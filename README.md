@@ -1,36 +1,158 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portal Coordinadores
 
-## Getting Started
+Portal de gestión para coordinadores desarrollado con Next.js, TypeScript y Tailwind CSS.
 
-First, run the development server:
+## 📋 Descripción
+
+Este proyecto es un portal web construido con las últimas tecnologías de Next.js utilizando el App Router. Está diseñado para proporcionar una plataforma de gestión para coordinadores.
+
+## 🚀 Tecnologías
+
+- **Next.js 16** - Framework de React con App Router
+- **TypeScript** - Tipado estático para JavaScript
+- **Tailwind CSS 4** - Framework de CSS utility-first
+- **React 19** - Biblioteca de interfaz de usuario
+- **ESLint** - Linter para mantener calidad de código
+
+## 📦 Requisitos Previos
+
+- Node.js >= 20.9.0 (recomendado)
+- npm (incluido con Node.js)
+
+**Nota:** El proyecto fue creado con Node.js 18.20.5 pero Next.js 16 requiere Node.js >= 20.9.0 para funcionar correctamente. Se recomienda actualizar Node.js.
+
+## 🛠️ Instalación
+
+Las dependencias ya están instaladas. Si necesitas reinstalarlas:
+
+```bash
+npm install
+```
+
+## 🎯 Scripts Disponibles
+
+### Modo Desarrollo
+
+Ejecuta el servidor de desarrollo con hot-reload:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build de Producción
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Compila la aplicación para producción:
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Ejecutar en Producción
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Inicia el servidor de producción (requiere build previo):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run start
+```
 
-## Deploy on Vercel
+### Linting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Ejecuta ESLint para verificar la calidad del código:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+```
+
+## 📁 Estructura del Proyecto
+
+```
+portal-coordinadores/
+├── app/                    # Directorio principal del App Router
+│   ├── favicon.ico        # Favicon del sitio
+│   ├── globals.css        # Estilos globales con Tailwind
+│   ├── layout.tsx         # Layout raíz de la aplicación
+│   └── page.tsx           # Página de inicio
+├── public/                # Archivos estáticos
+├── node_modules/          # Dependencias (no versionar)
+├── .gitignore            # Archivos ignorados por Git
+├── eslint.config.mjs     # Configuración de ESLint
+├── next.config.ts        # Configuración de Next.js
+├── next-env.d.ts         # Tipos de TypeScript para Next.js
+├── package.json          # Dependencias y scripts
+├── postcss.config.mjs    # Configuración de PostCSS
+├── README.md             # Este archivo
+└── tsconfig.json         # Configuración de TypeScript
+```
+
+## 🏗️ Desarrollo
+
+### Crear Nuevas Páginas
+
+Con el App Router, las páginas se crean en el directorio `app/`:
+
+```bash
+# Ejemplo: Crear página "about"
+mkdir app/about
+touch app/about/page.tsx
+```
+
+### Crear Componentes
+
+Se recomienda crear una carpeta `components/` en la raíz:
+
+```bash
+mkdir components
+touch components/Header.tsx
+```
+
+### Variables de Entorno
+
+Para configurar variables de entorno, crea un archivo `.env.local`:
+
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=https://api.example.com
+```
+
+## 🎨 Tailwind CSS
+
+El proyecto usa Tailwind CSS 4. Los estilos se aplican mediante clases utility:
+
+```tsx
+<div className="flex items-center justify-center p-4">
+  <h1 className="text-2xl font-bold">Título</h1>
+</div>
+```
+
+## 📝 Próximos Pasos
+
+- [ ] Implementar autenticación
+- [ ] Crear páginas adicionales
+- [ ] Configurar API routes
+- [ ] Añadir base de datos
+- [ ] Implementar gestión de estado (si es necesario)
+
+## 🤝 Contribución
+
+Este proyecto está en desarrollo activo. Para contribuir:
+
+1. Crea una rama para tu feature: `git checkout -b feature/nueva-funcionalidad`
+2. Realiza tus cambios y commits: `git commit -m 'Añade nueva funcionalidad'`
+3. Push a la rama: `git push origin feature/nueva-funcionalidad`
+4. Crea un Pull Request
+
+## 📄 Licencia
+
+Este proyecto es privado y está en desarrollo.
+
+## 🆘 Soporte
+
+Si encuentras problemas:
+
+1. Verifica que estés usando Node.js >= 20.9.0
+2. Elimina `node_modules` y `package-lock.json`, luego ejecuta `npm install`
+3. Verifica que el puerto 3000 no esté en uso
+
+Para más información, consulta la [documentación de Next.js](https://nextjs.org/docs).
