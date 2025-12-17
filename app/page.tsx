@@ -10,16 +10,16 @@ export default function Home() {
         </p>
         <div className="flex gap-4 mt-4">
           <a
-            href="#"
+            href="/login"
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            Comenzar
+            Iniciar Sesión
           </a>
           <a
-            href="#"
+            href="/dashboard"
             className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
-            Documentación
+            Dashboard
           </a>
         </div>
       </main>
