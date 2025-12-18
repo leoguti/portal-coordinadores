@@ -1,15 +1,19 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import { MemoryAdapter } from "@/lib/memory-adapter";
 
 /**
  * NextAuth configuration for Email Magic Link authentication
  * 
  * This is a MINIMAL test setup:
  * - Uses Email provider with magic links
- * - No database (sessions stored in JWT)
+ * - No database (uses in-memory adapter for tokens)
  * - Uses Nodemailer SMTP for sending emails
  */
 export const authOptions: NextAuthOptions = {
+  // Use in-memory adapter for verification tokens
+  adapter: MemoryAdapter(),
+  
   providers: [
     EmailProvider({
       server: {
