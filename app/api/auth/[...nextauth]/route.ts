@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { MemoryAdapter } from "@/lib/memory-adapter";
+import { getCoordinatorByEmail } from "@/lib/airtable";
 
 /**
  * NextAuth configuration for Email Magic Link authentication
@@ -9,6 +10,7 @@ import { MemoryAdapter } from "@/lib/memory-adapter";
  * - Uses Email provider with magic links
  * - No database (uses in-memory adapter for tokens)
  * - Uses Nodemailer SMTP for sending emails
+ * - Validates email against Airtable Coordinadores table
  */
 export const authOptions: NextAuthOptions = {
   // Use in-memory adapter for verification tokens
@@ -42,8 +44,27 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   
-  // Callbacks for session handling
+  // Callbacks for session handling and authorization
   callbacks: {
+    async signIn({ user }) {
+      // Deny sign-in if email is missing
+      if (!user.email) {
+        console.log("Sign-in denied: No email provided");
+        return "/login?error=NoEmail";
+      }
+
+      // Check if user email exists in Airtable Coordinadores table
+      const coordinator = await getCoordinatorByEmail(user.email);
+
+      if (!coordinator) {
+        console.log(`Sign-in denied: ${user.email} is not an authorized coordinator`);
+        return "/login?error=NotCoordinator";
+      }
+
+      console.log(`Sign-in allowed for coordinator: ${coordinator.name} (${coordinator.email})`);
+      return true;
+    },
+    
     async session({ session, token }) {
       // Add user email to session
       if (token.email && session.user) {

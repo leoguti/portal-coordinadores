@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Airtable credentials
+.env.airtable
+config/credentials.json
+airtable-api-key.txt
+
 # vercel
 .vercel
 

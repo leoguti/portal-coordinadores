@@ -1,18 +1,33 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 /**
  * Login Page - Email Magic Link Authentication
  * 
  * Simple form to send a magic link to the user's email
  * No password required - authentication via email link
+ * Validates email against Airtable Coordinadores table
  */
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Check for error from URL params
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "NotCoordinator") {
+      setMessage(
+        "Este correo no está autorizado como coordinador. Por favor contacta al administrador."
+      );
+    } else if (error === "NoEmail") {
+      setMessage("No se proporcionó un correo electrónico válido.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,9 +97,14 @@ export default function LoginPage() {
           {message && (
             <div
               className={`mt-4 p-3 rounded-lg text-sm ${
-                message.includes("Error") || message.includes("error")
+                message.includes("Error") || 
+                message.includes("error") ||
+                message.includes("no está autorizado") ||
+                message.includes("No se proporcionó")
                   ? "bg-red-50 text-red-700 border border-red-200"
-                  : "bg-green-50 text-green-700 border border-green-200"
+                  : message.includes("Revisa tu correo")
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-yellow-50 text-yellow-700 border border-yellow-200"
               }`}
             >
               {message}
@@ -93,7 +113,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>Te enviaremos un enlace de acceso a tu correo.</p>
-            <p>No se requiere contraseña.</p>
+            <p>Solo coordinadores autorizados pueden acceder.</p>
           </div>
         </div>
       </div>
