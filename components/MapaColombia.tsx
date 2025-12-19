@@ -18,13 +18,19 @@ interface MapaColombiaProps {
   actividadesPorMunicipio: MunicipioActividades[];
 }
 
-// Colores para el choropleth (solo municipios CON actividades)
-const getColor = (count: number): string => {
-  if (count <= 2) return "#86EFAC"; // green-300
-  if (count <= 5) return "#22C55E"; // green-500
-  if (count <= 10) return "#16A34A"; // green-600
-  if (count <= 20) return "#15803D"; // green-700
-  return "#166534"; // green-800
+// Escala de colores verdes (de claro a oscuro)
+const COLOR_SCALE = [
+  "#DCFCE7", // green-100
+  "#86EFAC", // green-300
+  "#22C55E", // green-500
+  "#16A34A", // green-600
+  "#166534", // green-800
+];
+
+// Función para obtener color basado en valor normalizado (0-1)
+const getColorByNormalizedValue = (normalized: number): string => {
+  const index = Math.min(Math.floor(normalized * COLOR_SCALE.length), COLOR_SCALE.length - 1);
+  return COLOR_SCALE[index];
 };
 
 export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaProps) {
@@ -44,6 +50,39 @@ export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaPr
     });
     return map;
   }, [actividadesPorMunicipio]);
+
+  // Calcular min/max para escala dinámica
+  const { minCount, maxCount, legendRanges } = useMemo(() => {
+    if (actividadesPorMunicipio.length === 0) {
+      return { minCount: 0, maxCount: 1, legendRanges: [] };
+    }
+    
+    const counts = actividadesPorMunicipio.map(m => m.cantidad);
+    const min = Math.min(...counts);
+    const max = Math.max(...counts);
+    
+    // Crear rangos para la leyenda
+    const range = max - min || 1;
+    const step = range / COLOR_SCALE.length;
+    
+    const ranges = COLOR_SCALE.map((color, i) => {
+      const from = Math.round(min + step * i);
+      const to = i === COLOR_SCALE.length - 1 ? max : Math.round(min + step * (i + 1) - 1);
+      return {
+        color,
+        label: from === to ? `${from}` : `${from} - ${to}`,
+      };
+    });
+    
+    return { minCount: min, maxCount: max, legendRanges: ranges };
+  }, [actividadesPorMunicipio]);
+
+  // Función para obtener color según cantidad
+  const getColor = (count: number): string => {
+    if (maxCount === minCount) return COLOR_SCALE[COLOR_SCALE.length - 1];
+    const normalized = (count - minCount) / (maxCount - minCount);
+    return getColorByNormalizedValue(normalized);
+  };
 
   // Cargar GeoJSON
   useEffect(() => {
@@ -258,23 +297,21 @@ export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaPr
       {/* Leyenda */}
       <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-4">
         <h4 className="font-medium text-gray-900 mb-2 text-sm">Mis actividades</h4>
-        <div className="space-y-1">
-          {[
-            { color: "#86EFAC", label: "1 - 2" },
-            { color: "#22C55E", label: "3 - 5" },
-            { color: "#16A34A", label: "6 - 10" },
-            { color: "#15803D", label: "11 - 20" },
-            { color: "#166534", label: "Más de 20" },
-          ].map(({ color, label }) => (
-            <div key={color} className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded border border-gray-300"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-xs text-gray-600">{label}</span>
-            </div>
-          ))}
-        </div>
+        {legendRanges.length > 0 ? (
+          <div className="space-y-1">
+            {legendRanges.map(({ color, label }) => (
+              <div key={color} className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded border border-gray-300"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-xs text-gray-600">{label}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">Sin datos</p>
+        )}
       </div>
 
       {/* Mapa */}

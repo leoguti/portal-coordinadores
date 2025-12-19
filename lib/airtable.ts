@@ -288,3 +288,52 @@ export async function createActividad(params: {
     throw error;
   }
 }
+
+/**
+ * TEMPORAL: List ALL activities from Airtable (sin filtrar por coordinador)
+ * Para visualización del mapa nacional
+ */
+export async function listAllActividades(): Promise<Actividad[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const allActividades: Actividad[] = [];
+    let offset: string | undefined;
+
+    // Paginar para obtener TODAS las actividades
+    do {
+      const url = `https://api.airtable.com/v0/${baseId}/Actividades?sort[0][field]=Fecha&sort[0][direction]=desc${offset ? `&offset=${offset}` : ""}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        console.error(`Airtable API error: ${response.status}`);
+        break;
+      }
+
+      const data: AirtableResponse<ActividadFields> = await response.json();
+      allActividades.push(...(data.records || []));
+      offset = data.offset;
+      
+      console.log(`Fetched ${data.records?.length || 0} activities, total: ${allActividades.length}`);
+    } while (offset);
+
+    console.log(`Total activities fetched: ${allActividades.length}`);
+    return allActividades;
+  } catch (error) {
+    console.error("Error fetching all activities:", error);
+    return [];
+  }
+}
