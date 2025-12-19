@@ -35,6 +35,7 @@ interface ActividadFields {
   "Name (from Coordinador)"?: string[];
   Municipio?: string[];
   "mundep (from Municipio)"?: string[];
+  "CODIGOMUN Compilación (de Municipio)"?: number;
   "Cantidad de Participantes"?: number;
   Modalidad?: string[];
   Consecutivo?: number;

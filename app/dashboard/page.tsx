@@ -129,7 +129,7 @@ export default function DashboardPage() {
         {/* Quick Actions Section */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Link
               href="/actividades/nueva"
               className="p-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
@@ -139,6 +139,16 @@ export default function DashboardPage() {
                 <p className="text-sm text-blue-100">Registrar una nueva actividad</p>
               </div>
               <span className="text-3xl">➕</span>
+            </Link>
+            <Link
+              href="/mapa"
+              className="p-6 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
+            >
+              <div>
+                <h3 className="font-semibold mb-1">Mapa de Actividades</h3>
+                <p className="text-sm text-amber-100">Ver cobertura geográfica</p>
+              </div>
+              <span className="text-3xl">🗺️</span>
             </Link>
             <Link
               href="/certificados"
