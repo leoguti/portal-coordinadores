@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import MunicipioSearch from "@/components/MunicipioSearch";
 import Link from "next/link";
 
 export default function NuevaActividadPage() {
@@ -18,14 +19,17 @@ export default function NuevaActividadPage() {
   const [descripcion, setDescripcion] = useState("");
   const [tipo, setTipo] = useState("");
   const [modalidad, setModalidad] = useState<string[]>([]);
-  const [perfilAsistentes, setPerfilAsistentes] = useState<string[]>([]);
+  const [perfilAsistentes, setPerfilAsistentes] = useState(""); // singleSelect en Airtable
   const [cultivo, setCultivo] = useState("");
-  const [municipio, setMunicipio] = useState("");
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [cantidadParticipantes, setCantidadParticipantes] = useState("");
   const [observaciones, setObservaciones] = useState("");
 
   // Conditional logic based on "Tipo de Actividad"
-  const showModalidad = tipo !== "";
-  const showPerfil = ["Sensibilización", "Visita almacenes", "Reuniones intersectoriales", "Recoleccion"].includes(tipo);
+  const isVisitaAcopio = tipo === "Visita acopio";
+  const showPerfil = tipo !== "" && !isVisitaAcopio; // Se muestra cuando tipo NO es "Visita acopio"
+  const showCultivo = tipo === "Recoleccion"; // Solo cuando es Recolección
+  const showCantidadParticipantes = tipo === "Sensibilización"; // Solo cuando es Sensibilización
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -59,10 +63,11 @@ export default function NuevaActividadPage() {
           fecha,
           descripcion,
           tipo,
-          cultivo,
-          municipio,
+          cultivo: showCultivo ? cultivo : undefined,
+          municipioId: municipio?.id,
           modalidad: modalidad.length > 0 ? modalidad : undefined,
-          perfilAsistentes: perfilAsistentes.length > 0 ? perfilAsistentes : undefined,
+          perfilAsistentes: showPerfil && perfilAsistentes ? perfilAsistentes : undefined,
+          cantidadParticipantes: showCantidadParticipantes && cantidadParticipantes ? parseInt(cantidadParticipantes) : undefined,
           observaciones: observaciones || undefined,
         }),
       });
@@ -90,14 +95,6 @@ export default function NuevaActividadPage() {
     );
   };
 
-  const togglePerfilAsistentes = (value: string) => {
-    setPerfilAsistentes(prev => 
-      prev.includes(value) 
-        ? prev.filter(v => v !== value)
-        : [...prev, value]
-    );
-  };
-
   return (
     <AuthenticatedLayout>
       <div className="max-w-4xl mx-auto">
@@ -117,6 +114,7 @@ export default function NuevaActividadPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Fecha - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fecha <span className="text-red-500">*</span>
@@ -130,6 +128,7 @@ export default function NuevaActividadPage() {
               />
             </div>
 
+            {/* Nombre - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre de la Actividad <span className="text-red-500">*</span>
@@ -144,6 +143,7 @@ export default function NuevaActividadPage() {
               />
             </div>
 
+            {/* Descripción - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Descripción de la actividad <span className="text-red-500">*</span>
@@ -158,121 +158,169 @@ export default function NuevaActividadPage() {
               />
             </div>
 
+            {/* Tipo de Actividad - Siempre visible (singleSelect como radio buttons) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tipo de Actividad <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Seleccionar...</option>
-                <option value="Sensibilización">Sensibilización</option>
-                <option value="Visita acopio">Visita acopio</option>
-                <option value="Visita almacenes">Visita almacenes</option>
-                <option value="Reuniones intersectoriales">Reuniones intersectoriales</option>
-                <option value="Recoleccion">Recolección</option>
-              </select>
+              <div className="space-y-2">
+                {[
+                  { value: "Sensibilización", label: "Sensibilización" },
+                  { value: "Visita acopio", label: "Visita acopio" },
+                  { value: "Visita almacenes ", label: "Visita almacenes" },
+                  { value: "Reuniones intersectoriales ", label: "Reuniones intersectoriales" },
+                  { value: "Recoleccion", label: "Recolección" },
+                ].map((option) => (
+                  <label key={option.value} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="tipo"
+                      value={option.value}
+                      checked={tipo === option.value}
+                      onChange={(e) => setTipo(e.target.value)}
+                      className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      required
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {/* Modalidad - Shown for all activity types except empty */}
-            {showModalidad && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Modalidad de la Actividad <span className="text-red-500">*</span>
+            {/* Modalidad - Siempre visible (multipleSelect como checkboxes) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Modalidad de la Actividad <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={modalidad.includes("Virtual")}
+                    onChange={() => toggleModalidad("Virtual")}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                  />
+                  <span>Virtual</span>
                 </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={modalidad.includes("Virtual")}
-                      onChange={() => toggleModalidad("Virtual")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <span>Virtual</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={modalidad.includes("Presencial")}
-                      onChange={() => toggleModalidad("Presencial")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <span>Presencial</span>
-                  </label>
-                </div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={modalidad.includes("Presencial")}
+                    onChange={() => toggleModalidad("Presencial")}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                  />
+                  <span>Presencial</span>
+                </label>
               </div>
-            )}
+            </div>
 
-            {/* Perfil de Asistentes - Shown only for specific activity types */}
+            {/* Perfil de Asistentes - Solo cuando tipo NO es "Visita acopio" */}
             {showPerfil && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Perfil de Asistentes <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={perfilAsistentes.includes("Técnicos / Profesionales")}
-                      onChange={() => togglePerfilAsistentes("Técnicos / Profesionales")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <span>Técnicos / Profesionales</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={perfilAsistentes.includes("Agricultores/ Productor")}
-                      onChange={() => togglePerfilAsistentes("Agricultores/ Productor")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <span>Agricultores / Productor</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={perfilAsistentes.includes("Distribuidores/ almacenes")}
-                      onChange={() => togglePerfilAsistentes("Distribuidores/ almacenes")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <span>Distribuidores / almacenes</span>
-                  </label>
+                  {[
+                    { value: "Técnicos / Profesionales ", label: "Técnicos / Profesionales" },
+                    { value: "Agricultores/ Productor ", label: "Agricultores / Productor" },
+                    { value: "Distribuidores/ almacenes", label: "Distribuidores / almacenes" },
+                  ].map((option) => (
+                    <label key={option.value} className="flex items-center">
+                      <input
+                        type="radio"
+                        name="perfilAsistentes"
+                        value={option.value}
+                        checked={perfilAsistentes === option.value}
+                        onChange={(e) => setPerfilAsistentes(e.target.value)}
+                        className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        required
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             )}
 
+            {/* Cantidad de Participantes - Solo cuando tipo es "Sensibilización" */}
+            {showCantidadParticipantes && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad de Participantes <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={cantidadParticipantes}
+                  onChange={(e) => setCantidadParticipantes(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Número de participantes"
+                />
+              </div>
+            )}
+
+            {/* Cultivo - Solo cuando tipo es "Recoleccion" */}
+            {showCultivo && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cultivo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={cultivo}
+                  onChange={(e) => setCultivo(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: PALMA, CAFÉ, etc."
+                />
+              </div>
+            )}
+
+            {/* Nota especial para Visita Acopio */}
+            {isVisitaAcopio && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm">
+                  <span className="font-semibold">📋 Nota:</span> Dentro de los <strong>Documentos de la Actividad</strong>, por favor adjuntar las <strong>listas de chequeo</strong>.
+                </p>
+              </div>
+            )}
+
+            {/* Fotografías - Siempre visible (placeholder - pendiente implementar) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cultivo <span className="text-red-500">*</span>
+                Fotografías
               </label>
-              <input
-                type="text"
-                required
-                value={cultivo}
-                onChange={(e) => setCultivo(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: PALMA, CAFÉ, etc."
-              />
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                <p className="text-gray-500 text-sm">📷 Subida de fotografías próximamente</p>
+              </div>
             </div>
 
+            {/* Documentos de Actividad - Siempre visible (placeholder - pendiente implementar) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Municipio <span className="text-red-500">*</span>
+                Documentos de Actividad
+                {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
               </label>
-              <input
-                type="text"
-                required
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                <p className="text-gray-500 text-sm">📄 Subida de documentos próximamente</p>
+              </div>
+            </div>
+
+            {/* Municipio - Selector con búsqueda */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Municipio
+              </label>
+              <MunicipioSearch
                 value={municipio}
-                onChange={(e) => setMunicipio(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: Fusagasugá"
+                onChange={setMunicipio}
+                placeholder="Buscar municipio..."
               />
-              <p className="text-xs text-gray-500 mt-1">Próximamente: selector de municipios desde tabla</p>
             </div>
 
+            {/* Observaciones - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Observaciones

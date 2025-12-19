@@ -65,12 +65,12 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, fecha, descripcion, tipo, cultivo, municipio, modalidad, perfilAsistentes, observaciones } = body;
+    const { name, fecha, descripcion, tipo, cultivo, municipioId, modalidad, perfilAsistentes, cantidadParticipantes, observaciones } = body;
 
-    // Validate required fields
-    if (!name || !fecha || !descripcion || !tipo || !cultivo || !municipio) {
+    // Validate required fields (municipio y cultivo son condicionales)
+    if (!name || !fecha || !descripcion || !tipo) {
       return NextResponse.json(
-        { error: "Missing required fields: name, fecha, descripcion, tipo, cultivo, municipio" },
+        { error: "Missing required fields: name, fecha, descripcion, tipo" },
         { status: 400 }
       );
     }
@@ -83,9 +83,10 @@ export async function POST(request: Request) {
       descripcion,
       tipo,
       cultivo,
-      municipio,
+      municipioId,
       modalidad,
       perfilAsistentes,
+      cantidadParticipantes,
       observaciones,
     });
 

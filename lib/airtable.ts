@@ -224,10 +224,11 @@ export async function createActividad(params: {
   fecha: string;
   descripcion: string;
   tipo: string;
-  cultivo: string;
-  municipio: string;
+  cultivo?: string;
+  municipioId?: string;
   modalidad?: string[];
-  perfilAsistentes?: string[];
+  perfilAsistentes?: string; // singleSelect en Airtable
+  cantidadParticipantes?: number;
   observaciones?: string;
 }): Promise<Actividad> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -246,11 +247,11 @@ export async function createActividad(params: {
         Fecha: params.fecha,
         Descripcion: params.descripcion,
         Tipo: params.tipo,
-        Cultivo: params.cultivo,
-        // TODO: Municipio should be linked record, for now using text
-        "Municipio Texto": params.municipio,
+        ...(params.cultivo && { Cultivo: params.cultivo }),
+        ...(params.municipioId && { Municipio: [params.municipioId] }), // Linked record - array of IDs
         ...(params.modalidad && params.modalidad.length > 0 && { Modalidad: params.modalidad }),
-        ...(params.perfilAsistentes && params.perfilAsistentes.length > 0 && { "Perfil de Asistentes": params.perfilAsistentes }),
+        ...(params.perfilAsistentes && { "Perfil de Asistentes": params.perfilAsistentes }),
+        ...(params.cantidadParticipantes && { "Cantidad de Participantes": params.cantidadParticipantes }),
         ...(params.observaciones && { Observaciones: params.observaciones }),
         Coordinador: [params.coordinatorRecordId], // Linked record array
       },

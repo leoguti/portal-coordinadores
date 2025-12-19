@@ -134,6 +134,25 @@ El proyecto usa Tailwind CSS 4. Los estilos se aplican mediante clases utility:
 - [ ] Añadir base de datos
 - [ ] Implementar gestión de estado (si es necesario)
 
+## 🗄️ Notas Técnicas
+
+### Cache de Municipios
+
+El endpoint `/api/municipios` usa un **cache en memoria** para la búsqueda de municipios:
+
+- **Ubicación**: `/app/api/municipios/route.ts`
+- **Comportamiento**: 
+  - La primera búsqueda carga TODOS los municipios de Airtable (con paginación completa)
+  - Se guarda en memoria con versión normalizada (sin acentos, minúsculas) para búsquedas
+  - Las búsquedas siguientes son instantáneas
+- **Actualización**: El cache se recarga automáticamente cuando:
+  - El servidor se reinicia
+  - En desarrollo: cada vez que guardas cambios (hot reload)
+  - En producción: cada deploy
+- **Búsqueda**: Insensible a mayúsculas y acentos (ej: "medellin" encuentra "Medellín")
+
+> ⚠️ Si se agregan nuevos municipios en Airtable, reiniciar el servidor para actualizar el cache.
+
 ## 🤝 Contribución
 
 Este proyecto está en desarrollo activo. Para contribuir:

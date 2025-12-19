@@ -87,6 +87,36 @@ POST https://api.airtable.com/v0/appniHwKiUMS0imXD/Actividades
 }
 ```
 
+## 📝 Formularios - Guía de Implementación
+
+### Campos de Municipio
+**Siempre usar el componente `MunicipioSearch`** para seleccionar municipios:
+
+```tsx
+import MunicipioSearch from "@/components/MunicipioSearch";
+
+// Estado
+const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+
+// En el formulario
+<MunicipioSearch
+  value={municipio}
+  onChange={setMunicipio}
+  placeholder="Buscar municipio..."
+/>
+
+// Al enviar a Airtable (linked record)
+municipioId: municipio?.id  // Se envía como array: [municipioId]
+```
+
+### Checklist para nuevos formularios:
+- [ ] Importar `MunicipioSearch` de `@/components/MunicipioSearch`
+- [ ] Estado como objeto `{ id, mundep } | null`, NO como string
+- [ ] Enviar solo el `id` al API (se convierte a `[id]` para Airtable)
+- [ ] El componente ya maneja: búsqueda, debounce, dropdown, teclado
+
+---
+
 ## Important Notes
 
 1. **Field Names**: Use brackets for spaces: `fields['Nombre de la Actividad']`
@@ -94,5 +124,43 @@ POST https://api.airtable.com/v0/appniHwKiUMS0imXD/Actividades
 3. **Links**: Are arrays of record IDs: `["recXXXX"]`
 4. **Attachments**: Arrays of objects with `id`, `url`, `filename`
 
+## 🔍 Búsqueda de Municipios
+
+**Siempre usar el endpoint con cache**: `/api/municipios?search=texto`
+
+### Características:
+- ✅ Insensible a mayúsculas y acentos
+- ✅ Cache en memoria (carga una vez, búsquedas instantáneas)
+- ✅ Mínimo 2 caracteres para buscar
+- ✅ Máximo 15 resultados
+
+### Implementación:
+- **Archivo**: `/app/api/municipios/route.ts`
+- **Cache**: Variable global `municipiosCache` con `mundepNormalized`
+- **Normalización**: `text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")`
+
+### Uso en componentes:
+```tsx
+import MunicipioSearch from "@/components/MunicipioSearch";
+
+<MunicipioSearch
+  value={municipio}           // { id: string, mundep: string } | null
+  onChange={setMunicipio}     // Callback con el municipio seleccionado
+  placeholder="Buscar..."     // Opcional
+/>
+```
+
+### Respuesta del API:
+```json
+{
+  "municipios": [
+    { "id": "recXXX", "mundep": "Medellín - Antioquia" },
+    { "id": "recYYY", "mundep": "Bogotá - Cundinamarca" }
+  ]
+}
+```
+
+> ⚠️ **Nota**: El cache se actualiza al reiniciar el servidor. Si se agregan municipios en Airtable, reiniciar para refrescar.
+
 ---
-Last updated: December 17, 2025
+Last updated: December 19, 2025
