@@ -163,11 +163,11 @@ export default function ActividadDetailPage() {
                       className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
                     >
                       <img
-                        src={foto.thumbnails?.large?.url || foto.url}
+                        src={foto.url}
                         alt={foto.filename}
                         className="w-full h-48 object-cover"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
                         <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
                           🔍
                         </span>
@@ -237,7 +237,7 @@ export default function ActividadDetailPage() {
                 ×
               </button>
               <img
-                src={selectedPhoto.thumbnails?.full?.url || selectedPhoto.url}
+                src={selectedPhoto.url}
                 alt={selectedPhoto.filename}
                 className="max-w-full max-h-[90vh] object-contain"
               />
