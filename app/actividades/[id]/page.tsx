@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import ConfirmModal from "@/components/ConfirmModal";
 import Link from "next/link";
 
 interface AirtableAttachment {
@@ -51,6 +52,8 @@ export default function ActividadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<AirtableAttachment | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -86,6 +89,29 @@ export default function ActividadDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/actividades/${actividadId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al eliminar");
+      }
+
+      // Redirigir a la lista de actividades
+      router.push("/actividades");
+    } catch (err) {
+      console.error("Error deleting activity:", err);
+      setError(err instanceof Error ? err.message : "Error al eliminar la actividad");
+      setShowDeleteModal(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (status === "loading" || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -117,24 +143,53 @@ export default function ActividadDetailPage() {
     <AuthenticatedLayout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
-            ← Volver a Actividades
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
-          </h1>
-          <div className="flex gap-4 text-gray-600">
-            {actividad.fields.Fecha && (
-              <span>📅 {actividad.fields.Fecha}</span>
-            )}
-            {actividad.fields["mundep (from Municipio)"]?.[0] && (
-              <span>📍 {actividad.fields["mundep (from Municipio)"][0]}</span>
-            )}
-            {actividad.fields.Tipo && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {actividad.fields.Tipo}
-              </span>
-            )}
+          <div className="flex justify-between items-start">
+            <div>
+              <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+                ← Volver a Actividades
+              </Link>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
+              </h1>
+              <div className="flex gap-4 text-gray-600">
+                {actividad.fields.Fecha && (
+                  <span>📅 {actividad.fields.Fecha}</span>
+                )}
+                {actividad.fields["mundep (from Municipio)"]?.[0] && (
+                  <span>📍 {actividad.fields["mundep (from Municipio)"][0]}</span>
+                )}
+                {actividad.fields.Tipo && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    {actividad.fields.Tipo}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Botones de acción */}
+            <div className="flex gap-2">
+              {/* Botón Editar */}
+              <Link
+                href={`/actividades/${actividadId}/editar`}
+                className="px-4 py-2 text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-600 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </Link>
+              
+              {/* Botón Eliminar */}
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-4 py-2 text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar
+              </button>
+            </div>
           </div>
         </div>
 
@@ -247,6 +302,18 @@ export default function ActividadDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+          title="Eliminar Actividad"
+          message={`¿Estás seguro de que deseas eliminar "${actividad.fields["Nombre de la Actividad"]}"? Esta acción no se puede deshacer y se eliminarán todas las fotografías asociadas.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          loading={deleting}
+        />
       </div>
     </AuthenticatedLayout>
   );

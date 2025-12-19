@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
+import ImageUpload, { ImageFile } from "@/components/ImageUpload";
 import Link from "next/link";
 
 export default function NuevaActividadPage() {
@@ -12,6 +13,7 @@ export default function NuevaActividadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   // Form state
   const [fecha, setFecha] = useState("");
@@ -24,6 +26,7 @@ export default function NuevaActividadPage() {
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [cantidadParticipantes, setCantidadParticipantes] = useState("");
   const [observaciones, setObservaciones] = useState("");
+  const [fotografias, setFotografias] = useState<ImageFile[]>([]);
 
   // Conditional logic based on "Tipo de Actividad"
   const isVisitaAcopio = tipo === "Visita acopio";
@@ -47,12 +50,61 @@ export default function NuevaActividadPage() {
 
   if (!session) return null;
 
+  // Convertir archivo a base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // Remover el prefijo "data:image/jpeg;base64,"
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // Subir una imagen a Airtable
+  const uploadImage = async (recordId: string, imageFile: ImageFile): Promise<boolean> => {
+    try {
+      const base64 = await fileToBase64(imageFile.file);
+      
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recordId,
+          fieldName: "Fotografias",
+          file: base64,
+          filename: imageFile.file.name,
+          contentType: imageFile.file.type,
+        }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error(`Error uploading ${imageFile.file.name}:`, error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validar municipio obligatorio
+    if (!municipio) {
+      setError("Debes seleccionar un municipio");
+      return;
+    }
+    
     setLoading(true);
+    setUploadProgress(null);
 
     try {
+      // Paso 1: Crear la actividad
+      setUploadProgress("Creando actividad...");
+      
       const response = await fetch("/api/actividades", {
         method: "POST",
         headers: {
@@ -77,6 +129,45 @@ export default function NuevaActividadPage() {
         throw new Error(data.error || "Error al crear la actividad");
       }
 
+      const { actividad } = await response.json();
+      const recordId = actividad.id;
+
+      // Paso 2: Subir fotografías (si hay)
+      if (fotografias.length > 0) {
+        let uploaded = 0;
+        let failed = 0;
+
+        for (const img of fotografias) {
+          setUploadProgress(`Subiendo foto ${uploaded + failed + 1} de ${fotografias.length}...`);
+          
+          // Marcar como subiendo
+          setFotografias(prev => prev.map(f => 
+            f.id === img.id ? { ...f, uploading: true } : f
+          ));
+
+          const success = await uploadImage(recordId, img);
+
+          // Actualizar estado de la imagen
+          setFotografias(prev => prev.map(f => 
+            f.id === img.id 
+              ? { ...f, uploading: false, uploaded: success, error: success ? undefined : "Error al subir" } 
+              : f
+          ));
+
+          if (success) {
+            uploaded++;
+          } else {
+            failed++;
+          }
+        }
+
+        if (failed > 0) {
+          setUploadProgress(`Actividad creada. ${uploaded} fotos subidas, ${failed} fallaron.`);
+          // Esperar un momento para que el usuario vea el mensaje
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
       // Success - redirect to actividades list
       router.push("/actividades");
     } catch (err) {
@@ -84,6 +175,7 @@ export default function NuevaActividadPage() {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -110,6 +202,13 @@ export default function NuevaActividadPage() {
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}
+            </div>
+          )}
+
+          {uploadProgress && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              {uploadProgress}
             </div>
           )}
 
@@ -287,14 +386,18 @@ export default function NuevaActividadPage() {
               </div>
             )}
 
-            {/* Fotografías - Siempre visible (placeholder - pendiente implementar) */}
+            {/* Fotografías - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fotografías
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                <p className="text-gray-500 text-sm">📷 Subida de fotografías próximamente</p>
-              </div>
+              <ImageUpload
+                images={fotografias}
+                onChange={setFotografias}
+                maxFiles={10}
+                maxSizeMB={5}
+                disabled={loading}
+              />
             </div>
 
             {/* Documentos de Actividad - Siempre visible (placeholder - pendiente implementar) */}
@@ -311,12 +414,13 @@ export default function NuevaActividadPage() {
             {/* Municipio - Selector con búsqueda */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Municipio
+                Municipio <span className="text-red-500">*</span>
               </label>
               <MunicipioSearch
                 value={municipio}
                 onChange={setMunicipio}
                 placeholder="Buscar municipio..."
+                required
               />
             </div>
 
