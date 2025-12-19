@@ -64,11 +64,27 @@ export const authOptions: NextAuthOptions = {
       console.log(`Sign-in allowed for coordinator: ${coordinator.name} (${coordinator.email})`);
       return true;
     },
+
+    async jwt({ token, user, account }) {
+      // On sign-in (when account exists), fetch and store the Airtable record ID
+      // This happens when the user clicks the magic link
+      if (account && user?.email) {
+        const coordinator = await getCoordinatorByEmail(user.email);
+        if (coordinator) {
+          token.coordinatorRecordId = coordinator.id;
+          console.log(`JWT: Stored coordinator record ID ${coordinator.id} for ${user.email}`);
+        }
+      }
+      return token;
+    },
     
     async session({ session, token }) {
-      // Add user email to session
+      // Add user email and coordinatorRecordId to session
       if (token.email && session.user) {
         session.user.email = token.email;
+      }
+      if (token.coordinatorRecordId && session.user) {
+        session.user.coordinatorRecordId = token.coordinatorRecordId;
       }
       return session;
     },
