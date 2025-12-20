@@ -192,13 +192,6 @@ Si día_actual <= 7:
   2. **Item SIN Kardex**: Otros servicios (procesamiento, etc.) no asociables a Kardex
 - Una misma orden puede mezclar ambos tipos de items
 
-### ⚠️ Kardex NO Cobrables
-- **No todos los registros de Kardex generan Orden de Servicio**
-- Algunos Kardex **NO son cobrables** / no generan costos para Campolimpio
-- **PENDIENTE**: Crear marca/campo en Kardex para identificar:
-  - ✅ Cobrable (genera orden de servicio)
-  - ❌ No cobrable (no genera costos)
-
 ### 🚨 CASO DE FRAUDE A EVITAR - "Caso Fulano el Malo"
 **Problema detectado:**
 - Un coordinador ("Fulano el malo") hacía acuerdos con el municipio
@@ -252,9 +245,9 @@ Si día_actual <= 7:
 - Luego en el Portal crea Orden de Servicio y selecciona los Kardex "Por Pagar"
 - Al crear la orden, esos Kardex cambian automáticamente a "En Orden"
 
-**📌 Diferencia entre "Pendiente Orden" y "En Orden":**
-- **Pendiente Orden de Servicio**: Coordinador marcó que debe ir a orden, pero NO tiene número de orden asignado
-- **En Orden de Servicio**: Ya tiene el **ID de Airtable o número de orden** asignado (la orden fue creada en el portal)
+**📌 Diferencia entre "Por Pagar" y "En Orden":**
+- **Por Pagar**: Coordinador marcó que debe ir a orden, pero NO tiene número de orden asignado
+- **En Orden**: Ya tiene el **ID de Airtable o número de orden** asignado (la orden fue creada en el portal)
 
 **🔧 Interfaz necesaria (Portal Coordinador):**
 - Opción para **corregir/cambiar estado** en caso de error del coordinador
@@ -269,8 +262,9 @@ Si día_actual <= 7:
 
 ## 📊 DASHBOARD - Tareas Pendientes del Coordinador
 
-### Kardex sin procesar = Tareas pendientes
-- Mostrar en el dashboard los **registros de Kardex no procesados**
+### Kardex "Por Pagar" = Tareas pendientes
+- Mostrar en el dashboard los **registros de Kardex con estado "Por Pagar"**
+- Estos son los que aún no se han incluido en una Orden de Servicio
 - Posible indicador tipo **semáforo** (interfaz a definir)
 - Son las tareas pendientes que el coordinador debe resolver
 
@@ -305,32 +299,34 @@ Si día_actual <= 7:
 - Coordinador solicita → Bogotá aprueba y paga
 
 **Controles necesarios:**
-- Marcar claramente cuándo el transporte **NO es cobrable** (lo asume el municipio u otro)
+- Marcar claramente cuándo el transporte es **"Sin Costo"** (lo asume el municipio u otro)
 - Validar quién realmente presta el servicio antes de generar orden de pago
-- Trazabilidad de quién marca un Kardex como cobrable/no cobrable
+- Trazabilidad de quién define el estado de pago de cada Kardex
 
 ### ✅ ESTRATEGIA DE CONTROL - Registro en Chatbot
 **Decisión:** Controlar desde el momento del registro de Kardex (en el chatbot)
 
-- El chatbot de registro de Kardex debe **preguntar si el movimiento lo paga Campolimpio o no**
-- **Por defecto**: Sí lo paga Campolimpio (es la mayoría de casos)
-- Si se marca como "NO paga Campolimpio" → **queda excluido automáticamente** de órdenes de servicio
-- **Ventaja**: Imposible que un Kardex marcado como no cobrable llegue a generar una orden de pago
+- El chatbot de registro de Kardex debe **preguntar el estado de pago**
+- Opciones: **Caja Menor**, **Sin Costo**, **Por Pagar**
+- Si se marca como "Sin Costo" → **queda excluido automáticamente** de órdenes de servicio
+- Si se marca como "Caja Menor" → va al módulo de Caja Menor (no a orden de servicio)
+- Si se marca como "Por Pagar" → disponible para incluir en Orden de Servicio
+- **Ventaja**: Imposible que un Kardex "Sin Costo" llegue a generar una orden de pago
 - **Control preventivo** (en el registro) en vez de correctivo (después)
 
 **Implementación:**
-- [ ] Agregar campo en Kardex: `PagaCampolimpio` (checkbox, default: true)
-- [ ] Agregar pregunta en chatbot: "¿Este transporte lo paga Campolimpio?"
-- [ ] Filtrar en órdenes de servicio: solo Kardex con `PagaCampolimpio = true`
+- [ ] Agregar campo en Kardex: `EstadoPago` (select: Caja Menor / Sin Costo / Por Pagar / En Orden)
+- [ ] Agregar pregunta en chatbot: "¿Cómo se paga este transporte?" (obligatorio)
+- [ ] Filtrar en órdenes de servicio: solo Kardex con `EstadoPago = "Por Pagar"`
 
 ### 🤔 PROBLEMA: ¿Quién valida si el coordinador miente?
 El coordinador puede ser "Fulano el malo" de nuevo...
 
 **Opciones de control adicional (a discutir):**
-1. **Auditoría por municipio**: Si un municipio tiene convenio de transporte, TODOS sus Kardex deberían ser "No paga Campolimpio" → Alertar inconsistencias
-2. **Aprobación de supervisor**: Kardex marcados como "Sí paga" requieren aprobación de un segundo nivel
+1. **Auditoría por municipio**: Si un municipio tiene convenio de transporte, TODOS sus Kardex deberían ser "Sin Costo" → Alertar inconsistencias
+2. **Aprobación de supervisor**: Kardex marcados como "Por Pagar" requieren aprobación de un segundo nivel
 3. **Registro de convenios**: Tabla de municipios con convenios de transporte → validar automáticamente
-4. **Reportes de anomalías**: Alertar si un coordinador tiene muchos "Sí paga" vs otros coordinadores
+4. **Reportes de anomalías**: Alertar si un coordinador tiene muchos "Por Pagar" vs otros coordinadores
 5. **Revisión aleatoria**: Auditorías periódicas de una muestra de Kardex
 6. **Doble confirmación**: Si hay convenio con municipio, preguntar "¿Estás seguro? Este municipio tiene convenio"
 
@@ -362,7 +358,7 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 - Puede requerir campo adicional o tabla separada
 
 ### Pendiente definir:
-- [ ] ¿Crear nuevo campo "Procesado" o "OrdenAsociada" en Kardex?
+- [x] ¿Crear nuevo campo "Procesado" o "OrdenAsociada" en Kardex? → **SÍ, campo `EstadoPago` con 4 estados**
 - [x] ¿La orden se genera solo de SALIDAS? → **NO, ambos tipos (ENTRADA y SALIDA)**
 
 ### Notas de la reunión:
