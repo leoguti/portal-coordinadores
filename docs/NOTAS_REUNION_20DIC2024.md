@@ -14,6 +14,7 @@
 ### Aplica para:
 - [x] **Actividades**
 - [x] **Kardex**
+- [x] **Órdenes de Servicio**
 
 ### Aclaración sobre Fecha de Actividad
 - La fecha que se registra en una actividad es la **fecha en que se realizó la actividad** (no la fecha de registro)
@@ -21,6 +22,7 @@
 
 ### Operaciones afectadas:
 - ❌ Crear (no se pueden crear registros en meses bloqueados)
+- ❌ Crear con fecha futura (no se permiten fechas en el futuro)
 - ❌ Editar (no se pueden modificar registros de meses bloqueados)
 - ❌ Eliminar (no se pueden borrar registros de meses bloqueados)
 - ✅ Ver (siempre se pueden ver, pero con indicador visual)
@@ -64,11 +66,13 @@ Si día_actual <= 7:
 
 ### Bloqueo por Fecha
 - [ ] Implementar función `isMonthLocked(date)` en utilidades
-- [ ] Validar en API antes de crear/editar/eliminar
+- [ ] Validar en API antes de crear/editar/eliminar (Actividades, Kardex, Órdenes)
+- [ ] Validar: NO permitir fechas futuras
 - [ ] Mostrar mensaje de error claro cuando se intente modificar registro bloqueado
 - [ ] Aplicar estilos visuales a registros bloqueados en:
   - [ ] Lista de Actividades
   - [ ] Lista de Kardex
+  - [ ] Lista de Órdenes
 - [ ] Deshabilitar botones de edición/eliminación en registros bloqueados
 
 ### Funcionalidad Pendiente - Actividades
@@ -86,24 +90,29 @@ Si día_actual <= 7:
 ### Esquema de Tablas Actuales
 
 #### Tabla: Ordenes
-| Campo | Tipo |
-|-------|------|
-| `ID Orden` | Text/Autonumber |
-| `Fecha de pedido` | Date |
-| `Estado` | Select |
-| `ItemsOrden` | Link → ItemsOrden |
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `NumeroOrden` | Autonumber | **Consecutivo visible** - identificador operativo oficial |
+| `ID Orden` | Text (Record ID) | ID interno de Airtable - NO se usa como referencia |
+| `Coordinador` | Link → Coordinadores | **Obligatorio** - una orden pertenece a un solo coordinador |
+| `Fecha de pedido` | Date | Fecha de creación de la orden |
+| `Estado` | Select | Estado actual de la orden |
+| `Beneficiario` | Link → Terceros | **Obligatorio** - transportador/proveedor que cobra |
+| `ItemsOrden` | Link → ItemsOrden | Items que componen la orden |
 
 #### Tabla: ItemsOrden
-| Campo | Tipo |
-|-------|------|
-| `Name` | Text |
-| `Orden` | Link → Ordenes |
-| `ID Orden (from Orden)` | Lookup |
-| `Producto` | Link → Productos? |
-| `ID Producto (from Producto)` | Lookup |
-| `Cantidad` | Number |
-| `Precio Unitario` | Currency |
-| `Subtotal` | Formula |
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Name` | Text | Descripción del item |
+| `Orden` | Link → Ordenes | Orden a la que pertenece |
+| `ID Orden (from Orden)` | Lookup | Número de orden |
+| `TipoItem` | Select | **"CON Kardex"** / **"SIN Kardex"** |
+| `Kardex` | Link → Kardex | Solo si TipoItem = "CON Kardex" |
+| `Servicio` | Link → ServiciosSinKardex | Solo si TipoItem = "SIN Kardex" |
+| `FormaCobro` | Select | **"Por Flete"** / **"Por Kilo"** |
+| `Cantidad` | Number | Cantidad de kg o fletes |
+| `Precio Unitario` | Currency | Precio por unidad |
+| `Subtotal` | Formula | Cantidad × Precio Unitario |
 
 #### Tabla: Kardex (campos completos)
 | Campo | Tipo | Ejemplo |
@@ -149,9 +158,9 @@ Si día_actual <= 7:
 - Los **Gestores** cobran servicios en algunos casos (ej: GEOCYCLE/HOLCIM)
 - **Pero hay otros servicios** que dependen de la tabla **Terceros** (donde también están los gestores)
 - **Terceros = Todos los proveedores** (gestores, transportadores, y otras entidades)
-- La Orden de Servicio **puede o no** agrupar registros de Kardex
-- Hay servicios en la orden que **no se pueden asociar a Kardex**
-- **PENDIENTE**: Definir cómo marcar Kardex ya procesados/asociados a una orden
+- La Orden de Servicio **agrupa registros de Kardex de un solo coordinador**
+- Hay items en la orden que **se asocian a Kardex** (CON Kardex)
+- Hay items en la orden que **NO se asocian a Kardex** (SIN Kardex - servicios del catálogo)
 
 ### Flujo de Órdenes de Servicio:
 
@@ -173,11 +182,10 @@ Si día_actual <= 7:
 **ENTRADA + SALIDA DIRECTA (Campo → Gestor Final):**
 - Material va **directo del municipio al gestor de disposición final**
 - **NO pasa por el centro de acopio**
-- Se registra como **ENTRADA y SALIDA al mismo tiempo** en Kardex
+- Se registra como **un solo Kardex** (limitación del chatbot - no crea dos registros vinculados)
 - Ejemplo: Material del campo directo a planta de proceso (Holcim)
-- **Formas de cobro:**
-  1. **Separado**: Transporte + Procesamiento (dos cobros distintos)
-  2. **Integral**: Transporte y procesamiento juntos (un solo cobro)
+- **Forma de cobro**: **INTEGRAL** (transporte + procesamiento en un solo pago)
+- 📌 **Decisión confirmada**: No se trabaja cobro separado en esta fase
 
 **PROCESAMIENTO EN CENTRO DE ACOPIO:**
 - Se realizan procesos de material en los centros de acopio
@@ -324,11 +332,12 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 
 **Opciones de control adicional (a discutir):**
 1. **Auditoría por municipio**: Si un municipio tiene convenio de transporte, TODOS sus Kardex deberían ser "Sin Costo" → Alertar inconsistencias
-2. **Aprobación de supervisor**: Kardex marcados como "Por Pagar" requieren aprobación de un segundo nivel
-3. **Registro de convenios**: Tabla de municipios con convenios de transporte → validar automáticamente
-4. **Reportes de anomalías**: Alertar si un coordinador tiene muchos "Por Pagar" vs otros coordinadores
-5. **Revisión aleatoria**: Auditorías periódicas de una muestra de Kardex
-6. **Doble confirmación**: Si hay convenio con municipio, preguntar "¿Estás seguro? Este municipio tiene convenio"
+2. **Registro de convenios**: Tabla de municipios con convenios de transporte → validar automáticamente
+3. **Reportes de anomalías**: Alertar si un coordinador tiene muchos "Por Pagar" vs otros coordinadores
+4. **Revisión aleatoria**: Auditorías periódicas de una muestra de Kardex
+5. **Doble confirmación**: Si hay convenio con municipio, preguntar "¿Estás seguro? Este municipio tiene convenio"
+
+**Nota**: ❌ NO hay segundo nivel de aprobación - el coordinador autoriza directamente
 
 **¿Cuál prefiere el cliente?**
 
@@ -348,28 +357,125 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 - Incluye: Gestores, Transportadores, y otras entidades que cobran
 
 ### 📋 Orden de Servicio - Campos clave
-- **Beneficiario/A quién se paga**: OBLIGATORIO definir en la orden
-  - En SALIDAS: Sugerir automáticamente el `gestor` del Kardex
-  - En ENTRADAS: Seleccionar manualmente (puede ser gestor u otra entidad)
+- **Coordinador**: Campo obligatorio - una orden pertenece a UN SOLO coordinador
+- **Transportador/Beneficiario**: Campo obligatorio a nivel de ORDEN (aplica a todos los items)
+  - En SALIDAS: El sistema **sugiere** el `gestor` del Kardex (pero es editable)
+  - En ENTRADAS: Seleccionar manualmente (transportador u otra entidad de Terceros)
+  - Siempre se elige de la tabla **Terceros**
 
-### ⚠️ PENDIENTE - Otras Entidades que Cobran
+### ⚠️ Otras Entidades que Cobran
 - Hay entidades que cobran pero **NO son gestores**
-- Detalles pendientes por definir
-- Puede requerir campo adicional o tabla separada
+- Todas se registran en la tabla **Terceros** (gestores, transportadores, otros proveedores)
+- La tabla **Terceros** es suficiente para todos los casos
 
-### Pendiente definir:
+### ✅ DEFINICIONES CONFIRMADAS:
 - [x] ¿Crear nuevo campo "Procesado" o "OrdenAsociada" en Kardex? → **SÍ, campo `EstadoPago` con 4 estados**
 - [x] ¿La orden se genera solo de SALIDAS? → **NO, ambos tipos (ENTRADA y SALIDA)**
+- [x] ¿Una orden agrupa Kardex de varios coordinadores? → **NO, una orden es de UN SOLO coordinador**
+- [x] ¿El transportador se asigna por orden o por item? → **A nivel de ORDEN** (aplica a todos los items)
+- [x] ¿Requiere aprobación de segundo nivel? → **NO**, el coordinador autoriza directamente
+- [x] ¿Un Kardex puede estar en varias órdenes? → **NO, relación 1 Kardex → 1 Orden** (estricta)
+- [x] ¿Se puede cambiar EstadoPago después de crear orden? → **NO, solo antes de crear la orden**
+- [x] ¿Las órdenes tienen bloqueo por fecha? → **SÍ**, igual que Actividades y Kardex
+- [x] ¿Forma de cobro se hereda del Kardex? → **NO, se define a nivel de ITEM** de la orden
+- [x] ¿Los convenios con municipios afectan el sistema? → **NO**, son solo información referencial
+- [x] ¿Identificador de orden? → **Consecutivo visible** (autonumber de Airtable), no el ID interno
 
-### Notas de la reunión:
-- [ ] ¿Cuál es el campo "marca" en Kardex que indica si fue procesado? → **PENDIENTE**
-- [ ] ¿La orden agrupa Kardex de un solo coordinador o de varios? → **PENDIENTE**
-- [ ] ¿Qué datos adicionales necesita la orden además de los de Kardex?
-- [ ] ¿El transportador se asigna a nivel de orden?
+---
 
-### Notas de la reunión:
+## 🔒 REGLAS DE NEGOCIO CONSOLIDADAS
 
-*(Espacio para notas)*
+### 1. Relación Kardex ↔ Orden de Servicio
+- Un registro de Kardex **solo puede asociarse a UNA orden de servicio**
+- No existe división ni asociación parcial
+- Una vez asociado → estado "En Orden" → **bloqueado para otras órdenes**
+- ✔️ Relación estricta: **1 Kardex → 1 Orden**
+
+### 2. Cambio manual de EstadoPago
+- ✅ **Permitido**: Cambiar estado ANTES de crear la Orden de Servicio (en el portal)
+- ❌ **Prohibido**: Cambiar estado DESPUÉS de que esté "En Orden"
+- 💬 **Mensaje requerido** al crear orden: 
+  > *"Después de crear la orden, no será posible modificar el estado de estos Kardex."*
+
+### 3. ENTRADA + SALIDA DIRECTA (Campo → Gestor Final)
+- El cobro es **INTEGRAL** (transporte + procesamiento en un solo pago)
+- **Limitación conocida del chatbot**: No existe vinculación automática de dos registros de Kardex
+- Se registra como un solo Kardex representando el movimiento
+- La Orden de Servicio puede tener un Item SIN Kardex adicional para el cobro integral
+- 📌 **Nota**: Esto queda documentado como limitación conocida, no como error
+
+### 4. Bloqueo por fecha en Órdenes de Servicio
+- Las órdenes **también están sujetas a bloqueo por fecha** (día 7 del mes siguiente)
+- Órdenes de meses bloqueados:
+  - ❌ No se pueden crear
+  - ❌ No se pueden editar
+  - ❌ No se pueden eliminar
+  - ✅ Solo lectura
+- ✔️ El criterio de bloqueo se aplica de forma **consistente a todo el sistema**
+
+### 5. Servicios SIN Kardex
+- **SÍ existe un listado formal**, pero la tabla **NO existe aún en Airtable**
+- **Acción requerida**: Crear nueva tabla **"ServiciosSinKardex"** (o nombre similar)
+- Campos sugeridos:
+  - `Nombre` - Descripción del servicio
+  - `Tipo` - Categoría (procesamiento, etc.)
+  - `UnidadMedida` - Para cálculo de precio
+- Los coordinadores **NO crean servicios libres** - solo seleccionan del catálogo
+- 📌 Esto mejora control y estandarización
+
+### 6. Forma de cobro (por kilo / por flete)
+- Se define **a nivel de ITEM** de la Orden de Servicio
+- **NO se hereda** del Kardex ni del Tercero
+- Cada item define explícitamente:
+  - Tipo de cobro: "Por Flete" / "Por Kilo"
+  - Valores asociados (precio unitario, cantidad, etc.)
+- ✔️ Máxima flexibilidad, controlada por item
+
+### 7. Convenios con municipios
+- **NO se trabajan como lógica del sistema**
+- Los convenios:
+  - NO generan validaciones automáticas
+  - NO bloquean flujos
+  - NO forman parte del desarrollo en esta fase
+- **Uso**: Solo información referencial/informativa
+- ✔️ Esto elimina complejidad innecesaria
+
+### 8. Identificador de Orden de Servicio
+- **Consecutivo visible obligatorio** (número entero positivo)
+- Basado en **autonumber de Airtable**
+- Visible para coordinadores y Bogotá
+- Es el **identificador operativo oficial**
+- 📌 El ID interno de Airtable NO se usa como referencia externa
+- Campo sugerido: `NumeroOrden` (autonumber)
+
+---
+
+## 📝 PENDIENTES Y PREGUNTAS ABIERTAS
+
+### Chatbot
+- [ ] ¿Cuándo se mejorará el flujo del chatbot para preguntar `EstadoPago`?
+- [ ] ¿Quién implementa las mejoras del chatbot? (¿equipo externo o interno?)
+
+### Alertas
+- [ ] **Condiciones** para enviar alertas de Kardex pendientes por chatbot (a definir con cliente)
+- [ ] Umbral de días para semáforo en dashboard (rojo/amarillo/verde)
+
+### Controles de Fraude
+- [ ] ¿Cuál(es) de las opciones de control prefiere el cliente?
+  - Auditoría por municipio
+  - Registro de convenios
+  - Reportes de anomalías
+  - Revisión aleatoria
+  - Doble confirmación
+
+### Caja Menor
+- [ ] ¿Qué soportes son obligatorios? (recibo, factura, fotos, etc.)
+- [ ] ¿Se requiere aprobación adicional para Caja Menor?
+- [ ] Definir flujo completo del módulo (dejado para fase futura)
+
+### Otras Entidades que Cobran
+- [ ] Definir si se necesita tabla adicional o campo específico
+- [ ] Ejemplos de entidades que NO son gestores pero cobran servicios
 
 ---
 
