@@ -416,7 +416,7 @@ export default function NuevaOrdenPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Items</h3>
                 <p className="text-xs text-gray-600 mt-1">
-                  ℹ️ <strong>Nota:</strong> Items de Catálogo siempre son "Por Flete" (precio fijo). Puedes cambiar la cantidad (ej: 2 meses de arriendo).
+                  ℹ️ <strong>Nota:</strong> Items de Catálogo tienen precio fijo. Puedes cambiar la cantidad (ej: 2 meses de arriendo).
                 </p>
               </div>
               <button
@@ -522,9 +522,9 @@ export default function NuevaOrdenPage() {
                         {/* Forma de Cobro - EDITABLE solo para Kardex */}
                         <td className="px-4 py-3">
                           {item.tipo === "CATALOGO" ? (
-                            // Catálogo: siempre "Por Flete" (no editable)
+                            // Catálogo: precio fijo
                             <div className="px-2 py-1.5 text-xs rounded bg-gray-100 font-semibold text-gray-600 text-center border border-gray-300">
-                              Por Flete (fijo)
+                              Precio Fijo
                             </div>
                           ) : (
                             // Kardex: editable
