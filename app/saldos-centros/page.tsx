@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
@@ -220,9 +220,8 @@ export default function SaldosCentrosPage() {
             </thead>
             <tbody>
               {saldos.map((saldo, index) => (
-                <>
+                <Fragment key={saldo.centroId}>
                   <tr
-                    key={saldo.centroId}
                     className={`border-b border-gray-200 ${
                       index % 2 === 0 ? "bg-white" : "bg-gray-50"
                     } hover:bg-blue-50 transition-colors`}
@@ -335,7 +334,7 @@ export default function SaldosCentrosPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
