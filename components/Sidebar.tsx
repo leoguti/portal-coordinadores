@@ -9,6 +9,7 @@ const navItems = [
   { name: "Actividades", href: "/actividades", icon: "📋" },
   { name: "Certificados", href: "/certificados", icon: "📜" },
   { name: "Kardex", href: "/kardex", icon: "📦" },
+  { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️" },
   { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧" },
 ];
 

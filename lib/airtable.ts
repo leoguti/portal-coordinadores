@@ -109,6 +109,21 @@ interface TerceroFields {
   Tipo?: string;
 }
 
+interface CentroAcopioFields {
+  Nombre?: string;
+  Municipio?: string[];
+  "mundep (from Municipio)"?: string[];
+  Tipo?: string;
+  Autonumber?: number;
+  Departamento?: string[];
+}
+
+export interface CentroAcopio {
+  id: string;
+  createdTime: string;
+  fields: CentroAcopioFields;
+}
+
 interface ItemOrdenFields {
   Name?: string;
   TipoItem?: string; // "CON Kardex" | "SIN Kardex"
@@ -957,6 +972,75 @@ export async function getCatalogoServicios(): Promise<CatalogoServicio[]> {
     }));
   } catch (error) {
     console.error("Error fetching CatalogoServicios:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all Centros de Acopio
+ */
+export async function getCentrosAcopio(): Promise<CentroAcopio[]> {
+  const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
+  const BASE_ID = process.env.AIRTABLE_BASE_ID;
+
+  if (!AIRTABLE_TOKEN || !BASE_ID) {
+    throw new Error("Missing Airtable credentials");
+  }
+
+  try {
+    const filterFormula = encodeURIComponent("{Tipo}='Centro de Acopio'");
+    const url = `https://api.airtable.com/v0/${BASE_ID}/Puntos%20Logisticos?filterByFormula=${filterFormula}&sort[0][field]=Nombre&sort[0][direction]=asc`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Centros de Acopio: ${response.statusText}`);
+    }
+
+    const data: AirtableResponse<CentroAcopioFields> = await response.json();
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching Centros de Acopio:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all Kardex for calculating balances
+ */
+export async function getAllKardex(): Promise<Kardex[]> {
+  const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
+  const BASE_ID = process.env.AIRTABLE_BASE_ID;
+
+  if (!AIRTABLE_TOKEN || !BASE_ID) {
+    throw new Error("Missing Airtable credentials");
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/Kardex?sort[0][field]=fechakardex&sort[0][direction]=desc`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Kardex: ${response.statusText}`);
+    }
+
+    const data: AirtableResponse<KardexFields> = await response.json();
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching all Kardex:", error);
     throw error;
   }
 }
