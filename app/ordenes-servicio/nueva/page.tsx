@@ -437,7 +437,7 @@ export default function NuevaOrdenPage() {
                 {/* Tabla tipo factura */}
                 <table className="w-full table-fixed">
                   <colgroup>
-                    <col style={{ width: '100px' }} />  {/* Tipo */}
+                    <col style={{ width: '130px' }} />  {/* Tipo - aumentado */}
                     <col style={{ width: 'auto' }} />    {/* Descripción */}
                     <col style={{ width: '100px' }} />  {/* Cantidad */}
                     <col style={{ width: '140px' }} />  {/* Forma Cobro */}
@@ -465,10 +465,10 @@ export default function NuevaOrdenPage() {
                         }`}
                       >
                         {/* Tipo */}
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-3">
                           <div className="flex flex-col gap-1">
                             <span
-                              className={`px-2 py-1 text-xs font-bold rounded text-center ${
+                              className={`px-1.5 py-1 text-[10px] font-bold rounded text-center leading-tight ${
                                 item.tipo === "KARDEX"
                                   ? "bg-blue-100 text-blue-700 border border-blue-300"
                                   : "bg-purple-100 text-purple-700 border border-purple-300"
@@ -478,7 +478,7 @@ export default function NuevaOrdenPage() {
                             </span>
                             {item.tipo === "KARDEX" && item.tipoMovimiento && (
                               <span
-                                className={`px-2 py-1 text-xs font-bold rounded text-center ${
+                                className={`px-1.5 py-1 text-[10px] font-bold rounded text-center leading-tight ${
                                   item.tipoMovimiento === "ENTRADA"
                                     ? "bg-green-100 text-green-700 border border-green-300"
                                     : "bg-red-100 text-red-700 border border-red-300"
