@@ -34,6 +34,7 @@ interface ItemOrden {
   cantidad: number;
   precioUnitario: number;
   kardexData?: Kardex;
+  tipoMovimiento?: "ENTRADA" | "SALIDA"; // Para Kardex
 }
 
 export default function NuevaOrdenPage() {
@@ -106,11 +107,12 @@ export default function NuevaOrdenPage() {
       id: `item-${Date.now()}`,
       tipo: "KARDEX",
       kardexId: kardex.id,
-      descripcion: `Kardex #${numero} - ${municipio} - ${fecha} - ${tipo} (${kg.toFixed(2)} kg)`,
+      descripcion: `Kardex #${numero} - ${municipio} - ${fecha} (${kg.toFixed(2)} kg)`,
       formaCobro: "Por Flete",
       cantidad: kg,
       precioUnitario: 0,
       kardexData: kardex,
+      tipoMovimiento: tipo as "ENTRADA" | "SALIDA",
     };
 
     setItemsOrden([...itemsOrden, nuevoItem]);
@@ -417,18 +419,33 @@ export default function NuevaOrdenPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {/* Badge tipo de item */}
                           <span
-                            className={`px-2 py-1 text-xs font-medium rounded ${
+                            className={`px-3 py-1 text-xs font-bold rounded-full ${
                               item.tipo === "KARDEX"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-purple-100 text-purple-700"
+                                ? "bg-blue-600 text-white"
+                                : "bg-purple-600 text-white"
                             }`}
                           >
-                            {item.tipo}
+                            {item.tipo === "KARDEX" ? "📦 KARDEX" : "📋 CATÁLOGO"}
                           </span>
-                          <p className="text-sm font-medium text-gray-900">{item.descripcion}</p>
+                          
+                          {/* Badge tipo de movimiento (solo para Kardex) */}
+                          {item.tipo === "KARDEX" && item.tipoMovimiento && (
+                            <span
+                              className={`px-3 py-1 text-xs font-bold rounded-full ${
+                                item.tipoMovimiento === "ENTRADA"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-red-600 text-white"
+                              }`}
+                            >
+                              {item.tipoMovimiento === "ENTRADA" ? "⬇️ ENTRADA" : "⬆️ SALIDA"}
+                            </span>
+                          )}
                         </div>
+                        
+                        <p className="text-sm font-medium text-gray-900 mb-3">{item.descripcion}</p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {/* Forma de cobro - EDITABLE */}
