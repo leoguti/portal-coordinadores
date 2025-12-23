@@ -272,8 +272,8 @@ export default function OrdenesServicioPage() {
                           </td>
                         </tr>
                       );
-                    })();
-                    })
+                    });
+                    })()}
                   </tbody>
                 </table>
               </div>

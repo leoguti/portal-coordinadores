@@ -1,3 +1,7 @@
 la orende de servicio es para que cobren para podenr pagar... ñlo ideal es que yo sepasa sobre que factura me cobraron .. se puede adicional la infromacion sobrcomo tesosreoro .. es decir que el tesorero referencia con que factura (del tercero) se cobro esta orden de servico . para psoterior auditoria. .
 hay que agrgar una interfaz para el catalogo tener en cuenta .. para el administrador 
 
+
+ > vamos a trabajr un poco explorando los datos ..   revisa la tabla de kardex .. ali se agrega centro de acopio en algunos caso y en tros no .. y luego se ponen
+   municipio en alginso caso segun entrada o salida.. explora doatso . y miremos el amanalisis  
+
