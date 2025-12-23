@@ -573,6 +573,44 @@ export async function getOrdenesCoordinador(
 }
 
 /**
+ * Get a single Orden de Servicio by ID with all its details
+ * @param ordenId - Airtable record ID of the orden
+ * @returns Orden record or null if not found
+ */
+export async function getOrdenById(ordenId: string): Promise<Orden | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return null;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Error fetching Orden ${ordenId}: ${response.status}`);
+      return null;
+    }
+
+    const orden: Orden = await response.json();
+    return orden;
+  } catch (error) {
+    console.error(`Error fetching Orden ${ordenId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Create a new Orden de Servicio with its items
  * This function:
  * 1. Creates the Orden record
