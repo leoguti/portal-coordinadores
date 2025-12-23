@@ -159,10 +159,16 @@ export default function NuevaOrdenPage() {
   };
 
   const calcularSubtotal = (item: ItemOrden) => {
+    if (item.tipo === "CATALOGO") {
+      // Catálogo: siempre Por Flete, precio unitario × cantidad
+      return item.precioUnitario * item.cantidad;
+    }
+    
+    // Kardex
     if (item.formaCobro === "Por Kilo") {
       return item.cantidad * item.precioUnitario;
     }
-    // Por Flete: cantidad siempre es 1, precio es fijo
+    // Por Flete: cantidad es 1, precio es fijo
     return item.precioUnitario;
   };
 
@@ -407,7 +413,12 @@ export default function NuevaOrdenPage() {
           {/* Items de la orden */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-900">Items</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Items</h3>
+                <p className="text-xs text-gray-600 mt-1">
+                  ℹ️ <strong>Nota:</strong> Items de Catálogo siempre son "Por Flete" (precio fijo). Puedes cambiar la cantidad (ej: 2 meses de arriendo).
+                </p>
+              </div>
               <button
                 onClick={() => setModalAbierto(true)}
                 className="px-4 py-2 bg-[#00d084] text-white rounded-lg hover:bg-[#00b872] transition-colors flex items-center gap-2"
@@ -486,25 +497,48 @@ export default function NuevaOrdenPage() {
 
                         {/* Cantidad */}
                         <td className="px-4 py-3 text-right">
-                          <span className={`text-sm font-mono font-semibold ${
-                            item.formaCobro === "Por Flete" ? "text-gray-400" : "text-gray-900"
-                          }`}>
-                            {item.formaCobro === "Por Flete" ? "1" : item.cantidad.toFixed(2)}
-                          </span>
+                          {item.tipo === "CATALOGO" ? (
+                            // Catálogo: cantidad editable
+                            <input
+                              type="number"
+                              value={item.cantidad}
+                              onChange={(e) =>
+                                actualizarItem(item.id, "cantidad", Number(e.target.value) || 1)
+                              }
+                              className="w-20 px-2 py-1 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                              min="1"
+                              step="1"
+                            />
+                          ) : (
+                            // Kardex: cantidad fija (depende de forma de cobro)
+                            <span className={`text-sm font-mono font-semibold ${
+                              item.formaCobro === "Por Flete" ? "text-gray-400" : "text-gray-900"
+                            }`}>
+                              {item.formaCobro === "Por Flete" ? "1" : item.cantidad.toFixed(2)}
+                            </span>
+                          )}
                         </td>
 
-                        {/* Forma de Cobro - EDITABLE */}
+                        {/* Forma de Cobro - EDITABLE solo para Kardex */}
                         <td className="px-4 py-3">
-                          <select
-                            value={item.formaCobro}
-                            onChange={(e) =>
-                              actualizarItem(item.id, "formaCobro", e.target.value)
-                            }
-                            className="w-full px-2 py-1.5 text-xs border-2 border-blue-400 rounded bg-blue-50 font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="Por Flete">Por Flete</option>
-                            <option value="Por Kilo">Por Kilo</option>
-                          </select>
+                          {item.tipo === "CATALOGO" ? (
+                            // Catálogo: siempre "Por Flete" (no editable)
+                            <div className="px-2 py-1.5 text-xs rounded bg-gray-100 font-semibold text-gray-600 text-center border border-gray-300">
+                              Por Flete (fijo)
+                            </div>
+                          ) : (
+                            // Kardex: editable
+                            <select
+                              value={item.formaCobro}
+                              onChange={(e) =>
+                                actualizarItem(item.id, "formaCobro", e.target.value)
+                              }
+                              className="w-full px-2 py-1.5 text-xs border-2 border-blue-400 rounded bg-blue-50 font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="Por Flete">Por Flete</option>
+                              <option value="Por Kilo">Por Kilo</option>
+                            </select>
+                          )}
                         </td>
 
                         {/* Precio Unitario - EDITABLE */}
