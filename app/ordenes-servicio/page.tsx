@@ -198,19 +198,10 @@ export default function OrdenesServicioPage() {
                           </td>
 
                           {/* Fecha */}
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-sm text-gray-700">
-                                {fechaPedido
-                                  ? new Date(fechaPedido).toLocaleDateString("es-CO")
-                                  : "Sin fecha"}
-                              </span>
-                              {!puedeEliminar && fechaPedido && (
-                                <span className="text-xs text-red-600 font-semibold">
-                                  🔒 Fuera de período
-                                </span>
-                              )}
-                            </div>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {fechaPedido
+                              ? new Date(fechaPedido).toLocaleDateString("es-CO")
+                              : "Sin fecha"}
                           </td>
 
                           {/* Beneficiario */}
@@ -237,12 +228,12 @@ export default function OrdenesServicioPage() {
                           {/* Acciones */}
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Botón Ver Detalle - SIEMPRE visible */}
+                              {/* Botón Ver Detalle - color CampoLimpio */}
                               <Link
                                 href={`/ordenes-servicio/${orden.id}`}
-                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                                className="px-3 py-1.5 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors whitespace-nowrap"
                               >
-                                Ver Detalle
+                                Ver
                               </Link>
 
                               {/* Botón Eliminar - solo si cumple restricción */}
@@ -253,7 +244,7 @@ export default function OrdenesServicioPage() {
                                       alert("Función eliminar en desarrollo");
                                     }
                                   }}
-                                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                  className="px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
                                   title="Eliminar orden"
                                 >
                                   Eliminar
