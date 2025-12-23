@@ -97,7 +97,7 @@ interface OrdenFields {
   "Fecha de pedido"?: string;
   ItemsOrden?: string[]; // Linked record IDs
   Observaciones?: string;
-  "Total de Ordenes"?: number; // Rollup: sum of ItemsOrden subtotals
+  Total?: number; // Rollup: sum of ItemsOrden subtotals
 }
 
 interface TerceroFields {
@@ -533,9 +533,8 @@ export async function getOrdenesCoordinador(
   }
 
   try {
-    // Fetch all orders and filter client-side
-    // TODO: Add idcoordinador lookup field in Airtable for server-side filtering
-    const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=Fecha de pedido&sort[0][direction]=desc`;
+    // Fetch orders sorted by NumeroOrden descending (most recent first)
+    const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=NumeroOrden&sort[0][direction]=desc`;
 
     console.log(`Fetching Ordenes for coordinator: ${coordinatorRecordId}`);
 

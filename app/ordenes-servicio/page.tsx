@@ -182,7 +182,7 @@ export default function OrdenesServicioPage() {
                       const fechaPedido = orden.fields["Fecha de pedido"] || "";
                       const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
                       const itemsCount = orden.fields.ItemsOrden?.length || 0;
-                      const total = orden.fields["Total de Ordenes"] || 0;
+                      const total = orden.fields.Total || 0;
                       const puedeEliminar = puedeEliminarOrden(fechaPedido);
 
                       const formatCurrency = (amount: number) => {
