@@ -50,6 +50,7 @@ export default function NuevaOrdenPage() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [tipoItemNuevo, setTipoItemNuevo] = useState<"KARDEX" | "CATALOGO">("KARDEX");
   const [busquedaItem, setBusquedaItem] = useState("");
+  const [filtroTipoMovimiento, setFiltroTipoMovimiento] = useState<string>("TODOS");
 
   // Form fields
   const [fechaPedido, setFechaPedido] = useState(
@@ -99,12 +100,13 @@ export default function NuevaOrdenPage() {
     const fecha = kardex.fields.fechakardex || "Sin fecha";
     const tipo = kardex.fields.TipoMovimiento || "";
     const kg = Math.abs(kardex.fields.Total || 0);
+    const numero = kardex.fields.Numero || "S/N";
 
     const nuevoItem: ItemOrden = {
       id: `item-${Date.now()}`,
       tipo: "KARDEX",
       kardexId: kardex.id,
-      descripcion: `Kardex ${fecha} - ${municipio} - ${tipo} (${kg.toFixed(2)} kg)`,
+      descripcion: `Kardex #${numero} - ${municipio} - ${fecha} - ${tipo} (${kg.toFixed(2)} kg)`,
       formaCobro: "Por Flete",
       cantidad: kg,
       precioUnitario: 0,
@@ -236,17 +238,81 @@ export default function NuevaOrdenPage() {
     }).format(amount);
   };
 
-  // Filtrar items según búsqueda
+  // Calcular fecha límite para mostrar registros
+  const getFechaLimite = () => {
+    const hoy = new Date();
+    const diaActual = hoy.getDate();
+    
+    let mesDesde, anioDesde;
+    
+    if (diaActual > 7) {
+      // Mostrar desde inicio del mes actual
+      mesDesde = hoy.getMonth();
+      anioDesde = hoy.getFullYear();
+    } else {
+      // Mostrar desde inicio del mes anterior
+      mesDesde = hoy.getMonth() - 1;
+      anioDesde = hoy.getFullYear();
+      if (mesDesde < 0) {
+        mesDesde = 11;
+        anioDesde -= 1;
+      }
+    }
+    
+    return new Date(anioDesde, mesDesde, 1);
+  };
+
+  // Filtrar items según búsqueda, tipo de movimiento y fecha
   const kardexFiltrados = kardexDisponibles.filter((k) => {
+    // Filtro de fecha - bloqueo día 7
+    if (k.fields.fechakardex) {
+      const fechaKardex = new Date(k.fields.fechakardex + 'T00:00:00');
+      const fechaLimite = getFechaLimite();
+      
+      if (fechaKardex < fechaLimite) {
+        return false;
+      }
+    }
+
+    // Filtro por tipo de movimiento
+    if (filtroTipoMovimiento !== "TODOS") {
+      const tipoMovimiento = k.fields.TipoMovimiento;
+      if (tipoMovimiento !== filtroTipoMovimiento) {
+        return false;
+      }
+    }
+
+    // Filtro de búsqueda
     if (!busquedaItem) return true;
     const searchLower = busquedaItem.toLowerCase();
     const municipio = k.fields["mundep (from MunicipioOrigen)"]?.[0] || "";
     const fecha = k.fields.fechakardex || "";
+    const numeroKardex = k.fields.Numero?.toString() || "";
     return (
       municipio.toLowerCase().includes(searchLower) ||
-      fecha.includes(busquedaItem)
+      fecha.includes(busquedaItem) ||
+      numeroKardex.includes(busquedaItem)
     );
   });
+
+  // Contar por tipo (aplicando filtro de fecha)
+  const contarPorTipo = (tipo: string) => {
+    return kardexDisponibles.filter((k) => {
+      // Aplicar filtro de fecha
+      if (k.fields.fechakardex) {
+        const fechaKardex = new Date(k.fields.fechakardex + 'T00:00:00');
+        const fechaLimite = getFechaLimite();
+        
+        if (fechaKardex < fechaLimite) {
+          return false;
+        }
+      }
+
+      // Aplicar filtro de tipo
+      if (tipo === "TODOS") return true;
+      return k.fields.TipoMovimiento === tipo;
+    }).length;
+  };
 
   const catalogoFiltrado = catalogoDisponibles.filter((c) => {
     if (!busquedaItem) return true;
@@ -526,13 +592,75 @@ export default function NuevaOrdenPage() {
                   onChange={(e) => setBusquedaItem(e.target.value)}
                   placeholder={
                     tipoItemNuevo === "KARDEX"
-                      ? "Buscar por municipio o fecha..."
+                      ? "Buscar por número, municipio o fecha..."
                       : "Buscar servicio..."
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   autoFocus
                 />
               </div>
+
+              {/* Filtros y aviso solo para Kardex */}
+              {tipoItemNuevo === "KARDEX" && (
+                <>
+                  {/* Aviso de restricción de fecha */}
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      ℹ️ <strong>Registros disponibles:</strong> Solo se muestran Kardex desde el{" "}
+                      <strong>
+                        {getFechaLimite().toLocaleDateString('es-CO', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </strong>
+                      {" "}hasta hoy.
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Los registros de meses bloqueados (anteriores al día 7) no están disponibles.
+                    </p>
+                  </div>
+
+                  {/* Filtro por tipo de movimiento */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Filtrar por tipo de movimiento
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFiltroTipoMovimiento("TODOS")}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          filtroTipoMovimiento === "TODOS"
+                            ? "bg-[#00d084] text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        Todos ({contarPorTipo("TODOS")})
+                      </button>
+                      <button
+                        onClick={() => setFiltroTipoMovimiento("ENTRADA")}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          filtroTipoMovimiento === "ENTRADA"
+                            ? "bg-green-600 text-white"
+                            : "bg-green-100 text-green-700 hover:bg-green-200"
+                        }`}
+                      >
+                        Entrada ({contarPorTipo("ENTRADA")})
+                      </button>
+                      <button
+                        onClick={() => setFiltroTipoMovimiento("SALIDA")}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          filtroTipoMovimiento === "SALIDA"
+                            ? "bg-red-600 text-white"
+                            : "bg-red-100 text-red-700 hover:bg-red-200"
+                        }`}
+                      >
+                        Salida ({contarPorTipo("SALIDA")})
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Lista de items */}
@@ -541,7 +669,10 @@ export default function NuevaOrdenPage() {
                 <div className="space-y-2">
                   {kardexFiltrados.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">
-                      No hay Kardex disponibles
+                      {filtroTipoMovimiento === "TODOS" 
+                        ? "No hay Kardex disponibles"
+                        : `No hay Kardex de tipo "${filtroTipoMovimiento}"`
+                      }
                     </p>
                   ) : (
                     kardexFiltrados.map((kardex) => {
@@ -551,6 +682,7 @@ export default function NuevaOrdenPage() {
                         : "Sin fecha";
                       const tipo = kardex.fields.TipoMovimiento || "N/A";
                       const kg = Math.abs(kardex.fields.Total || 0);
+                      const numero = kardex.fields.Numero || "S/N";
 
                       return (
                         <button
@@ -559,9 +691,14 @@ export default function NuevaOrdenPage() {
                           className="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-[#00d084] hover:bg-green-50 transition-colors"
                         >
                           <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {municipio} - {fecha}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-[#00d084] text-sm">#{numero}</span>
+                                <span className="text-gray-400">•</span>
+                                <span className="text-sm text-gray-600">{fecha}</span>
+                              </div>
+                              <p className="font-medium text-gray-900 mb-1">
+                                {municipio}
                               </p>
                               <p className="text-sm text-gray-600">
                                 <span
@@ -576,7 +713,7 @@ export default function NuevaOrdenPage() {
                                 {kg.toFixed(2)} kg
                               </p>
                             </div>
-                            <span className="text-[#00d084] font-medium">Agregar →</span>
+                            <span className="text-[#00d084] font-medium ml-4">Agregar →</span>
                           </div>
                         </button>
                       );
