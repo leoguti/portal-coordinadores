@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getOrdenById, type Orden } from "@/lib/airtable";
+import { getOrdenById, getItemsOrden, type Orden, type ItemOrden } from "@/lib/airtable";
 
 export default function OrdenDetallePage() {
   const params = useParams();
@@ -12,6 +12,7 @@ export default function OrdenDetallePage() {
   const ordenId = params.id as string;
 
   const [orden, setOrden] = useState<Orden | null>(null);
+  const [items, setItems] = useState<ItemOrden[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,14 +21,21 @@ export default function OrdenDetallePage() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getOrdenById(ordenId);
         
-        if (!data) {
+        // Cargar orden
+        const ordenData = await getOrdenById(ordenId);
+        
+        if (!ordenData) {
           setError("Orden no encontrada");
           return;
         }
         
-        setOrden(data);
+        setOrden(ordenData);
+        
+        // Cargar items de la orden
+        const itemsData = await getItemsOrden(ordenId);
+        setItems(itemsData);
+        
       } catch (err) {
         console.error("Error loading orden:", err);
         setError("Error al cargar la orden");
@@ -156,14 +164,87 @@ export default function OrdenDetallePage() {
             </div>
           </div>
 
-          {/* Items - Por implementar */}
+          {/* Items */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Items</h3>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800 text-sm">
-                ℹ️ Listado de items en desarrollo. Se mostrará la lista completa con detalles de cada Kardex/Servicio.
-              </p>
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Items de la Orden</h3>
+            
+            {items.length === 0 ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500">
+                No hay items en esta orden
+              </div>
+            ) : (
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripción</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Precio Unit.</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => {
+                      const tipoItem = item.fields.TipoItem || "";
+                      const formaCobro = item.fields.FormaCobro || "";
+                      const cantidad = item.fields.Cantidad || 0;
+                      const precioUnitario = item.fields.PrecioUnitario || 0;
+                      const subtotal = item.fields["Cálculo"] || (cantidad * precioUnitario);
+                      const nombre = item.fields.Name || "Sin nombre";
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-gray-200 ${
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          }`}
+                        >
+                          {/* Tipo */}
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2 py-1 text-xs font-bold rounded ${
+                                tipoItem === "CON Kardex"
+                                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                  : "bg-purple-100 text-purple-700 border border-purple-300"
+                              }`}
+                            >
+                              {tipoItem === "CON Kardex" ? "KARDEX" : "CATÁLOGO"}
+                            </span>
+                          </td>
+
+                          {/* Descripción/Nombre */}
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {nombre}
+                          </td>
+
+                          {/* Cantidad */}
+                          <td className="px-4 py-3 text-right text-sm font-mono text-gray-900">
+                            {cantidad.toFixed(2)}
+                          </td>
+
+                          {/* Forma de Cobro */}
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {formaCobro}
+                          </td>
+
+                          {/* Precio Unitario */}
+                          <td className="px-4 py-3 text-right text-sm font-mono text-gray-900">
+                            {formatCurrency(precioUnitario)}
+                          </td>
+
+                          {/* Subtotal */}
+                          <td className="px-4 py-3 text-right text-sm font-mono font-bold text-[#00d084]">
+                            {formatCurrency(subtotal)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Total */}
