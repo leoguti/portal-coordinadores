@@ -96,7 +96,7 @@ Si día_actual <= 7:
 | `ID Orden` | Text (Record ID) | ID interno de Airtable - NO se usa como referencia |
 | `Coordinador` | Link → Coordinadores | **Obligatorio** - una orden pertenece a un solo coordinador |
 | `Fecha de pedido` | Date | Fecha de creación de la orden |
-| `Estado` | Select | Estado actual de la orden |
+| `Estado` | Select | **Estados**: "Borrador" / "Enviada" / "Aprobada" / "Pagada" / "Rechazada" |
 | `Beneficiario` | Link → Terceros | **Obligatorio** - transportador/proveedor que cobra |
 | `ItemsOrden` | Link → ItemsOrden | Items que componen la orden |
 
@@ -404,8 +404,8 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 - La Orden de Servicio puede tener un Item SIN Kardex adicional para el cobro integral
 - 📌 **Nota**: Esto queda documentado como limitación conocida, no como error
 
-### 4. Bloqueo por fecha en Órdenes de Servicio
-- Las órdenes **también están sujetas a bloqueo por fecha** (día 7 del mes siguiente)
+**4. Bloqueo por fecha en Órdenes de Servicio:**
+- Las órdenes también están sujetas a bloqueo por fecha (día 7 del mes siguiente)
 - Órdenes de meses bloqueados:
   - ❌ No se pueden crear
   - ❌ No se pueden editar
@@ -413,22 +413,37 @@ El coordinador puede ser "Fulano el malo" de nuevo...
   - ✅ Solo lectura
 - ✔️ El criterio de bloqueo se aplica de forma **consistente a todo el sistema**
 
+**4b. Validación de fechas futuras:**
+- **NO se permiten fechas futuras** en ningún registro
+- Aplica a: Actividades, Kardex, Órdenes de Servicio
+- La fecha máxima permitida es **HOY** (fecha actual del servidor)
+- Mensaje de error sugerido: *"No se pueden registrar fechas futuras. La fecha máxima permitida es hoy."*
+
 ### 5. Servicios SIN Kardex
 - **SÍ existe un listado formal**, pero la tabla **NO existe aún en Airtable**
-- **Acción requerida**: Crear nueva tabla **"ServiciosSinKardex"** (o nombre similar)
-- Campos sugeridos:
-  - `Nombre` - Descripción del servicio
-  - `Tipo` - Categoría (procesamiento, etc.)
-  - `UnidadMedida` - Para cálculo de precio
+- **Acción requerida**: Crear nueva tabla **"CatalogoServicios"**
+
+#### Tabla: CatalogoServicios
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Nombre` | Text | Nombre del servicio (ej: "Procesamiento en planta", "Clasificación manual") |
+| `Descripcion` | Long Text | Descripción detallada del servicio |
+| `Categoria` | Select | Tipo de servicio (ej: "Procesamiento", "Clasificación", "Almacenamiento") |
+| `UnidadMedida` | Select | "Por Flete" / "Por Kilo" / "Por Hora" / "Otro" |
+| `Activo` | Checkbox | Si el servicio está disponible para selección |
+
 - Los coordinadores **NO crean servicios libres** - solo seleccionan del catálogo
 - 📌 Esto mejora control y estandarización
 
-### 6. Forma de cobro (por kilo / por flete)
+**6. Forma de cobro (por kilo / por flete):**
 - Se define **a nivel de ITEM** de la Orden de Servicio
 - **NO se hereda** del Kardex ni del Tercero
 - Cada item define explícitamente:
   - Tipo de cobro: "Por Flete" / "Por Kilo"
   - Valores asociados (precio unitario, cantidad, etc.)
+- **Por Kilo**: El precio es por **kg total** del movimiento, NO por tipo de material
+  - Ejemplo: 1000 kg totales × $50/kg = $50,000
+  - No se discrimina entre Reciclaje, Incineración, Flexibles, etc.
 - ✔️ Máxima flexibilidad, controlada por item
 
 ### 7. Convenios con municipios
@@ -452,6 +467,15 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 
 ## 📝 PENDIENTES Y PREGUNTAS ABIERTAS
 
+### Implementación en Airtable
+- [ ] Crear tabla **CatalogoServicios** con campos definidos
+- [ ] Agregar campo `EstadoPago` (Select) en tabla Kardex
+- [ ] Agregar campo `NumeroOrden` (Autonumber) en tabla Ordenes
+- [ ] Agregar campo `Coordinador` (Link) en tabla Ordenes
+- [ ] Agregar campo `Beneficiario` (Link → Terceros) en tabla Ordenes
+- [ ] Actualizar campo `Estado` en Ordenes con valores: Borrador, Enviada, Aprobada, Pagada, Rechazada
+- [ ] Agregar campos en ItemsOrden: `TipoItem`, `Servicio`, `FormaCobro`
+
 ### Chatbot
 - [ ] ¿Cuándo se mejorará el flujo del chatbot para preguntar `EstadoPago`?
 - [ ] ¿Quién implementa las mejoras del chatbot? (¿equipo externo o interno?)
@@ -473,9 +497,16 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 - [ ] ¿Se requiere aprobación adicional para Caja Menor?
 - [ ] Definir flujo completo del módulo (dejado para fase futura)
 
-### Otras Entidades que Cobran
-- [ ] Definir si se necesita tabla adicional o campo específico
-- [ ] Ejemplos de entidades que NO son gestores pero cobran servicios
+---
+
+## ✅ AMBIGÜEDADES RESUELTAS
+
+Las siguientes preguntas ya fueron aclaradas y documentadas:
+
+1. ✅ **Tabla ServiciosSinKardex**: Se llamará **CatalogoServicios**, campos definidos
+2. ✅ **Estados de Orden**: Borrador, Enviada, Aprobada, Pagada, Rechazada
+3. ✅ **Fechas futuras**: NO se permiten en ningún registro (máximo HOY)
+4. ✅ **Precio por kilo**: Es sobre kg TOTAL del movimiento, no por tipo de material
 
 ---
 

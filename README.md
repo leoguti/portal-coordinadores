@@ -65,6 +65,29 @@ Ejecuta ESLint para verificar la calidad del código:
 npm run lint
 ```
 
+### Tests
+
+Ejecuta tests automatizados con Vitest:
+
+```bash
+# Ejecutar tests en modo watch (recomendado durante desarrollo)
+npm test
+
+# Ejecutar tests una vez
+npm run test:run
+
+# Ejecutar tests con interfaz visual
+npm run test:ui
+
+# Ejecutar tests con reporte de cobertura
+npm run test:coverage
+```
+
+Los tests están ubicados en:
+- `lib/__tests__/` - Tests de utilidades y funciones
+- `components/__tests__/` - Tests de componentes React
+- `app/api/**/__tests__/` - Tests de API routes (próximamente)
+
 ## 📁 Estructura del Proyecto
 
 ```

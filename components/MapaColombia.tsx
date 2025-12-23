@@ -38,9 +38,17 @@ export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredMunicipio, setHoveredMunicipio] = useState<MunicipioActividades | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const mapRef = useRef<LeafletMap | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const geojsonLayerRef = useRef<LeafletGeoJSON | null>(null);
+  const initializingRef = useRef(false);
+
+  // Marcar como montado solo en cliente
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Crear mapa de actividades por código DIVIPOLA - memoizado
   const actividadesMap = useMemo(() => {
