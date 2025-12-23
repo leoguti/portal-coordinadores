@@ -222,7 +222,7 @@ export default function NuevaOrdenPage() {
         fechaPedido,
         observaciones: observaciones.trim() || undefined,
         items,
-        estado: "Borrador",
+        estado: "Enviada", // Crear directamente como "Enviada" - no hay borrador
       });
 
       router.push("/ordenes-servicio");
@@ -281,8 +281,12 @@ export default function NuevaOrdenPage() {
     return new Date(anioDesde, mesDesde, 1);
   };
 
-  // Filtrar items según búsqueda, tipo de movimiento y fecha
+  // Filtrar items según búsqueda, tipo de movimiento, fecha Y que no estén ya agregados
   const kardexFiltrados = kardexDisponibles.filter((k) => {
+    // Excluir Kardex ya agregados temporalmente a la orden
+    const yaAgregado = itemsOrden.some(item => item.kardexId === k.id);
+    if (yaAgregado) return false;
+
     // Filtro de fecha - bloqueo día 7
     if (k.fields.fechakardex) {
       const fechaKardex = new Date(k.fields.fechakardex + 'T00:00:00');
@@ -314,9 +318,13 @@ export default function NuevaOrdenPage() {
     );
   });
 
-  // Contar por tipo (aplicando filtro de fecha)
+  // Contar por tipo (aplicando filtro de fecha Y excluyendo ya agregados)
   const contarPorTipo = (tipo: string) => {
     return kardexDisponibles.filter((k) => {
+      // Excluir ya agregados
+      const yaAgregado = itemsOrden.some(item => item.kardexId === k.id);
+      if (yaAgregado) return false;
+
       // Aplicar filtro de fecha
       if (k.fields.fechakardex) {
         const fechaKardex = new Date(k.fields.fechakardex + 'T00:00:00');
