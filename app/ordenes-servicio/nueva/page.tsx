@@ -600,20 +600,23 @@ export default function NuevaOrdenPage() {
                         </td>
                       </tr>
                     ))}
+                    
+                    {/* Fila de TOTAL dentro de la tabla */}
+                    <tr className="bg-gray-100 border-t-2 border-gray-400">
+                      <td colSpan={5} className="px-4 py-4 text-right">
+                        <span className="text-xl font-bold text-gray-900">TOTAL:</span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <span className="text-2xl font-bold text-[#00d084]">
+                          {formatCurrency(calcularTotal())}
+                        </span>
+                      </td>
+                      <td></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
             )}
-          </div>
-
-          {/* Total */}
-          <div className="border-t-2 border-gray-300 pt-4 mt-6">
-            <div className="flex justify-between items-center">
-              <span className="text-xl font-bold text-gray-900">TOTAL:</span>
-              <span className="text-2xl font-bold text-[#00d084]">
-                {formatCurrency(calcularTotal())}
-              </span>
-            </div>
           </div>
 
           {/* Observaciones */}
