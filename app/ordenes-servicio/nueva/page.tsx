@@ -411,103 +411,118 @@ export default function NuevaOrdenPage() {
                 No hay items agregados. Haz clic en "Agregar Item" para empezar.
               </div>
             ) : (
-              <div className="space-y-2">
-                {itemsOrden.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {/* Badge tipo de item */}
-                          <span
-                            className={`px-3 py-1 text-xs font-bold rounded-full ${
-                              item.tipo === "KARDEX"
-                                ? "bg-blue-600 text-white"
-                                : "bg-purple-600 text-white"
-                            }`}
-                          >
-                            {item.tipo === "KARDEX" ? "📦 KARDEX" : "📋 CATÁLOGO"}
-                          </span>
-                          
-                          {/* Badge tipo de movimiento (solo para Kardex) */}
-                          {item.tipo === "KARDEX" && item.tipoMovimiento && (
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                {/* Tabla tipo factura */}
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripción</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Precio Unit.</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Subtotal</th>
+                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemsOrden.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        className={`border-b border-gray-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        }`}
+                      >
+                        {/* Tipo */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
                             <span
-                              className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                item.tipoMovimiento === "ENTRADA"
-                                  ? "bg-green-600 text-white"
-                                  : "bg-red-600 text-white"
+                              className={`px-2 py-1 text-xs font-bold rounded text-center ${
+                                item.tipo === "KARDEX"
+                                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                  : "bg-purple-100 text-purple-700 border border-purple-300"
                               }`}
                             >
-                              {item.tipoMovimiento === "ENTRADA" ? "⬇️ ENTRADA" : "⬆️ SALIDA"}
+                              {item.tipo}
                             </span>
-                          )}
-                        </div>
-                        
-                        <p className="text-sm font-medium text-gray-900 mb-3">{item.descripcion}</p>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {/* Forma de cobro - EDITABLE */}
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">
-                              Forma de cobro ✏️
-                            </label>
-                            <select
-                              value={item.formaCobro}
-                              onChange={(e) =>
-                                actualizarItem(item.id, "formaCobro", e.target.value)
-                              }
-                              className="w-full px-3 py-2 text-sm border-2 border-[#00d084] rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084] bg-white font-medium"
-                            >
-                              <option value="Por Flete">Por Flete</option>
-                              <option value="Por Kilo">Por Kilo</option>
-                            </select>
+                            {item.tipo === "KARDEX" && item.tipoMovimiento && (
+                              <span
+                                className={`px-2 py-1 text-xs font-bold rounded text-center ${
+                                  item.tipoMovimiento === "ENTRADA"
+                                    ? "bg-green-100 text-green-700 border border-green-300"
+                                    : "bg-red-100 text-red-700 border border-red-300"
+                                }`}
+                              >
+                                {item.tipoMovimiento}
+                              </span>
+                            )}
                           </div>
+                        </td>
 
-                          {/* Precio unitario - EDITABLE */}
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">
-                              Precio unitario ✏️
-                            </label>
-                            <input
-                              type="number"
-                              value={item.precioUnitario || ''}
-                              onChange={(e) =>
-                                actualizarItem(item.id, "precioUnitario", Number(e.target.value))
-                              }
-                              placeholder="Ingrese precio"
-                              className="w-full px-3 py-2 text-sm border-2 border-[#00d084] rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084] bg-white font-medium"
-                              min="0"
-                              step="1000"
-                            />
-                          </div>
+                        {/* Descripción */}
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-gray-900 font-medium">{item.descripcion}</p>
+                        </td>
 
-                          {/* Subtotal - NO EDITABLE */}
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">
-                              Subtotal 🔒
-                            </label>
-                            <div className="px-3 py-2 text-sm font-bold text-white bg-[#00d084] rounded-lg text-center">
-                              {formatCurrency(calcularSubtotal(item))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        {/* Cantidad */}
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-mono font-semibold text-gray-900">
+                            {item.cantidad.toFixed(2)}
+                          </span>
+                        </td>
 
-                      {/* Botón eliminar */}
-                      <button
-                        onClick={() => eliminarItem(item.id)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Eliminar item"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                        {/* Forma de Cobro - EDITABLE */}
+                        <td className="px-4 py-3">
+                          <select
+                            value={item.formaCobro}
+                            onChange={(e) =>
+                              actualizarItem(item.id, "formaCobro", e.target.value)
+                            }
+                            className="w-full px-2 py-1 text-xs border-2 border-blue-400 rounded bg-blue-50 font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="Por Flete">Por Flete</option>
+                            <option value="Por Kilo">Por Kilo</option>
+                          </select>
+                        </td>
+
+                        {/* Precio Unitario - EDITABLE */}
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            value={item.precioUnitario || ''}
+                            onChange={(e) =>
+                              actualizarItem(item.id, "precioUnitario", Number(e.target.value))
+                            }
+                            placeholder="$0"
+                            className="w-full px-2 py-1 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                            min="0"
+                            step="1000"
+                          />
+                        </td>
+
+                        {/* Subtotal - CALCULADO */}
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-mono font-bold text-[#00d084]">
+                            {formatCurrency(calcularSubtotal(item))}
+                          </span>
+                        </td>
+
+                        {/* Botón Eliminar */}
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => eliminarItem(item.id)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                            title="Eliminar item"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
