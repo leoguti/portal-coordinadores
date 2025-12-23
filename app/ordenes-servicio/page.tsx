@@ -61,7 +61,6 @@ export default function OrdenesServicioPage() {
   }
 
   const estadoColors: Record<string, string> = {
-    Borrador: "bg-gray-100 text-gray-800",
     Enviada: "bg-blue-100 text-blue-800",
     Aprobada: "bg-green-100 text-green-800",
     Pagada: "bg-green-600 text-white",
