@@ -533,8 +533,8 @@ export async function getOrdenesCoordinador(
   }
 
   try {
-    // Fetch orders sorted by NumeroOrden descending (most recent first)
-    const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=NumeroOrden&sort[0][direction]=desc`;
+    // Fetch orders sorted by NumeroOrden ascending (oldest first: #1, #2, #3...)
+    const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=NumeroOrden&sort[0][direction]=asc`;
 
     console.log(`Fetching Ordenes for coordinator: ${coordinatorRecordId}`);
 
