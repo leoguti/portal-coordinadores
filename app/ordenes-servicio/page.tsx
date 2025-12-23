@@ -68,6 +68,26 @@ export default function OrdenesServicioPage() {
     Rechazada: "bg-red-100 text-red-800",
   };
 
+  // Verificar si una orden puede ser eliminada (restricción de fecha día 7)
+  const puedeEliminarOrden = (fechaPedido: string): boolean => {
+    if (!fechaPedido) return false;
+    
+    const fechaOrden = new Date(fechaPedido + 'T00:00:00');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const diaActual = hoy.getDate();
+    
+    if (diaActual > 7) {
+      // Después del día 7: solo mes actual
+      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      return fechaOrden >= inicioMesActual;
+    } else {
+      // Días 1-7: mes anterior y actual
+      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      return fechaOrden >= inicioMesAnterior;
+    }
+  };
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -131,75 +151,112 @@ export default function OrdenesServicioPage() {
                 </Link>
               </div>
             ) : (
-              /* Grid de Cards */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ordenes.map((orden) => {
-                  const numeroOrden = orden.fields.NumeroOrden || "S/N";
-                  const estado = orden.fields.Estado || "Sin estado";
-                  const fechaPedido = orden.fields["Fecha de pedido"] || "Sin fecha";
-                  const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
-                  const itemsCount = orden.fields.ItemsOrden?.length || 0;
+              /* Tabla de órdenes */
+              <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
+                        # Orden
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
+                        Fecha
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
+                        Beneficiario
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
+                        Estado
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
+                        Items
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordenes.map((orden, index) => {
+                      const numeroOrden = orden.fields.NumeroOrden || "S/N";
+                      const estado = orden.fields.Estado || "Sin estado";
+                      const fechaPedido = orden.fields["Fecha de pedido"] || "";
+                      const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
+                      const itemsCount = orden.fields.ItemsOrden?.length || 0;
+                      const puedeEliminar = puedeEliminarOrden(fechaPedido);
 
-                  return (
-                    <div
-                      key={orden.id}
-                      className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-200"
-                    >
-                      {/* Header de la card */}
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Orden #{numeroOrden}
-                        </h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            estadoColors[estado] || "bg-gray-100 text-gray-800"
-                          }`}
+                      return (
+                        <tr
+                          key={orden.id}
+                          className={`border-b border-gray-200 ${
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          } hover:bg-blue-50 transition-colors`}
                         >
-                          {estado}
-                        </span>
-                      </div>
+                          {/* Número de Orden */}
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-[#00d084]">#{numeroOrden}</span>
+                          </td>
 
-                      {/* Detalles */}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center text-gray-600">
-                          <span className="mr-2">📅</span>
-                          <span>{fechaPedido}</span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <span className="mr-2">👤</span>
-                          <span className="truncate" title={beneficiario}>
+                          {/* Fecha */}
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {fechaPedido
+                              ? new Date(fechaPedido).toLocaleDateString("es-CO")
+                              : "Sin fecha"}
+                          </td>
+
+                          {/* Beneficiario */}
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                             {beneficiario}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <span className="mr-2">📋</span>
-                          <span>{itemsCount} {itemsCount === 1 ? "item" : "items"}</span>
-                        </div>
-                      </div>
+                          </td>
 
-                      {/* Observaciones (si existen) */}
-                      {orden.fields.Observaciones && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-500 line-clamp-2">
-                            {orden.fields.Observaciones}
-                          </p>
-                        </div>
-                      )}
+                          {/* Estado */}
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                                estadoColors[estado] || "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {estado}
+                            </span>
+                          </td>
 
-                      {/* Botón de editar (solo si es borrador) */}
-                      {estado === "Borrador" && (
-                        <div className="mt-4">
-                          <Link
-                            href={`/ordenes-servicio/editar/${orden.id}`}
-                            className="block w-full text-center px-4 py-2 border-2 border-[#00d084] text-[#00d084] hover:bg-[#e6f9f3] rounded-lg transition-colors font-medium"
-                          >
-                            ✏️ Editar Orden
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          {/* Items Count */}
+                          <td className="px-4 py-3 text-center text-sm text-gray-600">
+                            {itemsCount} {itemsCount === 1 ? "item" : "items"}
+                          </td>
+
+                          {/* Acciones */}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Botón Ver Detalle */}
+                              <Link
+                                href={`/ordenes-servicio/${orden.id}`}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                              >
+                                Ver Detalle
+                              </Link>
+
+                              {/* Botón Eliminar (solo si cumple restricción) */}
+                              {puedeEliminar && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`¿Eliminar orden #${numeroOrden}?`)) {
+                                      alert("Función eliminar en desarrollo");
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                  title="Eliminar orden"
+                                >
+                                  Eliminar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </>
