@@ -606,19 +606,13 @@ export default function NuevaOrdenPage() {
             )}
           </div>
 
-          {/* Total - Alineado con columna Subtotal */}
-          <div className="border-t-2 border-gray-300 pt-4 mt-0">
-            <div className="grid" style={{ gridTemplateColumns: '130px auto 100px 140px 140px 130px 70px' }}>
-              <div className="col-span-5"></div>
-              <div className="px-4 py-3 text-right">
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-sm font-semibold text-gray-700 uppercase">Total:</span>
-                  <span className="text-3xl font-bold text-[#00d084]">
-                    {formatCurrency(calcularTotal())}
-                  </span>
-                </div>
-              </div>
-              <div></div>
+          {/* Total */}
+          <div className="border-t-2 border-gray-300 pt-4 mt-6">
+            <div className="flex justify-between items-center">
+              <span className="text-xl font-bold text-gray-900">TOTAL:</span>
+              <span className="text-2xl font-bold text-[#00d084]">
+                {formatCurrency(calcularTotal())}
+              </span>
             </div>
           </div>
 
