@@ -236,17 +236,17 @@ export default function OrdenesServicioPage() {
 
                           {/* Acciones */}
                           <td className="px-4 py-3">
-                            {puedeEliminar ? (
-                              <div className="flex items-center justify-end gap-2">
-                                {/* Botón Ver Detalle */}
-                                <Link
-                                  href={`/ordenes-servicio/${orden.id}`}
-                                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
-                                >
-                                  Ver Detalle
-                                </Link>
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Botón Ver Detalle - SIEMPRE visible */}
+                              <Link
+                                href={`/ordenes-servicio/${orden.id}`}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                              >
+                                Ver Detalle
+                              </Link>
 
-                                {/* Botón Eliminar */}
+                              {/* Botón Eliminar - solo si cumple restricción */}
+                              {puedeEliminar && (
                                 <button
                                   onClick={() => {
                                     if (confirm(`¿Eliminar orden #${numeroOrden}?`)) {
@@ -258,14 +258,8 @@ export default function OrdenesServicioPage() {
                                 >
                                   Eliminar
                                 </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-end">
-                                <span className="text-xs text-gray-400 italic">
-                                  Sin acciones disponibles
-                                </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
