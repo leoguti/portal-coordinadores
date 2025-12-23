@@ -607,29 +607,106 @@ export default function NuevaOrdenPage() {
             />
           </div>
 
-          {/* Error */}
+          {/* Error general */}
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
 
-          {/* Botones */}
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-300">
-            <Link
-              href="/ordenes-servicio"
-              className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancelar
-            </Link>
+          {/* Botones y Validaciones */}
+          <div className="mt-6 pt-6 border-t border-gray-300">
+            <div className="flex items-start justify-between gap-6">
+              {/* Lista de validaciones a la izquierda */}
+              <div className="flex-1">
+                {(() => {
+                  const errores = [];
+                  
+                  // Validar fecha
+                  if (!fechaPedido) {
+                    errores.push("⚠️ Falta seleccionar fecha de pedido");
+                  } else {
+                    const fechaSeleccionada = new Date(fechaPedido + 'T00:00:00');
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    
+                    // Validar que no sea futura
+                    if (fechaSeleccionada > hoy) {
+                      errores.push("⚠️ La fecha no puede ser futura");
+                    }
+                    
+                    // Validar bloqueo día 7
+                    const diaActual = hoy.getDate();
+                    if (diaActual > 7) {
+                      // Bloquear registros del mes anterior
+                      const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+                      if (fechaSeleccionada < mesAnterior) {
+                        errores.push("⚠️ La fecha está en un mes bloqueado (después del día 7)");
+                      }
+                    }
+                  }
+                  
+                  // Validar beneficiario
+                  if (!beneficiario) {
+                    errores.push("⚠️ Falta seleccionar beneficiario");
+                  }
+                  
+                  // Validar items
+                  if (itemsOrden.length === 0) {
+                    errores.push("⚠️ No hay items agregados a la orden");
+                  } else {
+                    // Validar cada item
+                    itemsOrden.forEach((item, index) => {
+                      if (!item.precioUnitario || item.precioUnitario <= 0) {
+                        errores.push(`⚠️ Item ${index + 1}: Falta precio unitario`);
+                      }
+                      if (item.tipo === "CATALOGO" && (!item.cantidad || item.cantidad <= 0)) {
+                        errores.push(`⚠️ Item ${index + 1}: Cantidad debe ser mayor a 0`);
+                      }
+                    });
+                  }
+                  
+                  if (errores.length === 0) {
+                    return (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-800 text-sm font-semibold">✅ Orden lista para crear</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                      <p className="text-yellow-900 text-sm font-bold mb-2">Falta completar:</p>
+                      <ul className="space-y-1">
+                        {errores.map((error, idx) => (
+                          <li key={idx} className="text-yellow-800 text-xs">
+                            {error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
+              </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || itemsOrden.length === 0 || !beneficiario}
-              className="px-8 py-3 bg-[#00d084] text-white rounded-lg hover:bg-[#00b872] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-            >
-              {submitting ? "Creando..." : "Crear Orden de Servicio"}
-            </button>
+              {/* Botones a la derecha */}
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/ordenes-servicio"
+                  className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancelar
+                </Link>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || itemsOrden.length === 0 || !beneficiario || !fechaPedido}
+                  className="px-8 py-3 bg-[#00d084] text-white rounded-lg hover:bg-[#00b872] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
+                >
+                  {submitting ? "Creando..." : "Crear Orden de Servicio"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
