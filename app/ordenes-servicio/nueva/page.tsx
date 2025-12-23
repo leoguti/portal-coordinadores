@@ -378,9 +378,32 @@ export default function NuevaOrdenPage() {
                 value={fechaPedido}
                 onChange={(e) => setFechaPedido(e.target.value)}
                 max={new Date().toISOString().split("T")[0]}
+                min={(() => {
+                  const hoy = new Date();
+                  const diaActual = hoy.getDate();
+                  
+                  if (diaActual > 7) {
+                    // Si ya pasó día 7, permitir desde inicio del mes actual
+                    return new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split("T")[0];
+                  } else {
+                    // Si no ha llegado día 7, permitir desde inicio del mes anterior
+                    return new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toISOString().split("T")[0];
+                  }
+                })()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                📅 Solo fechas desde {(() => {
+                  const hoy = new Date();
+                  const diaActual = hoy.getDate();
+                  if (diaActual > 7) {
+                    return new Date(hoy.getFullYear(), hoy.getMonth(), 1).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+                  } else {
+                    return new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+                  }
+                })()} hasta hoy
+              </p>
             </div>
 
             {/* Beneficiario */}
