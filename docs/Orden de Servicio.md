@@ -468,13 +468,9 @@ El coordinador puede ser "Fulano el malo" de nuevo...
 ## 📝 PENDIENTES Y PREGUNTAS ABIERTAS
 
 ### Implementación en Airtable
-- [ ] Crear tabla **CatalogoServicios** con campos definidos
-- [ ] Agregar campo `EstadoPago` (Select) en tabla Kardex
-- [ ] Agregar campo `NumeroOrden` (Autonumber) en tabla Ordenes
-- [ ] Agregar campo `Coordinador` (Link) en tabla Ordenes
-- [ ] Agregar campo `Beneficiario` (Link → Terceros) en tabla Ordenes
-- [ ] Actualizar campo `Estado` en Ordenes con valores: Borrador, Enviada, Aprobada, Pagada, Rechazada
-- [ ] Agregar campos en ItemsOrden: `TipoItem`, `Servicio`, `FormaCobro`
+📋 **Ver documento detallado:** [`IMPLEMENTACION_PARTE1_AIRTABLE.md`](./IMPLEMENTACION_PARTE1_AIRTABLE.md)
+
+Este documento contiene la lista completa de tareas con subtareas detalladas y espacios para notas.
 
 ### Chatbot
 - [ ] ¿Cuándo se mejorará el flujo del chatbot para preguntar `EstadoPago`?

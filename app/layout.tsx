@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portal Coordinadores",
-  description: "Portal de gestión para coordinadores",
+  title: "Portal Coordinadores - CampoLimpio",
+  description: "Portal de gestión para coordinadores de CampoLimpio",
+  icons: {
+    icon: '/favicon-campolimpio.png',
+    apple: '/favicon-campolimpio.png',
+  },
 };
 
 export default function RootLayout({

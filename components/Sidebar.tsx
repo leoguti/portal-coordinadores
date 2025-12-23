@@ -9,17 +9,21 @@ const navItems = [
   { name: "Actividades", href: "/actividades", icon: "📋" },
   { name: "Certificados", href: "/certificados", icon: "📜" },
   { name: "Kardex", href: "/kardex", icon: "📦" },
-  { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧", disabled: true },
+  { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
+    <aside className="w-64 bg-[#042726] text-white min-h-screen flex flex-col">
       <div className="p-6 border-b border-gray-700">
-        <h1 className="text-xl font-bold">Portal Campolimpio</h1>
-        <p className="text-sm text-gray-400 mt-1">Coordinadores</p>
+        <img 
+          src="/logo-campolimpio-white.png" 
+          alt="CampoLimpio" 
+          className="h-12 w-auto mb-2"
+        />
+        <p className="text-sm text-gray-300 mt-1">Portal Coordinadores</p>
       </div>
 
       <nav className="flex-1 p-4">
@@ -41,8 +45,8 @@ export default function Sidebar() {
                     href={item.href}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-300 hover:bg-gray-800"
+                        ? "bg-[#00d084] text-white"
+                        : "text-gray-300 hover:bg-[#032120]"
                     }`}
                   >
                     <span>{item.icon}</span>
