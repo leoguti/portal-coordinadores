@@ -164,9 +164,6 @@ export default function OrdenesServicioPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                         Beneficiario
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Estado
-                      </th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
                         Items
                       </th>
@@ -206,17 +203,6 @@ export default function OrdenesServicioPage() {
                           {/* Beneficiario */}
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                             {beneficiario}
-                          </td>
-
-                          {/* Estado */}
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                estadoColors[estado] || "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {estado}
-                            </span>
                           </td>
 
                           {/* Items Count */}
