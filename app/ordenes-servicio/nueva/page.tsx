@@ -100,7 +100,7 @@ export default function NuevaOrdenPage() {
     const fecha = kardex.fields.fechakardex || "Sin fecha";
     const tipo = kardex.fields.TipoMovimiento || "";
     const kg = Math.abs(kardex.fields.Total || 0);
-    const numero = kardex.fields.Numero || "S/N";
+    const numero = kardex.fields.idkardex || "S/N";
 
     const nuevoItem: ItemOrden = {
       id: `item-${Date.now()}`,
@@ -287,7 +287,7 @@ export default function NuevaOrdenPage() {
     const searchLower = busquedaItem.toLowerCase();
     const municipio = k.fields["mundep (from MunicipioOrigen)"]?.[0] || "";
     const fecha = k.fields.fechakardex || "";
-    const numeroKardex = k.fields.Numero?.toString() || "";
+    const numeroKardex = k.fields.idkardex?.toString() || "";
     return (
       municipio.toLowerCase().includes(searchLower) ||
       fecha.includes(busquedaItem) ||
@@ -431,40 +431,47 @@ export default function NuevaOrdenPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {/* Forma de cobro */}
+                          {/* Forma de cobro - EDITABLE */}
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">Forma de cobro</label>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Forma de cobro ✏️
+                            </label>
                             <select
                               value={item.formaCobro}
                               onChange={(e) =>
                                 actualizarItem(item.id, "formaCobro", e.target.value)
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                              className="w-full px-3 py-2 text-sm border-2 border-[#00d084] rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084] bg-white font-medium"
                             >
                               <option value="Por Flete">Por Flete</option>
                               <option value="Por Kilo">Por Kilo</option>
                             </select>
                           </div>
 
-                          {/* Precio unitario */}
+                          {/* Precio unitario - EDITABLE */}
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">Precio unitario</label>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Precio unitario ✏️
+                            </label>
                             <input
                               type="number"
-                              value={item.precioUnitario}
+                              value={item.precioUnitario || ''}
                               onChange={(e) =>
                                 actualizarItem(item.id, "precioUnitario", Number(e.target.value))
                               }
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                              placeholder="Ingrese precio"
+                              className="w-full px-3 py-2 text-sm border-2 border-[#00d084] rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084] bg-white font-medium"
                               min="0"
                               step="1000"
                             />
                           </div>
 
-                          {/* Subtotal */}
+                          {/* Subtotal - NO EDITABLE */}
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">Subtotal</label>
-                            <div className="px-2 py-1 text-sm font-bold text-[#00d084] bg-white border border-gray-300 rounded">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Subtotal 🔒
+                            </label>
+                            <div className="px-3 py-2 text-sm font-bold text-white bg-[#00d084] rounded-lg text-center">
                               {formatCurrency(calcularSubtotal(item))}
                             </div>
                           </div>
@@ -682,7 +689,7 @@ export default function NuevaOrdenPage() {
                         : "Sin fecha";
                       const tipo = kardex.fields.TipoMovimiento || "N/A";
                       const kg = Math.abs(kardex.fields.Total || 0);
-                      const numero = kardex.fields.Numero || "S/N";
+                      const numero = kardex.fields.idkardex || "S/N";
 
                       return (
                         <button
