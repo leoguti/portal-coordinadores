@@ -926,7 +926,7 @@ export async function getTerceroById(terceroId: string): Promise<Tercero | null>
  * Get active services from CatalogoServicios
  */
 export async function getCatalogoServicios(): Promise<CatalogoServicio[]> {
-  const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
+  const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
   const BASE_ID = process.env.AIRTABLE_BASE_ID;
   const TABLE_ID_CATALOGO = process.env.AIRTABLE_TABLE_ID_CATALOGOSERVICIOS || "tblIrrr5gmebTtMH8";
 
