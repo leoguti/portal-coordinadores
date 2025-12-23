@@ -97,6 +97,7 @@ interface OrdenFields {
   "Fecha de pedido"?: string;
   ItemsOrden?: string[]; // Linked record IDs
   Observaciones?: string;
+  "Total de Ordenes"?: number; // Rollup: sum of ItemsOrden subtotals
 }
 
 interface TerceroFields {

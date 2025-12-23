@@ -168,6 +168,9 @@ export default function OrdenesServicioPage() {
                         Items
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
                         Acciones
                       </th>
                     </tr>
@@ -179,7 +182,16 @@ export default function OrdenesServicioPage() {
                       const fechaPedido = orden.fields["Fecha de pedido"] || "";
                       const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
                       const itemsCount = orden.fields.ItemsOrden?.length || 0;
+                      const total = orden.fields["Total de Ordenes"] || 0;
                       const puedeEliminar = puedeEliminarOrden(fechaPedido);
+
+                      const formatCurrency = (amount: number) => {
+                        return new Intl.NumberFormat("es-CO", {
+                          style: "currency",
+                          currency: "COP",
+                          minimumFractionDigits: 0,
+                        }).format(amount);
+                      };
 
                       return (
                         <tr
@@ -208,6 +220,13 @@ export default function OrdenesServicioPage() {
                           {/* Items Count */}
                           <td className="px-4 py-3 text-center text-sm text-gray-600">
                             {itemsCount} {itemsCount === 1 ? "item" : "items"}
+                          </td>
+
+                          {/* Total */}
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm font-bold text-[#00d084] font-mono">
+                              {formatCurrency(total)}
+                            </span>
                           </td>
 
                           {/* Acciones */}
