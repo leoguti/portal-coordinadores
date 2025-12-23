@@ -13,6 +13,8 @@ export default function OrdenesServicioPage() {
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -125,10 +127,16 @@ export default function OrdenesServicioPage() {
           </div>
         ) : (
           <>
-            {/* Contador */}
-            <div className="mb-4">
+            {/* Contador y paginación */}
+            <div className="mb-4 flex justify-between items-center">
               <p className="text-sm text-gray-600">
                 Total: {ordenes.length} {ordenes.length === 1 ? "orden" : "órdenes"}
+                {ordenes.length > ITEMS_PER_PAGE && (
+                  <span className="ml-2">
+                    (Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-
+                    {Math.min(currentPage * ITEMS_PER_PAGE, ordenes.length)})
+                  </span>
+                )}
               </p>
             </div>
 
@@ -176,14 +184,20 @@ export default function OrdenesServicioPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ordenes.map((orden, index) => {
-                      const numeroOrden = orden.fields.NumeroOrden || "S/N";
-                      const estado = orden.fields.Estado || "Sin estado";
-                      const fechaPedido = orden.fields["Fecha de pedido"] || "";
-                      const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
-                      const itemsCount = orden.fields.ItemsOrden?.length || 0;
-                      const total = orden.fields.Total || 0;
-                      const puedeEliminar = puedeEliminarOrden(fechaPedido);
+                    {(() => {
+                      // Calcular órdenes para la página actual
+                      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+                      const endIndex = startIndex + ITEMS_PER_PAGE;
+                      const ordenesPaginadas = ordenes.slice(startIndex, endIndex);
+                      
+                      return ordenesPaginadas.map((orden, index) => {
+                        const numeroOrden = orden.fields.NumeroOrden || "S/N";
+                        const estado = orden.fields.Estado || "Sin estado";
+                        const fechaPedido = orden.fields["Fecha de pedido"] || "";
+                        const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
+                        const itemsCount = orden.fields.ItemsOrden?.length || 0;
+                        const total = orden.fields.Total || 0;
+                        const puedeEliminar = puedeEliminarOrden(fechaPedido);
 
                       const formatCurrency = (amount: number) => {
                         return new Intl.NumberFormat("es-CO", {
@@ -258,9 +272,35 @@ export default function OrdenesServicioPage() {
                           </td>
                         </tr>
                       );
-                    })}
+                    })();
+                    })
                   </tbody>
                 </table>
+              </div>
+            )}
+            
+            {/* Controles de paginación */}
+            {ordenes.length > ITEMS_PER_PAGE && (
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Página {currentPage} de {Math.ceil(ordenes.length / ITEMS_PER_PAGE)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage >= Math.ceil(ordenes.length / ITEMS_PER_PAGE)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
               </div>
             )}
           </>
