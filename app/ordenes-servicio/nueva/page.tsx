@@ -142,9 +142,19 @@ export default function NuevaOrdenPage() {
 
   const actualizarItem = (itemId: string, campo: keyof ItemOrden, valor: any) => {
     setItemsOrden(
-      itemsOrden.map((item) =>
-        item.id === itemId ? { ...item, [campo]: valor } : item
-      )
+      itemsOrden.map((item) => {
+        if (item.id === itemId) {
+          const itemActualizado = { ...item, [campo]: valor };
+          
+          // Si cambia la forma de cobro a "Por Flete", ajustar cantidad a 1
+          if (campo === "formaCobro" && valor === "Por Flete") {
+            itemActualizado.cantidad = 1;
+          }
+          
+          return itemActualizado;
+        }
+        return item;
+      })
     );
   };
 
@@ -152,6 +162,7 @@ export default function NuevaOrdenPage() {
     if (item.formaCobro === "Por Kilo") {
       return item.cantidad * item.precioUnitario;
     }
+    // Por Flete: cantidad siempre es 1, precio es fijo
     return item.precioUnitario;
   };
 
@@ -475,8 +486,10 @@ export default function NuevaOrdenPage() {
 
                         {/* Cantidad */}
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-mono font-semibold text-gray-900">
-                            {item.cantidad.toFixed(2)}
+                          <span className={`text-sm font-mono font-semibold ${
+                            item.formaCobro === "Por Flete" ? "text-gray-400" : "text-gray-900"
+                          }`}>
+                            {item.formaCobro === "Por Flete" ? "1" : item.cantidad.toFixed(2)}
                           </span>
                         </td>
 
