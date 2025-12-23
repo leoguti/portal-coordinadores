@@ -198,10 +198,19 @@ export default function OrdenesServicioPage() {
                           </td>
 
                           {/* Fecha */}
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {fechaPedido
-                              ? new Date(fechaPedido).toLocaleDateString("es-CO")
-                              : "Sin fecha"}
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm text-gray-700">
+                                {fechaPedido
+                                  ? new Date(fechaPedido).toLocaleDateString("es-CO")
+                                  : "Sin fecha"}
+                              </span>
+                              {!puedeEliminar && fechaPedido && (
+                                <span className="text-xs text-red-600 font-semibold">
+                                  🔒 Fuera de período
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Beneficiario */}
@@ -227,17 +236,17 @@ export default function OrdenesServicioPage() {
 
                           {/* Acciones */}
                           <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* Botón Ver Detalle */}
-                              <Link
-                                href={`/ordenes-servicio/${orden.id}`}
-                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
-                              >
-                                Ver Detalle
-                              </Link>
+                            {puedeEliminar ? (
+                              <div className="flex items-center justify-end gap-2">
+                                {/* Botón Ver Detalle */}
+                                <Link
+                                  href={`/ordenes-servicio/${orden.id}`}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                                >
+                                  Ver Detalle
+                                </Link>
 
-                              {/* Botón Eliminar (solo si cumple restricción) */}
-                              {puedeEliminar && (
+                                {/* Botón Eliminar */}
                                 <button
                                   onClick={() => {
                                     if (confirm(`¿Eliminar orden #${numeroOrden}?`)) {
@@ -249,8 +258,14 @@ export default function OrdenesServicioPage() {
                                 >
                                   Eliminar
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end">
+                                <span className="text-xs text-gray-400 italic">
+                                  Sin acciones disponibles
+                                </span>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
