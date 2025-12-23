@@ -797,46 +797,6 @@ export async function listTerceros(): Promise<Tercero[]> {
 }
 
 /**
- * Get a single Orden by ID with all its details
- */
-export async function getOrdenById(ordenId: string): Promise<Orden | null> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return null;
-  }
-
-  try {
-    const url = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Airtable API error fetching Orden: ${response.status}`,
-        errorText
-      );
-      return null;
-    }
-
-    const data: Orden = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error fetching Orden from Airtable:", error);
-    return null;
-  }
-}
-
-/**
  * Get ItemsOrden for a specific Orden
  */
 export async function getItemsOrden(ordenId: string): Promise<ItemOrden[]> {
