@@ -413,7 +413,16 @@ export default function NuevaOrdenPage() {
             ) : (
               <div className="border border-gray-300 rounded-lg overflow-hidden">
                 {/* Tabla tipo factura */}
-                <table className="w-full">
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col style={{ width: '100px' }} />  {/* Tipo */}
+                    <col style={{ width: 'auto' }} />    {/* Descripción */}
+                    <col style={{ width: '100px' }} />  {/* Cantidad */}
+                    <col style={{ width: '140px' }} />  {/* Forma Cobro */}
+                    <col style={{ width: '140px' }} />  {/* Precio Unit. */}
+                    <col style={{ width: '130px' }} />  {/* Subtotal */}
+                    <col style={{ width: '70px' }} />   {/* Acción */}
+                  </colgroup>
                   <thead className="bg-gray-100 border-b-2 border-gray-300">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
@@ -478,7 +487,7 @@ export default function NuevaOrdenPage() {
                             onChange={(e) =>
                               actualizarItem(item.id, "formaCobro", e.target.value)
                             }
-                            className="w-full px-2 py-1 text-xs border-2 border-blue-400 rounded bg-blue-50 font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-2 py-1.5 text-xs border-2 border-blue-400 rounded bg-blue-50 font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="Por Flete">Por Flete</option>
                             <option value="Por Kilo">Por Kilo</option>
@@ -494,7 +503,7 @@ export default function NuevaOrdenPage() {
                               actualizarItem(item.id, "precioUnitario", Number(e.target.value))
                             }
                             placeholder="$0"
-                            className="w-full px-2 py-1 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-2 py-1.5 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
                             min="0"
                             step="1000"
                           />
