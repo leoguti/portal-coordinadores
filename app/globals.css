@@ -1,9 +1,11 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/* Forzar modo claro siempre */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -13,59 +15,162 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Desactivar modo oscuro completamente */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #111827;
+    color-scheme: light;
+  }
+  
+  html {
+    color-scheme: light;
   }
 }
 
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff !important;
+  color: #111827 !important;
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Mejoras de contraste para mejor legibilidad */
+/* Forzar texto oscuro en todos los elementos */
+* {
+  color-scheme: light;
+}
+
+/* Mejoras de contraste agresivas para mejor legibilidad */
+.text-gray-400 {
+  color: #4b5563 !important; /* gray-600 */
+}
+
 .text-gray-500 {
-  color: #374151 !important; /* gray-700 más oscuro */
+  color: #374151 !important; /* gray-700 */
 }
 
 .text-gray-600 {
-  color: #1f2937 !important; /* gray-800 más oscuro */
+  color: #1f2937 !important; /* gray-800 */
 }
 
 .text-gray-700 {
-  color: #111827 !important; /* gray-900 más oscuro */
+  color: #111827 !important; /* gray-900 */
+}
+
+.text-gray-800 {
+  color: #000000 !important; /* negro puro */
+}
+
+.text-gray-900 {
+  color: #000000 !important; /* negro puro */
 }
 
 /* Mejorar contraste en tablas */
+table {
+  background: #ffffff !important;
+}
+
+table thead {
+  background: #f9fafb !important;
+}
+
+table tbody tr {
+  background: #ffffff !important;
+}
+
+table tbody tr:hover {
+  background: #f9fafb !important;
+}
+
 table tbody tr td {
-  color: #1f2937 !important;
+  color: #111827 !important;
+  font-weight: 500;
+}
+
+table thead th {
+  color: #374151 !important;
+  font-weight: 600;
 }
 
 /* Mejorar contraste en badges/pills */
+.bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
 .bg-gray-100 {
   background-color: #e5e7eb !important;
   color: #111827 !important;
+  font-weight: 600;
 }
 
 .bg-green-100 {
   background-color: #d1fae5 !important;
   color: #065f46 !important;
+  font-weight: 600;
 }
 
 .bg-blue-100 {
   background-color: #dbeafe !important;
   color: #1e40af !important;
+  font-weight: 600;
 }
 
 .bg-yellow-100 {
   background-color: #fef3c7 !important;
   color: #92400e !important;
+  font-weight: 600;
+}
+
+.bg-red-50 {
+  background-color: #fef2f2 !important;
 }
 
 .bg-red-100 {
   background-color: #fee2e2 !important;
   color: #991b1b !important;
+  font-weight: 600;
+}
+
+.bg-purple-50 {
+  background-color: #faf5ff !important;
+}
+
+/* Asegurar inputs y forms tengan buen contraste */
+input,
+select,
+textarea {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* Labels y texto de formularios */
+label {
+  color: #374151 !important;
+  font-weight: 600;
+}
+
+/* Botones */
+button {
+  font-weight: 600;
+}
+
+/* Cards y contenedores */
+.bg-white {
+  background-color: #ffffff !important;
+}
+
+/* Forzar texto negro en elementos importantes */
+h1, h2, h3, h4, h5, h6 {
+  color: #111827 !important;
+  font-weight: 700;
+}
+
+p {
+  color: #374151 !important;
 }

@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import Sidebar from "@/components/Sidebar";
+import ContrastDiagnostic from "@/components/ContrastDiagnostic";
 
 export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
       <main className="flex-1 p-8">
         {children}
       </main>
+      <ContrastDiagnostic />
     </div>
   );
 }
