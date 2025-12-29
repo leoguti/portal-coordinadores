@@ -1269,7 +1269,7 @@ export async function createKardex(
     Lonas?: number;
     Carton?: number;
     Metal?: number;
-    Descripción?: string;
+    Observaciones?: string;
   }
 ): Promise<AirtableRecord<KardexFields> | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -1295,7 +1295,8 @@ export async function createKardex(
       Lonas: kardexData.Lonas || 0,
       Carton: kardexData.Carton || 0,
       Metal: kardexData.Metal || 0,
-      Descripción: kardexData.Descripción || "",
+      // Descripción is a computed field, don't send it
+      ...(kardexData.Observaciones && { Observaciones: kardexData.Observaciones }),
     };
 
     // Add optional linked records

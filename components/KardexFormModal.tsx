@@ -18,7 +18,7 @@ interface KardexFormData {
   Lonas: number | string;
   Carton: number | string;
   Metal: number | string;
-  Descripción: string;
+  Observaciones: string;
 }
 
 interface KardexFormModalProps {
@@ -54,7 +54,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     Lonas: "",
     Carton: "",
     Metal: "",
-    Descripción: "",
+    Observaciones: "",
   });
 
   // Cargar centros de acopio al montar el componente
@@ -426,18 +426,18 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
             </div>
           </div>
 
-          {/* Descripción */}
+          {/* Observaciones */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              📝 Descripción / Observaciones
+              📝 Observaciones
             </label>
             <textarea
-              name="Descripción"
-              value={formData.Descripción}
+              name="Observaciones"
+              value={formData.Observaciones}
               onChange={handleChange}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Detalles adicionales del movimiento..."
+              placeholder="Notas adicionales sobre el movimiento..."
             />
           </div>
 
