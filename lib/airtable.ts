@@ -1251,6 +1251,79 @@ export async function listKardexForCoordinator(
 }
 
 /**
+ * Create a new Kardex record
+ */
+export async function createKardex(
+  coordinatorRecordId: string,
+  kardexData: {
+    fechakardex: string;
+    TipoMovimiento: string;
+    EstadoPago: string;
+    Reciclaje?: number;
+    Incineracion?: number;
+    Flexibles?: number;
+    PlasticoContaminado?: number;
+    Lonas?: number;
+    Carton?: number;
+    Metal?: number;
+    Descripción?: string;
+  }
+): Promise<AirtableRecord<KardexFields> | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return null;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Kardex`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          Coordinador: [coordinatorRecordId],
+          fechakardex: kardexData.fechakardex,
+          TipoMovimiento: kardexData.TipoMovimiento,
+          EstadoPago: kardexData.EstadoPago,
+          Reciclaje: kardexData.Reciclaje || 0,
+          Incineracion: kardexData.Incineracion || 0,
+          Flexibles: kardexData.Flexibles || 0,
+          PlasticoContaminado: kardexData.PlasticoContaminado || 0,
+          Lonas: kardexData.Lonas || 0,
+          Carton: kardexData.Carton || 0,
+          Metal: kardexData.Metal || 0,
+          Descripción: kardexData.Descripción || "",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Airtable API error creating Kardex: ${response.status}`,
+        errorText
+      );
+      return null;
+    }
+
+    const data: AirtableRecord<KardexFields> = await response.json();
+    console.log(`Successfully created Kardex record with ID: ${data.id}`);
+    
+    return data;
+  } catch (error) {
+    console.error("Error creating Kardex in Airtable:", error);
+    return null;
+  }
+}
+
+/**
  * Delete an Orden de Servicio and all related data
  * This function:
  * 1. Fetches all ItemsOrden for the orden

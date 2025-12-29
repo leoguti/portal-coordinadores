@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import KardexFormModal from "@/components/KardexFormModal";
 
 interface KardexRecord {
   id: string;
@@ -36,6 +37,7 @@ export default function KardexPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   
   // Filtros
   const [fechaDesde, setFechaDesde] = useState("");
@@ -73,6 +75,26 @@ export default function KardexPage() {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateKardex = async (formData: any) => {
+    try {
+      const response = await fetch("/api/kardex", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al crear movimiento");
+      }
+
+      await fetchKardex();
+    } catch (err) {
+      throw err;
     }
   };
 
@@ -221,11 +243,20 @@ export default function KardexPage() {
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Kardex</h1>
-          <p className="text-gray-600">
-            Registro de movimientos logísticos de envases vacíos
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Kardex</h1>
+            <p className="text-gray-600">
+              Registro de movimientos logísticos de envases vacíos
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
+          >
+            <span className="text-xl">➕</span>
+            Nuevo Movimiento
+          </button>
         </div>
 
         {loading ? (
@@ -492,10 +523,10 @@ export default function KardexPage() {
                                   </div>
                                 );
                               })}
-                              {record.fields.Observaciones && (
+                              {record.fields.Descripción && (
                                 <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-purple-200 shadow-sm">
                                   <span className="text-sm font-semibold text-gray-900">📝</span>
-                                  <span className="text-xs text-gray-700 italic">{record.fields.Observaciones}</span>
+                                  <span className="text-xs text-gray-700 italic">{record.fields.Descripción}</span>
                                 </div>
                               )}
                             </div>
@@ -508,6 +539,14 @@ export default function KardexPage() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Modal para agregar nuevo movimiento */}
+        {showAddModal && (
+          <KardexFormModal
+            onClose={() => setShowAddModal(false)}
+            onSubmit={handleCreateKardex}
+          />
         )}
       </div>
     </AuthenticatedLayout>
