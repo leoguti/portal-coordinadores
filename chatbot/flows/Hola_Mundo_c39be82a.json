@@ -1,0 +1,41 @@
+{
+  "_ui": {
+    "nodes": {
+      "d4e260a0-d5eb-4f8c-8866-3af8cc8ccf30": {
+        "position": {
+          "left": 0,
+          "top": 0
+        },
+        "type": "execute_actions"
+      }
+    }
+  },
+  "expire_after_minutes": 4320,
+  "language": "spa",
+  "localization": {},
+  "name": "Hola Mundo",
+  "nodes": [
+    {
+      "actions": [
+        {
+          "attachments": [],
+          "quick_replies": [],
+          "text": "Hola Mundp",
+          "type": "send_msg",
+          "uuid": "09034c27-bc6d-4ff6-9bc7-8fbb1a06ad25"
+        }
+      ],
+      "exits": [
+        {
+          "destination_uuid": null,
+          "uuid": "66d8cece-1b10-42ce-b0ef-0d384d6d5cf4"
+        }
+      ],
+      "uuid": "d4e260a0-d5eb-4f8c-8866-3af8cc8ccf30"
+    }
+  ],
+  "spec_version": "14.3.0",
+  "type": "messaging",
+  "uuid": "c39be82a-3aa0-4efa-bcda-59608deddd07",
+  "revision": 4
+}

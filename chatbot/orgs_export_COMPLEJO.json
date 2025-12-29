@@ -1,0 +1,314 @@
+{
+  "version": "13",
+  "site": "https://textit.com",
+  "flows": [
+    {
+      "name": "Hola Mundo Completo",
+      "uuid": "c39be82a-3aa0-4efa-bcda-59608deddd07",
+      "spec_version": "14.3.0",
+      "language": "spa",
+      "type": "messaging",
+      "nodes": [
+        {
+          "uuid": "node-bcd823f5",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "🌟 ¡Bienvenido al Sistema de Prueba!\n\nEste es un flujo de ejemplo para probar ediciones masivas.\n\n¿Qué te gustaría hacer hoy?",
+              "type": "send_msg",
+              "quick_replies": [
+                "📊 Ver estadísticas",
+                "📝 Registrar datos",
+                "❓ Ayuda",
+                "🚪 Salir"
+              ],
+              "uuid": "8317a117-c362-4b67-8f7e-cea29d375787"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "exit-8fd44722",
+              "destination_uuid": "node-556859a9"
+            }
+          ]
+        },
+        {
+          "uuid": "node-556859a9",
+          "router": {
+            "type": "switch",
+            "default_category_uuid": "37e7892c-8433-4a6d-8316-dc74e36871ef",
+            "result_name": "opcion_menu",
+            "operand": "@input.text",
+            "wait": {
+              "type": "msg"
+            },
+            "cases": [
+              {
+                "uuid": "34d362ba-e165-43f9-90d9-554ce3c7b90a",
+                "type": "has_any_word",
+                "arguments": [
+                  "estadísticas",
+                  "estadisticas",
+                  "ver"
+                ],
+                "category_uuid": "1a6b0547-e8a7-41d9-9099-36c95a6191af"
+              },
+              {
+                "uuid": "e2a392e4-c9f0-40af-af4a-35da16388e6f",
+                "type": "has_any_word",
+                "arguments": [
+                  "registrar",
+                  "datos"
+                ],
+                "category_uuid": "eed5c136-6576-451f-9184-d6583522db0a"
+              },
+              {
+                "uuid": "3b31ebaa-f28b-4694-8b9f-4fbbc260c5fe",
+                "type": "has_any_word",
+                "arguments": [
+                  "ayuda",
+                  "help"
+                ],
+                "category_uuid": "b2ed3467-c5ce-402f-bc68-77ca07fc1875"
+              },
+              {
+                "uuid": "f1a217f2-d008-4575-8e46-13860eb665bc",
+                "type": "has_any_word",
+                "arguments": [
+                  "salir",
+                  "exit"
+                ],
+                "category_uuid": "0bfa199d-96bd-4165-84e4-340b0de9626f"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "5583250b-1bc4-4d38-8054-860184388d35",
+                "name": "Estadísticas",
+                "exit_uuid": "exit-cb15ad93"
+              },
+              {
+                "uuid": "08afbde0-c483-49b4-9e1d-54df74d8e5f2",
+                "name": "Registrar",
+                "exit_uuid": "exit-68eb1750"
+              },
+              {
+                "uuid": "90592cef-78f3-4727-a231-d7173d27f5e6",
+                "name": "Ayuda",
+                "exit_uuid": "exit-3ede29f4"
+              },
+              {
+                "uuid": "d91aec2e-f509-4fb2-822a-e29cda97d179",
+                "name": "Salir",
+                "exit_uuid": "exit-2e828266"
+              },
+              {
+                "uuid": "82fa3579-7259-4ffd-a25f-660143ef08a7",
+                "name": "Other",
+                "exit_uuid": "exit-2e828266"
+              }
+            ]
+          },
+          "exits": [
+            {
+              "uuid": "exit-cb15ad93",
+              "destination_uuid": "node-a52d1bf0"
+            },
+            {
+              "uuid": "exit-68eb1750",
+              "destination_uuid": "node-0974d88e"
+            },
+            {
+              "uuid": "exit-3ede29f4",
+              "destination_uuid": "node-1aef6bd2"
+            },
+            {
+              "uuid": "exit-2e828266",
+              "destination_uuid": "node-2942d5e4"
+            }
+          ]
+        },
+        {
+          "uuid": "node-a52d1bf0",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "📊 ESTADÍSTICAS DEL SISTEMA\n\n✅ Usuarios activos: 1,234\n📈 Registros hoy: 56\n💬 Mensajes enviados: 789\n⏱️ Tiempo promedio: 2.5 min\n\nEstos datos son actualizados en tiempo real.",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "c76aadc8-91be-42e0-bbe7-8a44b3a30352"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "40cf5ebd-50cb-45ca-b90f-e53a1a8cf95e",
+              "destination_uuid": "node-d296e70d"
+            }
+          ]
+        },
+        {
+          "uuid": "node-0974d88e",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "📝 MODO REGISTRO ACTIVADO\n\nPara registrar tus datos, necesitamos la siguiente información:\n\n1. Nombre completo\n2. Número de identificación\n3. Municipio\n4. Actividad a registrar\n\nPor favor, responde con tu nombre completo.",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "f2c881fb-afd9-4679-8085-657775fc456c"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ddf86224-395e-4ba8-8476-1b2874e0e1ea",
+              "destination_uuid": "node-d296e70d"
+            }
+          ]
+        },
+        {
+          "uuid": "node-1aef6bd2",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "❓ CENTRO DE AYUDA\n\n📚 Opciones disponibles:\n\n1️⃣ Ver estadísticas - Consulta datos en tiempo real\n2️⃣ Registrar datos - Ingresa nueva información\n3️⃣ Ayuda - Muestra este mensaje\n4️⃣ Salir - Termina la conversación\n\n💡 TIP: Puedes escribir el nombre de la opción directamente.\n\nPara soporte técnico, contacta a: soporte@ejemplo.com",
+              "type": "send_msg",
+              "quick_replies": [
+                "🔙 Volver al menú"
+              ],
+              "uuid": "429cc623-9ff6-4e88-8ef7-93233929edb3"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ea82c187-dcf3-408a-b5a6-5ccc2dc2af47",
+              "destination_uuid": "node-bcd823f5"
+            }
+          ]
+        },
+        {
+          "uuid": "node-dcb1a9f4",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "⚠️ Esta opción está en construcción.\n\nPronto estará disponible.",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "f4408686-096d-4e6d-ac9b-5f09638c8493"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "d706724e-e16e-4758-a554-5cfaca0fbffe",
+              "destination_uuid": "node-d296e70d"
+            }
+          ]
+        },
+        {
+          "uuid": "node-d296e70d",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "¿Deseas realizar otra consulta?",
+              "type": "send_msg",
+              "quick_replies": [
+                "✅ Sí",
+                "❌ No"
+              ],
+              "uuid": "9f54b3af-07a8-444b-a68d-d0b835cf1f45"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c06836ad-d96f-437f-9d7e-d864f5ff0d36",
+              "destination_uuid": "node-bcd823f5"
+            }
+          ]
+        },
+        {
+          "uuid": "node-2942d5e4",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "👋 ¡Hasta pronto!\n\nGracias por usar nuestro sistema.\n\n✨ Que tengas un excelente día.\n\nPara volver a iniciar, escribe cualquier mensaje.",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "e74fef43-5245-4300-954e-8e7a5807dd8a"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "5a1da283-ca16-4a05-b971-2fbea9811f7c",
+              "destination_uuid": null
+            }
+          ]
+        }
+      ],
+      "_ui": {
+        "nodes": {
+          "node-bcd823f5": {
+            "position": {
+              "left": 100,
+              "top": 0
+            },
+            "type": "execute_actions"
+          },
+          "node-556859a9": {
+            "position": {
+              "left": 100,
+              "top": 200
+            },
+            "type": "wait_for_response"
+          },
+          "node-a52d1bf0": {
+            "position": {
+              "left": 0,
+              "top": 400
+            },
+            "type": "execute_actions"
+          },
+          "node-0974d88e": {
+            "position": {
+              "left": 150,
+              "top": 400
+            },
+            "type": "execute_actions"
+          },
+          "node-1aef6bd2": {
+            "position": {
+              "left": 300,
+              "top": 400
+            },
+            "type": "execute_actions"
+          },
+          "node-dcb1a9f4": {
+            "position": {
+              "left": 450,
+              "top": 400
+            },
+            "type": "execute_actions"
+          },
+          "node-d296e70d": {
+            "position": {
+              "left": 200,
+              "top": 600
+            },
+            "type": "execute_actions"
+          },
+          "node-2942d5e4": {
+            "position": {
+              "left": 500,
+              "top": 200
+            },
+            "type": "execute_actions"
+          }
+        }
+      },
+      "revision": 3,
+      "expire_after_minutes": 4320,
+      "localization": {}
+    }
+  ],
+  "campaigns": [],
+  "triggers": [],
+  "fields": [],
+  "groups": []
+}

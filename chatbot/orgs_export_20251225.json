@@ -1,0 +1,51 @@
+{
+  "version": "13",
+  "site": "https://textit.com",
+  "flows": [
+    {
+      "name": "Hola Mundo",
+      "uuid": "c39be82a-3aa0-4efa-bcda-59608deddd07",
+      "spec_version": "14.3.0",
+      "language": "spa",
+      "type": "messaging",
+      "nodes": [
+        {
+          "uuid": "30e574d7-c486-4106-829c-1ff52c22e381",
+          "actions": [
+            {
+              "attachments": [],
+              "text": "Hola Mundp editado con Python! 🎉\n\nEste mensaje fue modificado programáticamente.\n\n✅ Prueba 1: Cambio de letra (Mundo → Mundp)\n✅ Prueba 2: Agregar texto largo\n✅ Prueba 3: Agregar emojis\n\n💚 CampoLimpio - Sistema de Reciclaje",
+              "type": "send_msg",
+              "quick_replies": [],
+              "uuid": "1c969f22-5ccf-4bce-81ca-694469e71606"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "e3e4eedc-fcc6-4a0a-80ec-495636779341",
+              "destination_uuid": null
+            }
+          ]
+        }
+      ],
+      "_ui": {
+        "nodes": {
+          "30e574d7-c486-4106-829c-1ff52c22e381": {
+            "position": {
+              "left": 0,
+              "top": 0
+            },
+            "type": "execute_actions"
+          }
+        }
+      },
+      "revision": 2,
+      "expire_after_minutes": 4320,
+      "localization": {}
+    }
+  ],
+  "campaigns": [],
+  "triggers": [],
+  "fields": [],
+  "groups": []
+}

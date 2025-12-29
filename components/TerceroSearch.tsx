@@ -163,7 +163,7 @@ export default function TerceroSearch({
               key={tercero.id}
               type="button"
               onClick={() => selectTercero(tercero)}
-              className={`w-full text-left px-4 py-2 hover:bg-[#e6f9f3] ${
+              className={`w-full text-left px-4 py-2 hover:bg-[#e6f9f3] text-gray-900 ${
                 index === highlightedIndex ? "bg-[#ccf2e8]" : ""
               }`}
             >

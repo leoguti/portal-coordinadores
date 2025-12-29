@@ -125,9 +125,22 @@ export default function OrdenDetallePage() {
             <span>›</span>
             <span>Orden #{numeroOrden}</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Detalle de Orden #{numeroOrden}
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Detalle de Orden #{numeroOrden}
+            </h1>
+            {/* Botón Ver PDF */}
+            {orden.fields.PDF && orden.fields.PDF[0]?.url && (
+              <a
+                href={orden.fields.PDF[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+              >
+                📄 Ver PDF
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Contenido de la orden - Solo lectura */}

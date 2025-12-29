@@ -178,6 +178,9 @@ export default function OrdenesServicioPage() {
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
                         Total
                       </th>
+                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
+                        PDF
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
                         Acciones
                       </th>
@@ -198,6 +201,7 @@ export default function OrdenesServicioPage() {
                         const itemsCount = orden.fields.ItemsOrden?.length || 0;
                         const total = orden.fields.Total || 0;
                         const puedeEliminar = puedeEliminarOrden(fechaPedido);
+                        const pdfUrl = orden.fields.PDF?.[0]?.url || null;
 
                       const formatCurrency = (amount: number) => {
                         return new Intl.NumberFormat("es-CO", {
@@ -243,6 +247,23 @@ export default function OrdenesServicioPage() {
                             </span>
                           </td>
 
+                          {/* PDF */}
+                          <td className="px-4 py-3 text-center">
+                            {pdfUrl ? (
+                              <a
+                                href={pdfUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:underline"
+                                title="Ver PDF"
+                              >
+                                📄 PDF
+                              </a>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+
                           {/* Acciones */}
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
@@ -257,12 +278,28 @@ export default function OrdenesServicioPage() {
                               {/* Botón Eliminar - solo si cumple restricción */}
                               {puedeEliminar && (
                                 <button
-                                  onClick={() => {
-                                    if (confirm(`¿Eliminar orden #${numeroOrden}?`)) {
-                                      alert("Función eliminar en desarrollo");
+                                  onClick={async () => {
+                                    if (confirm(`¿Estás seguro de eliminar la orden #${numeroOrden}?\n\nEsta acción no se puede deshacer.`)) {
+                                      try {
+                                        const response = await fetch(`/api/ordenes-servicio/${orden.id}`, {
+                                          method: 'DELETE',
+                                        });
+                                        
+                                        if (response.ok) {
+                                          alert(`Orden #${numeroOrden} eliminada correctamente`);
+                                          // Recargar órdenes
+                                          window.location.reload();
+                                        } else {
+                                          const data = await response.json();
+                                          alert(`Error: ${data.error || 'No se pudo eliminar la orden'}`);
+                                        }
+                                      } catch (error) {
+                                        console.error('Error eliminando orden:', error);
+                                        alert('Error al eliminar la orden');
+                                      }
                                     }
                                   }}
-                                  className="px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors whitespace-nowrap"
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors whitespace-nowrap"
                                   title="Eliminar orden"
                                 >
                                   Eliminar

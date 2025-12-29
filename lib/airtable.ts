@@ -715,7 +715,7 @@ export async function createOrdenServicio(
       if (item.kardexRecordId) {
         itemPayload.fields.Kardex = [item.kardexRecordId];
       } else if (item.catalogoRecordId) {
-        itemPayload.fields.Servicio = [item.catalogoRecordId];
+        itemPayload.fields.CatalogoServicio = [item.catalogoRecordId];
       }
 
       console.log("Creating ItemOrden:", itemPayload);
@@ -862,13 +862,22 @@ export async function createOrdenServicio(
           observaciones: params.observaciones,
         });
 
-        // Upload PDF to Airtable
-        const pdfAttachment = await uploadPDFToAirtable(
+        // Save PDF locally
+        await uploadPDFToAirtable(
           pdfBuffer,
           `Orden_${ordenData.fields.NumeroOrden}.pdf`
         );
 
-        console.log("PDF attachment prepared:", JSON.stringify(pdfAttachment).substring(0, 200));
+        // Upload PDF directly to Airtable
+        console.log("Uploading PDF to Airtable...");
+        
+        // Use ngrok URL if in development, otherwise use production URL
+        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const pdfUrl = `${baseUrl}/temp/Orden_${ordenData.fields.NumeroOrden}.pdf`;
+        
+        console.log(`PDF URL for Airtable: ${pdfUrl}`);
+        
+        const pdfAttachment = [{ url: pdfUrl }];
 
         // Update orden with PDF
         const updateResponse = await fetch(`${ordenUrl}/${ordenData.id}`, {
@@ -1238,5 +1247,110 @@ export async function listKardexForCoordinator(
   } catch (error) {
     console.error("Error fetching Kardex from Airtable:", error);
     return [];
+  }
+}
+
+/**
+ * Delete an Orden de Servicio and all related data
+ * This function:
+ * 1. Fetches all ItemsOrden for the orden
+ * 2. For each item with Kardex, updates Kardex status back to "Por Pagar"
+ * 3. Deletes all ItemsOrden records
+ * 4. Deletes the Orden record
+ * 
+ * @param ordenId - Airtable record ID of the orden to delete
+ * @returns true if successful, false otherwise
+ */
+export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    console.log(`Starting deletion of Orden ${ordenId}...`);
+
+    // Step 1: Get all ItemsOrden for this orden
+    const items = await getItemsOrden(ordenId);
+    console.log(`Found ${items.length} items to process`);
+
+    // Step 2: Update Kardex status back to "Por Pagar" for items with Kardex
+    for (const item of items) {
+      if (item.fields.Kardex && item.fields.Kardex.length > 0) {
+        const kardexId = item.fields.Kardex[0];
+        console.log(`Updating Kardex ${kardexId} to "Por Pagar"`);
+
+        const kardexUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${kardexId}`;
+        
+        const kardexResponse = await fetch(kardexUrl, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fields: {
+              Estado: "Por Pagar",
+            },
+          }),
+        });
+
+        if (kardexResponse.ok) {
+          console.log(`Kardex ${kardexId} updated to "Por Pagar"`);
+        } else {
+          const errorText = await kardexResponse.text();
+          console.error(`Error updating Kardex ${kardexId}:`, errorText);
+        }
+      }
+    }
+
+    // Step 3: Delete all ItemsOrden records
+    const itemsUrl = `https://api.airtable.com/v0/${baseId}/ItemsOrden`;
+    
+    for (const item of items) {
+      console.log(`Deleting ItemOrden ${item.id}`);
+      
+      const deleteItemResponse = await fetch(`${itemsUrl}/${item.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (deleteItemResponse.ok) {
+        console.log(`ItemOrden ${item.id} deleted`);
+      } else {
+        const errorText = await deleteItemResponse.text();
+        console.error(`Error deleting ItemOrden ${item.id}:`, errorText);
+      }
+    }
+
+    // Step 4: Delete the Orden record
+    console.log(`Deleting Orden ${ordenId}`);
+    
+    const ordenUrl = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
+    
+    const deleteOrdenResponse = await fetch(ordenUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!deleteOrdenResponse.ok) {
+      const errorText = await deleteOrdenResponse.text();
+      console.error(`Error deleting Orden ${ordenId}:`, errorText);
+      return false;
+    }
+
+    console.log(`Orden ${ordenId} deleted successfully`);
+    return true;
+
+  } catch (error) {
+    console.error(`Error deleting Orden ${ordenId}:`, error);
+    return false;
   }
 }

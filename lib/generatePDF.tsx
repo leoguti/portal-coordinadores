@@ -57,18 +57,17 @@ export async function generateOrdenServicioPDF(
 }
 
 /**
- * Upload PDF buffer to Airtable attachment field
- * Saves PDF to public folder temporarily for Airtable to fetch
+ * Save PDF locally to public folder
  */
 export async function uploadPDFToAirtable(
   pdfBuffer: Buffer,
   filename: string
-): Promise<Array<{ url: string; filename: string }>> {
+): Promise<{ success: boolean; fileUrl?: string }> {
   try {
     const fs = await import("fs/promises");
     const path = await import("path");
     
-    // Save PDF temporarily to public folder
+    // Save PDF to public folder for local access
     const publicPath = path.join(process.cwd(), "public", "temp", filename);
     
     // Ensure temp directory exists
@@ -77,20 +76,15 @@ export async function uploadPDFToAirtable(
     // Write PDF file
     await fs.writeFile(publicPath, pdfBuffer);
     
-    console.log(`PDF saved temporarily at: ${publicPath}`);
+    console.log(`PDF saved locally at: ${publicPath}`);
+    console.log(`PDF accessible at: /temp/${filename}`);
     
-    // Return URL for Airtable to fetch
-    // Airtable will download and store the file
-    const publicUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/temp/${filename}`;
-    
-    return [
-      {
-        url: publicUrl,
-        filename: filename,
-      },
-    ];
+    return {
+      success: true,
+      fileUrl: `/temp/${filename}`,
+    };
   } catch (error) {
-    console.error("Error preparing PDF for Airtable:", error);
-    throw new Error("Failed to upload PDF");
+    console.error("Error saving PDF:", error);
+    throw new Error("Failed to save PDF");
   }
 }
