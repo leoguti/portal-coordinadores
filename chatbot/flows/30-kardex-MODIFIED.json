@@ -1,0 +1,3261 @@
+{
+  "version": "13",
+  "site": null,
+  "flows": [
+    {
+      "_ui": {
+        "nodes": {
+          "01627b59-d46a-4426-b403-0805b37c98a0": {
+            "config": {},
+            "position": {
+              "left": 320,
+              "top": 12760
+            },
+            "type": "split_by_webhook"
+          },
+          "09b866b1-4245-439e-bffc-b39877be0cef": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 320,
+              "top": 13580
+            },
+            "type": "wait_for_response"
+          },
+          "100b09c9-df39-4a52-8437-03e25a206834": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 8,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 420,
+              "top": 18040
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "15b57e4d-a909-40f4-900c-dc5ce10fb9db": {
+            "position": {
+              "left": 840,
+              "top": 9060
+            },
+            "type": "execute_actions"
+          },
+          "189ecc5f-6305-4e2b-9e6c-582f622a7122": {
+            "position": {
+              "left": 300,
+              "top": 14800
+            },
+            "type": "execute_actions"
+          },
+          "19b35ead-3c80-4292-a6a1-32200d72a193": {
+            "position": {
+              "left": 400,
+              "top": 540
+            },
+            "type": "execute_actions"
+          },
+          "19e03eb4-7d7e-45d3-8966-63547f59a4d9": {
+            "config": {
+              "cases": {
+                "fa717bdb-f92e-4a78-bbfd-70722134de57": {
+                  "arguments": [
+                    "0"
+                  ]
+                }
+              },
+              "delimiter": "+",
+              "index": 1,
+              "operand": {
+                "id": "chorizo",
+                "name": "chorizo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 480,
+              "top": 1240
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "1a7a2b44-39c2-428f-bdda-66306df433c7": {
+            "position": {
+              "left": 840,
+              "top": 7900
+            },
+            "type": "execute_actions"
+          },
+          "1c5c7262-8bdc-4d82-8946-7679aa5149f0": {
+            "position": {
+              "left": 500,
+              "top": 6700
+            },
+            "type": "execute_actions"
+          },
+          "22dd38d9-0bb2-47ad-ae7a-7c0cb2962206": {
+            "position": {
+              "left": 1020,
+              "top": 16100
+            },
+            "type": "execute_actions"
+          },
+          "28bdc675-adc7-40b4-adab-8a221cc1d6d0": {
+            "position": {
+              "left": 500,
+              "top": 1040
+            },
+            "type": "split_by_expression"
+          },
+          "28de653a-74f0-4bc5-a778-f7eddc096ef6": {
+            "position": {
+              "left": 340,
+              "top": 2180
+            },
+            "type": "execute_actions"
+          },
+          "29c6987f-bcda-416f-a5c8-fb678a38ec56": {
+            "config": {
+              "cases": {},
+              "operand": {
+                "id": "tiposalida",
+                "name": "tiposalida",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 720,
+              "top": 17180
+            },
+            "type": "split_by_run_result"
+          },
+          "2a61060b-f96f-4505-8354-8c56bef926d3": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 7,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 11260
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "2b5c8128-9a21-49d1-bd6a-2562f2aa4d0b": {
+            "position": {
+              "left": 560,
+              "top": 17840
+            },
+            "type": "execute_actions"
+          },
+          "32064488-e48e-4549-8603-ac7ffd828fb2": {
+            "position": {
+              "left": 420,
+              "top": 19920
+            },
+            "type": "execute_actions"
+          },
+          "3417664c-6a89-4071-9cfe-c454940abba8": {
+            "position": {
+              "left": 600,
+              "top": 19420
+            },
+            "type": "execute_actions"
+          },
+          "387f9e5c-17cc-4f06-9a74-d0fa33064c25": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 2,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 8080
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "39408c60-c8e1-4999-ae2b-21942a081ae3": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 500,
+              "top": 7680
+            },
+            "type": "split_by_expression"
+          },
+          "395eb557-b0e2-4aac-9ff1-b123c9c15968": {
+            "position": {
+              "left": 200,
+              "top": 12380
+            },
+            "type": "execute_actions"
+          },
+          "3cf8dbc8-33d9-40a1-80c6-4524f71db965": {
+            "position": {
+              "left": 540,
+              "top": 17320
+            },
+            "type": "execute_actions"
+          },
+          "3dfa0ac9-c2f7-4015-a962-0c4ebb1f8035": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 5,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 10000
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "3e189d7c-cdd0-4d08-9da1-a0ad8f3e622a": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 3,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 8720
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "4416a670-6fd7-41b7-9c4b-47bc0b4203ee": {
+            "position": {
+              "left": 260,
+              "top": 1460
+            },
+            "type": "execute_actions"
+          },
+          "454d5515-4508-4bd3-968f-173011cd3ec4": {
+            "position": {
+              "left": 500,
+              "top": 11480
+            },
+            "type": "split_by_expression"
+          },
+          "4712aec4-c2d6-4266-8661-3a0588fd96b0": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 6,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 10640
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "48e9eb25-3372-49a2-8a53-24ffe1d1965f": {
+            "position": {
+              "left": 720,
+              "top": 16940
+            },
+            "type": "execute_actions"
+          },
+          "4b4eb4f0-35ee-40fd-9f1a-a5da1731d29e": {
+            "position": {
+              "left": 840,
+              "top": 11040
+            },
+            "type": "execute_actions"
+          },
+          "50b6a46d-6257-486f-b9e9-8072546bdc92": {
+            "position": {
+              "left": 420,
+              "top": 19240
+            },
+            "type": "wait_for_response"
+          },
+          "52a185ce-21dc-4f36-b906-0e3930949e8c": {
+            "position": {
+              "left": 840,
+              "top": 10420
+            },
+            "type": "execute_actions"
+          },
+          "5fa16ada-2d93-4498-9862-1e9bda1b9f11": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 540,
+              "top": 2420
+            },
+            "type": "split_by_expression"
+          },
+          "607d1ee7-ba64-425d-8846-576952404849": {
+            "position": {
+              "left": 680,
+              "top": 740
+            },
+            "type": "execute_actions"
+          },
+          "64caa95f-f2ae-49a0-818a-9965d9923ee1": {
+            "config": {},
+            "position": {
+              "left": 680,
+              "top": 15040
+            },
+            "type": "split_by_webhook"
+          },
+          "64ced424-599e-483f-94b9-c18139fccdde": {
+            "position": {
+              "left": 560,
+              "top": 40
+            },
+            "type": "split_by_groups"
+          },
+          "68469dd1-dc71-4317-b4d7-20b3c833e8be": {
+            "position": {
+              "left": 680,
+              "top": 15360
+            },
+            "type": "execute_actions"
+          },
+          "68c9950f-c09c-48fe-9e77-c94a98324312": {
+            "position": {
+              "left": 420,
+              "top": 18180
+            },
+            "type": "execute_actions"
+          },
+          "68de453d-2658-418b-a3ca-9e92dbabedcf": {
+            "position": {
+              "left": 720,
+              "top": 16680
+            },
+            "type": "execute_actions"
+          },
+          "6bfe01ae-24c3-4497-9727-dd6816c92a72": {
+            "position": {
+              "left": 840,
+              "top": 1460
+            },
+            "type": "execute_actions"
+          },
+          "71cb7d59-536b-4b9b-8c30-964bc7c88e6d": {
+            "position": {
+              "left": 300,
+              "top": 14320
+            },
+            "type": "execute_actions"
+          },
+          "75d913d4-913f-4d3f-8afe-a1d495ea6395": {
+            "position": {
+              "left": 1240,
+              "top": 240
+            },
+            "type": "execute_actions"
+          },
+          "76839792-26db-4c40-adb5-93d33fbd9764": {
+            "position": {
+              "left": 500,
+              "top": 8280
+            },
+            "type": "split_by_expression"
+          },
+          "7e8e462a-ed1c-4e69-a492-19bd6a80c3cc": {
+            "position": {
+              "left": 1020,
+              "top": 280
+            },
+            "type": "execute_actions"
+          },
+          "8030bc4c-0dbf-4185-9861-0e4f234b54ae": {
+            "config": {
+              "delimiter": "+",
+              "index": 1,
+              "operand": {
+                "id": "arreglo"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 7440
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "81ecc97b-17fe-4293-b079-c669fe364a9f": {
+            "position": {
+              "left": 520,
+              "top": 5940
+            },
+            "type": "execute_actions"
+          },
+          "84f7249f-6488-493e-96c4-0ca1b0f02606": {
+            "position": {
+              "left": 660,
+              "top": 2620
+            },
+            "type": "execute_actions"
+          },
+          "8518c96e-0ecb-4830-8a28-fd77ef68d506": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 680,
+              "top": 15960
+            },
+            "type": "wait_for_response"
+          },
+          "86b75db0-4690-4a18-909b-6eea120ea737": {
+            "config": {
+              "cases": {},
+              "operand": {
+                "id": "tipomovimiento",
+                "name": "tipomovimiento",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 11860
+            },
+            "type": "split_by_run_result"
+          },
+          "8c8876c4-7006-4ad6-8916-b0d510b70d13": {
+            "position": {
+              "left": 440,
+              "top": 13760
+            },
+            "type": "execute_actions"
+          },
+          "90fec1ff-7015-469a-ae3b-4f6f2cb30027": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 4,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 9320
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "94df8d6f-136b-431e-b91d-a839f7c06e6a": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 0,
+              "operand": {
+                "id": "arreglo",
+                "name": "arreglo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 500,
+              "top": 6480
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "9640950c-4ae8-4fb9-9064-c83748a03e82": {
+            "position": {
+              "left": 620,
+              "top": 7120
+            },
+            "type": "execute_actions"
+          },
+          "967b9611-6db6-4d5d-92b5-76a19774b415": {
+            "position": {
+              "left": 800,
+              "top": 4280
+            },
+            "type": "execute_actions"
+          },
+          "987c6e43-757b-4cce-bb4d-754679c694bc": {
+            "position": {
+              "left": 420,
+              "top": 18360
+            },
+            "type": "execute_actions"
+          },
+          "9cdcfb57-a841-481e-9069-8db00da1efb2": {
+            "position": {
+              "left": 540,
+              "top": 12380
+            },
+            "type": "execute_actions"
+          },
+          "9f41fdc7-6f99-41f4-97ab-e6de37f7c59f": {
+            "config": {},
+            "position": {
+              "left": 420,
+              "top": 19620
+            },
+            "type": "split_by_webhook"
+          },
+          "a0b5da4c-62f8-447c-903e-6c916c10ca95": {
+            "position": {
+              "left": 840,
+              "top": 9780
+            },
+            "type": "execute_actions"
+          },
+          "a563d42b-b594-4305-8ad7-a58977e33a0f": {
+            "position": {
+              "left": 500,
+              "top": 9580
+            },
+            "type": "split_by_expression"
+          },
+          "a735257d-461e-48fd-b4ec-d2ac80678959": {
+            "position": {
+              "left": 840,
+              "top": 6200
+            },
+            "type": "wait_for_response"
+          },
+          "adc6ca81-ca5d-4822-a386-2789f12db6ad": {
+            "config": {
+              "cases": {},
+              "operand": {
+                "id": "tiposalida",
+                "name": "tiposalida",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 340,
+              "top": 15020
+            },
+            "type": "split_by_run_result"
+          },
+          "b05d60eb-ef58-4615-ae48-204e8bcc04ab": {
+            "config": {
+              "cases": {},
+              "operand": {
+                "id": "tiposalida",
+                "name": "tiposalida",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 740,
+              "top": 12000
+            },
+            "type": "split_by_run_result"
+          },
+          "b0b05a46-6d2a-4467-a5c3-8f08c999b2d8": {
+            "position": {
+              "left": 840,
+              "top": 8500
+            },
+            "type": "execute_actions"
+          },
+          "b2e9886a-1ea9-4863-8381-8648dcf1f7d3": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 500,
+              "top": 8920
+            },
+            "type": "split_by_expression"
+          },
+          "b31923a6-77ee-485a-8f07-2e24b0e6b6d7": {
+            "config": {
+              "cases": {},
+              "delimiter": "+",
+              "index": 0,
+              "operand": {
+                "id": "chorizo",
+                "name": "chorizo",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 480,
+              "top": 4160
+            },
+            "type": "split_by_run_result_delimited"
+          },
+          "b35b0a9f-4a3b-47bb-b352-f67e48f7a1f0": {
+            "position": {
+              "left": 500,
+              "top": 10200
+            },
+            "type": "split_by_expression"
+          },
+          "b3b961a6-bf0a-4d7f-a7bf-c8981bb82dd3": {
+            "position": {
+              "left": 680,
+              "top": 2180
+            },
+            "type": "execute_actions"
+          },
+          "c75a57d7-2f70-43e8-bdf4-40e650170eff": {
+            "position": {
+              "left": 1120,
+              "top": 940
+            },
+            "type": "execute_actions"
+          },
+          "c7a808db-949d-474d-9ca7-5f47d2cc8c79": {
+            "position": {
+              "left": 300,
+              "top": 5300
+            },
+            "type": "execute_actions"
+          },
+          "c8ee7d08-fa88-4237-84d3-95dd4a9d90ee": {
+            "position": {
+              "left": 520,
+              "top": 1440
+            },
+            "type": "execute_actions"
+          },
+          "c934e6c5-91c6-4fe2-bd6c-def0558f7bdf": {
+            "position": {
+              "left": 840,
+              "top": 11620
+            },
+            "type": "execute_actions"
+          },
+          "ca4642b3-f10b-4c9f-889c-94997406dc70": {
+            "position": {
+              "left": 320,
+              "top": 13100
+            },
+            "type": "execute_actions"
+          },
+          "e31a7826-0942-4e8f-8228-4544e51425e2": {
+            "position": {
+              "left": 300,
+              "top": 14540
+            },
+            "type": "execute_actions"
+          },
+          "e4d9347e-27b3-4a81-9e39-b164079d20a9": {
+            "position": {
+              "left": 620,
+              "top": 4460
+            },
+            "type": "execute_actions"
+          },
+          "e60c1877-4dd2-4fca-9a19-b2ad5d54ca18": {
+            "config": {},
+            "position": {
+              "left": 500,
+              "top": 6880
+            },
+            "type": "split_by_subflow"
+          },
+          "ea21f298-e7af-4741-bbab-3a4294932666": {
+            "position": {
+              "left": 180,
+              "top": 17520
+            },
+            "type": "execute_actions"
+          },
+          "ebaf1843-0e82-4f48-ad55-14cabcecfa42": {
+            "position": {
+              "left": 200,
+              "top": 6660
+            },
+            "type": "execute_actions"
+          },
+          "f5922e3e-ab6b-425e-a115-4106ba1c98ae": {
+            "config": {
+              "cases": {},
+              "operand": {
+                "id": "dia",
+                "name": "dia",
+                "type": "result"
+              }
+            },
+            "position": {
+              "left": 520,
+              "top": 1980
+            },
+            "type": "split_by_run_result"
+          },
+          "f5cb5d07-4c8d-47a8-9161-309d8519f350": {
+            "position": {
+              "left": 480,
+              "top": 3920
+            },
+            "type": "execute_actions"
+          },
+          "f5cc7164-2e4f-46e4-a2f1-da9f847a6612": {
+            "config": {
+              "cases": {}
+            },
+            "position": {
+              "left": 1120,
+              "top": 1060
+            },
+            "type": "wait_for_response"
+          },
+          "f60a09ac-c186-4314-92cd-38f257313834": {
+            "position": {
+              "left": 500,
+              "top": 10820
+            },
+            "type": "split_by_expression"
+          }
+        },
+        "stickies": {
+          "053a92c0-1004-4392-af8a-5d54afc70091": {
+            "body": "En este paso, se extrae la segunda parte del campo chorizo, utilizando el delimitador \"+\" (plusses). Luego, se valida si el valor obtenido es una fecha y se clasifica en tres categorías:\n\nMenor a 60 días antes de hoy: ❌ Rechazado porque no se aceptan registros de Kardex con fechas tan antiguas.\n\nMayor a hoy: ❌ Rechazado porque no se pueden registrar movimientos con fechas futuras.\n\nEs una fecha válida: ✅ Aceptado y almacenado en @results.fechakardex para su uso posterior en el flujo.",
+            "color": "yellow",
+            "position": {
+              "bottom": 1060,
+              "left": 80,
+              "right": 0,
+              "top": 2980
+            },
+            "title": "Verificacion de Fecha"
+          },
+          "0f0770a4-a745-4308-9a3e-2220a9010bbf": {
+            "body": "Carton",
+            "color": "yellow",
+            "position": {
+              "bottom": 4740,
+              "left": 40,
+              "right": -20,
+              "top": 10640
+            },
+            "title": "No. 6"
+          },
+          "1196d631-210d-4780-8a83-32a8712a1580": {
+            "body": "Metal",
+            "color": "yellow",
+            "position": {
+              "bottom": 5100,
+              "left": 40,
+              "right": -20,
+              "top": 11260
+            },
+            "title": "No. 7"
+          },
+          "13d0110f-04b0-4b84-9771-fbc66e588110": {
+            "body": "se ingresa una entrada del tipo \n\nks+01/01/2025\n\ny se separa y procesa para extraer la fecha. ",
+            "color": "yellow",
+            "position": {
+              "bottom": -540,
+              "left": 60,
+              "right": -20,
+              "top": 1100
+            },
+            "title": "Analisis de entrada (disparador y fecha) "
+          },
+          "25811133-e549-434f-a6f8-5942afb1ebcd": {
+            "body": "Lonas",
+            "color": "yellow",
+            "position": {
+              "bottom": 4660,
+              "left": 40,
+              "right": -20,
+              "top": 10000
+            },
+            "title": "No. 5"
+          },
+          "699c9091-5cf5-4e41-b7f8-f76a5c0387b8": {
+            "body": "Temporalmente en 90. ",
+            "color": "yellow",
+            "position": {
+              "bottom": null,
+              "left": 940,
+              "right": null,
+              "top": 2940
+            },
+            "title": "New Note"
+          },
+          "6b94a005-8bfa-4701-af8a-485f100732af": {
+            "body": "Flexibles",
+            "color": "yellow",
+            "position": {
+              "bottom": 4420,
+              "left": 40,
+              "right": -20,
+              "top": 9320
+            },
+            "title": "No. 4"
+          },
+          "766f4b76-cae4-49ba-9241-d44da2876933": {
+            "body": "Incineracion",
+            "color": "yellow",
+            "position": {
+              "bottom": 3760,
+              "left": 40,
+              "right": -20,
+              "top": 8080
+            },
+            "title": "No. 3"
+          },
+          "86ef72de-0fec-42d4-b9c0-c2c5913dd245": {
+            "body": "Aqui se revisa que quien eta ejecutando el flujo es parte del grupo de coordinadores. ",
+            "color": "yellow",
+            "position": {
+              "bottom": -540,
+              "left": 60,
+              "right": -20,
+              "top": 260
+            },
+            "title": "New Note"
+          },
+          "a28aaf47-8f70-4d14-94af-d7d36bd094a0": {
+            "body": "Los usuarios tiene una identiicación en Airtable, esto se define con un código , aqui se define.",
+            "color": "yellow",
+            "position": {
+              "bottom": null,
+              "left": 40,
+              "right": null,
+              "top": 540
+            },
+            "title": "Identificacion Usuario Airtable"
+          },
+          "afc34bd0-be53-4e44-a771-21925b458061": {
+            "body": "reciclaje",
+            "color": "yellow",
+            "position": {
+              "bottom": 3720,
+              "left": 40,
+              "right": -20,
+              "top": 7440
+            },
+            "title": "No. 2"
+          }
+        }
+      },
+      "expire_after_minutes": 10080,
+      "language": "spa",
+      "localization": {},
+      "metadata": {
+        "expires": 10080
+      },
+      "name": "30-Kardex Airtable",
+      "nodes": [
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "19b35ead-3c80-4292-a6a1-32200d72a193",
+              "uuid": "25c27ba4-9682-466c-8752-573ba3b67a68"
+            },
+            {
+              "destination_uuid": "607d1ee7-ba64-425d-8846-576952404849",
+              "uuid": "45ca7f11-af10-4272-8313-e301ff6a9786"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "720518f1-7cc0-4802-b828-d8fa7581e27a",
+                  "Coordinadores"
+                ],
+                "category_uuid": "6f8ebb16-67a9-4e43-8ec8-0f56cff3ff5d",
+                "type": "has_group",
+                "uuid": "4bccd189-eb7e-4748-b0a5-f8077d8fa57a"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "25c27ba4-9682-466c-8752-573ba3b67a68",
+                "name": "Coordinadores",
+                "uuid": "6f8ebb16-67a9-4e43-8ec8-0f56cff3ff5d"
+              },
+              {
+                "exit_uuid": "45ca7f11-af10-4272-8313-e301ff6a9786",
+                "name": "Other",
+                "uuid": "2445d040-577b-4f73-b292-714845e5f334"
+              }
+            ],
+            "default_category_uuid": "2445d040-577b-4f73-b292-714845e5f334",
+            "operand": "@contact.groups",
+            "result_name": "escoordinador",
+            "type": "switch"
+          },
+          "uuid": "64ced424-599e-483f-94b9-c18139fccdde"
+        },
+        {
+          "actions": [
+            {
+              "all_urns": false,
+              "attachments": [],
+              "quick_replies": [],
+              "text": "🚧 Flujo en Pruebas - Verificación de Datos 🚧\n\nEste flujo se encuentra en fase de pruebas y su propósito es validar que todos los datos se registren correctamente en Airtable, específicamente en la tabla Kardex.\n\n🔍 ¿Qué debes revisar?\nEs fundamental asegurarse de que todos los datos estén correctos, prestando especial atención a:\n✅ Centros de Acopio\n✅ Gestores de Disposición\n\n📢 Importante: Si detectas algún error o es necesario hacer algún ajuste en los registros, notifica a María Paula de inmediato para que pueda revisarlo.\n\n⚠️ Este flujo no es definitivo y cualquier cambio realizado será exclusivamente para pruebas y verificación.\n\n¡Gracias por tu colaboración en este proceso de validación! 🚀",
+              "type": "send_msg",
+              "uuid": "dfac885c-ab29-40c8-9de3-f341294349d3"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "45194d4a-b603-4a43-823a-43f6ab3aa57e"
+            }
+          ],
+          "uuid": "75d913d4-913f-4d3f-8afe-a1d495ea6395"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "id_coordinador",
+              "type": "set_run_result",
+              "uuid": "2b46057e-ea8d-47a2-b60a-14db1cd274e8",
+              "value": "recLcrL8iaUboSV6B"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "c75a57d7-2f70-43e8-bdf4-40e650170eff",
+              "uuid": "57fccd2d-6048-4211-a418-d1c03f07fc75"
+            }
+          ],
+          "uuid": "7e8e462a-ed1c-4e69-a492-19bd6a80c3cc"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "id_coordinador",
+              "type": "set_run_result",
+              "uuid": "45a453cd-d75e-4238-8837-2ca34d5e0dd4",
+              "value": "@contact.fields.airtableid"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "28bdc675-adc7-40b4-adab-8a221cc1d6d0",
+              "uuid": "30a419c1-efc7-4e17-be30-dc7826328e17"
+            }
+          ],
+          "uuid": "19b35ead-3c80-4292-a6a1-32200d72a193"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "Disculpe, usuario no esta autorizado para hacer este procedimiento. Muchas gracias",
+              "type": "send_msg",
+              "uuid": "00f00ce3-89e4-4b2b-a8f4-940106cd08d9"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "26ab6454-9164-4650-98cd-da50104d6ce7"
+            }
+          ],
+          "uuid": "607d1ee7-ba64-425d-8846-576952404849"
+        },
+        {
+          "actions": [
+            {
+              "all_urns": false,
+              "attachments": [],
+              "quick_replies": [],
+              "text": "envie prueba ake o aks\n",
+              "type": "send_msg",
+              "uuid": "0fe5ebdc-e884-4bb7-8013-be1cf20029ed"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "f5cc7164-2e4f-46e4-a2f1-da9f847a6612",
+              "uuid": "f7a7290d-7fa0-4120-ab80-49d90051fc8a"
+            }
+          ],
+          "uuid": "c75a57d7-2f70-43e8-bdf4-40e650170eff"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "19e03eb4-7d7e-45d3-8966-63547f59a4d9",
+              "uuid": "1b0e8a57-b1ed-42db-be0f-edc8c4b12d50"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "1b0e8a57-b1ed-42db-be0f-edc8c4b12d50",
+                "name": "All Responses",
+                "uuid": "a9710308-327c-428d-a750-0d2d937035d6"
+              }
+            ],
+            "default_category_uuid": "a9710308-327c-428d-a750-0d2d937035d6",
+            "operand": "@(if(is_error(input), \"@step.value\", input))",
+            "result_name": "chorizo",
+            "type": "switch"
+          },
+          "uuid": "28bdc675-adc7-40b4-adab-8a221cc1d6d0"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "28bdc675-adc7-40b4-adab-8a221cc1d6d0",
+              "uuid": "3237f3b7-03be-4fad-b32e-77773016636f"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "3237f3b7-03be-4fad-b32e-77773016636f",
+                "name": "All Responses",
+                "uuid": "bc8c6cb2-24e6-469b-a547-f3a726dcd388"
+              }
+            ],
+            "default_category_uuid": "bc8c6cb2-24e6-469b-a547-f3a726dcd388",
+            "operand": "@input.text",
+            "result_name": "Result 26",
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            }
+          },
+          "uuid": "f5cc7164-2e4f-46e4-a2f1-da9f847a6612"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "4416a670-6fd7-41b7-9c4b-47bc0b4203ee",
+              "uuid": "943c6db8-6ef9-4416-b989-0c20c32c678a"
+            },
+            {
+              "destination_uuid": "c8ee7d08-fa88-4237-84d3-95dd4a9d90ee",
+              "uuid": "c5053339-2824-42fb-ba8b-e40d21e04b95"
+            },
+            {
+              "destination_uuid": "6bfe01ae-24c3-4497-9727-dd6816c92a72",
+              "uuid": "269b8d1a-630b-4c41-9935-71f21baf6bdb"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "@(datetime_add(today(), 0, \"D\"))"
+                ],
+                "category_uuid": "f6332cde-db17-49cc-8409-5e0c498bc50e",
+                "type": "has_date_gt",
+                "uuid": "fa717bdb-f92e-4a78-bbfd-70722134de57"
+              },
+              {
+                "arguments": [],
+                "category_uuid": "332b32f2-6018-4e37-a099-bcb82b3ca2e8",
+                "type": "has_date",
+                "uuid": "3d29ac5d-64a6-4a3a-928a-d90a1203f635"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "943c6db8-6ef9-4416-b989-0c20c32c678a",
+                "name": "> today +0 days",
+                "uuid": "f6332cde-db17-49cc-8409-5e0c498bc50e"
+              },
+              {
+                "exit_uuid": "c5053339-2824-42fb-ba8b-e40d21e04b95",
+                "name": "is a date",
+                "uuid": "332b32f2-6018-4e37-a099-bcb82b3ca2e8"
+              },
+              {
+                "exit_uuid": "269b8d1a-630b-4c41-9935-71f21baf6bdb",
+                "name": "Other",
+                "uuid": "b995c90d-947d-436f-ad03-7ca5a890a569"
+              }
+            ],
+            "default_category_uuid": "b995c90d-947d-436f-ad03-7ca5a890a569",
+            "operand": "@(field(results.chorizo, 1, \"+\"))",
+            "result_name": "fechakardex",
+            "type": "switch"
+          },
+          "uuid": "19e03eb4-7d7e-45d3-8966-63547f59a4d9"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "primerdiamesactual",
+              "type": "set_run_result",
+              "uuid": "1536df2a-aea6-45ba-a88e-89bfcf00400d",
+              "value": "@(format_date(date_from_parts(format_date(now(), \"YYYY\"), format_date(now(), \"MM\"), 1), \"YYYY-MM-DD\"))"
+            },
+            {
+              "category": "",
+              "name": "primerdiamesanterior",
+              "type": "set_run_result",
+              "uuid": "19f2cf88-99f3-485e-98de-6c53a39d31bf",
+              "value": "@(format_date(datetime_add(datetime_add(now(), -1, \"M\"), -1 * (format_date(datetime_add(now(), -1, \"M\"), \"D\") - 1), \"D\"), \"YYYY-MM-DD\"))"
+            },
+            {
+              "category": "",
+              "name": "dia",
+              "type": "set_run_result",
+              "uuid": "6465db3c-6761-4504-8907-0512ae1154bf",
+              "value": "@(format_date(now(), \"D\"))"
+            },
+            {
+              "category": "",
+              "name": "rango_fin",
+              "type": "set_run_result",
+              "uuid": "381d9345-7784-45e0-9974-60c80107f81f",
+              "value": "7"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "f5922e3e-ab6b-425e-a115-4106ba1c98ae",
+              "uuid": "327b3ccc-a8cc-49ed-846f-06ec8b2a11b0"
+            }
+          ],
+          "uuid": "c8ee7d08-fa88-4237-84d3-95dd4a9d90ee"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "ERROR en fecha, No es posible ingresar fecha en el futuro. Ingrese una fecha entre Ingrese una fecha anterior o igual a @(today()).",
+              "type": "send_msg",
+              "uuid": "1f197d8d-5348-44d0-9c5c-f12384c2dc65"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "37651b66-471c-407c-a9e1-7cd0d3d06be5"
+            }
+          ],
+          "uuid": "4416a670-6fd7-41b7-9c4b-47bc0b4203ee"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR de ingreso de datos, falta una fecha valida. Por favor ingresar en este formato  KE+dd/mm/aaaa (ejemplo: ke+25/03/2018)",
+              "type": "send_msg",
+              "uuid": "580e93d6-aef2-4b5a-8333-94d28124e929"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "fcc727a1-e0f2-4229-b299-38b70abd38bc"
+            }
+          ],
+          "uuid": "6bfe01ae-24c3-4497-9727-dd6816c92a72"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "28de653a-74f0-4bc5-a778-f7eddc096ef6",
+              "uuid": "6c2507f2-bd48-4b05-b1d0-53022f03e538"
+            },
+            {
+              "destination_uuid": "b3b961a6-bf0a-4d7f-a7bf-c8981bb82dd3",
+              "uuid": "8ce75b54-f81a-4135-9a7f-c2109d932e5f"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "1",
+                  "7"
+                ],
+                "category_uuid": "4ddfba69-a166-4916-8859-b85a2b6f44c2",
+                "type": "has_number_between",
+                "uuid": "4febc5ce-f7cc-4ff2-89f0-7a79b5c254ed"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "6c2507f2-bd48-4b05-b1d0-53022f03e538",
+                "name": "1 - 7",
+                "uuid": "4ddfba69-a166-4916-8859-b85a2b6f44c2"
+              },
+              {
+                "exit_uuid": "8ce75b54-f81a-4135-9a7f-c2109d932e5f",
+                "name": "Other",
+                "uuid": "7cfe0276-e1e4-47af-bc01-d5aa80ff7be3"
+              }
+            ],
+            "default_category_uuid": "7cfe0276-e1e4-47af-bc01-d5aa80ff7be3",
+            "operand": "@results.dia",
+            "type": "switch"
+          },
+          "uuid": "f5922e3e-ab6b-425e-a115-4106ba1c98ae"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "limite_inferior",
+              "type": "set_run_result",
+              "uuid": "33c81252-bd26-4f83-a913-43c3ad7f0692",
+              "value": "@results.primerdiamesanterior"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "5fa16ada-2d93-4498-9862-1e9bda1b9f11",
+              "uuid": "119473d1-7f12-4f13-aa1b-2ff259477482"
+            }
+          ],
+          "uuid": "28de653a-74f0-4bc5-a778-f7eddc096ef6"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "limite_inferior",
+              "type": "set_run_result",
+              "uuid": "6410f086-ac48-4228-9b5e-a814ab66051e",
+              "value": "@results.primerdiamesactual"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "5fa16ada-2d93-4498-9862-1e9bda1b9f11",
+              "uuid": "f2fff494-16a2-4b69-83a5-215bcb435a08"
+            }
+          ],
+          "uuid": "b3b961a6-bf0a-4d7f-a7bf-c8981bb82dd3"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "f5cb5d07-4c8d-47a8-9161-309d8519f350",
+              "uuid": "6c2a3fbd-dc97-40f7-920c-379e9b5963d2"
+            },
+            {
+              "destination_uuid": "84f7249f-6488-493e-96c4-0ca1b0f02606",
+              "uuid": "cea9af55-810a-4791-90b2-d5f9dafe48f4"
+            },
+            {
+              "destination_uuid": null,
+              "uuid": "2bf1d093-a8cf-4bdb-8d0d-db8d4443cb8f"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "true"
+                ],
+                "category_uuid": "0f3daaec-4f11-4588-bc6d-d481a45955a7",
+                "type": "has_any_word",
+                "uuid": "820bd6af-8ded-42e8-a473-d9e36b1c21ec"
+              },
+              {
+                "arguments": [
+                  "false"
+                ],
+                "category_uuid": "63772906-e869-4006-b4a3-8b24872f8d54",
+                "type": "has_any_word",
+                "uuid": "cc0e3543-e977-4083-bd08-0cc8e588a29f"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "6c2a3fbd-dc97-40f7-920c-379e9b5963d2",
+                "name": "Aceptado",
+                "uuid": "0f3daaec-4f11-4588-bc6d-d481a45955a7"
+              },
+              {
+                "exit_uuid": "cea9af55-810a-4791-90b2-d5f9dafe48f4",
+                "name": "Negado",
+                "uuid": "63772906-e869-4006-b4a3-8b24872f8d54"
+              },
+              {
+                "exit_uuid": "2bf1d093-a8cf-4bdb-8d0d-db8d4443cb8f",
+                "name": "Other",
+                "uuid": "44816158-2917-4207-bfcd-03a0d2ae8452"
+              }
+            ],
+            "default_category_uuid": "44816158-2917-4207-bfcd-03a0d2ae8452",
+            "operand": "@(datetime_diff(results.limite_inferior, results.fechakardex, \"D\") >=0  )",
+            "type": "switch"
+          },
+          "uuid": "5fa16ada-2d93-4498-9862-1e9bda1b9f11"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "ERROR en fecha ingresada. La fecha debe estar dentro del mes actual o en los primeros @results.rango_fin días del mes siguiente. No es posible hacer este ingreso. Ingrese una fecha entre @(format_date(results.limite_inferior, \"YYYY-MM-DD\")) y  @(today()).",
+              "type": "send_msg",
+              "uuid": "df0ae5bf-b99f-4235-8a66-fa7f360bd57f"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "ee126df0-a24d-4c06-b484-4828c53f86db"
+            }
+          ],
+          "uuid": "84f7249f-6488-493e-96c4-0ca1b0f02606"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "fechakardex",
+              "type": "set_run_result",
+              "uuid": "1e51bda5-ff7b-450a-a055-c48699ac8670",
+              "value": "@(format_date(results.fechakardex, \"YYYY-MM-DD\"))"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "b31923a6-77ee-485a-8f07-2e24b0e6b6d7",
+              "uuid": "5a0cfc84-a015-4f9d-9824-7bf4ef5a7170"
+            }
+          ],
+          "uuid": "f5cb5d07-4c8d-47a8-9161-309d8519f350"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "c7a808db-949d-474d-9ca7-5f47d2cc8c79",
+              "uuid": "b793233c-7f8a-4464-9b49-6769f06ced6e"
+            },
+            {
+              "destination_uuid": "e4d9347e-27b3-4a81-9e39-b164079d20a9",
+              "uuid": "4ffcd400-cf18-41e0-b75a-3cf66118d769"
+            },
+            {
+              "destination_uuid": "967b9611-6db6-4d5d-92b5-76a19774b415",
+              "uuid": "e594403f-6267-4b36-89dd-59e5ff749499"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ke"
+                ],
+                "category_uuid": "54685a3b-91e7-480c-a4a1-abc1cfdf044b",
+                "type": "has_any_word",
+                "uuid": "5091cb4c-70f2-4332-be3a-7bc21b955c3f"
+              },
+              {
+                "arguments": [
+                  "ks"
+                ],
+                "category_uuid": "36bc504d-e2fd-4896-b7e1-02cddad87756",
+                "type": "has_any_word",
+                "uuid": "082a9444-185a-4cc5-ba6d-c2c306b04c0f"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "b793233c-7f8a-4464-9b49-6769f06ced6e",
+                "name": "ENTRADA",
+                "uuid": "54685a3b-91e7-480c-a4a1-abc1cfdf044b"
+              },
+              {
+                "exit_uuid": "4ffcd400-cf18-41e0-b75a-3cf66118d769",
+                "name": "SALIDA",
+                "uuid": "36bc504d-e2fd-4896-b7e1-02cddad87756"
+              },
+              {
+                "exit_uuid": "e594403f-6267-4b36-89dd-59e5ff749499",
+                "name": "Other",
+                "uuid": "fbea583b-0ec3-4327-a1b6-65d75dd0b5f2"
+              }
+            ],
+            "default_category_uuid": "fbea583b-0ec3-4327-a1b6-65d75dd0b5f2",
+            "operand": "@(field(results.chorizo, 0, \"+\"))",
+            "result_name": "tipomovimiento",
+            "type": "switch"
+          },
+          "uuid": "b31923a6-77ee-485a-8f07-2e24b0e6b6d7"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. No reconozco si es (ke) entrada  o (ks) salida, por favor ingrese de nuevo en este formato. (ke+dd/mm/aaaa)",
+              "type": "send_msg",
+              "uuid": "e2dd14f0-530a-4cac-a447-b76d2aa4241e"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "51ddaa02-fa9d-434a-ac6d-63da039613f9"
+            }
+          ],
+          "uuid": "967b9611-6db6-4d5d-92b5-76a19774b415"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "🔹 KARDEX @results.tipomovimiento.category 🔹\n\nPor favor, ingrese los datos en el siguiente formato:\n\n✅ Si la salida proviene de un Centro de Acopio, escriba \"ca\" en el campo de municipio origen.\n✅ Si la salida no proviene de un Centro de Acopio, escriba el nombre del municipio correspondiente.\n\n✍ Ejemplos:\n➡️ Si el material sale de un Centro de Acopio: ca+\n➡️ Si el material sale de un municipio específico: Sabaneta+\n\n📌 Formato de ingreso:\nmunicipio origen (o palabra \"ca\") +\nreciclaje+\nincineracion+\nPlastico contaminado+\nflexibles+\nlonas+\ncarton+\nmetal+\nObservaciones\n\n⚠️ IMPORTANTE: Asegúrese de escribir los valores exactamente como se indica para evitar errores en el registro.",
+              "type": "send_msg",
+              "uuid": "9cfd619e-db90-458b-acb0-b7cf37a71cae"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "81ecc97b-17fe-4293-b079-c669fe364a9f",
+              "uuid": "16569b4e-1002-40fd-a29a-2fa47c96a9e8"
+            }
+          ],
+          "uuid": "e4d9347e-27b3-4a81-9e39-b164079d20a9"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "🔹 REGISTRO DE ENTRADA EN KARDEX 🔹\n\nVamos a registrar una ENTRADA en el sistema. Por favor, ingrese los datos en el siguiente formato, separando cada valor con \"+\":\n\n📌 Formato de ingreso:\n✅ Municipio de origen +\n✅ Cantidad de material reciclado +\n✅ Cantidad de material incinerado +\n✅ Cantidad de plástico contaminado +\n✅ Cantidad de material flexible +\n✅ Cantidad de lonas +\n✅ Cantidad de cartón +\n✅ Cantidad de metal +\n✅ Observaciones\n\n⚠ IMPORTANTE: Asegúrese de seguir el formato correctamente para evitar errores en el registro.",
+              "type": "send_msg",
+              "uuid": "52a4b962-a5dc-4d4b-b596-f4519fab03d8"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "81ecc97b-17fe-4293-b079-c669fe364a9f",
+              "uuid": "c525acc2-66d3-4996-ac1f-2051666d90b5"
+            }
+          ],
+          "uuid": "c7a808db-949d-474d-9ca7-5f47d2cc8c79"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "tipomovimiento",
+              "type": "set_run_result",
+              "uuid": "9a198021-5bc1-4735-a30c-725d0ab21d84",
+              "value": "@results.tipomovimiento.category"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "869c6c27-5b51-4476-8fc2-2731f4881a7f"
+            }
+          ],
+          "uuid": "81ecc97b-17fe-4293-b079-c669fe364a9f"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "94df8d6f-136b-431e-b91d-a839f7c06e6a",
+              "uuid": "c33502b9-06fa-4f6d-8f24-567716244756"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "c33502b9-06fa-4f6d-8f24-567716244756",
+                "name": "All Responses",
+                "uuid": "d61a2d23-408f-4a2f-9f6b-75a0ca832d73"
+              }
+            ],
+            "default_category_uuid": "d61a2d23-408f-4a2f-9f6b-75a0ca832d73",
+            "operand": "@input",
+            "result_name": "arreglo",
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            }
+          },
+          "uuid": "a735257d-461e-48fd-b4ec-d2ac80678959"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "ebaf1843-0e82-4f48-ad55-14cabcecfa42",
+              "uuid": "ef4e63a8-c779-4950-9d7a-14b46a93735f"
+            },
+            {
+              "destination_uuid": "1c5c7262-8bdc-4d82-8946-7679aa5149f0",
+              "uuid": "04ded95b-be92-4a3a-900e-b0547540d42e"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ca"
+                ],
+                "category_uuid": "f503c669-ac29-42b7-8794-5096dbc4ff39",
+                "type": "has_all_words",
+                "uuid": "27f1fb5f-2e76-40b7-b14e-1cc7e7066480"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "ef4e63a8-c779-4950-9d7a-14b46a93735f",
+                "name": "Ca",
+                "uuid": "f503c669-ac29-42b7-8794-5096dbc4ff39"
+              },
+              {
+                "exit_uuid": "04ded95b-be92-4a3a-900e-b0547540d42e",
+                "name": "Other",
+                "uuid": "88cf442a-88d9-4a9c-8adc-e56fc62143b2"
+              }
+            ],
+            "default_category_uuid": "88cf442a-88d9-4a9c-8adc-e56fc62143b2",
+            "operand": "@(field(results.arreglo, 0, \"+\"))",
+            "result_name": "textomunicipio",
+            "type": "switch"
+          },
+          "uuid": "94df8d6f-136b-431e-b91d-a839f7c06e6a"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "tiposalida",
+              "type": "set_run_result",
+              "uuid": "e01afdab-ca14-407b-a011-2c21854f585c",
+              "value": "ca"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "8030bc4c-0dbf-4185-9861-0e4f234b54ae",
+              "uuid": "603b28ad-ae96-46c5-852e-f2a5b7f7358f"
+            }
+          ],
+          "uuid": "ebaf1843-0e82-4f48-ad55-14cabcecfa42"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "tipomunicipio",
+              "type": "set_run_result",
+              "uuid": "5cc3566e-f5f2-4b9a-bb82-8cd2eac4b26e",
+              "value": "origen"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "e60c1877-4dd2-4fca-9a19-b2ad5d54ca18",
+              "uuid": "b2eed792-f841-4fc4-b9fb-ec1b149b326c"
+            }
+          ],
+          "uuid": "1c5c7262-8bdc-4d82-8946-7679aa5149f0"
+        },
+        {
+          "actions": [
+            {
+              "flow": {
+                "name": "10-Municipio",
+                "uuid": "0aa6c066-fb2d-4948-bc37-ca5ed8cfc16c"
+              },
+              "type": "enter_flow",
+              "uuid": "f202e560-d258-452f-8ba6-47e2ae222d4e"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "9640950c-4ae8-4fb9-9064-c83748a03e82",
+              "uuid": "3ba0df3d-8410-4118-badd-b759c4ee0d64"
+            },
+            {
+              "destination_uuid": null,
+              "uuid": "4030d2dc-799c-42f7-aa2d-51d56a7b7d5d"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "completed"
+                ],
+                "category_uuid": "60c37274-fec5-4d9a-8dea-efe9d786a96f",
+                "type": "has_only_text",
+                "uuid": "453a2eab-6857-4d8d-a688-815e4b457943"
+              },
+              {
+                "arguments": [
+                  "expired"
+                ],
+                "category_uuid": "688740b3-4fb6-4b54-80eb-3c7db06c54ae",
+                "type": "has_only_text",
+                "uuid": "cfa784dd-c2cd-45b0-acb6-55153d2d812b"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "3ba0df3d-8410-4118-badd-b759c4ee0d64",
+                "name": "Complete",
+                "uuid": "60c37274-fec5-4d9a-8dea-efe9d786a96f"
+              },
+              {
+                "exit_uuid": "4030d2dc-799c-42f7-aa2d-51d56a7b7d5d",
+                "name": "Expired",
+                "uuid": "688740b3-4fb6-4b54-80eb-3c7db06c54ae"
+              }
+            ],
+            "default_category_uuid": "688740b3-4fb6-4b54-80eb-3c7db06c54ae",
+            "operand": "@child.status",
+            "type": "switch"
+          },
+          "uuid": "e60c1877-4dd2-4fca-9a19-b2ad5d54ca18"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "idmunicipioorigen",
+              "type": "set_run_result",
+              "uuid": "80bb264b-97b3-4c80-915a-16764b750dc7",
+              "value": "@child.results.idmunicipio"
+            },
+            {
+              "category": "",
+              "name": "origen",
+              "type": "set_run_result",
+              "uuid": "8e0eb9cb-d391-4678-9a84-91001dc6aa7f",
+              "value": "@child.results.mundep"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "8030bc4c-0dbf-4185-9861-0e4f234b54ae",
+              "uuid": "26532ed0-9b55-4a2c-9e8e-75f9ac471610"
+            }
+          ],
+          "uuid": "9640950c-4ae8-4fb9-9064-c83748a03e82"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "39408c60-c8e1-4999-ae2b-21942a081ae3",
+              "uuid": "7862206f-5aa5-4dc3-a43a-c3e0c6157751"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "7862206f-5aa5-4dc3-a43a-c3e0c6157751",
+                "name": "All Responses",
+                "uuid": "8d309389-4f5d-4834-bab8-204e4b2cf2df"
+              }
+            ],
+            "default_category_uuid": "8d309389-4f5d-4834-bab8-204e4b2cf2df",
+            "operand": "@(field(results.arreglo, 1, \"+\"))",
+            "result_name": "reciclaje",
+            "type": "switch"
+          },
+          "uuid": "8030bc4c-0dbf-4185-9861-0e4f234b54ae"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "387f9e5c-17cc-4f06-9a74-d0fa33064c25",
+              "uuid": "4a89fa09-ff1a-44d4-98ca-cef7b0314d2d"
+            },
+            {
+              "destination_uuid": "1a7a2b44-39c2-428f-bdda-66306df433c7",
+              "uuid": "956b5259-b571-4750-995a-91c38f4e29e8"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [],
+                "category_uuid": "cc31262a-5970-4525-bcc3-d8866640df09",
+                "type": "has_number",
+                "uuid": "0db5fd9a-af09-4e86-a0ab-c4cde4f5640b"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "4a89fa09-ff1a-44d4-98ca-cef7b0314d2d",
+                "name": "okreciclables",
+                "uuid": "cc31262a-5970-4525-bcc3-d8866640df09"
+              },
+              {
+                "exit_uuid": "956b5259-b571-4750-995a-91c38f4e29e8",
+                "name": "Other",
+                "uuid": "8f377b76-15b7-499e-af22-5a166f8bbf9c"
+              }
+            ],
+            "default_category_uuid": "8f377b76-15b7-499e-af22-5a166f8bbf9c",
+            "operand": "@(if(is_error(replace(results.reciclaje, \",\", \".\")), \"@(SUBSTITUTE(flow.reciclaje,\\\",\\\",\\\".\\\"))\", replace(results.reciclaje, \",\", \".\")))",
+            "result_name": "reciclaje",
+            "type": "switch"
+          },
+          "uuid": "39408c60-c8e1-4999-ae2b-21942a081ae3"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de RECICLAJE no es un dato numérico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "57e25ca6-07db-4167-b84a-5036209ae8cc"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "82325aef-56d9-4f88-bd7f-d52e7c6bafbd"
+            }
+          ],
+          "uuid": "1a7a2b44-39c2-428f-bdda-66306df433c7"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "76839792-26db-4c40-adb5-93d33fbd9764",
+              "uuid": "2cd99c9a-4755-4124-9342-99b8f51176e8"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "2cd99c9a-4755-4124-9342-99b8f51176e8",
+                "name": "All Responses",
+                "uuid": "7b428e4b-15d8-4853-9883-7df01fe8c5fa"
+              }
+            ],
+            "default_category_uuid": "7b428e4b-15d8-4853-9883-7df01fe8c5fa",
+            "operand": "@(field(results.arreglo, 2, \"+\"))",
+            "result_name": "incineracion",
+            "type": "switch"
+          },
+          "uuid": "387f9e5c-17cc-4f06-9a74-d0fa33064c25"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "3e189d7c-cdd0-4d08-9da1-a0ad8f3e622a",
+              "uuid": "11853cef-0f51-4652-bdd6-85f7aca8e7be"
+            },
+            {
+              "destination_uuid": "b0b05a46-6d2a-4467-a5c3-8f08c999b2d8",
+              "uuid": "5fdd8621-2108-4dac-b9e9-3a921ac27d65"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "category_uuid": "d55c6467-9b50-4995-81ba-90da94e1e100",
+                "type": "has_number",
+                "uuid": "b6d8c39e-9c80-477a-938f-6c7b569844e8"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "11853cef-0f51-4652-bdd6-85f7aca8e7be",
+                "name": "okincineracion",
+                "uuid": "d55c6467-9b50-4995-81ba-90da94e1e100"
+              },
+              {
+                "exit_uuid": "5fdd8621-2108-4dac-b9e9-3a921ac27d65",
+                "name": "Other",
+                "uuid": "ace31f49-ab00-44a6-a996-25a6c96f2272"
+              }
+            ],
+            "default_category_uuid": "ace31f49-ab00-44a6-a996-25a6c96f2272",
+            "operand": "@(if(is_error(replace(results.incineracion, \",\", \".\")), \"@(SUBSTITUTE(flow.incineracion,\\\",\\\",\\\".\\\"))\", replace(results.incineracion, \",\", \".\")))",
+            "result_name": "incineracion",
+            "type": "switch"
+          },
+          "uuid": "76839792-26db-4c40-adb5-93d33fbd9764"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de INCINERACION no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "ec2cc087-08ed-4354-a78e-3c84f0eee9d0"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "b1ff4c87-cbe0-4b97-8cb1-f6c6b7f5987f"
+            }
+          ],
+          "uuid": "b0b05a46-6d2a-4467-a5c3-8f08c999b2d8"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "b2e9886a-1ea9-4863-8381-8648dcf1f7d3",
+              "uuid": "bec537be-724d-4a19-9af0-5ee8311e87ac"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "bec537be-724d-4a19-9af0-5ee8311e87ac",
+                "name": "All Responses",
+                "uuid": "1ac2cf60-1fca-4200-a4d8-5bc01ff11b15"
+              }
+            ],
+            "default_category_uuid": "1ac2cf60-1fca-4200-a4d8-5bc01ff11b15",
+            "operand": "@(field(results.arreglo, 3, \"+\"))",
+            "result_name": "plasticocontaminado",
+            "type": "switch"
+          },
+          "uuid": "3e189d7c-cdd0-4d08-9da1-a0ad8f3e622a"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "90fec1ff-7015-469a-ae3b-4f6f2cb30027",
+              "uuid": "2a49d2c7-8346-42c7-87d2-8e4cad8790b7"
+            },
+            {
+              "destination_uuid": "15b57e4d-a909-40f4-900c-dc5ce10fb9db",
+              "uuid": "fe8ff8f0-b6cb-44ca-8e3b-6bb08518c635"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [],
+                "category_uuid": "a28c0232-6bb1-418f-9946-8e3b7ca3138e",
+                "type": "has_number",
+                "uuid": "5aa8a339-931c-4fd3-9ffb-111edbca069d"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "2a49d2c7-8346-42c7-87d2-8e4cad8790b7",
+                "name": "okplastico",
+                "uuid": "a28c0232-6bb1-418f-9946-8e3b7ca3138e"
+              },
+              {
+                "exit_uuid": "fe8ff8f0-b6cb-44ca-8e3b-6bb08518c635",
+                "name": "Other",
+                "uuid": "6498d8ab-af9d-46fe-b169-3c58e5836403"
+              }
+            ],
+            "default_category_uuid": "6498d8ab-af9d-46fe-b169-3c58e5836403",
+            "operand": "@(if(is_error(replace(results.plasticocontaminado, \",\", \".\")), \"@(SUBSTITUTE(flow.plasticocontaminado,\\\",\\\",\\\".\\\"))\", replace(results.plasticocontaminado, \",\", \".\")))",
+            "type": "switch"
+          },
+          "uuid": "b2e9886a-1ea9-4863-8381-8648dcf1f7d3"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de PLASTICO CONTAMINADO no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "1d9e624b-2dce-486d-b854-a96450f05b22"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "f5c71809-f17e-46d1-b315-e7a1ab82a417"
+            }
+          ],
+          "uuid": "15b57e4d-a909-40f4-900c-dc5ce10fb9db"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "a563d42b-b594-4305-8ad7-a58977e33a0f",
+              "uuid": "afa2dec7-44cc-4534-a33e-23d29de7060e"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "afa2dec7-44cc-4534-a33e-23d29de7060e",
+                "name": "All Responses",
+                "uuid": "471f1887-a36d-4e95-baa5-e48526d11305"
+              }
+            ],
+            "default_category_uuid": "471f1887-a36d-4e95-baa5-e48526d11305",
+            "operand": "@(field(results.arreglo, 4, \"+\"))",
+            "result_name": "flexibles",
+            "type": "switch"
+          },
+          "uuid": "90fec1ff-7015-469a-ae3b-4f6f2cb30027"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "3dfa0ac9-c2f7-4015-a962-0c4ebb1f8035",
+              "uuid": "6c0728f9-c8ea-4730-b357-b0e7540515b3"
+            },
+            {
+              "destination_uuid": "a0b5da4c-62f8-447c-903e-6c916c10ca95",
+              "uuid": "2ac76cb8-5392-4a7b-be82-6ac7d0d80373"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "category_uuid": "c3122844-d4e3-4d87-8765-537aa4eeccb3",
+                "type": "has_number",
+                "uuid": "227147ff-8e82-4670-a564-71c907116adb"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "6c0728f9-c8ea-4730-b357-b0e7540515b3",
+                "name": "okflexibles",
+                "uuid": "c3122844-d4e3-4d87-8765-537aa4eeccb3"
+              },
+              {
+                "exit_uuid": "2ac76cb8-5392-4a7b-be82-6ac7d0d80373",
+                "name": "Other",
+                "uuid": "cb350f19-9e60-4e65-acd7-f54ce2922361"
+              }
+            ],
+            "default_category_uuid": "cb350f19-9e60-4e65-acd7-f54ce2922361",
+            "operand": "@(if(is_error(replace(results.flexibles, \",\", \".\")), \"@(SUBSTITUTE(flow.flexibles,\\\",\\\",\\\".\\\"))\", replace(results.flexibles, \",\", \".\")))",
+            "result_name": "flexibles",
+            "type": "switch"
+          },
+          "uuid": "a563d42b-b594-4305-8ad7-a58977e33a0f"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de FLEXIBLES no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "46f90b19-7208-4dd7-b59a-e893ef4f383f"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "f34f26c6-71d2-4d77-813f-c326938ac091"
+            }
+          ],
+          "uuid": "a0b5da4c-62f8-447c-903e-6c916c10ca95"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "b35b0a9f-4a3b-47bb-b352-f67e48f7a1f0",
+              "uuid": "a232c971-64b8-42da-b15c-4c7a2594f2fe"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "a232c971-64b8-42da-b15c-4c7a2594f2fe",
+                "name": "All Responses",
+                "uuid": "9f86e83d-c15a-45d4-a047-53f56b5bf1cb"
+              }
+            ],
+            "default_category_uuid": "9f86e83d-c15a-45d4-a047-53f56b5bf1cb",
+            "operand": "@(field(results.arreglo, 5, \"+\"))",
+            "result_name": "Lonas",
+            "type": "switch"
+          },
+          "uuid": "3dfa0ac9-c2f7-4015-a962-0c4ebb1f8035"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "4712aec4-c2d6-4266-8661-3a0588fd96b0",
+              "uuid": "cc242a4c-2080-40b6-beea-1fb3c9d15651"
+            },
+            {
+              "destination_uuid": "52a185ce-21dc-4f36-b906-0e3930949e8c",
+              "uuid": "abf37924-b3cc-4a49-82c4-1abe17c9abee"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "category_uuid": "e8d6f37e-66d2-409c-a688-7ccd95906a7d",
+                "type": "has_number",
+                "uuid": "d5b2b55a-339c-443c-9fce-aa14468ceda8"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "cc242a4c-2080-40b6-beea-1fb3c9d15651",
+                "name": "oklonas",
+                "uuid": "e8d6f37e-66d2-409c-a688-7ccd95906a7d"
+              },
+              {
+                "exit_uuid": "abf37924-b3cc-4a49-82c4-1abe17c9abee",
+                "name": "Other",
+                "uuid": "7f876f54-dd6f-41c7-ab6e-022862a01990"
+              }
+            ],
+            "default_category_uuid": "7f876f54-dd6f-41c7-ab6e-022862a01990",
+            "operand": "@(if(is_error(replace(results.lonas, \",\", \".\")), \"@(SUBSTITUTE(flow.lonas,\\\",\\\",\\\".\\\"))\", replace(results.lonas, \",\", \".\")))",
+            "result_name": "lonas",
+            "type": "switch"
+          },
+          "uuid": "b35b0a9f-4a3b-47bb-b352-f67e48f7a1f0"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de LONAS no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "cbb57418-01d9-4fa9-a478-b48f85e2f43e"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "88aa5267-fdc6-4c22-ae17-71ea8cd31561"
+            }
+          ],
+          "uuid": "52a185ce-21dc-4f36-b906-0e3930949e8c"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "f60a09ac-c186-4314-92cd-38f257313834",
+              "uuid": "3a07afb4-0c05-44df-b89c-84d8a153b71d"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "3a07afb4-0c05-44df-b89c-84d8a153b71d",
+                "name": "All Responses",
+                "uuid": "ed8769fd-d251-4c76-9c61-37e076dc17e8"
+              }
+            ],
+            "default_category_uuid": "ed8769fd-d251-4c76-9c61-37e076dc17e8",
+            "operand": "@(field(results.arreglo, 6, \"+\"))",
+            "result_name": "carton",
+            "type": "switch"
+          },
+          "uuid": "4712aec4-c2d6-4266-8661-3a0588fd96b0"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "2a61060b-f96f-4505-8354-8c56bef926d3",
+              "uuid": "25b9992d-996a-45d6-90b3-8d3d550c5acf"
+            },
+            {
+              "destination_uuid": "4b4eb4f0-35ee-40fd-9f1a-a5da1731d29e",
+              "uuid": "0ccd8033-5a0f-4e41-a31b-a891e3273443"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "category_uuid": "f35f1674-fa1c-4561-97b0-391cfd6f0071",
+                "type": "has_number",
+                "uuid": "03e5a11e-aa8b-4ac7-a573-7832344a0be8"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "25b9992d-996a-45d6-90b3-8d3d550c5acf",
+                "name": "okcarton",
+                "uuid": "f35f1674-fa1c-4561-97b0-391cfd6f0071"
+              },
+              {
+                "exit_uuid": "0ccd8033-5a0f-4e41-a31b-a891e3273443",
+                "name": "Other",
+                "uuid": "c08cbccf-5f14-4224-aa38-453e5de7512e"
+              }
+            ],
+            "default_category_uuid": "c08cbccf-5f14-4224-aa38-453e5de7512e",
+            "operand": "@(if(is_error(replace(results.carton, \",\", \".\")), \"@(SUBSTITUTE(flow.carton,\\\",\\\",\\\".\\\"))\", replace(results.carton, \",\", \".\")))",
+            "result_name": "carton",
+            "type": "switch"
+          },
+          "uuid": "f60a09ac-c186-4314-92cd-38f257313834"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de CARTON no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "bca7c861-c4d7-4ebb-a52f-bb27c1cb3417"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "ba748e34-7df5-4668-a1c6-a9d0ea601ee4"
+            }
+          ],
+          "uuid": "4b4eb4f0-35ee-40fd-9f1a-a5da1731d29e"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "454d5515-4508-4bd3-968f-173011cd3ec4",
+              "uuid": "1d6d05d7-0afb-4f91-b3b8-79a36aa501c5"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "1d6d05d7-0afb-4f91-b3b8-79a36aa501c5",
+                "name": "All Responses",
+                "uuid": "156e84c1-c321-417b-bfe2-02d84c3abf2d"
+              }
+            ],
+            "default_category_uuid": "156e84c1-c321-417b-bfe2-02d84c3abf2d",
+            "operand": "@(field(results.arreglo, 7, \"+\"))",
+            "result_name": "metal",
+            "type": "switch"
+          },
+          "uuid": "2a61060b-f96f-4505-8354-8c56bef926d3"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "86b75db0-4690-4a18-909b-6eea120ea737",
+              "uuid": "dd011d84-5666-4db9-942b-6a26ddab71a0"
+            },
+            {
+              "destination_uuid": "c934e6c5-91c6-4fe2-bd6c-def0558f7bdf",
+              "uuid": "5ec7b196-d9d0-4532-bac4-76846dfc25ce"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "category_uuid": "c68aeadf-6e59-4ca9-816d-d34b97a284ae",
+                "type": "has_number",
+                "uuid": "adb78d97-4785-4de5-8c2b-163937c93e7c"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "dd011d84-5666-4db9-942b-6a26ddab71a0",
+                "name": "okmetal",
+                "uuid": "c68aeadf-6e59-4ca9-816d-d34b97a284ae"
+              },
+              {
+                "exit_uuid": "5ec7b196-d9d0-4532-bac4-76846dfc25ce",
+                "name": "Other",
+                "uuid": "52967439-c1ee-48ce-ac96-d0919d24eb0b"
+              }
+            ],
+            "default_category_uuid": "52967439-c1ee-48ce-ac96-d0919d24eb0b",
+            "operand": "@(if(is_error(replace(results.metal, \",\", \".\")), \"@(SUBSTITUTE(flow.metal,\\\",\\\",\\\".\\\"))\", replace(results.metal, \",\", \".\")))",
+            "result_name": "metal",
+            "type": "switch"
+          },
+          "uuid": "454d5515-4508-4bd3-968f-173011cd3ec4"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "ERROR. El dato de kilos de METAL no es un dato numerico, por favor vuelva a ingresar los datos",
+              "type": "send_msg",
+              "uuid": "efc6675f-0b06-461e-8b57-57c7e4e3d8db"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "a735257d-461e-48fd-b4ec-d2ac80678959",
+              "uuid": "64ee3fec-3102-472c-9157-3e8c87790052"
+            }
+          ],
+          "uuid": "c934e6c5-91c6-4fe2-bd6c-def0558f7bdf"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "395eb557-b0e2-4aac-9ff1-b123c9c15968",
+              "uuid": "9fe8c7ba-29bd-4bfa-9134-9b5c53693cba"
+            },
+            {
+              "destination_uuid": "b05d60eb-ef58-4615-ae48-204e8bcc04ab",
+              "uuid": "787d8e55-0f0b-4dc7-920e-06747286afb6"
+            },
+            {
+              "uuid": "80e85de7-60de-48a2-b2cc-56e5dbd98f80"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ENTRADA"
+                ],
+                "category_uuid": "1d6365a4-53cb-4097-b22b-8fda85e99113",
+                "type": "has_any_word",
+                "uuid": "a68faa17-a96f-4626-ac27-73386372ec63"
+              },
+              {
+                "arguments": [
+                  "SALIDA"
+                ],
+                "category_uuid": "eca34ea8-2671-4fa4-b7c3-5239c0aa122a",
+                "type": "has_any_word",
+                "uuid": "5a3aff58-6a27-4a29-ac8a-bccc25935784"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "9fe8c7ba-29bd-4bfa-9134-9b5c53693cba",
+                "name": "ENTRADA",
+                "uuid": "1d6365a4-53cb-4097-b22b-8fda85e99113"
+              },
+              {
+                "exit_uuid": "787d8e55-0f0b-4dc7-920e-06747286afb6",
+                "name": "SALIDA",
+                "uuid": "eca34ea8-2671-4fa4-b7c3-5239c0aa122a"
+              },
+              {
+                "exit_uuid": "80e85de7-60de-48a2-b2cc-56e5dbd98f80",
+                "name": "Other",
+                "uuid": "61e40620-48e4-43a8-9a2b-1c6dd316072a"
+              }
+            ],
+            "default_category_uuid": "61e40620-48e4-43a8-9a2b-1c6dd316072a",
+            "operand": "@results.tipomovimiento",
+            "type": "switch"
+          },
+          "uuid": "86b75db0-4690-4a18-909b-6eea120ea737"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "9cdcfb57-a841-481e-9069-8db00da1efb2",
+              "uuid": "20ce7dac-59a1-4ea8-8635-f271fa2bedde"
+            },
+            {
+              "destination_uuid": "64caa95f-f2ae-49a0-818a-9965d9923ee1",
+              "uuid": "0e988384-5ac7-4ec6-a928-f403996628bc"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ca"
+                ],
+                "category_uuid": "586d7ca9-f4c1-4e3a-bf8d-f61f0882044d",
+                "type": "has_any_word",
+                "uuid": "b34ac868-f632-41ac-b06c-82cdc02e1ffe"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "20ce7dac-59a1-4ea8-8635-f271fa2bedde",
+                "name": "Ca",
+                "uuid": "586d7ca9-f4c1-4e3a-bf8d-f61f0882044d"
+              },
+              {
+                "exit_uuid": "0e988384-5ac7-4ec6-a928-f403996628bc",
+                "name": "Other",
+                "uuid": "e2228452-d9cf-48f8-ba13-23e8268f67a9"
+              }
+            ],
+            "default_category_uuid": "e2228452-d9cf-48f8-ba13-23e8268f67a9",
+            "operand": "@results.tiposalida",
+            "type": "switch"
+          },
+          "uuid": "b05d60eb-ef58-4615-ae48-204e8bcc04ab"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "A continuación, seleccionaremos el Centro de Acopio donde se recibirán los materiales.",
+              "type": "send_msg",
+              "uuid": "561a3881-8edc-42d2-a4be-7d20080d3ea3"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "01627b59-d46a-4426-b403-0805b37c98a0",
+              "uuid": "63738240-452d-496d-bc4e-5351429228dd"
+            }
+          ],
+          "uuid": "395eb557-b0e2-4aac-9ff1-b123c9c15968"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "Ahora seleccionaremos el Centro de Acopio de origen desde donde se realizará la salida del material.\n\n",
+              "type": "send_msg",
+              "uuid": "98c48057-c35f-4717-8a97-239b62906270"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "01627b59-d46a-4426-b403-0805b37c98a0",
+              "uuid": "4999b9f9-ac57-4dec-a61a-b5563459498b"
+            }
+          ],
+          "uuid": "9cdcfb57-a841-481e-9069-8db00da1efb2"
+        },
+        {
+          "actions": [
+            {
+              "body": "",
+              "headers": {
+                "Accept": "application/json",
+                "Authorization": "Bearer @globals.apikey"
+              },
+              "method": "GET",
+              "result_name": "webhook_response",
+              "type": "call_webhook",
+              "url": "https://api.airtable.com/v0/appniHwKiUMS0imXD/Puntos%20Logisticos?filterByFormula={Tipo}=%27Centro%20de%20Acopio%27&fields[]=Nombre&fields[]=Municipio&fields[]=Autonumber&sort[0][field]=Autonumber&sort[0][direction]=asc",
+              "uuid": "60bb0fdf-7984-49e4-a7f2-64c8b81bd9c8"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "ca4642b3-f10b-4c9f-889c-94997406dc70",
+              "uuid": "2f672018-f69c-407c-847d-ba0d9e071f9e"
+            },
+            {
+              "destination_uuid": null,
+              "uuid": "a0713035-b60a-4c59-a2ce-29c049568795"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "200",
+                  "299"
+                ],
+                "category_uuid": "02e9d3cb-e5df-431e-a58d-8617d8ea6a1a",
+                "type": "has_number_between",
+                "uuid": "ed8d576a-6c78-49e7-8470-e5963d72a469"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "2f672018-f69c-407c-847d-ba0d9e071f9e",
+                "name": "Success",
+                "uuid": "02e9d3cb-e5df-431e-a58d-8617d8ea6a1a"
+              },
+              {
+                "exit_uuid": "a0713035-b60a-4c59-a2ce-29c049568795",
+                "name": "Failure",
+                "uuid": "54f34ad8-c681-4c3f-8cc8-bbc78cff03b7"
+              }
+            ],
+            "default_category_uuid": "54f34ad8-c681-4c3f-8cc8-bbc78cff03b7",
+            "operand": "@webhook.status",
+            "type": "switch"
+          },
+          "uuid": "01627b59-d46a-4426-b403-0805b37c98a0"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "🔹 Selección de Centro de Acopio 🔹\n\n📍 Centros de Acopio Disponibles 📍\n\nℹ️ Importante: Los números en la lista reflejan su orden en el sistema y pueden no ser consecutivos. Por favor, selecciona el número correspondiente al centro de acopio donde se entregará el material.\n\n@(join(foreach(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber & \" ➝ \" & x.fields.Nombre), \"\\n\"))",
+              "type": "send_msg",
+              "uuid": "b7ceb632-079e-4ff3-afd3-17341f140c11"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "09b866b1-4245-439e-bffc-b39877be0cef",
+              "uuid": "2168e83c-714f-4eda-b0e1-c97c0d6c7b6e"
+            }
+          ],
+          "uuid": "ca4642b3-f10b-4c9f-889c-94997406dc70"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "71cb7d59-536b-4b9b-8c30-964bc7c88e6d",
+              "uuid": "4f37e3d6-75bb-4993-8129-0fed8bf21d20"
+            },
+            {
+              "destination_uuid": "8c8876c4-7006-4ad6-8916-b0d510b70d13",
+              "uuid": "068ca9d1-ab82-40ad-bc60-09210b0b2497"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "@(join(foreach(run.results.webhook_response.extra.records, (x) => \"^\" & x.fields.Autonumber & \"$\"), \"|\"))"
+                ],
+                "category_uuid": "094eeb24-507a-47ca-a5b1-3f7052f052b6",
+                "type": "has_pattern",
+                "uuid": "12e6970d-8012-46bf-a487-ed4ffe67f56c"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "4f37e3d6-75bb-4993-8129-0fed8bf21d20",
+                "name": "en_lista",
+                "uuid": "094eeb24-507a-47ca-a5b1-3f7052f052b6"
+              },
+              {
+                "exit_uuid": "068ca9d1-ab82-40ad-bc60-09210b0b2497",
+                "name": "Other",
+                "uuid": "c750d739-1ca9-4b5a-a1b9-9dcc8aabc34a"
+              }
+            ],
+            "default_category_uuid": "c750d739-1ca9-4b5a-a1b9-9dcc8aabc34a",
+            "operand": "@input.text",
+            "result_name": "sel",
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            }
+          },
+          "uuid": "09b866b1-4245-439e-bffc-b39877be0cef"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "⚠️ El número que ingresaste no está en la lista.\nPor favor, verifica e intenta nuevamente seleccionando un número de los disponibles en el listado.\n\n📍 Centros de Acopio Disponibles 📍\n\nℹ️ Importante: Los números en esta lista reflejan su orden en el sistema y pueden no ser consecutivos. Selecciona el número correspondiente al centro que deseas.\n\n@(join(foreach(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber & \" ➝ \" & x.fields.Nombre), \"\\n\"))",
+              "type": "send_msg",
+              "uuid": "592d7947-1c72-4a4f-a1c3-fbe0629064e5"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "09b866b1-4245-439e-bffc-b39877be0cef",
+              "uuid": "9894df84-d43c-4d44-b9fc-7ecfd3832f8b"
+            }
+          ],
+          "uuid": "8c8876c4-7006-4ad6-8916-b0d510b70d13"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "id_acopio",
+              "type": "set_run_result",
+              "uuid": "3199ec41-1c32-47da-9e96-63682a4af892",
+              "value": "@(filter(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber = results.sel)[0].id)"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "e31a7826-0942-4e8f-8228-4544e51425e2",
+              "uuid": "2402f4be-5672-416d-b43e-b37780a02ea4"
+            }
+          ],
+          "uuid": "71cb7d59-536b-4b9b-8c30-964bc7c88e6d"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "nombre_centroacopio",
+              "type": "set_run_result",
+              "uuid": "1c016123-0983-4e7d-a4ed-e7c3c93f736e",
+              "value": "@(filter(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber = results.sel)[0].fields.Nombre)"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "189ecc5f-6305-4e2b-9e6c-582f622a7122",
+              "uuid": "9b445b53-0c67-4800-86a0-2b7e724bce6d"
+            }
+          ],
+          "uuid": "e31a7826-0942-4e8f-8228-4544e51425e2"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "id_munca",
+              "type": "set_run_result",
+              "uuid": "b7c7eb3a-dd06-4fd5-9867-6b4d8dd8debb",
+              "value": "@(filter(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber = results.sel)[0].fields.Municipio[0])"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "adc6ca81-ca5d-4822-a386-2789f12db6ad",
+              "uuid": "4b66c789-eddf-4323-9cad-649895768344"
+            }
+          ],
+          "uuid": "189ecc5f-6305-4e2b-9e6c-582f622a7122"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "64caa95f-f2ae-49a0-818a-9965d9923ee1",
+              "uuid": "18008a81-bb0f-4223-bb2a-5eb86dbc5c4d"
+            },
+            {
+              "destination_uuid": "2b5c8128-9a21-49d1-bd6a-2562f2aa4d0b",
+              "uuid": "5a730742-77ea-4a1b-af10-94dd18e6e1fd"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ca"
+                ],
+                "category_uuid": "2050a24b-7cac-4ba6-a1d9-0d040c39de35",
+                "type": "has_any_word",
+                "uuid": "682814f0-4fb1-4173-87dd-10f65c21eed0"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "18008a81-bb0f-4223-bb2a-5eb86dbc5c4d",
+                "name": "Ca",
+                "uuid": "2050a24b-7cac-4ba6-a1d9-0d040c39de35"
+              },
+              {
+                "exit_uuid": "5a730742-77ea-4a1b-af10-94dd18e6e1fd",
+                "name": "Other",
+                "uuid": "3330ef82-5009-4044-ba86-fb1c447012c2"
+              }
+            ],
+            "default_category_uuid": "3330ef82-5009-4044-ba86-fb1c447012c2",
+            "operand": "@results.tiposalida",
+            "type": "switch"
+          },
+          "uuid": "adc6ca81-ca5d-4822-a386-2789f12db6ad"
+        },
+        {
+          "actions": [
+            {
+              "body": "",
+              "headers": {
+                "Accept": "application/json",
+                "Authorization": "Bearer @globals.apikey"
+              },
+              "method": "GET",
+              "result_name": "webhook_response",
+              "type": "call_webhook",
+              "url": "https://api.airtable.com/v0/appniHwKiUMS0imXD/Terceros?filterByFormula={Tipo}=%27Gestor%27&fields[]=RazonSocial&fields[]=Autonumber&sort[0][field]=Autonumber&sort[0][direction]=asc",
+              "uuid": "77c4a7c1-ab83-4f6b-b680-7c156bda0aac"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "68469dd1-dc71-4317-b4d7-20b3c833e8be",
+              "uuid": "d775413f-e8ab-4c43-a9e6-13b72a31bafd"
+            },
+            {
+              "destination_uuid": null,
+              "uuid": "18dfee46-5d17-4083-ae0d-7f5f56a8beb9"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "200",
+                  "299"
+                ],
+                "category_uuid": "15f299e5-7040-4dae-a61c-774c661e8677",
+                "type": "has_number_between",
+                "uuid": "e237dc8d-5854-4346-9cd8-76bba10e7dcd"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "d775413f-e8ab-4c43-a9e6-13b72a31bafd",
+                "name": "Success",
+                "uuid": "15f299e5-7040-4dae-a61c-774c661e8677"
+              },
+              {
+                "exit_uuid": "18dfee46-5d17-4083-ae0d-7f5f56a8beb9",
+                "name": "Failure",
+                "uuid": "0faa91e0-b4c9-440c-bd3d-2c288f42c94f"
+              }
+            ],
+            "default_category_uuid": "0faa91e0-b4c9-440c-bd3d-2c288f42c94f",
+            "operand": "@webhook.status",
+            "type": "switch"
+          },
+          "uuid": "64caa95f-f2ae-49a0-818a-9965d9923ee1"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "🔹 Selección de Gestor de Disposición Final 🔹\n\nHas seleccionado una SALIDA de material y ahora necesitamos definir a qué gestor de disposición final será dirigida.\n\n📍 Gestores de Disposición Final Disponibles 📍\n\nℹ️ Importante: Los números en la lista reflejan su orden en el sistema y pueden no ser consecutivos. Por favor, selecciona el número correspondiente al gestor de disposición final donde se entregará el material.\n\n@(join(foreach(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber & \" ➝ \" & x.fields.RazonSocial), \"\\n\"))",
+              "type": "send_msg",
+              "uuid": "7abd965f-34ae-4402-9ab0-59e6de93e31e"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "8518c96e-0ecb-4830-8a28-fd77ef68d506",
+              "uuid": "c7f6ca02-c5eb-4b85-a2cf-0d84c14a126b"
+            }
+          ],
+          "uuid": "68469dd1-dc71-4317-b4d7-20b3c833e8be"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "68de453d-2658-418b-a3ca-9e92dbabedcf",
+              "uuid": "79324a62-8da8-4190-a00a-bd6ae4acb9fb"
+            },
+            {
+              "destination_uuid": "22dd38d9-0bb2-47ad-ae7a-7c0cb2962206",
+              "uuid": "364254d2-def4-427f-a7a0-b7b3b89141b7"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "@(join(foreach(run.results.webhook_response.extra.records, (x) => \"^\" & x.fields.Autonumber & \"$\"), \"|\"))"
+                ],
+                "category_uuid": "7fbcd65a-5f44-427f-87b7-98ac3dc20433",
+                "type": "has_pattern",
+                "uuid": "cc8ee56a-caa2-4018-bff0-98ad650d2b35"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "79324a62-8da8-4190-a00a-bd6ae4acb9fb",
+                "name": "en lista",
+                "uuid": "7fbcd65a-5f44-427f-87b7-98ac3dc20433"
+              },
+              {
+                "exit_uuid": "364254d2-def4-427f-a7a0-b7b3b89141b7",
+                "name": "Other",
+                "uuid": "7e5e56e7-5c62-4dc2-a66c-81726e3353b8"
+              }
+            ],
+            "default_category_uuid": "7e5e56e7-5c62-4dc2-a66c-81726e3353b8",
+            "operand": "@input.text",
+            "result_name": "sel",
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            }
+          },
+          "uuid": "8518c96e-0ecb-4830-8a28-fd77ef68d506"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "⚠️ El número que ingresaste no está en la lista.\nPor favor, verifica e intenta nuevamente seleccionando un número de los disponibles en el listado.\n\n📍 Gestores de Disposición Final Disponibles 📍\n\nℹ️ Importante: Los números en la lista reflejan su orden en el sistema y pueden no ser consecutivos. Por favor, selecciona el número correspondiente al gestor de disposición final donde se entregará el material.\n\n@(join(foreach(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber & \" ➝ \" & x.fields.RazonSocial), \"\\n\"))",
+              "type": "send_msg",
+              "uuid": "87dbea42-5583-478d-b664-5dedb8c049d3"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "8518c96e-0ecb-4830-8a28-fd77ef68d506",
+              "uuid": "1b736059-9032-4eb8-9cbb-93e32f836859"
+            }
+          ],
+          "uuid": "22dd38d9-0bb2-47ad-ae7a-7c0cb2962206"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "id_gestor",
+              "type": "set_run_result",
+              "uuid": "31100352-457d-4f91-882a-71b009413035",
+              "value": "@(filter(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber = results.sel)[0].id)"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "48e9eb25-3372-49a2-8a53-24ffe1d1965f",
+              "uuid": "9ed3497d-16e1-4005-86f9-3fcba9adc1a5"
+            }
+          ],
+          "uuid": "68de453d-2658-418b-a3ca-9e92dbabedcf"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "nombre_gestor",
+              "type": "set_run_result",
+              "uuid": "56f6bb9a-9fea-46f7-9327-4d6b04a7d129",
+              "value": "@(filter(run.results.webhook_response.extra.records, (x) => x.fields.Autonumber = results.sel)[0].fields.RazonSocial)"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "29c6987f-bcda-416f-a5c8-fb678a38ec56",
+              "uuid": "f3de1447-e9da-4a26-ab69-cca056091073"
+            }
+          ],
+          "uuid": "48e9eb25-3372-49a2-8a53-24ffe1d1965f"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "3cf8dbc8-33d9-40a1-80c6-4524f71db965",
+              "uuid": "e90853f5-a602-436c-99f2-81cb06fe85b4"
+            },
+            {
+              "destination_uuid": "2b5c8128-9a21-49d1-bd6a-2562f2aa4d0b",
+              "uuid": "576072a8-09c3-4183-9441-37c00c60843f"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "ca"
+                ],
+                "category_uuid": "d4ce7930-2b25-48e3-8b90-69d7fc36ab09",
+                "type": "has_any_word",
+                "uuid": "69fa950e-09a5-4d24-aa0b-ffce8dbe9497"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "e90853f5-a602-436c-99f2-81cb06fe85b4",
+                "name": "Ca",
+                "uuid": "d4ce7930-2b25-48e3-8b90-69d7fc36ab09"
+              },
+              {
+                "exit_uuid": "576072a8-09c3-4183-9441-37c00c60843f",
+                "name": "Other",
+                "uuid": "517d1e5a-382a-46a2-ac5c-d638abee8c31"
+              }
+            ],
+            "default_category_uuid": "517d1e5a-382a-46a2-ac5c-d638abee8c31",
+            "operand": "@results.tiposalida",
+            "type": "switch"
+          },
+          "uuid": "29c6987f-bcda-416f-a5c8-fb678a38ec56"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "origen",
+              "type": "set_run_result",
+              "uuid": "a5b38a7d-6a16-4b54-9abd-725d5df4f03d",
+              "value": "@results.nombre_centroacopio"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "ea21f298-e7af-4741-bbab-3a4294932666",
+              "uuid": "6650acf8-b036-499c-9992-d22ed460323c"
+            }
+          ],
+          "uuid": "3cf8dbc8-33d9-40a1-80c6-4524f71db965"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "idmunicipioorigen",
+              "type": "set_run_result",
+              "uuid": "2ffb35fd-0cde-4e3d-8eaa-05f3e197aff9",
+              "value": "@results.id_munca"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "2b5c8128-9a21-49d1-bd6a-2562f2aa4d0b",
+              "uuid": "00bbbf5d-ee69-4b76-a834-b1e07c8a0013"
+            }
+          ],
+          "uuid": "ea21f298-e7af-4741-bbab-3a4294932666"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "destino",
+              "type": "set_run_result",
+              "uuid": "a9bc7e05-9733-4a30-a69e-64939ef79b94",
+              "value": "@results.nombre_gestor"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "100b09c9-df39-4a52-8437-03e25a206834",
+              "uuid": "fd4a26e3-965f-4569-80b5-cd09b7c509c9"
+            }
+          ],
+          "uuid": "2b5c8128-9a21-49d1-bd6a-2562f2aa4d0b"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "68c9950f-c09c-48fe-9e77-c94a98324312",
+              "uuid": "75ff5bad-5b6a-4c76-a1e2-d08d83cf5327"
+            }
+          ],
+          "router": {
+            "cases": [],
+            "categories": [
+              {
+                "exit_uuid": "75ff5bad-5b6a-4c76-a1e2-d08d83cf5327",
+                "name": "All Responses",
+                "uuid": "ca3b370f-6061-4ea7-bea8-e4bdcb7411d2"
+              }
+            ],
+            "default_category_uuid": "ca3b370f-6061-4ea7-bea8-e4bdcb7411d2",
+            "operand": "@(field(results.arreglo, 8, \"+\"))",
+            "result_name": "observaciones",
+            "type": "switch"
+          },
+          "uuid": "100b09c9-df39-4a52-8437-03e25a206834"
+        },
+        {
+          "actions": [
+            {
+              "category": "",
+              "name": "total",
+              "type": "set_run_result",
+              "uuid": "28a0f20c-40e4-4f52-93c9-8e9f5191eaf0",
+              "value": "@(results.reciclaje+results.incineracion+results.plasticocontaminado+results.flexibles+results.lonas+results.carton+results.metal)"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a",
+              "uuid": "93af4d03-475e-4036-a94a-59c0ce4ddf2d"
+            }
+          ],
+          "uuid": "68c9950f-c09c-48fe-9e77-c94a98324312"
+        },
+        {
+          "uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a",
+          "actions": [
+            {
+              "uuid": "cf3b28c1-ce18-494b-8f43-3c09def68adf",
+              "type": "send_msg",
+              "text": "💰 FORMA DE PAGO 💰\n\n¿Cómo se pagará este movimiento?\n\nSeleccione una opción:\n\n1️⃣ Caja Menor\n2️⃣ Sin Costo\n3️⃣ Por Pagar\n\n📝 Escriba el número de la opción (1, 2 o 3):",
+              "quick_replies": [
+                "1",
+                "2",
+                "3"
+              ],
+              "all_urns": false
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "dc49d84a-ca3c-4cda-bc87-479ffc62c1c7",
+              "destination_uuid": "2e6fa2a1-64f6-4d7a-a040-6d397c465969"
+            }
+          ]
+        },
+        {
+          "uuid": "2e6fa2a1-64f6-4d7a-a040-6d397c465969",
+          "router": {
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            },
+            "result_name": "estadopago_num",
+            "categories": [
+              {
+                "uuid": "08e26da5-5204-4ea9-838e-fb6a77f7b5e8",
+                "name": "Caja Menor",
+                "exit_uuid": "b48dbdac-4c5b-44f7-b495-59c5585264c2"
+              },
+              {
+                "uuid": "c8e609a7-bf83-4aa9-a3ad-44308ea179c6",
+                "name": "Sin Costo",
+                "exit_uuid": "71092788-02c1-42c4-a80f-69bf28ce1b77"
+              },
+              {
+                "uuid": "974a9ec4-11ba-4975-9ff7-7e378742ffb7",
+                "name": "Por Pagar",
+                "exit_uuid": "ccfb2ba2-f118-44c3-bc6c-14018080b21b"
+              },
+              {
+                "uuid": "7a386a51-fb79-4e0e-9d3a-2cbc96fdfd86",
+                "name": "Other",
+                "exit_uuid": "c50f934a-14b8-46d7-81b2-9424144ffce1"
+              }
+            ],
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "05ceec3d-1f3b-4f02-9ffa-b0b026da7477",
+                "type": "has_number_eq",
+                "arguments": [
+                  "1"
+                ],
+                "category_uuid": "08e26da5-5204-4ea9-838e-fb6a77f7b5e8"
+              },
+              {
+                "uuid": "d40b05d8-f98f-411c-a384-36249b2d9884",
+                "type": "has_number_eq",
+                "arguments": [
+                  "2"
+                ],
+                "category_uuid": "c8e609a7-bf83-4aa9-a3ad-44308ea179c6"
+              },
+              {
+                "uuid": "8f9d37a1-8240-49c4-b117-d41468b2ccb6",
+                "type": "has_number_eq",
+                "arguments": [
+                  "3"
+                ],
+                "category_uuid": "974a9ec4-11ba-4975-9ff7-7e378742ffb7"
+              }
+            ],
+            "default_category_uuid": "7a386a51-fb79-4e0e-9d3a-2cbc96fdfd86"
+          },
+          "exits": [
+            {
+              "uuid": "b48dbdac-4c5b-44f7-b495-59c5585264c2",
+              "destination_uuid": "1c9123f5-8806-46fd-8604-6bef38a75d0f"
+            },
+            {
+              "uuid": "71092788-02c1-42c4-a80f-69bf28ce1b77",
+              "destination_uuid": "e88fc577-2454-4a5e-bf68-729b9a18fc1f"
+            },
+            {
+              "uuid": "ccfb2ba2-f118-44c3-bc6c-14018080b21b",
+              "destination_uuid": "6dd869f8-4cea-42ba-8776-5feb2d6ae03b"
+            },
+            {
+              "uuid": "c50f934a-14b8-46d7-81b2-9424144ffce1",
+              "destination_uuid": "a5de23bd-022b-45d9-8bb5-6bbf63c4fee7"
+            }
+          ]
+        },
+        {
+          "uuid": "1c9123f5-8806-46fd-8604-6bef38a75d0f",
+          "actions": [
+            {
+              "uuid": "059ee2dd-7005-491d-abd1-b38db88cd0ad",
+              "type": "set_run_result",
+              "name": "estadopago",
+              "value": "Caja Menor",
+              "category": ""
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c2915f26-3aed-4806-8209-905f3e2c9d81",
+              "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+            }
+          ]
+        },
+        {
+          "uuid": "e88fc577-2454-4a5e-bf68-729b9a18fc1f",
+          "actions": [
+            {
+              "uuid": "13c6862b-6e54-4b47-b697-4881551007b3",
+              "type": "set_run_result",
+              "name": "estadopago",
+              "value": "Sin Costo",
+              "category": ""
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "19f950b3-20fd-4d28-baae-d7daf5f85a87",
+              "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+            }
+          ]
+        },
+        {
+          "uuid": "6dd869f8-4cea-42ba-8776-5feb2d6ae03b",
+          "actions": [
+            {
+              "uuid": "166db496-5ab5-496e-b159-3ac56ce7d5f0",
+              "type": "set_run_result",
+              "name": "estadopago",
+              "value": "Por Pagar",
+              "category": ""
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "05bac7b3-fee3-49b5-a93b-01a140b66847",
+              "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+            }
+          ]
+        },
+        {
+          "uuid": "a5de23bd-022b-45d9-8bb5-6bbf63c4fee7",
+          "actions": [
+            {
+              "uuid": "9545ee0a-407c-450b-ad8f-84840e27588f",
+              "type": "send_msg",
+              "text": "❌ Opción no válida. Por favor ingrese 1, 2 o 3.",
+              "all_urns": false
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "d73a1249-2837-4099-9841-61c76a36f832",
+              "destination_uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a"
+            }
+          ]
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [
+                "NO",
+                "SI"
+              ],
+              "text": "🎉 ¡Buen trabajo! Estamos listos para registrar esta información. Antes de continuar, revisemos los detalles:\n\n🔍 Resumen del Registro:\n\n🔹 Movimiento: @results.tipomovimiento\n🔹 Origen: @results.origen\n🔹 Destino: @results.destino\n\n📦 Materiales Enviados:\n♻️ Reciclaje: @results.reciclaje kg\n🔥 Incineración: @results.incineracion kg\n🚯 Plástico Contaminado: @results.plasticocontaminado kg\n📌 Flexibles: @results.flexibles kg\n🧵 Lonas: @results.lonas kg\n📦 Cartón: @results.carton kg\n🔩 Metal: @results.metal kg\n\n📝 Observaciones: @results.observaciones\n💰 Estado de Pago: @results.estadopago\n\n📊 TOTAL: @results.total Kg\n\n✅ ¿Confirmas que los datos son correctos?\n(Si todo está bien, presiona Sí para continuar o No para corregir).",
+              "type": "send_msg",
+              "uuid": "42a76309-1c13-4979-9fa0-45db7e6c5c5b"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "50b6a46d-6257-486f-b9e9-8072546bdc92",
+              "uuid": "8226e96a-5e8f-407f-9355-97249eabf74d"
+            }
+          ],
+          "uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+        },
+        {
+          "actions": [],
+          "exits": [
+            {
+              "destination_uuid": "9f41fdc7-6f99-41f4-97ab-e6de37f7c59f",
+              "uuid": "b770c215-0a6e-4b00-aa25-7258ba93fb19"
+            },
+            {
+              "destination_uuid": "3417664c-6a89-4071-9cfe-c454940abba8",
+              "uuid": "f8fd4f3c-e384-4122-93c6-d33ec39d7486"
+            },
+            {
+              "destination_uuid": "3417664c-6a89-4071-9cfe-c454940abba8",
+              "uuid": "422038fe-4e83-4943-8aa3-1e522abb8c85"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "SI ok"
+                ],
+                "category_uuid": "cf10228f-db61-42d9-8714-ed8174b84b72",
+                "type": "has_any_word",
+                "uuid": "76e31121-4852-4774-a327-beb039c26d8e"
+              },
+              {
+                "arguments": [
+                  "NO"
+                ],
+                "category_uuid": "492f7daa-721d-4dfe-8471-fd8732057b8a",
+                "type": "has_any_word",
+                "uuid": "ed946395-592c-461d-9af9-1b487313138f"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "b770c215-0a6e-4b00-aa25-7258ba93fb19",
+                "name": "Si",
+                "uuid": "cf10228f-db61-42d9-8714-ed8174b84b72"
+              },
+              {
+                "exit_uuid": "f8fd4f3c-e384-4122-93c6-d33ec39d7486",
+                "name": "No",
+                "uuid": "492f7daa-721d-4dfe-8471-fd8732057b8a"
+              },
+              {
+                "exit_uuid": "422038fe-4e83-4943-8aa3-1e522abb8c85",
+                "name": "Other",
+                "uuid": "d6aeb65d-dd25-41d1-acad-715572451f3f"
+              }
+            ],
+            "default_category_uuid": "d6aeb65d-dd25-41d1-acad-715572451f3f",
+            "operand": "@input",
+            "result_name": "confirma",
+            "type": "switch",
+            "wait": {
+              "type": "msg"
+            }
+          },
+          "uuid": "50b6a46d-6257-486f-b9e9-8072546bdc92"
+        },
+        {
+          "actions": [
+            {
+              "quick_replies": [],
+              "text": "Registro Kardex CANCELADO. Por favor inicie el proceso nuevamente.",
+              "type": "send_msg",
+              "uuid": "9fe78409-fbe0-4208-b273-8b8bbe414043"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "378edf0e-20e0-4c40-bcf6-5c35ff617af4"
+            }
+          ],
+          "uuid": "3417664c-6a89-4071-9cfe-c454940abba8"
+        },
+        {
+          "actions": [
+            {
+              "body": "{\n  \"records\": [\n    {\n      \"fields\": {\n        \"Coordinador\": [\"@results.id_coordinador\"],\n        \"fechakardex\": \"@results.fechakardex\",\n        \"TipoMovimiento\": \"@results.tipomovimiento\",\n        \"MunicipioOrigen\": [\"@results.idmunicipioorigen\"],\n        \"Reciclaje\": @results.reciclaje,\n        \"Incineracion\": @results.incineracion,\n        \"PlasticoContaminado\": @results.plasticocontaminado,\n        \"Flexibles\": @results.flexibles,\n        \"Lonas\": @results.lonas,\n        \"Carton\": @results.carton,\n        \"Metal\": @results.metal,\n        \"Observaciones\": \"@results.observaciones\",\n        \"EstadoPago\": \"@results.estadopago\"\n        @(if(results.id_acopio, \", \\\"CentrodeAcopio\\\": [\\\"\" & results.id_acopio & \"\\\"]\", \"\"))\n        @(if(results.id_gestor, \", \\\"gestor\\\": [\\\"\" & results.id_gestor & \"\\\"]\", \"\"))\n      }\n    }\n  ]\n}",
+              "headers": {
+                "Accept": "application/json",
+                "Authorization": "Bearer @globals.apikey",
+                "Content-Type": "application/json"
+              },
+              "method": "POST",
+              "result_name": "webhook_response",
+              "type": "call_webhook",
+              "url": "https://api.airtable.com/v0/appniHwKiUMS0imXD/Kardex",
+              "uuid": "701992bc-009c-462f-ae0c-5aa3f8835197"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": "32064488-e48e-4549-8603-ac7ffd828fb2",
+              "uuid": "d7ada395-c9d4-46ca-9265-7b12ae304287"
+            },
+            {
+              "destination_uuid": null,
+              "uuid": "adec4028-59a6-48b1-b686-79c96fe8aa3f"
+            }
+          ],
+          "router": {
+            "cases": [
+              {
+                "arguments": [
+                  "200",
+                  "299"
+                ],
+                "category_uuid": "f1aa5493-9b45-4de0-975f-d86eb2bf757a",
+                "type": "has_number_between",
+                "uuid": "094d3723-e612-4fcc-a376-d3c38b4cab34"
+              }
+            ],
+            "categories": [
+              {
+                "exit_uuid": "d7ada395-c9d4-46ca-9265-7b12ae304287",
+                "name": "Success",
+                "uuid": "f1aa5493-9b45-4de0-975f-d86eb2bf757a"
+              },
+              {
+                "exit_uuid": "adec4028-59a6-48b1-b686-79c96fe8aa3f",
+                "name": "Failure",
+                "uuid": "02979886-54b1-40ab-a1fa-715d706f7337"
+              }
+            ],
+            "default_category_uuid": "02979886-54b1-40ab-a1fa-715d706f7337",
+            "operand": "@webhook.status",
+            "type": "switch"
+          },
+          "uuid": "9f41fdc7-6f99-41f4-97ab-e6de37f7c59f"
+        },
+        {
+          "actions": [
+            {
+              "attachments": [],
+              "quick_replies": [],
+              "text": "✅ Registro Exitoso ✅\n\nTu movimiento ha sido registrado correctamente en el sistema.\n\n📌 Número de Kardex: @run.results.webhook_response.extra.records.0.fields.idkardex\n\nGuarda este número para futuras referencias. ¡Gracias por tu gestión! 🚀",
+              "type": "send_msg",
+              "uuid": "6d763602-fb60-4903-aeb7-7ba120dcf0c5"
+            }
+          ],
+          "exits": [
+            {
+              "destination_uuid": null,
+              "uuid": "2a779a63-66d0-4273-b511-b6f08528a740"
+            }
+          ],
+          "uuid": "32064488-e48e-4549-8603-ac7ffd828fb2"
+        }
+      ],
+      "revision": 1083,
+      "spec_version": "14.3.0",
+      "type": "messaging",
+      "uuid": "e3837ec8-d0c7-4e9b-a14a-6fdcc24e1e13"
+    }
+  ]
+}

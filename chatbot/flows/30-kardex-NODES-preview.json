@@ -1,0 +1,179 @@
+{
+  "nodo_pregunta": {
+    "uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a",
+    "actions": [
+      {
+        "uuid": "cf3b28c1-ce18-494b-8f43-3c09def68adf",
+        "type": "send_msg",
+        "text": "💰 FORMA DE PAGO 💰\n\n¿Cómo se pagará este movimiento?\n\nSeleccione una opción:\n\n1️⃣ Caja Menor\n2️⃣ Sin Costo\n3️⃣ Por Pagar\n\n📝 Escriba el número de la opción (1, 2 o 3):",
+        "quick_replies": [
+          "1",
+          "2",
+          "3"
+        ],
+        "all_urns": false
+      }
+    ],
+    "exits": [
+      {
+        "uuid": "dc49d84a-ca3c-4cda-bc87-479ffc62c1c7",
+        "destination_uuid": "2e6fa2a1-64f6-4d7a-a040-6d397c465969"
+      }
+    ]
+  },
+  "nodo_espera": {
+    "uuid": "2e6fa2a1-64f6-4d7a-a040-6d397c465969",
+    "router": {
+      "type": "switch",
+      "wait": {
+        "type": "msg"
+      },
+      "result_name": "estadopago_num",
+      "categories": [
+        {
+          "uuid": "08e26da5-5204-4ea9-838e-fb6a77f7b5e8",
+          "name": "Caja Menor",
+          "exit_uuid": "b48dbdac-4c5b-44f7-b495-59c5585264c2"
+        },
+        {
+          "uuid": "c8e609a7-bf83-4aa9-a3ad-44308ea179c6",
+          "name": "Sin Costo",
+          "exit_uuid": "71092788-02c1-42c4-a80f-69bf28ce1b77"
+        },
+        {
+          "uuid": "974a9ec4-11ba-4975-9ff7-7e378742ffb7",
+          "name": "Por Pagar",
+          "exit_uuid": "ccfb2ba2-f118-44c3-bc6c-14018080b21b"
+        },
+        {
+          "uuid": "7a386a51-fb79-4e0e-9d3a-2cbc96fdfd86",
+          "name": "Other",
+          "exit_uuid": "c50f934a-14b8-46d7-81b2-9424144ffce1"
+        }
+      ],
+      "operand": "@input.text",
+      "cases": [
+        {
+          "uuid": "05ceec3d-1f3b-4f02-9ffa-b0b026da7477",
+          "type": "has_number_eq",
+          "arguments": [
+            "1"
+          ],
+          "category_uuid": "08e26da5-5204-4ea9-838e-fb6a77f7b5e8"
+        },
+        {
+          "uuid": "d40b05d8-f98f-411c-a384-36249b2d9884",
+          "type": "has_number_eq",
+          "arguments": [
+            "2"
+          ],
+          "category_uuid": "c8e609a7-bf83-4aa9-a3ad-44308ea179c6"
+        },
+        {
+          "uuid": "8f9d37a1-8240-49c4-b117-d41468b2ccb6",
+          "type": "has_number_eq",
+          "arguments": [
+            "3"
+          ],
+          "category_uuid": "974a9ec4-11ba-4975-9ff7-7e378742ffb7"
+        }
+      ],
+      "default_category_uuid": "7a386a51-fb79-4e0e-9d3a-2cbc96fdfd86"
+    },
+    "exits": [
+      {
+        "uuid": "b48dbdac-4c5b-44f7-b495-59c5585264c2",
+        "destination_uuid": "1c9123f5-8806-46fd-8604-6bef38a75d0f"
+      },
+      {
+        "uuid": "71092788-02c1-42c4-a80f-69bf28ce1b77",
+        "destination_uuid": "e88fc577-2454-4a5e-bf68-729b9a18fc1f"
+      },
+      {
+        "uuid": "ccfb2ba2-f118-44c3-bc6c-14018080b21b",
+        "destination_uuid": "6dd869f8-4cea-42ba-8776-5feb2d6ae03b"
+      },
+      {
+        "uuid": "c50f934a-14b8-46d7-81b2-9424144ffce1",
+        "destination_uuid": "a5de23bd-022b-45d9-8bb5-6bbf63c4fee7"
+      }
+    ]
+  },
+  "nodos_intermedios": [
+    {
+      "uuid": "1c9123f5-8806-46fd-8604-6bef38a75d0f",
+      "actions": [
+        {
+          "uuid": "059ee2dd-7005-491d-abd1-b38db88cd0ad",
+          "type": "set_run_result",
+          "name": "estadopago",
+          "value": "Caja Menor",
+          "category": ""
+        }
+      ],
+      "exits": [
+        {
+          "uuid": "c2915f26-3aed-4806-8209-905f3e2c9d81",
+          "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+        }
+      ]
+    },
+    {
+      "uuid": "e88fc577-2454-4a5e-bf68-729b9a18fc1f",
+      "actions": [
+        {
+          "uuid": "13c6862b-6e54-4b47-b697-4881551007b3",
+          "type": "set_run_result",
+          "name": "estadopago",
+          "value": "Sin Costo",
+          "category": ""
+        }
+      ],
+      "exits": [
+        {
+          "uuid": "19f950b3-20fd-4d28-baae-d7daf5f85a87",
+          "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+        }
+      ]
+    },
+    {
+      "uuid": "6dd869f8-4cea-42ba-8776-5feb2d6ae03b",
+      "actions": [
+        {
+          "uuid": "166db496-5ab5-496e-b159-3ac56ce7d5f0",
+          "type": "set_run_result",
+          "name": "estadopago",
+          "value": "Por Pagar",
+          "category": ""
+        }
+      ],
+      "exits": [
+        {
+          "uuid": "05bac7b3-fee3-49b5-a93b-01a140b66847",
+          "destination_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc"
+        }
+      ]
+    }
+  ],
+  "nodo_error": {
+    "uuid": "a5de23bd-022b-45d9-8bb5-6bbf63c4fee7",
+    "actions": [
+      {
+        "uuid": "9545ee0a-407c-450b-ad8f-84840e27588f",
+        "type": "send_msg",
+        "text": "❌ Opción no válida. Por favor ingrese 1, 2 o 3.",
+        "all_urns": false
+      }
+    ],
+    "exits": [
+      {
+        "uuid": "d73a1249-2837-4099-9841-61c76a36f832",
+        "destination_uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a"
+      }
+    ]
+  },
+  "info": {
+    "resumen_node_uuid": "987c6e43-757b-4cce-bb4d-754679c694bc",
+    "nuevo_pregunta_uuid": "4d115c85-6e31-4bd1-91c2-1a6dda6ee46a"
+  }
+}
