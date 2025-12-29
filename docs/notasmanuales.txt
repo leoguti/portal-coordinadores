@@ -1,7 +1,5 @@
-la orende de servicio es para que cobren para podenr pagar... ñlo ideal es que yo sepasa sobre que factura me cobraron .. se puede adicional la infromacion sobrcomo tesosreoro .. es decir que el tesorero referencia con que factura (del tercero) se cobro esta orden de servico . para psoterior auditoria. .
-hay que agrgar una interfaz para el catalogo tener en cuenta .. para el administrador 
-orden de servicio: 
-	el coordinador debe poder descargar un pdf de la orden de servicio 
-	el tesorero tambien descargar PDF 
-	el tesorero debe poder marcar la orden como pagada poniendo el numero de factura correspondiente a la orden  
+hay que agregar una interfaz para el catalogo tener en cuenta .. para el administrador 
+Para la interfaz de administrador 
+	Ver igual los datos de kardex ... todos los coordinadores 
+	agregar filtro de coordinador. mas lo que ya existen 
 

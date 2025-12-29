@@ -35,6 +35,16 @@ export default function KardexPage() {
   const [kardexRecords, setKardexRecords] = useState<KardexRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  
+  // Filtros
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [tipoMovimiento, setTipoMovimiento] = useState("");
+  const [municipio, setMunicipio] = useState("");
+  const [centroAcopio, setCentroAcopio] = useState("");
+  const [gestor, setGestor] = useState("");
+  const [estadoPago, setEstadoPago] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -104,6 +114,110 @@ export default function KardexPage() {
     );
   };
 
+  const getMaterialIcon = (material: string) => {
+    const icons: Record<string, string> = {
+      "Reciclaje": "♻️",
+      "Incineracion": "🔥",
+      "Flexibles": "📦",
+      "PlasticoContaminado": "⚠️",
+      "Lonas": "🎪",
+      "Carton": "📄",
+      "Metal": "⚙️",
+    };
+    return icons[material] || "📦";
+  };
+
+  const materialesLabels: Record<string, string> = {
+    "Reciclaje": "Reciclaje",
+    "Incineracion": "Incineración",
+    "Flexibles": "Flexibles",
+    "PlasticoContaminado": "Plástico Contaminado",
+    "Lonas": "Lonas",
+    "Carton": "Cartón",
+    "Metal": "Metal",
+  };
+
+  const toggleRow = (id: string) => {
+    setExpandedRow(expandedRow === id ? null : id);
+  };
+
+  // Obtener valores únicos para filtros
+  const getUniqueValues = (field: keyof KardexRecord["fields"]) => {
+    const values = new Set<string>();
+    kardexRecords.forEach((record) => {
+      const value = record.fields[field];
+      if (Array.isArray(value)) {
+        value.forEach((v) => values.add(v));
+      } else if (value) {
+        values.add(String(value));
+      }
+    });
+    return Array.from(values).sort();
+  };
+
+  // Aplicar filtros
+  const filteredRecords = kardexRecords.filter((record) => {
+    // Filtro de fecha desde
+    if (fechaDesde && record.fields.fechakardex) {
+      if (new Date(record.fields.fechakardex) < new Date(fechaDesde)) {
+        return false;
+      }
+    }
+
+    // Filtro de fecha hasta
+    if (fechaHasta && record.fields.fechakardex) {
+      if (new Date(record.fields.fechakardex) > new Date(fechaHasta)) {
+        return false;
+      }
+    }
+
+    // Filtro de tipo de movimiento
+    if (tipoMovimiento && record.fields.TipoMovimiento !== tipoMovimiento) {
+      return false;
+    }
+
+    // Filtro de municipio
+    if (municipio) {
+      const municipios = record.fields["mundep (from MunicipioOrigen)"] || [];
+      if (!municipios.includes(municipio)) {
+        return false;
+      }
+    }
+
+    // Filtro de centro de acopio
+    if (centroAcopio) {
+      const centros = record.fields.NombreCentrodeAcopio || [];
+      if (!centros.includes(centroAcopio)) {
+        return false;
+      }
+    }
+
+    // Filtro de gestor
+    if (gestor) {
+      const gestores = record.fields.nombregestor || [];
+      if (!gestores.includes(gestor)) {
+        return false;
+      }
+    }
+
+    // Filtro de estado de pago
+    if (estadoPago && record.fields.EstadoPago !== estadoPago) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const limpiarFiltros = () => {
+    setFechaDesde("");
+    setFechaHasta("");
+    setTipoMovimiento("");
+    setMunicipio("");
+    setCentroAcopio("");
+    setGestor("");
+    setEstadoPago("");
+  };
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -135,10 +249,157 @@ export default function KardexPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Sección de Filtros */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <p className="text-sm text-gray-600">
-                Total: <span className="font-semibold">{kardexRecords.length}</span> movimientos
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">🔍 Filtros</h2>
+                <button
+                  onClick={limpiarFiltros}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Fecha Desde */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📅 Fecha Desde
+                  </label>
+                  <input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  />
+                </div>
+
+                {/* Fecha Hasta */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📅 Fecha Hasta
+                  </label>
+                  <input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  />
+                </div>
+
+                {/* Tipo de Movimiento */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📦 Tipo Movimiento
+                  </label>
+                  <select
+                    value={tipoMovimiento}
+                    onChange={(e) => setTipoMovimiento(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">⬇️ ENTRADA</option>
+                    <option value="SALIDA">⬆️ SALIDA</option>
+                  </select>
+                </div>
+
+                {/* Estado de Pago */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    💰 Estado de Pago
+                  </label>
+                  <select
+                    value={estadoPago}
+                    onChange={(e) => setEstadoPago(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    <option value="Caja Menor">Caja Menor</option>
+                    <option value="Sin Costo">Sin Costo</option>
+                    <option value="Por Pagar">Por Pagar</option>
+                    <option value="En Orden">En Orden</option>
+                  </select>
+                </div>
+
+                {/* Municipio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🏙️ Municipio
+                  </label>
+                  <select
+                    value={municipio}
+                    onChange={(e) => setMunicipio(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    {getUniqueValues("mundep (from MunicipioOrigen)").map((mun) => (
+                      <option key={mun} value={mun}>
+                        {mun}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Centro de Acopio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🏢 Centro de Acopio
+                  </label>
+                  <select
+                    value={centroAcopio}
+                    onChange={(e) => setCentroAcopio(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    {getUniqueValues("NombreCentrodeAcopio").map((centro) => (
+                      <option key={centro} value={centro}>
+                        {centro}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Gestor */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ♻️ Gestor
+                  </label>
+                  <select
+                    value={gestor}
+                    onChange={(e) => setGestor(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    {getUniqueValues("nombregestor").map((ges) => (
+                      <option key={ges} value={ges}>
+                        {ges}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de resumen */}
+            <div className="px-6 py-3 border-b border-gray-200 bg-white">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Mostrando <span className="font-semibold">{filteredRecords.length}</span> de{" "}
+                  <span className="font-semibold">{kardexRecords.length}</span> movimientos
+                </p>
+                {filteredRecords.length > 0 && (
+                  <p className="text-sm text-gray-600">
+                    Total filtrado:{" "}
+                    <span className="font-semibold">
+                      {filteredRecords
+                        .reduce((sum, r) => sum + (r.fields.Total || 0), 0)
+                        .toLocaleString("es-CO")}{" "}
+                      kg
+                    </span>
+                  </p>
+                )}
+              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -172,36 +433,76 @@ export default function KardexPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {kardexRecords.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {record.fields.idkardex || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(record.fields.fechakardex)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className="inline-flex items-center gap-1">
-                          {getTipoIcon(record.fields.TipoMovimiento)}
-                          <span className="font-medium">{record.fields.TipoMovimiento || "-"}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {record.fields["mundep (from MunicipioOrigen)"]?.[0] || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {record.fields.NombreCentrodeAcopio?.[0] || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {record.fields.nombregestor?.[0] || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                        {record.fields.Total?.toLocaleString("es-CO") || "0"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {getEstadoBadge(record.fields.EstadoPago)}
-                      </td>
-                    </tr>
+                  {filteredRecords.map((record) => (
+                    <>
+                      <tr
+                        key={record.id}
+                        onClick={() => toggleRow(record.id)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">
+                              {expandedRow === record.id ? "▼" : "▶"}
+                            </span>
+                            {record.fields.idkardex || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(record.fields.fechakardex)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="inline-flex items-center gap-1">
+                            {getTipoIcon(record.fields.TipoMovimiento)}
+                            <span className="font-medium text-gray-900">{record.fields.TipoMovimiento || "-"}</span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {record.fields["mundep (from MunicipioOrigen)"]?.[0] || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {record.fields.NombreCentrodeAcopio?.[0] || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {record.fields.nombregestor?.[0] || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                          {record.fields.Total?.toLocaleString("es-CO") || "0"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {getEstadoBadge(record.fields.EstadoPago)}
+                        </td>
+                      </tr>
+                      {expandedRow === record.id && (
+                        <tr key={`${record.id}-detail`} className="bg-purple-50">
+                          <td colSpan={8} className="px-6 py-4">
+                            <div className="flex flex-wrap gap-3 items-center">
+                              <span className="text-sm font-semibold text-gray-900">📊</span>
+                              {Object.entries(materialesLabels).map(([key, label]) => {
+                                const valor = record.fields[key as keyof typeof record.fields] as number | undefined;
+                                if (!valor || valor === 0) return null;
+                                return (
+                                  <div
+                                    key={key}
+                                    className="inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-purple-200 shadow-sm"
+                                  >
+                                    <span className="text-lg">{getMaterialIcon(key)}</span>
+                                    <span className="text-xs font-medium text-gray-600">{label}:</span>
+                                    <span className="text-sm font-bold text-purple-700">{valor.toLocaleString("es-CO")} kg</span>
+                                  </div>
+                                );
+                              })}
+                              {record.fields.Observaciones && (
+                                <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-purple-200 shadow-sm">
+                                  <span className="text-sm font-semibold text-gray-900">📝</span>
+                                  <span className="text-xs text-gray-700 italic">{record.fields.Observaciones}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
