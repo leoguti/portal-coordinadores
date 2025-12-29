@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import MunicipioSearch from "./MunicipioSearch";
+import CentroAcopioSearch from "./CentroAcopioSearch";
+import GestorSearch from "./GestorSearch";
 
 interface KardexFormData {
   fechakardex: string;
@@ -9,13 +12,13 @@ interface KardexFormData {
   CentroAcopio?: string;
   Gestor?: string;
   EstadoPago: string;
-  Reciclaje: number;
-  Incineracion: number;
-  Flexibles: number;
-  PlasticoContaminado: number;
-  Lonas: number;
-  Carton: number;
-  Metal: number;
+  Reciclaje: number | string;
+  Incineracion: number | string;
+  Flexibles: number | string;
+  PlasticoContaminado: number | string;
+  Lonas: number | string;
+  Carton: number | string;
+  Metal: number | string;
   Descripción: string;
 }
 
@@ -24,49 +27,83 @@ interface KardexFormModalProps {
   onSubmit: (data: KardexFormData) => Promise<void>;
 }
 
+interface SelectOption {
+  id: string;
+  name: string;
+}
+
 export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalProps) {
   const [loading, setLoading] = useState(false);
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [centroAcopio, setCentroAcopio] = useState<SelectOption | null>(null);
+  const [gestor, setGestor] = useState<SelectOption | null>(null);
+  
   const [formData, setFormData] = useState<KardexFormData>({
     fechakardex: new Date().toISOString().split("T")[0],
     TipoMovimiento: "ENTRADA",
     EstadoPago: "Por Pagar",
-    Reciclaje: 0,
-    Incineracion: 0,
-    Flexibles: 0,
-    PlasticoContaminado: 0,
-    Lonas: 0,
-    Carton: 0,
-    Metal: 0,
+    Reciclaje: "",
+    Incineracion: "",
+    Flexibles: "",
+    PlasticoContaminado: "",
+    Lonas: "",
+    Carton: "",
+    Metal: "",
     Descripción: "",
   });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseFloat(value) || 0 : value,
+      [name]: value,
     }));
   };
 
   const calculateTotal = () => {
+    const toNumber = (val: number | string) => {
+      if (val === "" || val === null || val === undefined) return 0;
+      return typeof val === "number" ? val : parseFloat(val) || 0;
+    };
+
     return (
-      formData.Reciclaje +
-      formData.Incineracion +
-      formData.Flexibles +
-      formData.PlasticoContaminado +
-      formData.Lonas +
-      formData.Carton +
-      formData.Metal
+      toNumber(formData.Reciclaje) +
+      toNumber(formData.Incineracion) +
+      toNumber(formData.Flexibles) +
+      toNumber(formData.PlasticoContaminado) +
+      toNumber(formData.Lonas) +
+      toNumber(formData.Carton) +
+      toNumber(formData.Metal)
     );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
-      await onSubmit(formData);
+      const toNumber = (val: number | string) => {
+        if (val === "" || val === null || val === undefined) return 0;
+        return typeof val === "number" ? val : parseFloat(val) || 0;
+      };
+
+      const submitData = {
+        ...formData,
+        MunicipioOrigen: municipio?.id,
+        CentroAcopio: centroAcopio?.id,
+        Gestor: gestor?.id,
+        Reciclaje: toNumber(formData.Reciclaje),
+        Incineracion: toNumber(formData.Incineracion),
+        Flexibles: toNumber(formData.Flexibles),
+        PlasticoContaminado: toNumber(formData.PlasticoContaminado),
+        Lonas: toNumber(formData.Lonas),
+        Carton: toNumber(formData.Carton),
+        Metal: toNumber(formData.Metal),
+      };
+
+      await onSubmit(submitData);
       onClose();
     } catch (error) {
       console.error("Error al enviar formulario:", error);
@@ -76,10 +113,12 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     }
   };
 
+  const isSalida = formData.TipoMovimiento === "SALIDA";
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-bold text-gray-900">➕ Nuevo Movimiento de Kardex</h2>
           <button
             onClick={onClose}
@@ -151,13 +190,61 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
             </div>
           </div>
 
+          {/* Ubicación y Destino */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+              📍 Ubicación y Destino
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Municipio de Origen */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  🏙️ Municipio de Origen
+                </label>
+                <MunicipioSearch
+                  value={municipio}
+                  onChange={setMunicipio}
+                  placeholder="Buscar municipio..."
+                />
+              </div>
+
+              {/* Centro de Acopio */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  🏢 Centro de Acopio
+                </label>
+                <CentroAcopioSearch
+                  value={centroAcopio}
+                  onChange={setCentroAcopio}
+                  placeholder="Buscar centro..."
+                />
+              </div>
+
+              {/* Gestor - Solo para SALIDA */}
+              {isSalida && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ♻️ Gestor de Residuos *
+                  </label>
+                  <GestorSearch
+                    value={gestor}
+                    onChange={setGestor}
+                    placeholder="Buscar gestor..."
+                    required={isSalida}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Cantidades por Material */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
               ⚖️ Cantidades por Material (kg)
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {/* Reciclaje */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -170,6 +257,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -186,6 +274,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -202,6 +291,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -209,7 +299,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
               {/* Plástico Contaminado */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ⚠️ Plástico Contaminado
+                  ⚠️ P. Contaminado
                 </label>
                 <input
                   type="number"
@@ -218,6 +308,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -234,6 +325,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -250,12 +342,13 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
 
               {/* Metal */}
-              <div>
+              <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ⚙️ Metal
                 </label>
@@ -266,6 +359,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
@@ -278,7 +372,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   📊 Total:
                 </span>
                 <span className="text-2xl font-bold text-purple-700">
-                  {calculateTotal().toLocaleString("es-CO")} kg
+                  {calculateTotal().toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
                 </span>
               </div>
             </div>

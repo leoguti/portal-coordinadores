@@ -1259,6 +1259,9 @@ export async function createKardex(
     fechakardex: string;
     TipoMovimiento: string;
     EstadoPago: string;
+    MunicipioOrigen?: string;
+    CentroAcopio?: string;
+    Gestor?: string;
     Reciclaje?: number;
     Incineracion?: number;
     Flexibles?: number;
@@ -1280,28 +1283,39 @@ export async function createKardex(
   try {
     const url = `https://api.airtable.com/v0/${baseId}/Kardex`;
 
+    const fields: any = {
+      Coordinador: [coordinatorRecordId],
+      fechakardex: kardexData.fechakardex,
+      TipoMovimiento: kardexData.TipoMovimiento,
+      EstadoPago: kardexData.EstadoPago,
+      Reciclaje: kardexData.Reciclaje || 0,
+      Incineracion: kardexData.Incineracion || 0,
+      Flexibles: kardexData.Flexibles || 0,
+      PlasticoContaminado: kardexData.PlasticoContaminado || 0,
+      Lonas: kardexData.Lonas || 0,
+      Carton: kardexData.Carton || 0,
+      Metal: kardexData.Metal || 0,
+      Descripción: kardexData.Descripción || "",
+    };
+
+    // Add optional linked records
+    if (kardexData.MunicipioOrigen) {
+      fields.MunicipioOrigen = [kardexData.MunicipioOrigen];
+    }
+    if (kardexData.CentroAcopio) {
+      fields.CentrodeAcopio = [kardexData.CentroAcopio];
+    }
+    if (kardexData.Gestor) {
+      fields.gestor = [kardexData.Gestor];
+    }
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        fields: {
-          Coordinador: [coordinatorRecordId],
-          fechakardex: kardexData.fechakardex,
-          TipoMovimiento: kardexData.TipoMovimiento,
-          EstadoPago: kardexData.EstadoPago,
-          Reciclaje: kardexData.Reciclaje || 0,
-          Incineracion: kardexData.Incineracion || 0,
-          Flexibles: kardexData.Flexibles || 0,
-          PlasticoContaminado: kardexData.PlasticoContaminado || 0,
-          Lonas: kardexData.Lonas || 0,
-          Carton: kardexData.Carton || 0,
-          Metal: kardexData.Metal || 0,
-          Descripción: kardexData.Descripción || "",
-        },
-      }),
+      body: JSON.stringify({ fields }),
     });
 
     if (!response.ok) {
