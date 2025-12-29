@@ -20,11 +20,34 @@
   :root {
     --background: #ffffff;
     --foreground: #111827;
-    color-scheme: light;
+    color-scheme: light !important;
   }
   
   html {
-    color-scheme: light;
+    color-scheme: light !important;
+  }
+  
+  /* Forzar inputs en modo oscuro del sistema */
+  input,
+  select,
+  textarea {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    color-scheme: light !important;
+    -webkit-text-fill-color: #111827 !important;
+  }
+  
+  /* Forzar opciones de select */
+  select option {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  
+  /* Forzar todo el body */
+  body,
+  body * {
+    color-scheme: light !important;
   }
 }
 
@@ -142,11 +165,29 @@ textarea {
   background: #ffffff !important;
   color: #111827 !important;
   border-color: #d1d5db !important;
+  color-scheme: light !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+/* Forzar texto oscuro en inputs disabled también */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #f9fafb !important;
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* Forzar texto oscuro en options de select */
+select option {
+  background: #ffffff !important;
+  color: #111827 !important;
 }
 
 input::placeholder,
 textarea::placeholder {
   color: #6b7280 !important;
+  opacity: 1 !important;
 }
 
 /* Labels y texto de formularios */
