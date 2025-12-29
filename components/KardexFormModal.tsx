@@ -62,6 +62,26 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     Metal: "",
   });
 
+  // Calcular fecha mínima permitida según regla de negocio
+  const calcularFechaMinima = (): string => {
+    const hoy = new Date();
+    const diaActual = hoy.getDate();
+    
+    if (diaActual > 7) {
+      // Después del día 7: solo mes actual
+      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      return inicioMesActual.toISOString().split('T')[0];
+    } else {
+      // Días 1-7: mes anterior y actual
+      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      return inicioMesAnterior.toISOString().split('T')[0];
+    }
+  };
+
+  // Fecha máxima es hoy
+  const fechaMaxima = new Date().toISOString().split('T')[0];
+  const fechaMinima = calcularFechaMinima();
+
   // Cargar centros de acopio y gestores al montar el componente
   useEffect(() => {
     const fetchCentrosAcopio = async () => {
@@ -235,9 +255,16 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   name="fechakardex"
                   value={formData.fechakardex}
                   onChange={handleChange}
+                  min={fechaMinima}
+                  max={fechaMaxima}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date().getDate() > 7 
+                    ? "Solo se permiten fechas del mes actual"
+                    : "Se permiten fechas del mes actual y anterior"}
+                </p>
               </div>
 
               {/* Tipo de Movimiento */}
