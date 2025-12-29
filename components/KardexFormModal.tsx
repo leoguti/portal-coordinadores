@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import MunicipioSearch from "./MunicipioSearch";
-import GestorSearch from "./GestorSearch";
 
 interface KardexFormData {
   fechakardex: string;
   TipoMovimiento: string;
+  origenTipo?: string; // "municipio" | "centro" - solo para SALIDA
   MunicipioOrigen?: string;
   CentroAcopio?: string;
   Gestor?: string;
@@ -18,7 +18,6 @@ interface KardexFormData {
   Lonas: number | string;
   Carton: number | string;
   Metal: number | string;
-  Observaciones: string;
 }
 
 interface KardexFormModalProps {
@@ -36,16 +35,23 @@ interface CentroAcopio {
   name: string;
 }
 
+interface Gestor {
+  id: string;
+  name: string;
+}
+
 export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [centrosAcopio, setCentrosAcopio] = useState<CentroAcopio[]>([]);
   const [loadingCentros, setLoadingCentros] = useState(true);
+  const [gestores, setGestores] = useState<Gestor[]>([]);
+  const [loadingGestores, setLoadingGestores] = useState(true);
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
-  const [gestor, setGestor] = useState<SelectOption | null>(null);
   
   const [formData, setFormData] = useState<KardexFormData>({
     fechakardex: new Date().toISOString().split("T")[0],
     TipoMovimiento: "ENTRADA",
+    origenTipo: "municipio", // default para SALIDA
     EstadoPago: "Por Pagar",
     Reciclaje: "",
     Incineracion: "",
@@ -54,10 +60,9 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     Lonas: "",
     Carton: "",
     Metal: "",
-    Observaciones: "",
   });
 
-  // Cargar centros de acopio al montar el componente
+  // Cargar centros de acopio y gestores al montar el componente
   useEffect(() => {
     const fetchCentrosAcopio = async () => {
       try {
@@ -73,13 +78,53 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
       }
     };
 
+    const fetchGestores = async () => {
+      try {
+        const response = await fetch("/api/gestores/list");
+        if (response.ok) {
+          const data = await response.json();
+          setGestores(data.gestores || []);
+        }
+      } catch (error) {
+        console.error("Error cargando gestores:", error);
+      } finally {
+        setLoadingGestores(false);
+      }
+    };
+
     fetchCentrosAcopio();
+    fetchGestores();
   }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    
+    // Si cambia el tipo de movimiento, resetear origen
+    if (name === "TipoMovimiento") {
+      setMunicipio(null);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        origenTipo: "municipio",
+        MunicipioOrigen: undefined,
+        CentroAcopio: undefined,
+      }));
+      return;
+    }
+    
+    // Si cambia el tipo de origen en SALIDA, limpiar campos correspondientes
+    if (name === "origenTipo") {
+      setMunicipio(null);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        MunicipioOrigen: undefined,
+        CentroAcopio: undefined,
+      }));
+      return;
+    }
     
     // Para campos numéricos, evitar que se guarden con ceros prefijados
     if (e.target.type === "number" && value !== "") {
@@ -124,11 +169,19 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         return typeof val === "number" ? val : parseFloat(val) || 0;
       };
 
+      const isSalida = formData.TipoMovimiento === "SALIDA";
+      
       const submitData = {
         ...formData,
-        MunicipioOrigen: municipio?.id,
-        CentroAcopio: formData.CentroAcopio || undefined,
-        Gestor: gestor?.id,
+        // Para SALIDA: enviar municipio o centro según origenTipo
+        // Para ENTRADA: siempre enviar municipio si hay, centro como destino
+        MunicipioOrigen: isSalida 
+          ? (formData.origenTipo === "municipio" ? municipio?.id : undefined)
+          : municipio?.id,
+        CentroAcopio: isSalida
+          ? (formData.origenTipo === "centro" ? formData.CentroAcopio : undefined)
+          : (formData.CentroAcopio || undefined),
+        Gestor: formData.Gestor || undefined,
         Reciclaje: toNumber(formData.Reciclaje),
         Incineracion: toNumber(formData.Incineracion),
         Flexibles: toNumber(formData.Flexibles),
@@ -231,43 +284,110 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Municipio de Origen */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  🏙️ Municipio de Origen
-                </label>
-                <MunicipioSearch
-                  value={municipio}
-                  onChange={setMunicipio}
-                  placeholder="Buscar municipio..."
-                />
-              </div>
-
-              {/* Centro de Acopio */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  🏢 Centro de Acopio
-                </label>
-                {loadingCentros ? (
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
-                    Cargando centros...
+              {/* Tipo de Origen - Solo para SALIDA */}
+              {isSalida && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    📍 Origen de la Salida *
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="origenTipo"
+                        value="municipio"
+                        checked={formData.origenTipo === "municipio"}
+                        onChange={handleChange}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-700">🏙️ Municipio</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="origenTipo"
+                        value="centro"
+                        checked={formData.origenTipo === "centro"}
+                        onChange={handleChange}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-700">🏢 Centro de Acopio</span>
+                    </label>
                   </div>
-                ) : (
-                  <select
-                    name="CentroAcopio"
-                    value={formData.CentroAcopio || ""}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
-                  >
-                    <option value="">-- Seleccione un centro --</option>
-                    {centrosAcopio.map((centro) => (
-                      <option key={centro.id} value={centro.id}>
-                        {centro.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Municipio de Origen - Solo si NO es salida o si es salida desde municipio */}
+              {(!isSalida || (isSalida && formData.origenTipo === "municipio")) && (
+                <div className={isSalida ? "md:col-span-2" : ""}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🏙️ Municipio {isSalida ? "de Origen *" : ""}
+                  </label>
+                  <MunicipioSearch
+                    value={municipio}
+                    onChange={setMunicipio}
+                    placeholder="Buscar municipio..."
+                    required={isSalida && formData.origenTipo === "municipio"}
+                  />
+                </div>
+              )}
+
+              {/* Centro de Acopio Origen - Solo para SALIDA desde centro */}
+              {isSalida && formData.origenTipo === "centro" && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🏢 Centro de Acopio de Origen *
+                  </label>
+                  {loadingCentros ? (
+                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                      Cargando centros...
+                    </div>
+                  ) : (
+                    <select
+                      name="CentroAcopio"
+                      value={formData.CentroAcopio || ""}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                    >
+                      <option value="">-- Seleccione centro de origen --</option>
+                      {centrosAcopio.map((centro) => (
+                        <option key={centro.id} value={centro.id}>
+                          {centro.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Centro de Acopio Destino - Solo para ENTRADA */}
+              {!isSalida && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🏢 Centro de Acopio (Destino)
+                  </label>
+                  {loadingCentros ? (
+                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                      Cargando centros...
+                    </div>
+                  ) : (
+                    <select
+                      name="CentroAcopio"
+                      value={formData.CentroAcopio || ""}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                    >
+                      <option value="">-- Seleccione centro de destino --</option>
+                      {centrosAcopio.map((centro) => (
+                        <option key={centro.id} value={centro.id}>
+                          {centro.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Gestor - Solo para SALIDA */}
               {isSalida && (
@@ -275,12 +395,26 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     ♻️ Gestor de Residuos *
                   </label>
-                  <GestorSearch
-                    value={gestor}
-                    onChange={setGestor}
-                    placeholder="Buscar gestor..."
-                    required={isSalida}
-                  />
+                  {loadingGestores ? (
+                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                      Cargando gestores...
+                    </div>
+                  ) : (
+                    <select
+                      name="Gestor"
+                      value={formData.Gestor || ""}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                    >
+                      <option value="">-- Seleccione un gestor --</option>
+                      {gestores.map((gestor) => (
+                        <option key={gestor.id} value={gestor.id}>
+                          {gestor.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
             </div>
@@ -424,21 +558,6 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                 </span>
               </div>
             </div>
-          </div>
-
-          {/* Observaciones */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              📝 Observaciones
-            </label>
-            <textarea
-              name="Observaciones"
-              value={formData.Observaciones}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Notas adicionales sobre el movimiento..."
-            />
           </div>
 
           {/* Botones */}

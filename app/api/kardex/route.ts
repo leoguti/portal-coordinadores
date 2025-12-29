@@ -74,7 +74,6 @@ export async function POST(request: Request) {
       Lonas: body.Lonas,
       Carton: body.Carton,
       Metal: body.Metal,
-      Observaciones: body.Observaciones,
     });
 
     if (!newKardex) {

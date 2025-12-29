@@ -82,8 +82,7 @@ interface KardexFields {
   Carton?: number;
   Metal?: number;
   Total?: number;
-  Descripción?: string;
-  Observaciones?: string;
+  Descripción?: string; // Computed field - read only
   gestor?: string[];
   nombregestor?: string[];
 }
@@ -1269,7 +1268,6 @@ export async function createKardex(
     Lonas?: number;
     Carton?: number;
     Metal?: number;
-    Observaciones?: string;
   }
 ): Promise<AirtableRecord<KardexFields> | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -1295,8 +1293,7 @@ export async function createKardex(
       Lonas: kardexData.Lonas || 0,
       Carton: kardexData.Carton || 0,
       Metal: kardexData.Metal || 0,
-      // Descripción is a computed field, don't send it
-      ...(kardexData.Observaciones && { Observaciones: kardexData.Observaciones }),
+      // Descripción is a computed field, cannot be set
     };
 
     // Add optional linked records
