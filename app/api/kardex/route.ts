@@ -59,6 +59,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validar restricción de fecha (misma lógica que eliminación)
+    const fechaKardex = body.fechakardex;
+    const fechaMovimiento = new Date(fechaKardex + 'T00:00:00');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const diaActual = hoy.getDate();
+
+    let puedeCrear = false;
+    if (diaActual > 7) {
+      // Después del día 7: solo mes actual
+      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      puedeCrear = fechaMovimiento >= inicioMesActual;
+    } else {
+      // Días 1-7: mes anterior y actual
+      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      puedeCrear = fechaMovimiento >= inicioMesAnterior;
+    }
+
+    if (!puedeCrear) {
+      return NextResponse.json(
+        { 
+          error: diaActual > 7
+            ? "Solo se pueden crear movimientos con fecha del mes actual después del día 7"
+            : "Solo se pueden crear movimientos con fecha del mes actual y anterior durante los primeros 7 días del mes"
+        },
+        { status: 400 }
+      );
+    }
+
     // Create kardex record
     const newKardex = await createKardex(session.user.coordinatorRecordId, {
       fechakardex: body.fechakardex,

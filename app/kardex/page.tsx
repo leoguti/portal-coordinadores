@@ -25,7 +25,6 @@ interface KardexRecord {
     Carton?: number;
     Metal?: number;
     Total?: number;
-    Descripción?: string;
     nombregestor?: string[];
   };
 }
@@ -583,12 +582,6 @@ export default function KardexPage() {
                                   </div>
                                 );
                               })}
-                              {record.fields.Descripción && (
-                                <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-purple-200 shadow-sm">
-                                  <span className="text-sm font-semibold text-gray-900">📝</span>
-                                  <span className="text-xs text-gray-700 italic">{record.fields.Descripción}</span>
-                                </div>
-                              )}
                             </div>
                           </td>
                         </tr>
