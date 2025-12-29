@@ -12,12 +12,14 @@ declare module "next-auth" {
   interface Session {
     user: {
       email?: string | null;
+      name?: string | null;
       coordinatorRecordId?: string; // Airtable record ID
     };
   }
 
   interface User {
     email?: string | null;
+    name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
   }
 }
@@ -25,6 +27,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     email?: string | null;
+    name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
   }
 }

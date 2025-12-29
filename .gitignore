@@ -44,3 +44,18 @@ airtable-api-key.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python virtual environments
+chatbot/venv/
+chatbot/__pycache__/
+*.pyc
+
+# Development logs
+dev.log
+
+# Temporary PDF files
+/public/temp/
+
+# Vim swap files
+*.swp
+*.swo

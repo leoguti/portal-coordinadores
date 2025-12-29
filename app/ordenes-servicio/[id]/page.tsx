@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getOrdenById, getItemsOrden, type Orden, type ItemOrden } from "@/lib/airtable";
+import { getOrdenById, getItemsOrden, getKardexByIds, type Orden, type ItemOrden, type Kardex } from "@/lib/airtable";
 
 export default function OrdenDetallePage() {
   const params = useParams();
@@ -13,6 +13,7 @@ export default function OrdenDetallePage() {
 
   const [orden, setOrden] = useState<Orden | null>(null);
   const [items, setItems] = useState<ItemOrden[]>([]);
+  const [kardexMap, setKardexMap] = useState<Map<string, Kardex>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,18 @@ export default function OrdenDetallePage() {
         // Cargar items de la orden
         const itemsData = await getItemsOrden(ordenId);
         setItems(itemsData);
+        
+        // Cargar datos de Kardex para items que los tengan
+        const kardexIds = itemsData
+          .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
+          .map(item => item.fields.Kardex![0]);
+        
+        if (kardexIds.length > 0) {
+          const kardexData = await getKardexByIds(kardexIds);
+          const kardexMapTemp = new Map<string, Kardex>();
+          kardexData.forEach(k => kardexMapTemp.set(k.id, k));
+          setKardexMap(kardexMapTemp);
+        }
         
       } catch (err) {
         console.error("Error loading orden:", err);
@@ -193,6 +206,11 @@ export default function OrdenDetallePage() {
                       const precioUnitario = item.fields.PrecioUnitario || 0;
                       const subtotal = item.fields["Cálculo"] || (cantidad * precioUnitario);
                       const nombre = item.fields.Name || "Sin nombre";
+                      
+                      // Obtener datos del Kardex si existe
+                      const kardexId = item.fields.Kardex?.[0];
+                      const kardex = kardexId ? kardexMap.get(kardexId) : undefined;
+                      const tipoMovimiento = kardex?.fields.TipoMovimiento;
 
                       return (
                         <tr
@@ -203,15 +221,28 @@ export default function OrdenDetallePage() {
                         >
                           {/* Tipo */}
                           <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-1 text-xs font-bold rounded ${
-                                tipoItem === "CON Kardex"
-                                  ? "bg-blue-100 text-blue-700 border border-blue-300"
-                                  : "bg-purple-100 text-purple-700 border border-purple-300"
-                              }`}
-                            >
-                              {tipoItem === "CON Kardex" ? "KARDEX" : "CATÁLOGO"}
-                            </span>
+                            <div className="mb-2">
+                              <span
+                                className={`px-2 py-1 text-xs font-bold rounded ${
+                                  tipoItem === "CON Kardex"
+                                    ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                    : "bg-purple-100 text-purple-700 border border-purple-300"
+                                }`}
+                              >
+                                {tipoItem === "CON Kardex" ? "KARDEX" : "CATÁLOGO"}
+                              </span>
+                            </div>
+                            {tipoMovimiento && (
+                              <div>
+                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                                  tipoMovimiento === "ENTRADA" 
+                                    ? "bg-green-100 text-green-700 border border-green-300" 
+                                    : "bg-red-100 text-red-700 border border-red-300"
+                                }`}>
+                                  {tipoMovimiento}
+                                </span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Descripción/Nombre */}

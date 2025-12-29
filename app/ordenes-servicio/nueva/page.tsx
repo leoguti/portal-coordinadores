@@ -108,8 +108,8 @@ export default function NuevaOrdenPage() {
       tipo: "KARDEX",
       kardexId: kardex.id,
       descripcion: `Kardex #${numero} - ${municipio} - ${fecha} (${kg.toFixed(2)} kg)`,
-      formaCobro: "Por Flete",
-      cantidad: kg,
+      formaCobro: "Por Kilo", // Por defecto Kardex se cobra por kilo
+      cantidad: kg, // La cantidad es el total de kilos del kardex
       precioUnitario: 0,
       kardexData: kardex,
       tipoMovimiento: tipo as "ENTRADA" | "SALIDA",
@@ -149,6 +149,12 @@ export default function NuevaOrdenPage() {
           // Si cambia la forma de cobro a "Por Flete", ajustar cantidad a 1
           if (campo === "formaCobro" && valor === "Por Flete") {
             itemActualizado.cantidad = 1;
+          }
+          
+          // Si cambia la forma de cobro a "Por Kilo" y es un Kardex, usar los kilos del kardex
+          if (campo === "formaCobro" && valor === "Por Kilo" && item.tipo === "KARDEX" && item.kardexData) {
+            const kg = Math.abs(item.kardexData.fields.Total || 0);
+            itemActualizado.cantidad = kg;
           }
           
           return itemActualizado;
@@ -216,14 +222,27 @@ export default function NuevaOrdenPage() {
         }
       });
 
-      await createOrdenServicio({
-        coordinatorRecordId: session.user.coordinatorRecordId,
-        beneficiarioRecordId: beneficiario.id,
-        fechaPedido,
-        observaciones: observaciones.trim() || undefined,
-        items,
-        estado: "Enviada", // Crear directamente como "Enviada" - no hay borrador
-      });
+      await createOrdenServicio(
+        {
+          coordinatorRecordId: session.user.coordinatorRecordId,
+          beneficiarioRecordId: beneficiario.id,
+          fechaPedido,
+          observaciones: observaciones.trim() || undefined,
+          items,
+          estado: "Enviada", // Crear directamente como "Enviada" - no hay borrador
+        },
+        // Datos del coordinador para el PDF
+        {
+          name: session.user.name || "Coordinador",
+          email: session.user.email || "",
+        },
+        // Datos del beneficiario para el PDF
+        {
+          razonSocial: beneficiario.razonSocial,
+          nit: beneficiario.nit || "N/A",
+          direccion: beneficiario.direccion || "N/A",
+        }
+      );
 
       router.push("/ordenes-servicio");
     } catch (err) {

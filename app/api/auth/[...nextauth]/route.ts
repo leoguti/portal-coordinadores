@@ -72,6 +72,7 @@ export const authOptions: NextAuthOptions = {
         const coordinator = await getCoordinatorByEmail(user.email);
         if (coordinator) {
           token.coordinatorRecordId = coordinator.id;
+          token.name = coordinator.name;
           console.log(`JWT: Stored coordinator record ID ${coordinator.id} for ${user.email}`);
         }
       }
@@ -79,9 +80,12 @@ export const authOptions: NextAuthOptions = {
     },
     
     async session({ session, token }) {
-      // Add user email and coordinatorRecordId to session
+      // Add user email, name and coordinatorRecordId to session
       if (token.email && session.user) {
         session.user.email = token.email;
+      }
+      if (token.name && session.user) {
+        session.user.name = token.name;
       }
       if (token.coordinatorRecordId && session.user) {
         session.user.coordinatorRecordId = token.coordinatorRecordId;

@@ -31,29 +31,20 @@ export default function Sidebar() {
         <ul className="space-y-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            const isDisabled = item.disabled;
 
             return (
               <li key={item.href}>
-                {isDisabled ? (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-500 cursor-not-allowed">
-                    <span>{item.icon}</span>
-                    <span className="flex-1">{item.name}</span>
-                    <span className="text-xs bg-gray-700 px-2 py-1 rounded">Próximamente</span>
-                  </div>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-[#00d084] text-white"
-                        : "text-gray-300 hover:bg-[#032120]"
-                    }`}
-                  >
-                    <span>{item.icon}</span>
-                    <span>{item.name}</span>
-                  </Link>
-                )}
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-[#00d084] text-white"
+                      : "text-gray-300 hover:bg-[#032120]"
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.name}</span>
+                </Link>
               </li>
             );
           })}

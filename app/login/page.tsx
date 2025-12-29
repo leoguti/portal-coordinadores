@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
@@ -11,7 +11,8 @@ import { useSearchParams } from "next/navigation";
  * No password required - authentication via email link
  * Validates email against Airtable Coordinadores table
  */
-export default function LoginPage() {
+
+function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -118,5 +119,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Cargando...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

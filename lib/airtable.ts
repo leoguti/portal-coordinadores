@@ -31,6 +31,7 @@ interface CatalogoServicioFields {
   Descripcion?: string;
   UnidadMedida?: string;
   Activo?: boolean;
+  "Precio Unitario"?: number;
 }
 
 interface ActividadFields {
@@ -98,6 +99,13 @@ interface OrdenFields {
   ItemsOrden?: string[]; // Linked record IDs
   Observaciones?: string;
   Total?: number; // Rollup: sum of ItemsOrden subtotals
+  PDF?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    size: number;
+    type: string;
+  }>;
 }
 
 interface TerceroFields {
@@ -626,17 +634,22 @@ export async function getOrdenById(ordenId: string): Promise<Orden | null> {
 }
 
 /**
- * Create a new Orden de Servicio with its items
+ * Create a new Orden de Servicio with its items and generate PDF
  * This function:
  * 1. Creates the Orden record
- * 2. Creates ItemsOrden records for each Kardex
+ * 2. Creates ItemsOrden records for each item
  * 3. Updates Kardex status from "Por Pagar" to "En Orden"
+ * 4. Generates PDF and uploads to Airtable
  *
  * @param params - Order creation parameters
- * @returns Created Orden record with NumeroOrden
+ * @param coordinatorData - Coordinator info for PDF (name, email)
+ * @param beneficiarioData - Beneficiary info for PDF
+ * @returns Created Orden record with NumeroOrden and PDF
  */
 export async function createOrdenServicio(
-  params: CreateOrdenParams
+  params: CreateOrdenParams,
+  coordinatorData?: { name: string; email: string },
+  beneficiarioData?: { razonSocial: string; nit: string; direccion: string }
 ): Promise<Orden> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -757,6 +770,133 @@ export async function createOrdenServicio(
     }
 
     console.log(`Orden de Servicio #${ordenData.fields.NumeroOrden} created successfully with ${params.items.length} items`);
+
+    // Step 4: Generate PDF and upload to Airtable
+    console.log("Checking PDF generation requirements...", {
+      hasCoordinatorData: !!coordinatorData,
+      hasBeneficiarioData: !!beneficiarioData,
+      coordinatorData,
+      beneficiarioData,
+    });
+
+    if (coordinatorData && beneficiarioData) {
+      try {
+        console.log("Generating PDF for Orden...");
+        
+        const { generateOrdenServicioPDF, uploadPDFToAirtable } = await import("@/lib/generatePDF");
+        
+        // Fetch detailed data for Kardex items
+        const kardexIds = params.items
+          .filter(item => item.kardexRecordId)
+          .map(item => item.kardexRecordId!);
+        
+        const kardexData = kardexIds.length > 0 
+          ? await getKardexByIds(kardexIds)
+          : [];
+        
+        // Fetch detailed data for Catalog items
+        const catalogoIds = params.items
+          .filter(item => item.catalogoRecordId)
+          .map(item => item.catalogoRecordId!);
+        
+        const catalogoData: CatalogoServicio[] = [];
+        if (catalogoIds.length > 0) {
+          const allCatalogo = await getCatalogoServicios();
+          catalogoData.push(...allCatalogo.filter(c => catalogoIds.includes(c.id)));
+        }
+        
+        // Prepare items data for PDF with detailed descriptions
+        const pdfItems = params.items.map((item, index) => {
+          if (item.kardexRecordId) {
+            // Find Kardex data
+            const kardex = kardexData.find(k => k.id === item.kardexRecordId);
+            const idkardex = kardex?.fields.idkardex || "N/A";
+            const fecha = kardex?.fields.fechakardex || "";
+            const municipio = kardex?.fields["mundep (from MunicipioOrigen)"]?.[0] || "N/A";
+            const centro = kardex?.fields.NombreCentrodeAcopio?.[0] || "N/A";
+            const total = kardex?.fields.Total || 0;
+            
+            return {
+              id: `item-${index}`,
+              tipo: "KARDEX" as const,
+              descripcion: `Kardex #${idkardex} - ${municipio} - ${centro} - ${Math.abs(total)} kg`,
+              kardexId: item.kardexRecordId,
+              formaCobro: item.formaCobro,
+              cantidad: item.cantidad,
+              precioUnitario: item.precioUnitario,
+              subtotal: item.cantidad * item.precioUnitario,
+            };
+          } else {
+            // Find Catalog data
+            const catalogo = catalogoData.find(c => c.id === item.catalogoRecordId);
+            const nombre = catalogo?.fields.Nombre || "Servicio";
+            const descripcion = catalogo?.fields.Descripcion || "";
+            
+            return {
+              id: `item-${index}`,
+              tipo: "CATALOGO" as const,
+              descripcion: `${nombre}${descripcion ? ` - ${descripcion}` : ""}`,
+              catalogoId: item.catalogoRecordId,
+              formaCobro: item.formaCobro,
+              cantidad: item.cantidad,
+              precioUnitario: item.precioUnitario,
+              subtotal: item.cantidad * item.precioUnitario,
+            };
+          }
+        });
+
+        const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+        // Generate PDF buffer
+        const pdfBuffer = await generateOrdenServicioPDF({
+          numeroOrden: ordenData.fields.NumeroOrden || 0,
+          coordinador: {
+            nombre: coordinatorData.name,
+            email: coordinatorData.email,
+          },
+          beneficiario: beneficiarioData,
+          fechaPedido: params.fechaPedido,
+          estado: params.estado || "Borrador",
+          items: pdfItems,
+          total: totalCalculated,
+          observaciones: params.observaciones,
+        });
+
+        // Upload PDF to Airtable
+        const pdfAttachment = await uploadPDFToAirtable(
+          pdfBuffer,
+          `Orden_${ordenData.fields.NumeroOrden}.pdf`
+        );
+
+        console.log("PDF attachment prepared:", JSON.stringify(pdfAttachment).substring(0, 200));
+
+        // Update orden with PDF
+        const updateResponse = await fetch(`${ordenUrl}/${ordenData.id}`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fields: {
+              PDF: pdfAttachment,
+            },
+          }),
+        });
+
+        if (updateResponse.ok) {
+          const updatedOrden = await updateResponse.json();
+          console.log(`PDF uploaded successfully to Orden #${ordenData.fields.NumeroOrden}`);
+          return updatedOrden;
+        } else {
+          const errorText = await updateResponse.text();
+          console.error("Failed to upload PDF to Airtable:", errorText);
+        }
+      } catch (pdfError) {
+        console.error("Error generating/uploading PDF:", pdfError);
+        // Continue without PDF - orden was created successfully
+      }
+    }
 
     return ordenData;
   } catch (error) {
@@ -1042,5 +1182,61 @@ export async function getAllKardex(): Promise<Kardex[]> {
   } catch (error) {
     console.error("Error fetching all Kardex:", error);
     throw error;
+  }
+}
+
+/**
+ * Get all Kardex records for a specific coordinator
+ * Sorted by date descending (most recent first)
+ *
+ * @param coordinatorRecordId - Airtable record ID of the coordinator
+ * @returns Array of all Kardex records for the coordinator
+ */
+export async function listKardexForCoordinator(
+  coordinatorRecordId: string
+): Promise<Kardex[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    // Filter by coordinator using idcoordinador lookup field
+    const filterFormula = `FIND("${coordinatorRecordId}", ARRAYJOIN({idcoordinador}))`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/Kardex?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}&sort[0][field]=fechakardex&sort[0][direction]=desc`;
+
+    console.log(`Fetching all Kardex for coordinator: ${coordinatorRecordId}`);
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Airtable API error fetching Kardex: ${response.status}`,
+        errorText
+      );
+      return [];
+    }
+
+    const data: AirtableResponse<KardexFields> = await response.json();
+
+    console.log(`Successfully fetched ${data.records?.length || 0} Kardex records`);
+
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching Kardex from Airtable:", error);
+    return [];
   }
 }
