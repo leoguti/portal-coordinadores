@@ -12,19 +12,12 @@ interface AirtableRecord {
   };
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-
-    if (search.length < 2) {
-      return NextResponse.json({ centros: [] });
     }
 
     const apiKey = process.env.AIRTABLE_API_KEY;
@@ -34,10 +27,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Configuración de Airtable no disponible" }, { status: 500 });
     }
 
-    // Search using case-insensitive FIND function
-    // Filter by Tipo = 'Centro de Acopio' AND search in Nombre
-    const filterFormula = `AND({Tipo}='Centro de Acopio', FIND(LOWER("${search.toLowerCase()}"), LOWER({Nombre})))`;
-    const url = `https://api.airtable.com/v0/${baseId}/Puntos%20Logisticos?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=Nombre&sort[0][direction]=asc&maxRecords=20`;
+    // Get all Centros de Acopio
+    const filterFormula = "{Tipo}='Centro de Acopio'";
+    const url = `https://api.airtable.com/v0/${baseId}/Puntos%20Logisticos?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=Nombre&sort[0][direction]=asc`;
 
     const response = await fetch(url, {
       headers: {

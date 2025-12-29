@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MunicipioSearch from "./MunicipioSearch";
-import CentroAcopioSearch from "./CentroAcopioSearch";
 import GestorSearch from "./GestorSearch";
 
 interface KardexFormData {
@@ -32,10 +31,16 @@ interface SelectOption {
   name: string;
 }
 
+interface CentroAcopio {
+  id: string;
+  name: string;
+}
+
 export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalProps) {
   const [loading, setLoading] = useState(false);
+  const [centrosAcopio, setCentrosAcopio] = useState<CentroAcopio[]>([]);
+  const [loadingCentros, setLoadingCentros] = useState(true);
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
-  const [centroAcopio, setCentroAcopio] = useState<SelectOption | null>(null);
   const [gestor, setGestor] = useState<SelectOption | null>(null);
   
   const [formData, setFormData] = useState<KardexFormData>({
@@ -52,10 +57,40 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     Descripción: "",
   });
 
+  // Cargar centros de acopio al montar el componente
+  useEffect(() => {
+    const fetchCentrosAcopio = async () => {
+      try {
+        const response = await fetch("/api/centros-acopio/list");
+        if (response.ok) {
+          const data = await response.json();
+          setCentrosAcopio(data.centros || []);
+        }
+      } catch (error) {
+        console.error("Error cargando centros de acopio:", error);
+      } finally {
+        setLoadingCentros(false);
+      }
+    };
+
+    fetchCentrosAcopio();
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    
+    // Para campos numéricos, evitar que se guarden con ceros prefijados
+    if (e.target.type === "number" && value !== "") {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue === 0) {
+        // Si es 0, mantener como string vacío para evitar ceros prefijados
+        setFormData((prev) => ({ ...prev, [name]: "" }));
+        return;
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -92,7 +127,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
       const submitData = {
         ...formData,
         MunicipioOrigen: municipio?.id,
-        CentroAcopio: centroAcopio?.id,
+        CentroAcopio: formData.CentroAcopio || undefined,
         Gestor: gestor?.id,
         Reciclaje: toNumber(formData.Reciclaje),
         Incineracion: toNumber(formData.Incineracion),
@@ -182,7 +217,6 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="Por Pagar">Por Pagar</option>
-                  <option value="En Orden">En Orden</option>
                   <option value="Caja Menor">Caja Menor</option>
                   <option value="Sin Costo">Sin Costo</option>
                 </select>
@@ -214,11 +248,25 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   🏢 Centro de Acopio
                 </label>
-                <CentroAcopioSearch
-                  value={centroAcopio}
-                  onChange={setCentroAcopio}
-                  placeholder="Buscar centro..."
-                />
+                {loadingCentros ? (
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                    Cargando centros...
+                  </div>
+                ) : (
+                  <select
+                    name="CentroAcopio"
+                    value={formData.CentroAcopio || ""}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                  >
+                    <option value="">-- Seleccione un centro --</option>
+                    {centrosAcopio.map((centro) => (
+                      <option key={centro.id} value={centro.id}>
+                        {centro.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Gestor - Solo para SALIDA */}

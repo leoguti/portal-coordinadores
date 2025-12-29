@@ -5,7 +5,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 interface AirtableRecord {
   id: string;
   fields: {
-    NombreGestor?: string;
+    RazonSocial?: string;
+    Autonumber?: number;
   };
 }
 
@@ -32,8 +33,9 @@ export async function GET(request: Request) {
     }
 
     // Search using case-insensitive FIND function
-    const filterFormula = `FIND(LOWER("${search.toLowerCase()}"), LOWER({NombreGestor}))`;
-    const url = `https://api.airtable.com/v0/${baseId}/Gestores?filterByFormula=${encodeURIComponent(filterFormula)}&maxRecords=20`;
+    // Filter by Tipo = 'Gestor' AND search in RazonSocial
+    const filterFormula = `AND({Tipo}='Gestor', FIND(LOWER("${search.toLowerCase()}"), LOWER({RazonSocial})))`;
+    const url = `https://api.airtable.com/v0/${baseId}/Terceros?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=RazonSocial&sort[0][direction]=asc&maxRecords=20`;
 
     const response = await fetch(url, {
       headers: {
@@ -52,7 +54,7 @@ export async function GET(request: Request) {
 
     const gestores = data.records.map((record) => ({
       id: record.id,
-      name: record.fields.NombreGestor || "Sin nombre",
+      name: record.fields.RazonSocial || "Sin nombre",
     }));
 
     return NextResponse.json({ gestores });
