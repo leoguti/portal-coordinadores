@@ -78,6 +78,49 @@ export default function KardexPage() {
     }
   };
 
+  // Verificar si un kardex puede ser eliminado (misma lógica que órdenes)
+  const puedeEliminarKardex = (fechaKardex: string): boolean => {
+    if (!fechaKardex) return false;
+    
+    const fechaMovimiento = new Date(fechaKardex + 'T00:00:00');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const diaActual = hoy.getDate();
+    
+    if (diaActual > 7) {
+      // Después del día 7: solo mes actual
+      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      return fechaMovimiento >= inicioMesActual;
+    } else {
+      // Días 1-7: mes anterior y actual
+      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      return fechaMovimiento >= inicioMesAnterior;
+    }
+  };
+
+  const handleDeleteKardex = async (kardexId: string, idkardex: number) => {
+    if (!confirm(`¿Estás seguro de eliminar el movimiento #${idkardex}?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/kardex/${kardexId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        alert(`Movimiento #${idkardex} eliminado correctamente`);
+        await fetchKardex();
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.error || 'No se pudo eliminar el movimiento'}`);
+      }
+    } catch (error) {
+      console.error('Error eliminando kardex:', error);
+      alert('Error al eliminar el movimiento');
+    }
+  };
+
   const handleCreateKardex = async (formData: any) => {
     try {
       const response = await fetch("/api/kardex", {
@@ -461,6 +504,9 @@ export default function KardexPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -503,10 +549,24 @@ export default function KardexPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {getEstadoBadge(record.fields.EstadoPago)}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          {record.fields.fechakardex && puedeEliminarKardex(record.fields.fechakardex) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteKardex(record.id, record.fields.idkardex || 0);
+                              }}
+                              className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                              title="Eliminar movimiento"
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </td>
                       </tr>
                       {expandedRow === record.id && (
                         <tr key={`${record.id}-detail`} className="bg-purple-50">
-                          <td colSpan={8} className="px-6 py-4">
+                          <td colSpan={9} className="px-6 py-4">
                             <div className="flex flex-wrap gap-3 items-center">
                               <span className="text-sm font-semibold text-gray-900">📊</span>
                               {Object.entries(materialesLabels).map(([key, label]) => {
