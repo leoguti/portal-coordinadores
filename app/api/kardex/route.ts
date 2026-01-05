@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { listKardexForCoordinator, createKardex } from "@/lib/airtable";
+import { 
+  listKardexForCoordinatorPaginated, 
+  createKardex, 
+  getAllKardexPaginated
+} from "@/lib/airtable";
 
 /**
  * GET /api/kardex
- * Get all kardex records for the authenticated coordinator
+ * Get kardex records with pagination
+ * - Coordinador: Solo sus propios kardex
+ * - Administrador: Todos los kardex (opcionalmente filtrar por ?coordinatorId=xxx)
+ * 
+ * Query params:
+ * - pageSize: Number of records per page (default 50, max 100)
+ * - offset: Airtable offset for pagination
+ * - coordinatorId: (Admin only) Filter by coordinator
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Get authenticated session
     const session = await getServerSession(authOptions);
@@ -19,10 +30,32 @@ export async function GET() {
       );
     }
 
-    // Fetch all kardex for this coordinator
-    const kardexRecords = await listKardexForCoordinator(session.user.coordinatorRecordId);
+    const isAdmin = session.user.rol === "Administrador";
+    const { searchParams } = new URL(request.url);
+    const filterCoordinatorId = searchParams.get("coordinatorId");
+    const pageSize = Math.min(parseInt(searchParams.get("pageSize") || "50"), 100);
+    const offset = searchParams.get("offset") || undefined;
 
-    return NextResponse.json({ kardex: kardexRecords });
+    let result;
+
+    if (isAdmin) {
+      // Administrador: ver todos o filtrar por coordinador específico
+      if (filterCoordinatorId) {
+        result = await listKardexForCoordinatorPaginated(filterCoordinatorId, pageSize, offset);
+      } else {
+        result = await getAllKardexPaginated(pageSize, offset);
+      }
+    } else {
+      // Coordinador: solo sus propios kardex
+      result = await listKardexForCoordinatorPaginated(session.user.coordinatorRecordId, pageSize, offset);
+    }
+
+    return NextResponse.json({ 
+      kardex: result.records, 
+      offset: result.offset,
+      hasMore: result.hasMore,
+      isAdmin 
+    });
   } catch (error) {
     console.error("Error fetching kardex:", error);
     return NextResponse.json(

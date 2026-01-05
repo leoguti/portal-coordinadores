@@ -21,6 +21,7 @@ interface AirtableResponse<T> {
 interface CoordinadorFields {
   Name?: string;
   Email?: string;
+  Rol?: "Coordinador" | "Administrador" | "Desactivado"; // Uppercase R to match Airtable
   Actividades?: string[];
   Certificados?: string[];
   Kardex?: string[];
@@ -85,6 +86,8 @@ interface KardexFields {
   Descripción?: string; // Computed field - read only
   gestor?: string[];
   nombregestor?: string[];
+  AÑO?: string; // Year as string (e.g., "2025")
+  MES?: string; // Year-Month format (e.g., "2025-02")
 }
 
 interface OrdenFields {
@@ -147,6 +150,7 @@ export interface Coordinator {
   id: string;
   name?: string;
   email: string;
+  rol?: "Coordinador" | "Administrador" | "Desactivado";
 }
 
 export interface Actividad {
@@ -206,6 +210,7 @@ export interface CreateItemOrdenParams {
 /**
  * Get coordinator by email from Airtable
  * Case-insensitive email comparison
+ * With retry logic for timeout errors
  * 
  * @param email - Email address to search for
  * @returns Coordinator object or null if not found
@@ -221,50 +226,84 @@ export async function getCoordinatorByEmail(
     return null;
   }
 
-  try {
-    // Normalize email for comparison (lowercase, trim)
-    const normalizedEmail = email.toLowerCase().trim();
+  // Normalize email for comparison (lowercase, trim)
+  const normalizedEmail = email.toLowerCase().trim();
 
-    // Build Airtable API URL with filter
-    // Using LOWER() formula for case-insensitive comparison
-    const filterFormula = `LOWER({Email})="${normalizedEmail}"`;
-    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(
-      filterFormula
-    )}&maxRecords=1`;
+  // Build Airtable API URL with filter
+  // Using LOWER() formula for case-insensitive comparison
+  const filterFormula = `LOWER({Email})="${normalizedEmail}"`;
+  const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(
+    filterFormula
+  )}&maxRecords=1`;
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      // Don't cache in production to ensure fresh data
-      cache: "no-store",
-    });
+  // Retry logic
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Fetching coordinator (attempt ${attempt}/${maxRetries}): ${email}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
 
-    if (!response.ok) {
-      console.error(
-        `Airtable API error: ${response.status} ${response.statusText}`
-      );
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.error(
+          `Airtable API error: ${response.status} ${response.statusText}`
+        );
+        return null;
+      }
+
+      const data: AirtableResponse<CoordinadorFields> = await response.json();
+
+      // Return first match or null
+      if (data.records && data.records.length > 0) {
+        const record = data.records[0];
+        const rol = record.fields.Rol;
+        
+        // 🚫 Bloquear acceso si el rol es "Desactivado"
+        if (rol === "Desactivado") {
+          console.log(`⛔ Acceso denegado: Usuario desactivado - ${email}`);
+          return null;
+        }
+        
+        console.log(`✅ Coordinator found: ${record.fields.Name} (${rol || 'no role'})`);
+        return {
+          id: record.id,
+          name: record.fields.Name,
+          email: record.fields.Email || email,
+          rol: record.fields.Rol, // Uppercase R to match Airtable
+        };
+      }
+
+      console.log(`❌ No coordinator found for: ${email}`);
       return null;
+    } catch (error: any) {
+      console.error(`Attempt ${attempt} failed:`, error.message);
+      
+      // If it's the last attempt, return null
+      if (attempt === maxRetries) {
+        console.error("Max retries reached, giving up");
+        return null;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-
-    const data: AirtableResponse<CoordinadorFields> = await response.json();
-
-    // Return first match or null
-    if (data.records && data.records.length > 0) {
-      const record = data.records[0];
-      return {
-        id: record.id,
-        name: record.fields.Name,
-        email: record.fields.Email || email,
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error fetching coordinator from Airtable:", error);
-    return null;
   }
+
+  return null;
 }
 
 /**
@@ -1161,6 +1200,7 @@ export async function getCentrosAcopio(): Promise<CentroAcopio[]> {
 
 /**
  * Get all Kardex for calculating balances
+ * Handles pagination to get ALL records
  */
 export async function getAllKardex(): Promise<Kardex[]> {
   const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
@@ -1171,7 +1211,62 @@ export async function getAllKardex(): Promise<Kardex[]> {
   }
 
   try {
-    const url = `https://api.airtable.com/v0/${BASE_ID}/Kardex?sort[0][field]=fechakardex&sort[0][direction]=desc`;
+    const allKardex: Kardex[] = [];
+    let offset: string | undefined;
+
+    // Paginate through all records
+    do {
+      const url = `https://api.airtable.com/v0/${BASE_ID}/Kardex?sort[0][field]=fechakardex&sort[0][direction]=desc${offset ? `&offset=${offset}` : ""}`;
+
+      console.log(`Fetching Kardex page... (current total: ${allKardex.length})`);
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Kardex: ${response.statusText}`);
+      }
+
+      const data: AirtableResponse<KardexFields> = await response.json();
+      allKardex.push(...(data.records || []));
+      offset = data.offset;
+
+      console.log(`Fetched ${data.records?.length || 0} records, total: ${allKardex.length}`);
+    } while (offset);
+
+    console.log(`✅ Total Kardex fetched: ${allKardex.length}`);
+    return allKardex;
+  } catch (error) {
+    console.error("Error fetching all Kardex:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get paginated Kardex records (for all coordinators)
+ * 
+ * @param pageSize - Number of records per page (default 100)
+ * @param offset - Airtable offset for pagination
+ * @returns Object with records and next offset
+ */
+export async function getAllKardexPaginated(
+  pageSize: number = 100,
+  offset?: string
+): Promise<{ records: Kardex[]; offset?: string; hasMore: boolean }> {
+  const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
+  const BASE_ID = process.env.AIRTABLE_BASE_ID;
+
+  if (!AIRTABLE_TOKEN || !BASE_ID) {
+    throw new Error("Missing Airtable credentials");
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/Kardex?sort[0][field]=fechakardex&sort[0][direction]=desc&pageSize=${pageSize}${offset ? `&offset=${offset}` : ""}`;
 
     const response = await fetch(url, {
       headers: {
@@ -1186,10 +1281,115 @@ export async function getAllKardex(): Promise<Kardex[]> {
     }
 
     const data: AirtableResponse<KardexFields> = await response.json();
-    return data.records || [];
+    
+    return {
+      records: data.records || [],
+      offset: data.offset,
+      hasMore: !!data.offset,
+    };
   } catch (error) {
-    console.error("Error fetching all Kardex:", error);
+    console.error("Error fetching paginated Kardex:", error);
     throw error;
+  }
+}
+
+/**
+ * Get total count of Kardex records (all coordinators)
+ */
+export async function getKardexTotalCount(): Promise<number> {
+  const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
+  const BASE_ID = process.env.AIRTABLE_BASE_ID;
+
+  if (!AIRTABLE_TOKEN || !BASE_ID) {
+    return 0;
+  }
+
+  try {
+    // Get first page just to count - Airtable doesn't have a count endpoint
+    // We'll use maxRecords=1 and pageSize=1 to minimize data transfer
+    const url = `https://api.airtable.com/v0/${BASE_ID}/Kardex?maxRecords=1&fields=idkardex`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return 0;
+    }
+
+    // Since Airtable doesn't provide total count, we need to iterate through all pages
+    // For performance, we'll fetch all IDs only (minimal fields)
+    let count = 0;
+    let offset: string | undefined;
+    
+    do {
+      const countUrl = `https://api.airtable.com/v0/${BASE_ID}/Kardex?fields=idkardex${offset ? `&offset=${offset}` : ""}`;
+      const countResponse = await fetch(countUrl, {
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!countResponse.ok) break;
+
+      const data: AirtableResponse<KardexFields> = await countResponse.json();
+      count += data.records?.length || 0;
+      offset = data.offset;
+    } while (offset);
+
+    return count;
+  } catch (error) {
+    console.error("Error counting Kardex:", error);
+    return 0;
+  }
+}
+
+/**
+ * Get total count of Kardex records for a specific coordinator
+ */
+export async function getKardexCountForCoordinator(coordinatorRecordId: string): Promise<number> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    return 0;
+  }
+
+  try {
+    const filterFormula = `FIND("${coordinatorRecordId}", ARRAYJOIN({idcoordinador}))`;
+    let count = 0;
+    let offset: string | undefined;
+    
+    do {
+      const url = `https://api.airtable.com/v0/${baseId}/Kardex?filterByFormula=${encodeURIComponent(
+        filterFormula
+      )}&fields=idkardex${offset ? `&offset=${offset}` : ""}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) break;
+
+      const data: AirtableResponse<KardexFields> = await response.json();
+      count += data.records?.length || 0;
+      offset = data.offset;
+    } while (offset);
+
+    return count;
+  } catch (error) {
+    console.error("Error counting Kardex for coordinator:", error);
+    return 0;
   }
 }
 
@@ -1246,6 +1446,64 @@ export async function listKardexForCoordinator(
   } catch (error) {
     console.error("Error fetching Kardex from Airtable:", error);
     return [];
+  }
+}
+
+/**
+ * Get paginated Kardex records for a specific coordinator
+ * 
+ * @param coordinatorRecordId - Airtable record ID of the coordinator
+ * @param pageSize - Number of records per page (default 100)
+ * @param offset - Airtable offset for pagination
+ * @returns Object with records and next offset
+ */
+export async function listKardexForCoordinatorPaginated(
+  coordinatorRecordId: string,
+  pageSize: number = 100,
+  offset?: string
+): Promise<{ records: Kardex[]; offset?: string; hasMore: boolean }> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return { records: [], hasMore: false };
+  }
+
+  try {
+    const filterFormula = `FIND("${coordinatorRecordId}", ARRAYJOIN({idcoordinador}))`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/Kardex?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}&sort[0][field]=fechakardex&sort[0][direction]=desc&pageSize=${pageSize}${offset ? `&offset=${offset}` : ""}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Airtable API error fetching Kardex: ${response.status}`,
+        errorText
+      );
+      return { records: [], hasMore: false };
+    }
+
+    const data: AirtableResponse<KardexFields> = await response.json();
+
+    return {
+      records: data.records || [],
+      offset: data.offset,
+      hasMore: !!data.offset,
+    };
+  } catch (error) {
+    console.error("Error fetching paginated Kardex:", error);
+    return { records: [], hasMore: false };
   }
 }
 

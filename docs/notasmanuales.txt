@@ -1,8 +1,8 @@
+Pendientes para seguir: 
+	restricciones de fecha en cracion de kardex 
+	
 hay que agregar una interfaz para el catalogo tener en cuenta .. para el administrador 
 Para la interfaz de administrador 
 	Ver igual los datos de kardex ... todos los coordinadores 
 	agregar filtro de coordinador. mas lo que ya existen 
 Debemos revisar el tema del kardex entrada-salida no hemos revisado esto ni hecho los cambios en el chatbot . 
-
-
-

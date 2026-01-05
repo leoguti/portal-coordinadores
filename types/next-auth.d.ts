@@ -5,7 +5,7 @@ import "next-auth/jwt";
  * TypeScript module augmentation for NextAuth
  * 
  * Extends the default Session and JWT types to include
- * the Airtable coordinator record ID
+ * the Airtable coordinator record ID and rol
  */
 
 declare module "next-auth" {
@@ -14,6 +14,7 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       coordinatorRecordId?: string; // Airtable record ID
+      rol?: "Coordinador" | "Administrador" | "Desactivado";
     };
   }
 
@@ -21,6 +22,7 @@ declare module "next-auth" {
     email?: string | null;
     name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
+    rol?: "Coordinador" | "Administrador" | "Desactivado";
   }
 }
 
@@ -29,5 +31,6 @@ declare module "next-auth/jwt" {
     email?: string | null;
     name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
+    rol?: "Coordinador" | "Administrador" | "Desactivado";
   }
 }

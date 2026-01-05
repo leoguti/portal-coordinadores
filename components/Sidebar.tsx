@@ -2,22 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: "📊" },
-  { name: "Actividades", href: "/actividades", icon: "📋" },
-  { name: "Certificados", href: "/certificados", icon: "📜" },
-  { name: "Kardex", href: "/kardex", icon: "📦" },
-  { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️" },
-  { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧" },
+  { name: "Dashboard", href: "/dashboard", icon: "📊", roles: ["Coordinador", "Administrador"] },
+  { name: "Actividades", href: "/actividades", icon: "📋", roles: ["Coordinador", "Administrador"] },
+  { name: "Kardex", href: "/kardex", icon: "📦", roles: ["Coordinador", "Administrador"] },
+  { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧", roles: ["Coordinador", "Administrador"] },
+  { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️", roles: ["Administrador"] },
+  // { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador"] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRol = session?.user?.rol || "Coordinador";
 
   return (
-    <aside className="w-64 bg-[#042726] text-white min-h-screen flex flex-col">
+    <aside className="w-64 bg-[#042726] text-white h-screen flex flex-col fixed left-0 top-0">
       <div className="p-6 border-b border-gray-700">
         <img 
           src="/logo-campolimpio-white.png" 
@@ -25,38 +27,44 @@ export default function Sidebar() {
           className="h-12 w-auto mb-2"
         />
         <p className="text-sm text-gray-300 mt-1">Portal Coordinadores</p>
+        {/* DEBUG: Mostrar rol del usuario */}
+        <p className="text-xs text-yellow-300 mt-2 bg-yellow-900/30 px-2 py-1 rounded">
+          Rol: {userRol}
+        </p>
       </div>
 
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          {navItems
+            .filter((item) => item.roles.includes(userRol))
+            .map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-[#00d084] text-white"
-                      : "text-gray-300 hover:bg-[#032120]"
-                  }`}
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.name}</span>
-                </Link>
-              </li>
-            );
-          })}
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-[#00d084] text-white"
+                        : "text-gray-300 hover:bg-[#032120]"
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span>{item.name}</span>
+                  </Link>
+                </li>
+              );
+            })}
         </ul>
       </nav>
 
       <div className="p-4 border-t border-gray-700">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-white font-medium"
         >
-          Cerrar Sesión
+          🚪 Cerrar Sesión
         </button>
       </div>
     </aside>

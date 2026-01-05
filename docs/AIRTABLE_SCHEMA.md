@@ -12,6 +12,7 @@
 |-------|------|-------------|
 | `Name` | Text | Nombre del coordinador |
 | `Email` | Email | Email del coordinador |
+| `Rol` | Single Select | Rol del usuario: Coordinador, Tesorero, Administrador |
 | `Certificados` | Link | Relación con certificados |
 | `Kardex` | Link | Relación con kardex |
 | `Actividades` | Link | Relación con actividades |

@@ -73,14 +73,15 @@ export const authOptions: NextAuthOptions = {
         if (coordinator) {
           token.coordinatorRecordId = coordinator.id;
           token.name = coordinator.name;
-          console.log(`JWT: Stored coordinator record ID ${coordinator.id} for ${user.email}`);
+          token.rol = coordinator.rol;
+          console.log(`JWT: Stored coordinator record ID ${coordinator.id} (${coordinator.rol}) for ${user.email}`);
         }
       }
       return token;
     },
     
     async session({ session, token }) {
-      // Add user email, name and coordinatorRecordId to session
+      // Add user email, name, coordinatorRecordId and rol to session
       if (token.email && session.user) {
         session.user.email = token.email;
       }
@@ -89,6 +90,9 @@ export const authOptions: NextAuthOptions = {
       }
       if (token.coordinatorRecordId && session.user) {
         session.user.coordinatorRecordId = token.coordinatorRecordId;
+      }
+      if (token.rol && session.user) {
+        session.user.rol = token.rol;
       }
       return session;
     },
