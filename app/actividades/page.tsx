@@ -48,6 +48,7 @@ export default function ActividadesPage() {
   const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
   const [selectedMes, setSelectedMes] = useState<string>("");
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
+  const [selectedTipo, setSelectedTipo] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -69,10 +70,11 @@ export default function ActividadesPage() {
     setExpandedMonths(newExpanded);
   };
 
-  // Obtener opciones únicas de meses y municipios
+  // Obtener opciones únicas de meses, municipios y tipos
   const opcionesFiltros = React.useMemo(() => {
     const meses = new Set<string>();
     const municipios = new Set<string>();
+    const tipos = new Set<string>();
 
     actividades.forEach(actividad => {
       // Meses (YYYY-MM)
@@ -86,15 +88,21 @@ export default function ActividadesPage() {
       if (actividad.fields["mundep (from Municipio)"]?.[0]) {
         municipios.add(actividad.fields["mundep (from Municipio)"][0]);
       }
+
+      // Tipos
+      if (actividad.fields.Tipo) {
+        tipos.add(actividad.fields.Tipo);
+      }
     });
 
     return {
       meses: Array.from(meses).sort().reverse(), // Más reciente primero
       municipios: Array.from(municipios).sort(),
+      tipos: Array.from(tipos).sort(),
     };
   }, [actividades]);
 
-  // Filtrar actividades por coordinador, mes y municipio (admin)
+  // Filtrar actividades por coordinador, mes, municipio y tipo (admin)
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
@@ -120,10 +128,15 @@ export default function ActividadesPage() {
           a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
         );
       }
+
+      // Filtro por tipo
+      if (selectedTipo) {
+        filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
+      }
     }
 
     return filtered;
-  }, [actividades, selectedCoordinador, selectedMes, selectedMunicipio, isAdmin]);
+  }, [actividades, selectedCoordinador, selectedMes, selectedMunicipio, selectedTipo, isAdmin]);
 
   // Agrupar actividades por mes
   const actividadesPorMes = React.useMemo(() => {
@@ -269,7 +282,7 @@ export default function ActividadesPage() {
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               🔍 Filtros de Búsqueda
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Filtro por Coordinador */}
               <div>
                 <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
@@ -348,15 +361,39 @@ export default function ActividadesPage() {
                   })}
                 </select>
               </div>
+
+              {/* Filtro por Tipo */}
+              <div>
+                <label htmlFor="tipo-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Actividad
+                </label>
+                <select
+                  id="tipo-filter"
+                  value={selectedTipo}
+                  onChange={(e) => setSelectedTipo(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Todos los tipos</option>
+                  {opcionesFiltros.tipos.map((tipo) => {
+                    const count = actividades.filter(a => a.fields.Tipo === tipo).length;
+                    return (
+                      <option key={tipo} value={tipo}>
+                        {tipo} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             </div>
 
             {/* Botón para limpiar filtros */}
-            {(selectedCoordinador || selectedMes || selectedMunicipio) && (
+            {(selectedCoordinador || selectedMes || selectedMunicipio || selectedTipo) && (
               <button
                 onClick={() => {
                   setSelectedCoordinador("");
                   setSelectedMes("");
                   setSelectedMunicipio("");
+                  setSelectedTipo("");
                 }}
                 className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
