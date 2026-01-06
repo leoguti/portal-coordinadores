@@ -78,6 +78,7 @@ export default function ActividadesPage() {
     
     console.log('📊 Calculando opciones de filtros...');
     console.log('Total actividades:', actividades.length);
+    console.log('Filtros aplicados:', { selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo });
     
     if (isAdmin) {
       // Aplicar filtro de coordinador si existe
@@ -89,7 +90,7 @@ export default function ActividadesPage() {
       // Aplicar filtro de año si existe (afecta opciones de mes)
       if (selectedAno) {
         dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Año) === selectedAno);
-        console.log('Después de filtrar año:', dataParaOpciones.length);
+        console.log('Después de filtrar año:', dataParaOpciones.length, 'con año:', selectedAno);
       }
       
       // Aplicar filtro de mes si existe (afecta opciones de municipio y tipo)
@@ -113,10 +114,20 @@ export default function ActividadesPage() {
     // Para obtener todas las opciones disponibles según filtros actuales
     dataParaOpciones.forEach(actividad => {
       if (actividad.fields.Mes) {
-        meses.add(String(actividad.fields.Mes));
+        const mesValue = actividad.fields.Mes;
+        // Solo agregar si es string válido
+        if (typeof mesValue === 'string' && mesValue.trim()) {
+          meses.add(mesValue);
+        }
       }
       if (actividad.fields.Año) {
-        anos.add(String(actividad.fields.Año));
+        const anoValue = actividad.fields.Año;
+        // Solo agregar si es string o número válido
+        if (typeof anoValue === 'string' && anoValue.trim()) {
+          anos.add(anoValue);
+        } else if (typeof anoValue === 'number') {
+          anos.add(String(anoValue));
+        }
       }
       if (actividad.fields["mundep (from Municipio)"]?.[0]) {
         municipios.add(actividad.fields["mundep (from Municipio)"][0]);
@@ -138,7 +149,7 @@ export default function ActividadesPage() {
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
-  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio]);
+  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo]);
 
   // Filtrar actividades por coordinador, mes, año, municipio y tipo (admin)
   const actividadesFiltradas = React.useMemo(() => {
