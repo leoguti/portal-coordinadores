@@ -235,7 +235,7 @@ export default function ActividadesPage() {
       setCoordinadores(
         data.coordinadores.map((c: any) => ({
           id: c.id,
-          name: c.fields.Nombre || "Sin nombre",
+          name: c.name || "Sin nombre",
         }))
       );
     } catch (err) {
