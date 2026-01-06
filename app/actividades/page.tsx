@@ -273,7 +273,7 @@ export default function ActividadesPage() {
                                 <span className="font-semibold text-blue-600">{stats.count}</span>
                                 {stats.participantes > 0 && (
                                   <span className="text-gray-500">
-                                    · 👥 {stats.participantes.toLocaleString('es-CO')}
+                                    · 👥 {stats.participantes.toLocaleString('es-CO')} participantes
                                   </span>
                                 )}
                               </span>
