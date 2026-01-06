@@ -85,15 +85,20 @@ export default function ActividadesPage() {
 
   // Calcular resumen de participantes por mes
   const getResumenMes = (actividadesDelMes: Actividad[]) => {
-    const sensibilizaciones = actividadesDelMes.filter(a => a.fields.Tipo === "Sensibilización");
-    const totalParticipantes = sensibilizaciones.reduce((sum, a) => {
-      return sum + (a.fields["Cantidad de Participantes"] || 0);
-    }, 0);
+    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
     
-    return {
-      totalSensibilizaciones: sensibilizaciones.length,
-      totalParticipantes
-    };
+    actividadesDelMes.forEach(actividad => {
+      const tipo = actividad.fields.Tipo || 'Sin tipo';
+      if (!porTipo[tipo]) {
+        porTipo[tipo] = { count: 0, participantes: 0 };
+      }
+      porTipo[tipo].count++;
+      if (actividad.fields["Cantidad de Participantes"]) {
+        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
+      }
+    });
+
+    return porTipo;
   };
 
   // Calcular estadísticas generales
@@ -237,7 +242,7 @@ export default function ActividadesPage() {
               const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
               const isMonthExpanded = expandedMonths.has(monthKey);
               const totalActividades = actividadesDelMes.length;
-              const resumen = getResumenMes(actividadesDelMes);
+              const resumenMes = getResumenMes(actividadesDelMes);
 
               return (
                 <div key={monthKey} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
@@ -247,9 +252,9 @@ export default function ActividadesPage() {
                     className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <svg 
-                          className={`w-5 h-5 text-gray-600 transform transition-transform ${isMonthExpanded ? 'rotate-90' : ''}`}
+                          className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ${isMonthExpanded ? 'rotate-90' : ''}`}
                           fill="none" 
                           stroke="currentColor" 
                           viewBox="0 0 24 24"
@@ -260,15 +265,24 @@ export default function ActividadesPage() {
                           <h2 className="text-lg font-semibold text-gray-900 capitalize text-left">
                             📅 {monthName}
                           </h2>
-                          {resumen.totalSensibilizaciones > 0 && (
-                            <p className="text-sm text-gray-600 text-left mt-1">
-                              👥 {resumen.totalParticipantes.toLocaleString('es-CO')} participantes en {resumen.totalSensibilizaciones} sensibilización{resumen.totalSensibilizaciones !== 1 ? 'es' : ''}
-                            </p>
-                          )}
+                          {/* Resumen compacto por tipo */}
+                          <div className="flex flex-wrap gap-2 mt-2 text-left">
+                            {Object.entries(resumenMes).map(([tipo, stats]) => (
+                              <span key={tipo} className="inline-flex items-center gap-1 text-xs bg-white px-2 py-1 rounded-md border border-gray-200">
+                                <span className="font-medium text-gray-700">{tipo}:</span>
+                                <span className="font-semibold text-blue-600">{stats.count}</span>
+                                {stats.participantes > 0 && (
+                                  <span className="text-gray-500">
+                                    · 👥 {stats.participantes.toLocaleString('es-CO')}
+                                  </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
-                        {totalActividades} actividad{totalActividades !== 1 ? "es" : ""}
+                      <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full flex-shrink-0">
+                        {totalActividades}
                       </span>
                     </div>
                   </button>
