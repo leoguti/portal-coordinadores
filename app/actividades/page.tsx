@@ -44,10 +44,14 @@ export default function ActividadesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
+  const isAdmin = session?.user?.rol === "Administrador";
 
   const toggleRow = (id: string) => {
     setExpandedRow(expandedRow === id ? null : id);
@@ -63,11 +67,19 @@ export default function ActividadesPage() {
     setExpandedMonths(newExpanded);
   };
 
+  // Filtrar actividades por coordinador (admin)
+  const actividadesFiltradas = React.useMemo(() => {
+    if (!isAdmin || !selectedCoordinador) {
+      return actividades;
+    }
+    return actividades.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+  }, [actividades, selectedCoordinador, isAdmin]);
+
   // Agrupar actividades por mes
   const actividadesPorMes = React.useMemo(() => {
     const grupos: { [key: string]: Actividad[] } = {};
     
-    actividades.forEach(actividad => {
+    actividadesFiltradas.forEach(actividad => {
       if (actividad.fields.Fecha) {
         const fecha = new Date(actividad.fields.Fecha + 'T00:00:00');
         const monthKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
@@ -105,7 +117,7 @@ export default function ActividadesPage() {
   const estadisticasGenerales = React.useMemo(() => {
     const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
     
-    actividades.forEach(actividad => {
+    actividadesFiltradas.forEach(actividad => {
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
         porTipo[tipo] = { count: 0, participantes: 0 };
@@ -117,7 +129,7 @@ export default function ActividadesPage() {
     });
 
     return porTipo;
-  }, [actividades]);
+  }, [actividadesFiltradas]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -125,8 +137,11 @@ export default function ActividadesPage() {
     }
     if (status === "authenticated") {
       fetchActividades();
+      if (isAdmin) {
+        fetchCoordinadores();
+      }
     }
-  }, [status, router]);
+  }, [status, isAdmin, router]);
 
   async function fetchActividades() {
     try {
