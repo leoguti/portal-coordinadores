@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import ProxiedImage from "@/components/ProxiedImage";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
 
@@ -362,18 +361,13 @@ export default function ActividadesPage() {
                                     <h4 className="text-sm font-semibold text-gray-700 mb-3">
                                       Fotografías ({photoCount})
                                     </h4>
-                                    {console.log('📸 Renderizando fotos en desplegable:', {
-                                      actividadId: actividad.id,
-                                      photoCount,
-                                      primeraFoto: actividad.fields.Fotografias?.[0]
-                                    })}
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                       {actividad.fields.Fotografias?.map((foto, idx) => (
-                                        <div key={foto.id} className="relative group">
-                                          <ProxiedImage
-                                            src={foto.url}
+                                        <div key={foto.id} className="relative group cursor-pointer">
+                                          <img
+                                            src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
                                             alt={`Foto ${idx + 1}`}
-                                            className="w-full h-32 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                            className="w-full h-32 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow"
                                             onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
                                           />
                                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center pointer-events-none">
