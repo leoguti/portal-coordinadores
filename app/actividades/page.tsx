@@ -96,6 +96,24 @@ export default function ActividadesPage() {
     };
   };
 
+  // Calcular estadísticas generales
+  const estadisticasGenerales = React.useMemo(() => {
+    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
+    
+    actividades.forEach(actividad => {
+      const tipo = actividad.fields.Tipo || 'Sin tipo';
+      if (!porTipo[tipo]) {
+        porTipo[tipo] = { count: 0, participantes: 0 };
+      }
+      porTipo[tipo].count++;
+      if (actividad.fields["Cantidad de Participantes"]) {
+        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
+      }
+    });
+
+    return porTipo;
+  }, [actividades]);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -185,6 +203,34 @@ export default function ActividadesPage() {
 
         {!loading && !error && actividades.length > 0 && (
           <div className="space-y-4">
+            {/* Cuadro de Resumen General */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">📊</span>
+                <h3 className="text-lg font-semibold text-gray-900">Resumen General</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => (
+                  <div key={tipo} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-600">{tipo}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        {stats.count}
+                      </span>
+                    </div>
+                    {stats.participantes > 0 && (
+                      <div className="flex items-center gap-1 text-sm text-gray-700 mt-2 pt-2 border-t border-gray-100">
+                        <span>👥</span>
+                        <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
+                        <span className="text-gray-500 text-xs">participantes</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actividades por Mes */}
             {actividadesPorMes.map(([monthKey, actividadesDelMes]) => {
               const [year, month] = monthKey.split('-');
               const monthDate = new Date(parseInt(year), parseInt(month) - 1);
