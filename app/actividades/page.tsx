@@ -78,22 +78,6 @@ export default function ActividadesPage() {
     
     if (isAdmin && selectedCoordinador) {
       dataParaOpciones = actividades.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
-      
-      // Debug: buscar actividades de 2025 para este coordinador
-      const actividades2025 = actividades.filter(a => 
-        a.fields.Coordinador?.[0] === selectedCoordinador && 
-        (String(a.fields.Año) === '2025' || a.fields.Fecha?.startsWith('2025'))
-      );
-      console.log('🔍 Actividades de 2025 para este coordinador:', actividades2025.length);
-      if (actividades2025.length > 0) {
-        console.log('Ejemplos de actividades 2025:', actividades2025.slice(0, 3).map(a => ({
-          id: a.id,
-          nombre: a.fields["Nombre de la Actividad"],
-          fecha: a.fields.Fecha,
-          mes: a.fields.Mes,
-          año: a.fields.Año
-        })));
-      }
     }
     
     const meses = new Set<string>();
@@ -123,13 +107,6 @@ export default function ActividadesPage() {
       }
     });
 
-    console.log('=== OPCIONES FILTROS ===');
-    console.log('Usando datos de:', selectedCoordinador ? `coordinador (${dataParaOpciones.length} actividades)` : `todas (${actividades.length} actividades)`);
-    console.log('Meses encontrados:', Array.from(meses));
-    console.log('Años encontrados:', Array.from(anos));
-    console.log('Municipios encontrados:', Array.from(municipios).length);
-    console.log('Tipos encontrados:', Array.from(tipos));
-
     return {
       meses: Array.from(meses).sort().reverse(),
       anos: Array.from(anos).sort().reverse(),
@@ -142,40 +119,20 @@ export default function ActividadesPage() {
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
-    console.log('=== DEBUG FILTROS ===');
-    console.log('Total actividades:', actividades.length);
-    console.log('isAdmin:', isAdmin);
-    console.log('Filtros seleccionados:', { selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo });
-
     if (isAdmin) {
       // Filtro por coordinador
       if (selectedCoordinador) {
         filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
-        console.log('Después de filtrar por coordinador:', filtered.length);
       }
 
       // Filtro por mes
       if (selectedMes) {
-        console.log('Filtrando por mes:', selectedMes);
-        console.log('Tipo de selectedMes:', typeof selectedMes);
-        const ejemplos = filtered.slice(0, 5).map(a => ({ 
-          id: a.id, 
-          mes: a.fields.Mes,
-          tipoMes: typeof a.fields.Mes,
-          mesString: String(a.fields.Mes),
-          coincide: String(a.fields.Mes) === selectedMes
-        }));
-        console.log('Ejemplo de Mes en actividades:', ejemplos);
         filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
-        console.log('Después de filtrar por mes:', filtered.length);
       }
 
       // Filtro por año
       if (selectedAno) {
-        console.log('Filtrando por año:', selectedAno);
-        console.log('Ejemplo de Año en actividades:', filtered.slice(0, 3).map(a => ({ id: a.id, ano: a.fields.Año })));
         filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
-        console.log('Después de filtrar por año:', filtered.length);
       }
 
       // Filtro por municipio
@@ -183,17 +140,14 @@ export default function ActividadesPage() {
         filtered = filtered.filter(a => 
           a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
         );
-        console.log('Después de filtrar por municipio:', filtered.length);
       }
 
       // Filtro por tipo
       if (selectedTipo) {
         filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
-        console.log('Después de filtrar por tipo:', filtered.length);
       }
     }
 
-    console.log('Total filtrado final:', filtered.length);
     return filtered;
   }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin]);
 
