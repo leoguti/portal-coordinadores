@@ -78,6 +78,22 @@ export default function ActividadesPage() {
     
     if (isAdmin && selectedCoordinador) {
       dataParaOpciones = actividades.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+      
+      // Debug: buscar actividades de 2025 para este coordinador
+      const actividades2025 = actividades.filter(a => 
+        a.fields.Coordinador?.[0] === selectedCoordinador && 
+        (String(a.fields.Año) === '2025' || a.fields.Fecha?.startsWith('2025'))
+      );
+      console.log('🔍 Actividades de 2025 para este coordinador:', actividades2025.length);
+      if (actividades2025.length > 0) {
+        console.log('Ejemplos de actividades 2025:', actividades2025.slice(0, 3).map(a => ({
+          id: a.id,
+          nombre: a.fields["Nombre de la Actividad"],
+          fecha: a.fields.Fecha,
+          mes: a.fields.Mes,
+          año: a.fields.Año
+        })));
+      }
     }
     
     const meses = new Set<string>();
