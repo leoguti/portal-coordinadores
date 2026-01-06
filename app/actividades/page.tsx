@@ -559,6 +559,10 @@ export default function ActividadesPage() {
             </div>
           </div>
         )}
+      </div>
+    </AuthenticatedLayout>
+  );
+}
           <div className="space-y-4">
             {/* Cuadro de Resumen General */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
