@@ -35,14 +35,18 @@ export default function ProxiedImage({ src, alt, className, onClick }: ProxiedIm
   return (
     <div className="relative">
       {loading && (
-        <div className={`${className} bg-gray-200 animate-pulse`} />
+        <div className={`${className} bg-gray-200 animate-pulse absolute inset-0`} />
       )}
       <img
         src={proxiedSrc}
         alt={alt}
-        className={`${className} ${loading ? 'hidden' : ''}`}
+        className={className}
+        style={{ display: loading ? 'none' : 'block' }}
         onClick={onClick}
-        onLoad={() => setLoading(false)}
+        onLoad={() => {
+          console.log('✅ Image loaded:', alt);
+          setLoading(false);
+        }}
         onError={(e) => {
           console.error("❌ Failed to load image:", {
             proxiedSrc,
