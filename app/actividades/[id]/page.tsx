@@ -236,7 +236,7 @@ export default function ActividadDetailPage() {
                       className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
                     >
                       <img
-                        src={foto.url}
+                        src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
                         alt={foto.filename}
                         className="w-full h-48 object-cover"
                       />
@@ -310,7 +310,7 @@ export default function ActividadDetailPage() {
                 ×
               </button>
               <img
-                src={selectedPhoto.url}
+                src={`/api/image-proxy?url=${encodeURIComponent(selectedPhoto.url)}`}
                 alt={selectedPhoto.filename}
                 className="max-w-full max-h-[90vh] object-contain"
               />
