@@ -550,9 +550,9 @@ export default function ActividadesPage() {
                 <div key={actividad.id} className="p-3 border border-gray-200 rounded">
                   <div className="font-semibold">{actividad.fields["Nombre de la Actividad"] || "Sin nombre"}</div>
                   <div className="text-sm text-gray-600">
-                    📅 Fecha: {actividad.fields.Fecha || "N/A"} | 
-                    Mes: {actividad.fields.Mes || "N/A"} | 
-                    Año: {actividad.fields.Año || "N/A"}
+                    📅 Fecha: {String(actividad.fields.Fecha || "N/A")} | 
+                    Mes: {String(actividad.fields.Mes || "N/A")} | 
+                    Año: {String(actividad.fields.Año || "N/A")}
                   </div>
                 </div>
               ))}
