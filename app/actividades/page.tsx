@@ -363,19 +363,22 @@ export default function ActividadesPage() {
                                     </h4>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                       {actividad.fields.Fotografias?.map((foto, idx) => (
-                                        <div key={foto.id} className="relative group cursor-pointer bg-yellow-200">
+                                        <button
+                                          key={foto.id}
+                                          onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
+                                          className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
+                                        >
                                           <img
                                             src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
                                             alt={`Foto ${idx + 1}`}
-                                            className="w-full h-48 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow bg-red-500"
-                                            onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
+                                            className="w-full h-48 object-cover"
                                           />
-                                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center pointer-events-none">
-                                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                            </svg>
+                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
+                                            <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                                              🔍
+                                            </span>
                                           </div>
-                                        </div>
+                                        </button>
                                       ))}
                                     </div>
                                   </div>
