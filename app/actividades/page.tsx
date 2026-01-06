@@ -133,7 +133,15 @@ export default function ActividadesPage() {
       // Filtro por mes
       if (selectedMes) {
         console.log('Filtrando por mes:', selectedMes);
-        console.log('Ejemplo de Mes en actividades:', filtered.slice(0, 3).map(a => ({ id: a.id, mes: a.fields.Mes })));
+        console.log('Tipo de selectedMes:', typeof selectedMes);
+        const ejemplos = filtered.slice(0, 5).map(a => ({ 
+          id: a.id, 
+          mes: a.fields.Mes,
+          tipoMes: typeof a.fields.Mes,
+          mesString: String(a.fields.Mes),
+          coincide: String(a.fields.Mes) === selectedMes
+        }));
+        console.log('Ejemplo de Mes en actividades:', ejemplos);
         filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
         console.log('Después de filtrar por mes:', filtered.length);
       }
