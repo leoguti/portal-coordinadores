@@ -362,6 +362,11 @@ export default function ActividadesPage() {
                                     <h4 className="text-sm font-semibold text-gray-700 mb-3">
                                       Fotografías ({photoCount})
                                     </h4>
+                                    {console.log('📸 Renderizando fotos en desplegable:', {
+                                      actividadId: actividad.id,
+                                      photoCount,
+                                      primeraFoto: actividad.fields.Fotografias?.[0]
+                                    })}
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                       {actividad.fields.Fotografias?.map((foto, idx) => (
                                         <div key={foto.id} className="relative group">
