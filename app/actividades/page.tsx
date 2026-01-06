@@ -71,13 +71,31 @@ export default function ActividadesPage() {
     setExpandedMonths(newExpanded);
   };
 
-  // Obtener opciones únicas de meses, años, municipios y tipos
+  // Obtener opciones únicas basadas en los filtros aplicados (cascada completa)
   const opcionesFiltros = React.useMemo(() => {
-    // Para filtros en cascada: si hay coordinador seleccionado, usar solo sus actividades
+    // Aplicar filtros gradualmente para opciones en cascada
     let dataParaOpciones = actividades;
     
-    if (isAdmin && selectedCoordinador) {
-      dataParaOpciones = actividades.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+    if (isAdmin) {
+      // Aplicar filtro de coordinador si existe
+      if (selectedCoordinador) {
+        dataParaOpciones = dataParaOpciones.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+      }
+      
+      // Aplicar filtro de año si existe (afecta opciones de mes)
+      if (selectedAno) {
+        dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Año) === selectedAno);
+      }
+      
+      // Aplicar filtro de mes si existe (afecta opciones de municipio y tipo)
+      if (selectedMes) {
+        dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Mes) === selectedMes);
+      }
+      
+      // Aplicar filtro de municipio si existe (afecta opciones de tipo)
+      if (selectedMunicipio) {
+        dataParaOpciones = dataParaOpciones.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
+      }
     }
     
     const meses = new Set<string>();
@@ -85,23 +103,17 @@ export default function ActividadesPage() {
     const municipios = new Set<string>();
     const tipos = new Set<string>();
 
+    // Para obtener todas las opciones disponibles según filtros actuales
     dataParaOpciones.forEach(actividad => {
-      // Meses (campo directo de Airtable)
       if (actividad.fields.Mes) {
         meses.add(String(actividad.fields.Mes));
       }
-
-      // Años (campo directo de Airtable)
       if (actividad.fields.Año) {
         anos.add(String(actividad.fields.Año));
       }
-
-      // Municipios
       if (actividad.fields["mundep (from Municipio)"]?.[0]) {
         municipios.add(actividad.fields["mundep (from Municipio)"][0]);
       }
-
-      // Tipos
       if (actividad.fields.Tipo) {
         tipos.add(actividad.fields.Tipo);
       }
@@ -113,7 +125,7 @@ export default function ActividadesPage() {
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
-  }, [actividades, isAdmin, selectedCoordinador]);
+  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio]);
 
   // Filtrar actividades por coordinador, mes, año, municipio y tipo (admin)
   const actividadesFiltradas = React.useMemo(() => {
