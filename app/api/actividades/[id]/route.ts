@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { puedeModificarActividad } from "@/lib/dateValidations";
 
 /**
  * GET /api/actividades/[id]
@@ -128,6 +129,15 @@ export async function PUT(
       );
     }
 
+    // Verificar la regla de los 7 días
+    const fechaActividad = existingActividad.fields?.Fecha;
+    if (fechaActividad && !puedeModificarActividad(fechaActividad)) {
+      return NextResponse.json(
+        { error: "Esta actividad ya no se puede modificar. Han pasado más de 7 días desde el fin del mes de la actividad." },
+        { status: 403 }
+      );
+    }
+
     // Obtener datos del body
     const body = await request.json();
     const { 
@@ -246,6 +256,15 @@ export async function DELETE(
     if (!coordinadores.includes(session.user.coordinatorRecordId)) {
       return NextResponse.json(
         { error: "No tienes permiso para eliminar esta actividad" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar la regla de los 7 días
+    const fechaActividad = actividad.fields?.Fecha;
+    if (fechaActividad && !puedeModificarActividad(fechaActividad)) {
+      return NextResponse.json(
+        { error: "Esta actividad ya no se puede eliminar. Han pasado más de 7 días desde el fin del mes de la actividad." },
         { status: 403 }
       );
     }

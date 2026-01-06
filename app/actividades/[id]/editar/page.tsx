@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import ActividadForm, { ActividadFormData } from "@/components/ActividadForm";
 import Link from "next/link";
+import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
 
 interface Actividad {
   id: string;
@@ -129,6 +130,45 @@ export default function EditarActividadPage() {
   }
 
   if (!actividad) return null;
+
+  // Verificar si puede modificar la actividad
+  const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
+
+  // Si no puede modificar, mostrar mensaje y redirigir
+  if (!puedeModificar) {
+    return (
+      <AuthenticatedLayout>
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <Link href={`/actividades/${actividadId}`} className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+              ← Volver al detalle
+            </Link>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Editar Actividad</h1>
+          </div>
+
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-8">
+            <div className="flex items-start gap-4">
+              <span className="text-4xl">🔒</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-yellow-800 mb-2">
+                  Esta actividad ya no se puede editar
+                </h2>
+                <p className="text-yellow-700 mb-4">
+                  {actividad.fields.Fecha && getMensajeErrorActividad(actividad.fields.Fecha)}
+                </p>
+                <Link
+                  href={`/actividades/${actividadId}`}
+                  className="inline-block px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Volver al detalle
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    );
+  }
 
   // Preparar datos iniciales para el formulario
   const initialData: Partial<ActividadFormData> = {

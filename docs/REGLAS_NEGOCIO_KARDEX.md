@@ -82,3 +82,69 @@ Ver `app/kardex/page.tsx` líneas 364-383:
 
 ### Justificación
 Este período de gracia permite a los coordinadores hacer correcciones o agregar movimientos tardíos después del fin del mes, sin necesidad de reabrir periodos manualmente.
+
+---
+
+# Reglas de Negocio - Actividades
+
+## Período de Modificación (7 días de gracia)
+
+### Regla Principal
+Una actividad solo puede ser **editada o eliminada** dentro de los **7 días posteriores al fin del mes** de la actividad.
+
+### Lógica de Cálculo
+- Se toma el **mes de la actividad** (no la fecha exacta)
+- Se calcula el **último día del mes**
+- Se agregan **7 días** a ese último día
+- La actividad está **abierta** si hoy ≤ último día del mes + 7
+
+### Ejemplos
+
+**Actividad del 15 de diciembre 2025:**
+- Último día del mes: 31/12/2025
+- Fecha de cierre: 31/12/2025 + 7 días = **07/01/2026**
+- Si hoy es 06/01/2026 → ✅ **Puede modificar**
+- Si hoy es 08/01/2026 → ❌ **Ya cerró**
+
+**Actividad del 5 de enero 2026:**
+- Último día del mes: 31/01/2026
+- Fecha de cierre: 31/01/2026 + 7 días = **07/02/2026**
+- Si hoy es 06/01/2026 → ✅ **Puede modificar** (aún está en enero)
+
+### Implementación
+
+**Frontend:**
+- `/app/actividades/page.tsx` - Lista con badges de "Cerrada" y botón editar deshabilitado
+- `/app/actividades/[id]/page.tsx` - Detalle con botones condicionales y mensaje de advertencia
+- `/app/actividades/[id]/editar/page.tsx` - Página de edición bloqueada con mensaje
+
+**Backend:**
+- `/app/api/actividades/[id]/route.ts` - Validación en PUT y DELETE
+- Retorna error 403 si intenta modificar actividad cerrada
+
+**Utilidades:**
+- `/lib/dateValidations.ts`:
+  - `puedeModificarActividad(fecha)` - Verifica si puede modificar
+  - `getMensajeErrorActividad(fecha)` - Mensaje de error descriptivo
+
+### Mensajes en la UI
+
+**Badge en lista:**
+```
+🔒 Cerrada
+```
+
+**Advertencia en detalle:**
+```
+🔒 Actividad Cerrada
+Esta actividad es de diciembre 2025 y cerró el 7 de enero de 2026 
+(7 días después del fin de mes). Ya no se puede modificar ni eliminar.
+```
+
+**Página de edición bloqueada:**
+```
+Esta actividad ya no se puede editar
+```
+
+### Justificación
+Similar al kardex, este período de gracia permite corregir errores o agregar información faltante sin necesidad de gestión manual de permisos.

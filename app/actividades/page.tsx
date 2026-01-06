@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
+import { puedeModificarActividad } from "@/lib/dateValidations";
 
 interface AirtableAttachment {
   id: string;
@@ -143,12 +144,12 @@ export default function ActividadesPage() {
                 const firstPhoto = actividad.fields.Fotografias?.[0];
                 const photoCount = actividad.fields.Fotografias?.length || 0;
                 const remainingPhotos = photoCount > 1 ? photoCount - 1 : 0;
+                const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
 
                 return (
-                  <Link
+                  <div
                     key={actividad.id}
-                    href={`/actividades/${actividad.id}`}
-                    className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                   >
                     <div className="flex gap-6">
                       {/* Photo thumbnail */}
@@ -173,9 +174,16 @@ export default function ActividadesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                              {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
-                            </h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-xl font-semibold text-gray-900">
+                                {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
+                              </h3>
+                              {!puedeModificar && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                  🔒 Cerrada
+                                </span>
+                              )}
+                            </div>
                             <div className="flex gap-4 text-sm text-gray-600">
                               {actividad.fields.Fecha && (
                                 <span>📅 {actividad.fields.Fecha}</span>
@@ -198,17 +206,37 @@ export default function ActividadesPage() {
                           </p>
                         )}
 
-                        <div className="flex gap-6 text-sm text-gray-600">
-                          {actividad.fields["Cantidad de Participantes"] && (
-                            <span><strong>Participantes:</strong> {actividad.fields["Cantidad de Participantes"]}</span>
-                          )}
-                          {photoCount > 0 && (
-                            <span><strong>Fotos:</strong> {photoCount}</span>
-                          )}
+                        <div className="flex justify-between items-center">
+                          <div className="flex gap-6 text-sm text-gray-600">
+                            {actividad.fields["Cantidad de Participantes"] && (
+                              <span><strong>Participantes:</strong> {actividad.fields["Cantidad de Participantes"]}</span>
+                            )}
+                            {photoCount > 0 && (
+                              <span><strong>Fotos:</strong> {photoCount}</span>
+                            )}
+                          </div>
+                          
+                          {/* Botones de acción */}
+                          <div className="flex gap-2">
+                            <Link
+                              href={`/actividades/${actividad.id}`}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Ver Detalles
+                            </Link>
+                            {puedeModificar && (
+                              <Link
+                                href={`/actividades/${actividad.id}/editar`}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                ✏️ Editar
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

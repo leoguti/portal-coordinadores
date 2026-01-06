@@ -130,3 +130,65 @@ export function getFechaMinimaPermitida(): string {
 export function getFechaMaximaPermitida(): string {
   return new Date().toISOString().split('T')[0];
 }
+
+/**
+ * Verifica si una actividad puede ser modificada/eliminada
+ * REGLA: 7 días de gracia después del FIN DEL MES de la actividad
+ * (Mismo comportamiento que kardex)
+ * 
+ * @param fechaActividad - Fecha de la actividad (formato YYYY-MM-DD o Date object)
+ * @returns true si puede ser modificada (dentro de 7 días), false si ya cerró
+ */
+export function puedeModificarActividad(fechaActividad: string | Date): boolean {
+  const fecha = typeof fechaActividad === 'string' 
+    ? new Date(fechaActividad + 'T00:00:00')
+    : new Date(fechaActividad);
+  
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  // Obtener el último día del mes de la actividad
+  const año = fecha.getFullYear();
+  const mes = fecha.getMonth();
+  const ultimoDiaMes = new Date(año, mes + 1, 0); // día 0 del mes siguiente = último día del mes actual
+  
+  // Fecha de cierre = último día del mes + 7 días
+  const fechaCierre = new Date(ultimoDiaMes);
+  fechaCierre.setDate(fechaCierre.getDate() + 7);
+  
+  // Puede modificar si aún no ha pasado la fecha de cierre
+  return hoy <= fechaCierre;
+}
+
+/**
+ * Obtiene el mensaje de error para actividades que ya no se pueden modificar
+ * 
+ * @param fechaActividad - Fecha de la actividad
+ * @returns Mensaje descriptivo
+ */
+export function getMensajeErrorActividad(fechaActividad: string | Date): string {
+  const fecha = typeof fechaActividad === 'string' 
+    ? new Date(fechaActividad + 'T00:00:00')
+    : new Date(fechaActividad);
+  
+  const año = fecha.getFullYear();
+  const mes = fecha.getMonth();
+  const ultimoDiaMes = new Date(año, mes + 1, 0);
+  
+  const fechaCierre = new Date(ultimoDiaMes);
+  fechaCierre.setDate(fechaCierre.getDate() + 7);
+  
+  const mesNombre = fecha.toLocaleDateString('es-CO', { 
+    year: 'numeric', 
+    month: 'long'
+  });
+  
+  const fechaCierreStr = fechaCierre.toLocaleDateString('es-CO', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  return `Esta actividad es de ${mesNombre} y cerró el ${fechaCierreStr} (7 días después del fin de mes). Ya no se puede modificar ni eliminar.`;
+}
+
