@@ -180,26 +180,26 @@ export default function ActividadesPage() {
               const totalActividades = actividadesDelMes.length;
 
               return (
-                <div key={monthKey} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div key={monthKey} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
                   {/* Month Header - Clickable */}
                   <button
                     onClick={() => toggleMonth(monthKey)}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-colors flex items-center justify-between"
+                    className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between border-b border-gray-200"
                   >
                     <div className="flex items-center gap-3">
                       <svg 
-                        className={`w-5 h-5 text-white transform transition-transform ${isMonthExpanded ? 'rotate-90' : ''}`}
+                        className={`w-5 h-5 text-gray-600 transform transition-transform ${isMonthExpanded ? 'rotate-90' : ''}`}
                         fill="none" 
                         stroke="currentColor" 
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                      <h2 className="text-lg font-semibold text-white capitalize">
-                        {monthName}
+                      <h2 className="text-lg font-semibold text-gray-900 capitalize">
+                        📅 {monthName}
                       </h2>
                     </div>
-                    <span className="text-sm text-blue-100">
+                    <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
                       {totalActividades} actividad{totalActividades !== 1 ? "es" : ""}
                     </span>
                   </button>
