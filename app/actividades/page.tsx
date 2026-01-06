@@ -51,6 +51,11 @@ export default function ActividadesPage() {
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
   const [selectedTipo, setSelectedTipo] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
+  // Debug: Log cuando cambia selectedAno
+  React.useEffect(() => {
+    console.log('✅ selectedAno cambió a:', selectedAno);
+  }, [selectedAno]);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
@@ -409,7 +414,10 @@ export default function ActividadesPage() {
                 <select
                   id="ano-filter"
                   value={selectedAno}
-                  onChange={(e) => setSelectedAno(e.target.value)}
+                  onChange={(e) => {
+                    console.log('🔄 Cambiando año a:', e.target.value);
+                    setSelectedAno(e.target.value);
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
