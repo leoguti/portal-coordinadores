@@ -541,6 +541,24 @@ export default function ActividadesPage() {
         )}
 
         {!loading && !error && actividadesFiltradas.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">
+              Actividades Filtradas: {actividadesFiltradas.length}
+            </h2>
+            <div className="space-y-2">
+              {actividadesFiltradas.map((actividad) => (
+                <div key={actividad.id} className="p-3 border border-gray-200 rounded">
+                  <div className="font-semibold">{actividad.fields["Nombre de la Actividad"] || "Sin nombre"}</div>
+                  <div className="text-sm text-gray-600">
+                    📅 Fecha: {actividad.fields.Fecha || "N/A"} | 
+                    Mes: {actividad.fields.Mes || "N/A"} | 
+                    Año: {actividad.fields.Año || "N/A"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
           <div className="space-y-4">
             {/* Cuadro de Resumen General */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
