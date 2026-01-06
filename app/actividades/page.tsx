@@ -76,25 +76,32 @@ export default function ActividadesPage() {
     // Aplicar filtros gradualmente para opciones en cascada
     let dataParaOpciones = actividades;
     
+    console.log('📊 Calculando opciones de filtros...');
+    console.log('Total actividades:', actividades.length);
+    
     if (isAdmin) {
       // Aplicar filtro de coordinador si existe
       if (selectedCoordinador) {
         dataParaOpciones = dataParaOpciones.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+        console.log('Después de filtrar coordinador:', dataParaOpciones.length);
       }
       
       // Aplicar filtro de año si existe (afecta opciones de mes)
       if (selectedAno) {
         dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Año) === selectedAno);
+        console.log('Después de filtrar año:', dataParaOpciones.length);
       }
       
       // Aplicar filtro de mes si existe (afecta opciones de municipio y tipo)
       if (selectedMes) {
         dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Mes) === selectedMes);
+        console.log('Después de filtrar mes:', dataParaOpciones.length);
       }
       
       // Aplicar filtro de municipio si existe (afecta opciones de tipo)
       if (selectedMunicipio) {
         dataParaOpciones = dataParaOpciones.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
+        console.log('Después de filtrar municipio:', dataParaOpciones.length);
       }
     }
     
@@ -118,6 +125,12 @@ export default function ActividadesPage() {
         tipos.add(actividad.fields.Tipo);
       }
     });
+
+    console.log('Opciones resultantes:');
+    console.log('- Años:', Array.from(anos));
+    console.log('- Meses:', Array.from(meses));
+    console.log('- Municipios:', municipios.size);
+    console.log('- Tipos:', Array.from(tipos));
 
     return {
       meses: Array.from(meses).sort().reverse(),
