@@ -342,85 +342,140 @@ export default function KardexPage() {
   const endIndex = startIndex + pageSize;
   const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
 
-  // Total en kg de TODOS los registros filtrados
-  const totalKg = filteredRecords.reduce((sum, r) => sum + (r.fields.Total || 0), 0);
+  // ========== CÁLCULO DE SALDO HISTÓRICO (ENTRADAS - SALIDAS) ==========
+  
+  // Separar por tipo de movimiento
+  const entradasFiltradas = filteredRecords.filter(r => r.fields.TipoMovimiento === "ENTRADA");
+  const salidasFiltradas = filteredRecords.filter(r => r.fields.TipoMovimiento === "SALIDA");
+  
+  // Calcular totales (IMPORTANTE: salidas vienen negativas, usamos Math.abs para mostrar)
+  const totalEntradas = entradasFiltradas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+  const totalSalidas = salidasFiltradas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+  const saldoTotal = totalEntradas - totalSalidas;
 
   // ========== CÁLCULOS DE RESÚMENES ==========
   
-  // Obtener fecha de corte para meses cerrados (usar función centralizada)
-  const fechaCorteCerrado = getFechaCorteMesesCerrados();
+  // Fecha actual para determinar períodos abiertos vs cerrados
+  // REGLA DE NEGOCIO: Un periodo se cierra 7 días después de terminar
+  const hoy = new Date();
+  const añoActual = hoy.getFullYear();
+  const mesActual = hoy.getMonth() + 1; // 1-12
   
-  // Filtrar solo registros de meses cerrados (estrictamente menores a la fecha de corte)
-  const registrosCerrados = filteredRecords.filter((record) => {
+  // Función para determinar si un mes está cerrado (más de 7 días después del fin del mes)
+  const esMesCerrado = (mesStr: string): boolean => {
+    // mesStr formato: "YYYY-MM"
+    const [año, mes] = mesStr.split('-').map(Number);
+    // Último día del mes
+    const ultimoDiaMes = new Date(año, mes, 0); // mes sin restar 1 da el último día del mes anterior
+    // Fecha de cierre = último día del mes + 7 días
+    const fechaCierre = new Date(ultimoDiaMes);
+    fechaCierre.setDate(fechaCierre.getDate() + 7);
+    // El mes está cerrado si ya pasó la fecha de cierre
+    return hoy > fechaCierre;
+  };
+  
+  // Función para determinar si un año está cerrado (todos sus meses están cerrados)
+  const esAñoCerrado = (añoStr: string): boolean => {
+    const año = parseInt(añoStr);
+    // El año está cerrado si su último mes (diciembre) está cerrado
+    const diciembreStr = `${año}-12`;
+    return esMesCerrado(diciembreStr);
+  };
+  
+  // Para los resúmenes anuales/mensuales, usar TODO el histórico hasta 2025-12-31
+  // NO solo meses cerrados
+  const registrosParaResumen = filteredRecords.filter((record) => {
     if (!record.fields.fechakardex) return false;
-    const fechaMovimiento = new Date(record.fields.fechakardex + 'T00:00:00');
-    return fechaMovimiento < fechaCorteCerrado;
+    // Incluir TODO hasta 2025-12-31
+    return record.fields.fechakardex <= '2025-12-31';
   });
   
-  // Resumen por Mes (solo meses cerrados)
-  const resumenPorMes = registrosCerrados.reduce((acc, record) => {
-    const mes = record.fields.MES;
-    const tipo = record.fields.TipoMovimiento;
-    const total = record.fields.Total || 0;
-    
-    if (!mes || !tipo) return acc;
-    
-    if (!acc[mes]) {
-      acc[mes] = { mes, entradas: 0, salidas: 0, saldo: 0 };
-    }
-    
-    if (tipo === "ENTRADA") {
-      acc[mes].entradas += total;
-    } else if (tipo === "SALIDA") {
-      acc[mes].salidas += total;
-    }
-    
-    acc[mes].saldo = acc[mes].entradas - acc[mes].salidas;
-    
-    return acc;
-  }, {} as Record<string, { mes: string; entradas: number; salidas: number; saldo: number }>);
+  // Resumen por Mes - Entradas/Salidas del mes, SALDO HISTÓRICO ACUMULADO
+  const mesesDisponibles = Array.from(
+    new Set(
+      registrosParaResumen
+        .map(r => r.fields.MES)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b)); // ASCENDENTE: más antiguo primero
   
-  const resumenMensual = Object.values(resumenPorMes)
-    .sort((a, b) => b.mes.localeCompare(a.mes))
-    .slice(0, 12); // Solo últimos 12 meses
+  const resumenMensual = mesesDisponibles.slice(-12).map(mes => { // Últimos 12 meses
+    // ENTRADAS Y SALIDAS: Solo movimientos DE este mes específico
+    const registrosDelMes = registrosParaResumen.filter(r => r.fields.MES === mes);
+    
+    const entradasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
+    const salidasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
+    
+    const totalEntradasMes = entradasDelMes.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalSalidasMes = salidasDelMes.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    
+    // SALDO: TODO el histórico HASTA el final de este mes
+    const [anio, mesNum] = mes.split('-');
+    const ultimoDiaMes = new Date(parseInt(anio), parseInt(mesNum), 0).getDate();
+    const fechaFinMes = `${anio}-${mesNum}-${ultimoDiaMes.toString().padStart(2, '0')}`;
+    
+    const registrosHastaEsteMes = filteredRecords.filter(r => {
+      const fecha = r.fields.fechakardex;
+      if (!fecha) return false;
+      return fecha <= fechaFinMes;
+    });
+    
+    const entradasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
+    const salidasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
+    
+    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    
+    return {
+      mes,
+      entradas: totalEntradasMes,     // Solo del mes
+      salidas: totalSalidasMes,       // Solo del mes
+      saldo: totalEntradasAcum - totalSalidasAcum,  // Acumulado histórico
+      estaAbierto: !esMesCerrado(mes)  // Abierto si NO ha pasado más de 7 días desde fin de mes
+    };
+  });
   
-  // Resumen por Año (solo años COMPLETAMENTE cerrados)
-  const resumenPorAnio = registrosCerrados.reduce((acc, record) => {
-    const anioRaw = record.fields.AÑO;
-    const anio = anioRaw ? String(anioRaw) : null; // Convertir a string por si viene como número
-    const tipo = record.fields.TipoMovimiento;
-    const total = record.fields.Total || 0;
-    
-    if (!anio || !tipo) return acc;
-    
-    if (!acc[anio]) {
-      acc[anio] = { año: anio, entradas: 0, salidas: 0, saldo: 0 };
-    }
-    
-    if (tipo === "ENTRADA") {
-      acc[anio].entradas += total;
-    } else if (tipo === "SALIDA") {
-      acc[anio].salidas += total;
-    }
-    
-    acc[anio].saldo = acc[anio].entradas - acc[anio].salidas;
-    
-    return acc;
-  }, {} as Record<string, { año: string; entradas: number; salidas: number; saldo: number }>);
+  // Resumen por Año - Entradas/Salidas del año, SALDO HISTÓRICO ACUMULADO
+  const aniosDisponibles = Array.from(
+    new Set(
+      registrosParaResumen
+        .map(r => r.fields.AÑO)
+        .filter(Boolean)
+        .map(a => String(a))
+    )
+  ).sort((a, b) => a.localeCompare(b)); // ASCENDENTE: más antiguo primero
   
-  // Filtrar solo años completamente cerrados y limitar a últimos 3 años
-  const anioCorteCerrado = fechaCorteCerrado.getFullYear();
-  const mesCorteCerrado = fechaCorteCerrado.getMonth(); // 0-11
-  
-  const resumenAnual = Object.values(resumenPorAnio)
-    .filter((item) => {
-      const anioNumero = parseInt(item.año);
-      // Solo incluir años anteriores al año de corte
-      // O si es el mismo año, solo si el mes de corte es enero (mes 0) - significa que todo el año anterior está cerrado
-      return anioNumero < anioCorteCerrado || (anioNumero === anioCorteCerrado && mesCorteCerrado === 0);
-    })
-    .sort((a, b) => b.año.localeCompare(a.año))
-    .slice(0, 3); // Solo últimos 3 años
+  const resumenAnual = aniosDisponibles.slice(-5).map(anio => { // Últimos 5 años
+    // ENTRADAS Y SALIDAS: Solo movimientos DE este año específico
+    const registrosDelAnio = registrosParaResumen.filter(r => String(r.fields.AÑO) === anio);
+    
+    const entradasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
+    const salidasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
+    
+    const totalEntradasAnio = entradasDelAnio.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalSalidasAnio = salidasDelAnio.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    
+    // SALDO: TODO el histórico HASTA el final de este año
+    const registrosHastaEsteAnio = filteredRecords.filter(r => {
+      const fecha = r.fields.fechakardex;
+      if (!fecha) return false;
+      return fecha <= `${anio}-12-31`;
+    });
+    
+    const entradasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
+    const salidasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
+    
+    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    
+    return {
+      año: anio,
+      entradas: totalEntradasAnio,    // Solo del año
+      salidas: totalSalidasAnio,      // Solo del año
+      saldo: totalEntradasAcum - totalSalidasAcum,  // Acumulado histórico
+      estaAbierto: !esAñoCerrado(anio)  // Abierto si su último mes (diciembre) aún está abierto
+    };
+  }); // Sin slice adicional, ya tomamos últimos 5 con slice(-5)
 
   const limpiarFiltros = () => {
     setFechaDesde("");
@@ -477,11 +532,18 @@ export default function KardexPage() {
               <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    📅 Resumen por Año (últimos 3 años)
+                    📅 Resumen por Año (últimos 5 años)
                   </h2>
-                  <span className="text-xs text-gray-600">
-                    🔒 Solo períodos completamente cerrados
-                  </span>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 rounded-full bg-green-100 border border-green-300"></span>
+                      <span className="text-gray-600">Cerrado</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 rounded-full bg-yellow-100 border border-yellow-300"></span>
+                      <span className="text-gray-600">Abierto (puede cambiar)</span>
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -492,19 +554,23 @@ export default function KardexPage() {
                       <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase">⬇️ Entradas (kg)</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase">⬆️ Salidas (kg)</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase font-bold">💰 Saldo (kg)</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {resumenAnual.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                           No hay datos con año disponible
                         </td>
                       </tr>
                     ) : (
                       resumenAnual.map((item) => (
-                        <tr key={item.año} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.año}</td>
+                        <tr key={item.año} className={`hover:bg-gray-50 ${item.estaAbierto ? 'bg-yellow-50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                            {item.año}
+                            {item.estaAbierto && <span className="ml-2 text-xs text-yellow-600">⚠️</span>}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-700 font-semibold">
                             {item.entradas.toLocaleString("es-CO")}
                           </td>
@@ -515,6 +581,17 @@ export default function KardexPage() {
                             item.saldo >= 0 ? "text-blue-700" : "text-red-700"
                           }`}>
                             {item.saldo.toLocaleString("es-CO")}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            {item.estaAbierto ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                🔓 Abierto
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ✅ Cerrado
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -532,7 +609,7 @@ export default function KardexPage() {
                     📆 Resumen por Mes (últimos 12 meses)
                   </h2>
                   <span className="text-xs text-gray-600">
-                    🔒 Solo períodos completamente cerrados
+                    📊 Movimientos por mes hasta 2025-12-31
                   </span>
                 </div>
               </div>
@@ -544,19 +621,23 @@ export default function KardexPage() {
                       <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase">⬇️ Entradas (kg)</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase">⬆️ Salidas (kg)</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase font-bold">💰 Saldo (kg)</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {resumenMensual.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                           No hay datos con mes disponible
                         </td>
                       </tr>
                     ) : (
                       resumenMensual.map((item) => (
-                        <tr key={item.mes} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.mes}</td>
+                        <tr key={item.mes} className={`hover:bg-gray-50 ${item.estaAbierto ? 'bg-yellow-50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                            {item.mes}
+                            {item.estaAbierto && <span className="ml-2 text-xs text-yellow-600">⚠️</span>}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-700 font-semibold">
                             {item.entradas.toLocaleString("es-CO")}
                           </td>
@@ -567,6 +648,17 @@ export default function KardexPage() {
                             item.saldo >= 0 ? "text-blue-700" : "text-red-700"
                           }`}>
                             {item.saldo.toLocaleString("es-CO")}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            {item.estaAbierto ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                🔓 Abierto
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ✅ Cerrado
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -779,8 +871,8 @@ export default function KardexPage() {
             </div>
 
             {/* Barra de resumen */}
-            <div className="px-6 py-3 border-b border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-sm text-gray-600">
                   Mostrando <span className="font-semibold">{startIndex + 1}-{Math.min(endIndex, totalRecords)}</span> de{" "}
                   <span className="font-semibold">{totalRecords.toLocaleString("es-CO")}</span> movimientos
@@ -790,12 +882,19 @@ export default function KardexPage() {
                     </span>
                   )}
                 </p>
-                <p className="text-sm text-gray-600">
-                  Total:{" "}
-                  <span className="font-semibold">
-                    {totalKg.toLocaleString("es-CO")} kg
-                  </span>
-                </p>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm">
+                    <span className="text-green-600 font-semibold">⬇️ {totalEntradas.toLocaleString("es-CO")}</span>
+                    <span className="text-gray-400 mx-1">|</span>
+                    <span className="text-red-600 font-semibold">⬆️ {totalSalidas.toLocaleString("es-CO")}</span>
+                  </div>
+                  <div className="text-sm px-4 py-2 bg-white rounded-lg border-2 border-purple-300 shadow-sm">
+                    <span className="text-gray-600">💰 Saldo: </span>
+                    <span className={`font-bold text-base ${saldoTotal >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                      {saldoTotal.toLocaleString("es-CO")} kg
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
             

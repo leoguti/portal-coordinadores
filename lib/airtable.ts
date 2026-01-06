@@ -20,8 +20,9 @@ interface AirtableResponse<T> {
 
 interface CoordinadorFields {
   Name?: string;
-  Email?: string;
-  Rol?: "Coordinador" | "Administrador" | "Desactivado"; // Uppercase R to match Airtable
+  email?: string; // lowercase to match Airtable field name
+  telefono?: string;
+  Rol?: "Coordinador" | "Administrador" | "Desactivado";
   Actividades?: string[];
   Certificados?: string[];
   Kardex?: string[];
@@ -231,7 +232,7 @@ export async function getCoordinatorByEmail(
 
   // Build Airtable API URL with filter
   // Using LOWER() formula for case-insensitive comparison
-  const filterFormula = `LOWER({Email})="${normalizedEmail}"`;
+  const filterFormula = `LOWER({email})="${normalizedEmail}"`;
   const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(
     filterFormula
   )}&maxRecords=1`;
@@ -280,8 +281,8 @@ export async function getCoordinatorByEmail(
         return {
           id: record.id,
           name: record.fields.Name,
-          email: record.fields.Email || email,
-          rol: record.fields.Rol, // Uppercase R to match Airtable
+          email: record.fields.email || email,
+          rol: record.fields.Rol,
         };
       }
 
