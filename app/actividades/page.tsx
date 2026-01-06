@@ -162,6 +162,24 @@ export default function ActividadesPage() {
     }
   }
 
+  async function fetchCoordinadores() {
+    try {
+      const response = await fetch("/api/coordinadores");
+      if (!response.ok) {
+        throw new Error("Error al cargar coordinadores");
+      }
+      const data = await response.json();
+      setCoordinadores(
+        data.coordinadores.map((c: any) => ({
+          id: c.id,
+          name: c.fields.Nombre || "Sin nombre",
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching coordinadores:", err);
+    }
+  }
+
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -176,9 +194,15 @@ export default function ActividadesPage() {
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Actividades</h1>
-            <p className="text-gray-600">Listado de actividades del coordinador</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">Actividades</h1>
+              {isAdmin && <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-sm">👑 Vista Admin</span>}
+              {!isAdmin && <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm">👤 Mis Actividades</span>}
+            </div>
+            <p className="text-gray-600">
+              {isAdmin ? "Gestión de actividades de todos los coordinadores" : "Listado de actividades del coordinador"}
+            </p>
           </div>
           <Link
             href="/actividades/nueva"
@@ -188,6 +212,31 @@ export default function ActividadesPage() {
             Nueva Actividad
           </Link>
         </div>
+
+        {/* Filtro de coordinador - Solo admin */}
+        {isAdmin && coordinadores.length > 0 && (
+          <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
+              🔍 Filtrar por Coordinador
+            </label>
+            <select
+              id="coordinador-filter"
+              value={selectedCoordinador}
+              onChange={(e) => setSelectedCoordinador(e.target.value)}
+              className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Todos los coordinadores ({actividades.length} actividades)</option>
+              {coordinadores.map((coord) => {
+                const countActividades = actividades.filter(a => a.fields.Coordinador?.[0] === coord.id).length;
+                return (
+                  <option key={coord.id} value={coord.id}>
+                    {coord.name} ({countActividades} actividad{countActividades !== 1 ? 'es' : ''})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
 
         {loading && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -199,6 +248,18 @@ export default function ActividadesPage() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
+          </div>
+        )}
+
+        {!loading && !error && actividadesFiltradas.length === 0 && actividades.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-6xl mb-4">🔍</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              No hay actividades para este coordinador
+            </h2>
+            <p className="text-gray-600">
+              Selecciona otro coordinador o muestra todos
+            </p>
           </div>
         )}
 
@@ -221,7 +282,7 @@ export default function ActividadesPage() {
           </div>
         )}
 
-        {!loading && !error && actividades.length > 0 && (
+        {!loading && !error && actividadesFiltradas.length > 0 && (
           <div className="space-y-4">
             {/* Cuadro de Resumen General */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
