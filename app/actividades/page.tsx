@@ -79,14 +79,14 @@ export default function ActividadesPage() {
     const tipos = new Set<string>();
 
     actividades.forEach(actividad => {
-      // Meses (desde campo Mes de Airtable)
-      if (actividad.fields.Mes) {
+      // Meses (desde campo Mes de Airtable) - validar formato YYYY-MM
+      if (actividad.fields.Mes && typeof actividad.fields.Mes === 'string' && actividad.fields.Mes.includes('-')) {
         meses.add(actividad.fields.Mes);
       }
 
       // Años (desde campo Año de Airtable)
       if (actividad.fields.Año) {
-        anos.add(actividad.fields.Año);
+        anos.add(String(actividad.fields.Año));
       }
 
       // Municipios
@@ -101,7 +101,7 @@ export default function ActividadesPage() {
     });
 
     return {
-      meses: Array.from(meses).sort(),
+      meses: Array.from(meses).sort().reverse(), // Más reciente primero
       anos: Array.from(anos).sort().reverse(), // Más reciente primero
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
@@ -325,6 +325,7 @@ export default function ActividadesPage() {
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.meses.map((mes) => {
+                    if (!mes || typeof mes !== 'string' || !mes.includes('-')) return null;
                     const count = actividades.filter(a => a.fields.Mes === mes).length;
                     const [year, month] = mes.split('-');
                     const monthDate = new Date(parseInt(year), parseInt(month) - 1);
