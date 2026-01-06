@@ -79,12 +79,12 @@ export default function ActividadesPage() {
     const tipos = new Set<string>();
 
     actividades.forEach(actividad => {
-      // Meses (desde campo Mes de Airtable) - validar formato YYYY-MM
-      if (actividad.fields.Mes && typeof actividad.fields.Mes === 'string' && actividad.fields.Mes.includes('-')) {
-        meses.add(actividad.fields.Mes);
+      // Meses (campo directo de Airtable)
+      if (actividad.fields.Mes) {
+        meses.add(String(actividad.fields.Mes));
       }
 
-      // Años (desde campo Año de Airtable)
+      // Años (campo directo de Airtable)
       if (actividad.fields.Año) {
         anos.add(String(actividad.fields.Año));
       }
@@ -101,8 +101,8 @@ export default function ActividadesPage() {
     });
 
     return {
-      meses: Array.from(meses).sort().reverse(), // Más reciente primero
-      anos: Array.from(anos).sort().reverse(), // Más reciente primero
+      meses: Array.from(meses).sort().reverse(),
+      anos: Array.from(anos).sort().reverse(),
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
@@ -120,12 +120,12 @@ export default function ActividadesPage() {
 
       // Filtro por mes
       if (selectedMes) {
-        filtered = filtered.filter(a => a.fields.Mes === selectedMes);
+        filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
       }
 
       // Filtro por año
       if (selectedAno) {
-        filtered = filtered.filter(a => a.fields.Año === selectedAno);
+        filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
       }
 
       // Filtro por municipio
@@ -325,14 +325,10 @@ export default function ActividadesPage() {
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.meses.map((mes) => {
-                    if (!mes || typeof mes !== 'string' || !mes.includes('-')) return null;
-                    const count = actividades.filter(a => a.fields.Mes === mes).length;
-                    const [year, month] = mes.split('-');
-                    const monthDate = new Date(parseInt(year), parseInt(month) - 1);
-                    const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+                    const count = actividades.filter(a => String(a.fields.Mes) === mes).length;
                     return (
                       <option key={mes} value={mes}>
-                        {monthName} ({count})
+                        {mes} ({count})
                       </option>
                     );
                   })}
