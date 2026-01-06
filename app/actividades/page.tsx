@@ -71,67 +71,80 @@ export default function ActividadesPage() {
     setExpandedMonths(newExpanded);
   };
 
-  // Obtener opciones únicas basadas en los filtros aplicados (cascada completa)
+  // Obtener opciones únicas basadas en los filtros aplicados (cascada inteligente)
   const opcionesFiltros = React.useMemo(() => {
-    // Aplicar filtros gradualmente para opciones en cascada
-    let dataParaOpciones = actividades;
-    
     console.log('📊 Calculando opciones de filtros...');
-    console.log('Total actividades:', actividades.length);
     console.log('Filtros aplicados:', { selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo });
     
-    if (isAdmin) {
-      // Aplicar filtro de coordinador si existe
-      if (selectedCoordinador) {
-        dataParaOpciones = dataParaOpciones.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
-        console.log('Después de filtrar coordinador:', dataParaOpciones.length);
-      }
+    // Para cada tipo de opción, aplicar solo los filtros relevantes
+    const calcularOpciones = (excluirFiltro: string) => {
+      let data = actividades;
       
-      // Aplicar filtro de año si existe (afecta opciones de mes)
-      if (selectedAno) {
-        dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Año) === selectedAno);
-        console.log('Después de filtrar año:', dataParaOpciones.length, 'con año:', selectedAno);
-      }
-      
-      // Aplicar filtro de mes si existe (afecta opciones de municipio y tipo)
-      if (selectedMes) {
-        dataParaOpciones = dataParaOpciones.filter(a => String(a.fields.Mes) === selectedMes);
-        console.log('Después de filtrar mes:', dataParaOpciones.length);
-      }
-      
-      // Aplicar filtro de municipio si existe (afecta opciones de tipo)
-      if (selectedMunicipio) {
-        dataParaOpciones = dataParaOpciones.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
-        console.log('Después de filtrar municipio:', dataParaOpciones.length);
-      }
-    }
-    
-    const meses = new Set<string>();
-    const anos = new Set<string>();
-    const municipios = new Set<string>();
-    const tipos = new Set<string>();
-
-    // Para obtener todas las opciones disponibles según filtros actuales
-    dataParaOpciones.forEach(actividad => {
-      if (actividad.fields.Mes) {
-        const mesValue = actividad.fields.Mes;
-        // Solo agregar si es string válido
-        if (typeof mesValue === 'string' && mesValue.trim()) {
-          meses.add(mesValue);
+      if (isAdmin) {
+        if (selectedCoordinador) {
+          data = data.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+        }
+        
+        // Aplicar filtros según qué estamos calculando
+        if (excluirFiltro !== 'ano' && selectedAno) {
+          data = data.filter(a => String(a.fields.Año) === selectedAno);
+        }
+        
+        if (excluirFiltro !== 'mes' && selectedMes) {
+          data = data.filter(a => String(a.fields.Mes) === selectedMes);
+        }
+        
+        if (excluirFiltro !== 'municipio' && selectedMunicipio) {
+          data = data.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
+        }
+        
+        if (excluirFiltro !== 'tipo' && selectedTipo) {
+          data = data.filter(a => a.fields.Tipo === selectedTipo);
         }
       }
+      
+      return data;
+    };
+    
+    // Calcular años (solo coordinador afecta)
+    const dataParaAnos = calcularOpciones('ano');
+    const anos = new Set<string>();
+    dataParaAnos.forEach(actividad => {
       if (actividad.fields.Año) {
         const anoValue = actividad.fields.Año;
-        // Solo agregar si es string o número válido
         if (typeof anoValue === 'string' && anoValue.trim()) {
           anos.add(anoValue);
         } else if (typeof anoValue === 'number') {
           anos.add(String(anoValue));
         }
       }
+    });
+    
+    // Calcular meses (coordinador + año afectan)
+    const dataParaMeses = calcularOpciones('mes');
+    const meses = new Set<string>();
+    dataParaMeses.forEach(actividad => {
+      if (actividad.fields.Mes) {
+        const mesValue = actividad.fields.Mes;
+        if (typeof mesValue === 'string' && mesValue.trim()) {
+          meses.add(mesValue);
+        }
+      }
+    });
+    
+    // Calcular municipios (coordinador + año + mes afectan)
+    const dataParaMunicipios = calcularOpciones('municipio');
+    const municipios = new Set<string>();
+    dataParaMunicipios.forEach(actividad => {
       if (actividad.fields["mundep (from Municipio)"]?.[0]) {
         municipios.add(actividad.fields["mundep (from Municipio)"][0]);
       }
+    });
+    
+    // Calcular tipos (coordinador + año + mes + municipio afectan)
+    const dataParaTipos = calcularOpciones('tipo');
+    const tipos = new Set<string>();
+    dataParaTipos.forEach(actividad => {
       if (actividad.fields.Tipo) {
         tipos.add(actividad.fields.Tipo);
       }
