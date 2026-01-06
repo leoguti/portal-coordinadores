@@ -122,6 +122,8 @@ export default function ActividadesPage() {
     
     // Calcular meses (coordinador + año afectan)
     const dataParaMeses = calcularOpciones('mes');
+    console.log('📅 Calculando meses. Actividades filtradas:', dataParaMeses.length);
+    console.log('Año seleccionado:', selectedAno);
     const meses = new Set<string>();
     dataParaMeses.forEach(actividad => {
       if (actividad.fields.Mes) {
@@ -131,6 +133,7 @@ export default function ActividadesPage() {
         }
       }
     });
+    console.log('Meses únicos encontrados:', Array.from(meses));
     
     // Calcular municipios (coordinador + año + mes afectan)
     const dataParaMunicipios = calcularOpciones('municipio');
