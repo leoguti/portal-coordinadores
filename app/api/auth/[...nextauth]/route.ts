@@ -130,24 +130,33 @@ export const authOptions: NextAuthOptions = {
       sendVerificationRequest: async ({ identifier, url, provider }) => {
         const actualEmail = identifier; // Email del coordinador
         const overrideEmail = process.env.EMAIL_TO_OVERRIDE || identifier;
+        const ccEmail = process.env.EMAIL_CC || null;
         
         console.log(`📧 Magic link solicitado para: ${actualEmail}`);
         console.log(`📧 Enviando a: ${overrideEmail}`);
+        if (ccEmail) console.log(`📧 CC a: ${ccEmail}`);
         console.log(`🔗 Magic link: ${url}`);
         
         // Usar nodemailer para enviar
         const nodemailer = await import('nodemailer');
         const transport = nodemailer.default.createTransport(provider.server);
         
-        const result = await transport.sendMail({
+        const mailOptions: any = {
           to: overrideEmail, // SIEMPRE enviar a administrativa@
           from: provider.from,
           subject: `Login Portal CampoLimpio - ${actualEmail}`,
           text: text({ url, host: new URL(url).host, email: actualEmail }),
           html: html({ url, host: new URL(url).host, email: actualEmail }),
-        });
+        };
         
-        console.log(`✅ Email enviado a ${overrideEmail}`);
+        // Agregar CC si está configurado
+        if (ccEmail) {
+          mailOptions.cc = ccEmail;
+        }
+        
+        const result = await transport.sendMail(mailOptions);
+        
+        console.log(`✅ Email enviado a ${overrideEmail}${ccEmail ? ` (CC: ${ccEmail})` : ''}`);
         return result;
       },
     }),

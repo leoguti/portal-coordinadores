@@ -498,22 +498,22 @@ export default function KardexPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Kardex
               {isAdmin && <span className="ml-3 text-sm px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium">👑 Vista Admin</span>}
+              {!isAdmin && <span className="ml-3 text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">👤 Mi Kardex</span>}
             </h1>
             <p className="text-gray-600">
               Registro de movimientos logísticos de envases vacíos
               {isAdmin && <span className="ml-2 text-purple-600 font-medium">(Viendo todos los coordinadores)</span>}
+              {!isAdmin && <span className="ml-2 text-blue-600 font-medium">(Solo mis movimientos)</span>}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && (
-              <button
-                onClick={() => setShowResumen(!showResumen)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
-              >
-                <span className="text-xl">📊</span>
-                {showResumen ? "Ocultar Resúmenes" : "Ver Resúmenes"}
-              </button>
-            )}
+            <button
+              onClick={() => setShowResumen(!showResumen)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+            >
+              <span className="text-xl">📊</span>
+              {showResumen ? "Ocultar Resúmenes" : "Ver Resúmenes"}
+            </button>
             <button
               onClick={() => setShowAddModal(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
@@ -524,8 +524,8 @@ export default function KardexPage() {
           </div>
         </div>
 
-        {/* Sección de Resúmenes - SOLO ADMIN */}
-        {isAdmin && showResumen && allKardexRecords.length > 0 && (
+        {/* Sección de Resúmenes - Para TODOS */}
+        {showResumen && allKardexRecords.length > 0 && (
           <div className="mb-8 space-y-6">
             {/* Resumen por Año */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
