@@ -47,6 +47,7 @@ export default function ActividadesPage() {
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
   const [selectedMes, setSelectedMes] = useState<string>("");
+  const [selectedAno, setSelectedAno] = useState<string>("");
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
   const [selectedTipo, setSelectedTipo] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -70,18 +71,22 @@ export default function ActividadesPage() {
     setExpandedMonths(newExpanded);
   };
 
-  // Obtener opciones únicas de meses, municipios y tipos
+  // Obtener opciones únicas de meses, años, municipios y tipos
   const opcionesFiltros = React.useMemo(() => {
     const meses = new Set<string>();
+    const anos = new Set<string>();
     const municipios = new Set<string>();
     const tipos = new Set<string>();
 
     actividades.forEach(actividad => {
-      // Meses (YYYY-MM)
-      if (actividad.fields.Fecha) {
-        const fecha = new Date(actividad.fields.Fecha + 'T00:00:00');
-        const monthKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-        meses.add(monthKey);
+      // Meses (desde campo Mes de Airtable)
+      if (actividad.fields.Mes) {
+        meses.add(actividad.fields.Mes);
+      }
+
+      // Años (desde campo Año de Airtable)
+      if (actividad.fields.Año) {
+        anos.add(actividad.fields.Año);
       }
 
       // Municipios
@@ -96,13 +101,14 @@ export default function ActividadesPage() {
     });
 
     return {
-      meses: Array.from(meses).sort().reverse(), // Más reciente primero
+      meses: Array.from(meses).sort(),
+      anos: Array.from(anos).sort().reverse(), // Más reciente primero
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
   }, [actividades]);
 
-  // Filtrar actividades por coordinador, mes, municipio y tipo (admin)
+  // Filtrar actividades por coordinador, mes, año, municipio y tipo (admin)
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
@@ -114,12 +120,12 @@ export default function ActividadesPage() {
 
       // Filtro por mes
       if (selectedMes) {
-        filtered = filtered.filter(a => {
-          if (!a.fields.Fecha) return false;
-          const fecha = new Date(a.fields.Fecha + 'T00:00:00');
-          const monthKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-          return monthKey === selectedMes;
-        });
+        filtered = filtered.filter(a => a.fields.Mes === selectedMes);
+      }
+
+      // Filtro por año
+      if (selectedAno) {
+        filtered = filtered.filter(a => a.fields.Año === selectedAno);
       }
 
       // Filtro por municipio
@@ -136,7 +142,7 @@ export default function ActividadesPage() {
     }
 
     return filtered;
-  }, [actividades, selectedCoordinador, selectedMes, selectedMunicipio, selectedTipo, isAdmin]);
+  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin]);
 
   // Agrupar actividades por mes
   const actividadesPorMes = React.useMemo(() => {
@@ -282,7 +288,7 @@ export default function ActividadesPage() {
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               🔍 Filtros de Búsqueda
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Filtro por Coordinador */}
               <div>
                 <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
@@ -317,20 +323,38 @@ export default function ActividadesPage() {
                   onChange={(e) => setSelectedMes(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Todos los meses</option>
+                  <option value="">Todos</option>
                   {opcionesFiltros.meses.map((mes) => {
+                    const count = actividades.filter(a => a.fields.Mes === mes).length;
                     const [year, month] = mes.split('-');
                     const monthDate = new Date(parseInt(year), parseInt(month) - 1);
                     const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
-                    const count = actividades.filter(a => {
-                      if (!a.fields.Fecha) return false;
-                      const fecha = new Date(a.fields.Fecha + 'T00:00:00');
-                      const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-                      return key === mes;
-                    }).length;
                     return (
                       <option key={mes} value={mes}>
                         {monthName} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Filtro por Año */}
+              <div>
+                <label htmlFor="ano-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                  Año
+                </label>
+                <select
+                  id="ano-filter"
+                  value={selectedAno}
+                  onChange={(e) => setSelectedAno(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Todos</option>
+                  {opcionesFiltros.anos.map((ano) => {
+                    const count = actividades.filter(a => a.fields.Año === ano).length;
+                    return (
+                      <option key={ano} value={ano}>
+                        {ano} ({count})
                       </option>
                     );
                   })}
@@ -348,7 +372,7 @@ export default function ActividadesPage() {
                   onChange={(e) => setSelectedMunicipio(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Todos los municipios</option>
+                  <option value="">Todos</option>
                   {opcionesFiltros.municipios.map((municipio) => {
                     const count = actividades.filter(a => 
                       a.fields["mundep (from Municipio)"]?.[0] === municipio
@@ -365,7 +389,7 @@ export default function ActividadesPage() {
               {/* Filtro por Tipo */}
               <div>
                 <label htmlFor="tipo-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Actividad
+                  Tipo
                 </label>
                 <select
                   id="tipo-filter"
@@ -373,7 +397,7 @@ export default function ActividadesPage() {
                   onChange={(e) => setSelectedTipo(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Todos los tipos</option>
+                  <option value="">Todos</option>
                   {opcionesFiltros.tipos.map((tipo) => {
                     const count = actividades.filter(a => a.fields.Tipo === tipo).length;
                     return (
@@ -387,11 +411,12 @@ export default function ActividadesPage() {
             </div>
 
             {/* Botón para limpiar filtros */}
-            {(selectedCoordinador || selectedMes || selectedMunicipio || selectedTipo) && (
+            {(selectedCoordinador || selectedMes || selectedAno || selectedMunicipio || selectedTipo) && (
               <button
                 onClick={() => {
                   setSelectedCoordinador("");
                   setSelectedMes("");
+                  setSelectedAno("");
                   setSelectedMunicipio("");
                   setSelectedTipo("");
                 }}
