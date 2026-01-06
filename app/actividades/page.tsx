@@ -47,10 +47,41 @@ export default function ActividadesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
   const toggleRow = (id: string) => {
     setExpandedRow(expandedRow === id ? null : id);
   };
+
+  const toggleMonth = (monthKey: string) => {
+    const newExpanded = new Set(expandedMonths);
+    if (newExpanded.has(monthKey)) {
+      newExpanded.delete(monthKey);
+    } else {
+      newExpanded.add(monthKey);
+    }
+    setExpandedMonths(newExpanded);
+  };
+
+  // Agrupar actividades por mes
+  const actividadesPorMes = React.useMemo(() => {
+    const grupos: { [key: string]: Actividad[] } = {};
+    
+    actividades.forEach(actividad => {
+      if (actividad.fields.Fecha) {
+        const fecha = new Date(actividad.fields.Fecha + 'T00:00:00');
+        const monthKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!grupos[monthKey]) {
+          grupos[monthKey] = [];
+        }
+        grupos[monthKey].push(actividad);
+      }
+    });
+
+    // Ordenar meses de más reciente a más antiguo
+    return Object.entries(grupos).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [actividades]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -140,22 +171,43 @@ export default function ActividadesPage() {
         )}
 
         {!loading && !error && actividades.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
-                  Listado de Actividades
-                </h2>
-                <span className="text-sm text-blue-100">
-                  Total: {actividades.length} actividad{actividades.length !== 1 ? "es" : ""}
-                </span>
-              </div>
-            </div>
+          <div className="space-y-4">
+            {actividadesPorMes.map(([monthKey, actividadesDelMes]) => {
+              const [year, month] = monthKey.split('-');
+              const monthDate = new Date(parseInt(year), parseInt(month) - 1);
+              const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+              const isMonthExpanded = expandedMonths.has(monthKey);
+              const totalActividades = actividadesDelMes.length;
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              return (
+                <div key={monthKey} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                  {/* Month Header - Clickable */}
+                  <button
+                    onClick={() => toggleMonth(monthKey)}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-colors flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg 
+                        className={`w-5 h-5 text-white transform transition-transform ${isMonthExpanded ? 'rotate-90' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <h2 className="text-lg font-semibold text-white capitalize">
+                        {monthName}
+                      </h2>
+                    </div>
+                    <span className="text-sm text-blue-100">
+                      {totalActividades} actividad{totalActividades !== 1 ? "es" : ""}
+                    </span>
+                  </button>
+
+                  {/* Month Content */}
+                  {isMonthExpanded && (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="w-12 px-6 py-3"></th>
@@ -183,7 +235,7 @@ export default function ActividadesPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {actividades.map((actividad) => {
+                  {actividadesDelMes.map((actividad) => {
                     const isExpanded = expandedRow === actividad.id;
                     const photoCount = actividad.fields.Fotografias?.length || 0;
                     const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
@@ -393,6 +445,10 @@ export default function ActividadesPage() {
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
+              );
+            })}
           </div>
         )}
       </div>
