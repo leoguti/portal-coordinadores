@@ -32,31 +32,29 @@ export default function ProxiedImage({ src, alt, className, onClick }: ProxiedIm
     );
   }
 
+  if (loading) {
+    return <div className={`${className} bg-gray-200 animate-pulse`} />;
+  }
+
   return (
-    <div className="relative">
-      {loading && (
-        <div className={`${className} bg-gray-200 animate-pulse absolute inset-0`} />
-      )}
-      <img
-        src={proxiedSrc}
-        alt={alt}
-        className={className}
-        style={{ display: loading ? 'none' : 'block' }}
-        onClick={onClick}
-        onLoad={() => {
-          console.log('✅ Image loaded:', alt);
-          setLoading(false);
-        }}
-        onError={(e) => {
-          console.error("❌ Failed to load image:", {
-            proxiedSrc,
-            originalSrc: src,
-            target: e.currentTarget.src
-          });
-          setError(true);
-          setLoading(false);
-        }}
-      />
-    </div>
+    <img
+      src={proxiedSrc}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      onLoad={() => {
+        console.log('✅ Image loaded:', alt);
+        setLoading(false);
+      }}
+      onError={(e) => {
+        console.error("❌ Failed to load image:", {
+          proxiedSrc,
+          originalSrc: src,
+          target: e.currentTarget.src
+        });
+        setError(true);
+        setLoading(false);
+      }}
+    />
   );
 }
