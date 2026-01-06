@@ -51,11 +51,6 @@ export default function ActividadesPage() {
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
   const [selectedTipo, setSelectedTipo] = useState<string>("");
   const [loading, setLoading] = useState(true);
-
-  // Debug: Log cuando cambia selectedAno
-  React.useEffect(() => {
-    console.log('✅ selectedAno cambió a:', selectedAno);
-  }, [selectedAno]);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
@@ -78,9 +73,6 @@ export default function ActividadesPage() {
 
   // Obtener opciones únicas basadas en los filtros aplicados (cascada inteligente)
   const opcionesFiltros = React.useMemo(() => {
-    console.log('📊 Calculando opciones de filtros...');
-    console.log('Filtros aplicados:', { selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo });
-    
     // Para cada tipo de opción, aplicar solo los filtros relevantes
     const calcularOpciones = (excluirFiltro: string) => {
       let data = actividades;
@@ -127,8 +119,6 @@ export default function ActividadesPage() {
     
     // Calcular meses (coordinador + año afectan)
     const dataParaMeses = calcularOpciones('mes');
-    console.log('📅 Calculando meses. Actividades filtradas:', dataParaMeses.length);
-    console.log('Año seleccionado:', selectedAno);
     const meses = new Set<string>();
     dataParaMeses.forEach(actividad => {
       if (actividad.fields.Mes) {
@@ -138,7 +128,6 @@ export default function ActividadesPage() {
         }
       }
     });
-    console.log('Meses únicos encontrados:', Array.from(meses));
     
     // Calcular municipios (coordinador + año + mes afectan)
     const dataParaMunicipios = calcularOpciones('municipio');
@@ -158,12 +147,6 @@ export default function ActividadesPage() {
       }
     });
 
-    console.log('Opciones resultantes:');
-    console.log('- Años:', Array.from(anos));
-    console.log('- Meses:', Array.from(meses));
-    console.log('- Municipios:', municipios.size);
-    console.log('- Tipos:', Array.from(tipos));
-
     return {
       meses: Array.from(meses).sort().reverse(),
       anos: Array.from(anos).sort().reverse(),
@@ -176,20 +159,34 @@ export default function ActividadesPage() {
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
+    console.log('🔎 Filtrando actividades. Filtros:', { selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo });
+
     if (isAdmin) {
       // Filtro por coordinador
       if (selectedCoordinador) {
         filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+        console.log('Después coordinador:', filtered.length);
       }
 
       // Filtro por mes
       if (selectedMes) {
         filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
+        console.log('Después mes:', filtered.length);
       }
 
       // Filtro por año
       if (selectedAno) {
-        filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
+        console.log('Aplicando filtro año:', selectedAno);
+        const antes = filtered.length;
+        filtered = filtered.filter(a => {
+          const anoActividad = String(a.fields.Año);
+          const coincide = anoActividad === selectedAno;
+          if (!coincide && antes < 5) {
+            console.log('Actividad NO coincide:', { id: a.id, año: anoActividad, buscado: selectedAno });
+          }
+          return coincide;
+        });
+        console.log('Después año:', filtered.length, 'de', antes);
       }
 
       // Filtro por municipio
@@ -197,14 +194,17 @@ export default function ActividadesPage() {
         filtered = filtered.filter(a => 
           a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
         );
+        console.log('Después municipio:', filtered.length);
       }
 
       // Filtro por tipo
       if (selectedTipo) {
         filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
+        console.log('Después tipo:', filtered.length);
       }
     }
 
+    console.log('✅ Total actividades filtradas:', filtered.length);
     return filtered;
   }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin]);
 
@@ -414,10 +414,7 @@ export default function ActividadesPage() {
                 <select
                   id="ano-filter"
                   value={selectedAno}
-                  onChange={(e) => {
-                    console.log('🔄 Cambiando año a:', e.target.value);
-                    setSelectedAno(e.target.value);
-                  }}
+                  onChange={(e) => setSelectedAno(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
