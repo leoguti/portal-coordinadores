@@ -39,6 +39,8 @@ interface CatalogoServicioFields {
 interface ActividadFields {
   "Nombre de la Actividad"?: string;
   Fecha?: string;
+  Mes?: string; // Campo Mes en formato YYYY-MM
+  Año?: string; // Campo Año
   Descripcion?: string;
   Tipo?: string;
   Coordinador?: string[]; // Linked record IDs
