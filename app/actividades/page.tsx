@@ -265,18 +265,24 @@ export default function ActividadesPage() {
                           <h2 className="text-lg font-semibold text-gray-900 capitalize text-left">
                             📅 {monthName}
                           </h2>
-                          {/* Resumen compacto por tipo */}
-                          <div className="flex flex-wrap gap-2 mt-2 text-left">
+                          {/* Resumen compacto por tipo - En columna */}
+                          <div className="flex flex-col gap-1.5 mt-2">
                             {Object.entries(resumenMes).map(([tipo, stats]) => (
-                              <span key={tipo} className="inline-flex items-center gap-1 text-xs bg-white px-2 py-1 rounded-md border border-gray-200">
-                                <span className="font-medium text-gray-700">{tipo}:</span>
-                                <span className="font-semibold text-blue-600">{stats.count}</span>
-                                {stats.participantes > 0 && (
-                                  <span className="text-gray-500">
-                                    · 👥 {stats.participantes.toLocaleString('es-CO')} participantes
-                                  </span>
-                                )}
-                              </span>
+                              <div key={tipo} className="flex items-center gap-2 text-xs">
+                                <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-300 min-w-[200px]">
+                                  <span className="font-medium text-gray-700">{tipo}:</span>
+                                  <span className="font-bold text-blue-600">{stats.count}</span>
+                                  {stats.participantes > 0 && (
+                                    <>
+                                      <span className="text-gray-400">|</span>
+                                      <span className="text-gray-600 flex items-center gap-1">
+                                        <span>👥</span>
+                                        <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
+                                      </span>
+                                    </>
+                                  )}
+                                </span>
+                              </div>
                             ))}
                           </div>
                         </div>
