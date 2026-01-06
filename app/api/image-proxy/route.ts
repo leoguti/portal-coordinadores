@@ -9,24 +9,18 @@ export async function GET(request: NextRequest) {
   const url = searchParams.get('url');
 
   if (!url) {
-    console.error('[Image Proxy] Missing url parameter');
     return new NextResponse('Missing url parameter', { status: 400 });
   }
-
-  console.log('[Image Proxy] Fetching:', url.substring(0, 100));
 
   try {
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error('[Image Proxy] Failed to fetch:', response.status, response.statusText);
       return new NextResponse('Failed to fetch image', { status: response.status });
     }
 
     const blob = await response.blob();
     const contentType = response.headers.get('content-type') || 'image/jpeg';
-
-    console.log('[Image Proxy] Success:', contentType, blob.size, 'bytes');
 
     return new NextResponse(blob, {
       status: 200,

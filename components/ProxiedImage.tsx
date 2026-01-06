@@ -15,14 +15,6 @@ export default function ProxiedImage({ src, alt, className, onClick }: ProxiedIm
 
   const proxiedSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
 
-  console.log('🖼️ ProxiedImage rendering:', {
-    alt,
-    originalSrc: src?.substring(0, 50),
-    proxiedSrc: proxiedSrc.substring(0, 80),
-    loading,
-    error
-  });
-
   if (error) {
     return (
       <div className={`${className} bg-red-50 border-2 border-red-200 flex flex-col items-center justify-center`}>
@@ -42,10 +34,7 @@ export default function ProxiedImage({ src, alt, className, onClick }: ProxiedIm
       alt={alt}
       className={className}
       onClick={onClick}
-      onLoad={() => {
-        console.log('✅ Image loaded:', alt);
-        setLoading(false);
-      }}
+      onLoad={() => setLoading(false)}
       onError={(e) => {
         console.error("❌ Failed to load image:", {
           proxiedSrc,
