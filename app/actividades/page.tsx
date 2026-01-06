@@ -100,6 +100,12 @@ export default function ActividadesPage() {
       }
     });
 
+    console.log('=== OPCIONES FILTROS ===');
+    console.log('Meses encontrados:', Array.from(meses));
+    console.log('Años encontrados:', Array.from(anos));
+    console.log('Municipios encontrados:', Array.from(municipios).length);
+    console.log('Tipos encontrados:', Array.from(tipos));
+
     return {
       meses: Array.from(meses).sort().reverse(),
       anos: Array.from(anos).sort().reverse(),
@@ -112,20 +118,32 @@ export default function ActividadesPage() {
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
+    console.log('=== DEBUG FILTROS ===');
+    console.log('Total actividades:', actividades.length);
+    console.log('isAdmin:', isAdmin);
+    console.log('Filtros seleccionados:', { selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo });
+
     if (isAdmin) {
       // Filtro por coordinador
       if (selectedCoordinador) {
         filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+        console.log('Después de filtrar por coordinador:', filtered.length);
       }
 
       // Filtro por mes
       if (selectedMes) {
+        console.log('Filtrando por mes:', selectedMes);
+        console.log('Ejemplo de Mes en actividades:', filtered.slice(0, 3).map(a => ({ id: a.id, mes: a.fields.Mes })));
         filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
+        console.log('Después de filtrar por mes:', filtered.length);
       }
 
       // Filtro por año
       if (selectedAno) {
+        console.log('Filtrando por año:', selectedAno);
+        console.log('Ejemplo de Año en actividades:', filtered.slice(0, 3).map(a => ({ id: a.id, ano: a.fields.Año })));
         filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
+        console.log('Después de filtrar por año:', filtered.length);
       }
 
       // Filtro por municipio
@@ -133,14 +151,17 @@ export default function ActividadesPage() {
         filtered = filtered.filter(a => 
           a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
         );
+        console.log('Después de filtrar por municipio:', filtered.length);
       }
 
       // Filtro por tipo
       if (selectedTipo) {
         filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
+        console.log('Después de filtrar por tipo:', filtered.length);
       }
     }
 
+    console.log('Total filtrado final:', filtered.length);
     return filtered;
   }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin]);
 
