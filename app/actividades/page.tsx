@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
@@ -193,10 +194,9 @@ export default function ActividadesPage() {
                     });
 
                     return (
-                      <>
+                      <React.Fragment key={actividad.id}>
                         {/* Main Row */}
                         <tr 
-                          key={actividad.id}
                           className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50' : ''}`}
                         >
                           {/* Expand Button */}
@@ -384,7 +384,7 @@ export default function ActividadesPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
