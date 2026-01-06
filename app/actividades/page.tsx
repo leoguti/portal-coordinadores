@@ -153,11 +153,6 @@ export default function ActividadesPage() {
       }
 
       const data = await response.json();
-      console.log('📊 Actividades recibidas:', {
-        isAdmin: data.isAdmin,
-        count: data.count,
-        actividades: data.actividades?.length
-      });
       setActividades(data.actividades || []);
     } catch (err) {
       console.error("Error fetching activities:", err);
