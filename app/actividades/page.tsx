@@ -363,11 +363,11 @@ export default function ActividadesPage() {
                                     </h4>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                       {actividad.fields.Fotografias?.map((foto, idx) => (
-                                        <div key={foto.id} className="relative group cursor-pointer">
+                                        <div key={foto.id} className="relative group cursor-pointer bg-yellow-200">
                                           <img
                                             src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
                                             alt={`Foto ${idx + 1}`}
-                                            className="w-full h-48 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                                            className="w-full h-48 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow bg-red-500"
                                             onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
                                           />
                                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center pointer-events-none">
