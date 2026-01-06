@@ -73,12 +73,19 @@ export default function ActividadesPage() {
 
   // Obtener opciones únicas de meses, años, municipios y tipos
   const opcionesFiltros = React.useMemo(() => {
+    // Para filtros en cascada: si hay coordinador seleccionado, usar solo sus actividades
+    let dataParaOpciones = actividades;
+    
+    if (isAdmin && selectedCoordinador) {
+      dataParaOpciones = actividades.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+    }
+    
     const meses = new Set<string>();
     const anos = new Set<string>();
     const municipios = new Set<string>();
     const tipos = new Set<string>();
 
-    actividades.forEach(actividad => {
+    dataParaOpciones.forEach(actividad => {
       // Meses (campo directo de Airtable)
       if (actividad.fields.Mes) {
         meses.add(String(actividad.fields.Mes));
@@ -101,6 +108,7 @@ export default function ActividadesPage() {
     });
 
     console.log('=== OPCIONES FILTROS ===');
+    console.log('Usando datos de:', selectedCoordinador ? `coordinador (${dataParaOpciones.length} actividades)` : `todas (${actividades.length} actividades)`);
     console.log('Meses encontrados:', Array.from(meses));
     console.log('Años encontrados:', Array.from(anos));
     console.log('Municipios encontrados:', Array.from(municipios).length);
@@ -112,7 +120,7 @@ export default function ActividadesPage() {
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
-  }, [actividades]);
+  }, [actividades, isAdmin, selectedCoordinador]);
 
   // Filtrar actividades por coordinador, mes, año, municipio y tipo (admin)
   const actividadesFiltradas = React.useMemo(() => {
@@ -326,7 +334,14 @@ export default function ActividadesPage() {
                 <select
                   id="coordinador-filter"
                   value={selectedCoordinador}
-                  onChange={(e) => setSelectedCoordinador(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedCoordinador(e.target.value);
+                    // Limpiar otros filtros al cambiar coordinador
+                    setSelectedMes("");
+                    setSelectedAno("");
+                    setSelectedMunicipio("");
+                    setSelectedTipo("");
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos ({actividades.length})</option>
