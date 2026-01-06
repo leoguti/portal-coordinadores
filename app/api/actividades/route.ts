@@ -3,6 +3,41 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { listActividadesForCoordinator, createActividad } from "@/lib/airtable";
 
+// Función auxiliar para validar fecha dentro del período de gracia
+function esFechaValida(fecha: string): boolean {
+  const fechaActividad = new Date(fecha + 'T00:00:00');
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  // No permitir fechas futuras
+  if (fechaActividad > hoy) {
+    return false;
+  }
+  
+  // Calcular mes anterior
+  const mesAnterior = new Date(hoy);
+  mesAnterior.setMonth(mesAnterior.getMonth() - 1);
+  
+  // Último día del mes anterior
+  const ultimoDiaMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0);
+  
+  // Fecha de cierre del mes anterior (último día + 7)
+  const fechaCierreMesAnterior = new Date(ultimoDiaMesAnterior);
+  fechaCierreMesAnterior.setDate(fechaCierreMesAnterior.getDate() + 7);
+  
+  // Determinar fecha mínima permitida
+  let fechaMinima: Date;
+  if (hoy <= fechaCierreMesAnterior) {
+    // Mes anterior aún está abierto
+    fechaMinima = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth(), 1);
+  } else {
+    // Solo mes actual permitido
+    fechaMinima = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  }
+  
+  return fechaActividad >= fechaMinima;
+}
+
 /**
  * GET /api/actividades
  * 
@@ -71,6 +106,14 @@ export async function POST(request: Request) {
     if (!name || !fecha || !descripcion || !tipo) {
       return NextResponse.json(
         { error: "Missing required fields: name, fecha, descripcion, tipo" },
+        { status: 400 }
+      );
+    }
+
+    // Validar que la fecha esté dentro del período permitido
+    if (!esFechaValida(fecha)) {
+      return NextResponse.json(
+        { error: "La fecha está fuera del período permitido. Solo puedes crear actividades del mes actual o del mes anterior si aún está en el período de gracia (7 días después del fin de mes)." },
         { status: 400 }
       );
     }
