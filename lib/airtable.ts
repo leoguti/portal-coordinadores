@@ -129,6 +129,14 @@ interface CentroAcopioFields {
   Tipo?: string;
   Autonumber?: number;
   Departamento?: string[];
+  SaldoInicialTotal?: number;
+  SaldoInicial_Reciclaje?: number;
+  SaldoInicial_Incineracion?: number;
+  SaldoInicial_Flexibles?: number;
+  SaldoInicial_PlasticoContaminado?: number;
+  SaldoInicial_Lonas?: number;
+  SaldoInicial_Carton?: number;
+  SaldoInicial_Metal?: number;
 }
 
 export interface CentroAcopio {

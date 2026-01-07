@@ -62,6 +62,7 @@ export default function KardexPage() {
   
   // Vista de resúmenes
   const [showResumen, setShowResumen] = useState(false);
+  const [datosYaCargados, setDatosYaCargados] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -70,14 +71,15 @@ export default function KardexPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === "authenticated" && !datosYaCargados) {
       fetchKardex();
       // Solo cargar coordinadores si es admin
       if (isAdmin) {
         fetchCoordinadores();
       }
+      setDatosYaCargados(true);
     }
-  }, [status, isAdmin]);
+  }, [status, isAdmin, datosYaCargados]);
 
   // Fetch coordinadores (solo para admin)
   const fetchCoordinadores = async () => {
