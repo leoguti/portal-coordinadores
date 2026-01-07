@@ -397,7 +397,7 @@ export default function KardexPage() {
     new Set(
       registrosParaResumen
         .map(r => r.fields.MES)
-        .filter(Boolean)
+        .filter((mes): mes is string => Boolean(mes))
     )
   ).sort((a, b) => a.localeCompare(b)); // ASCENDENTE: más antiguo primero
   
