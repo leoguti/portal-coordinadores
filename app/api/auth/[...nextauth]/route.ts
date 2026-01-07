@@ -154,10 +154,9 @@ export const authOptions: NextAuthOptions = {
           mailOptions.cc = ccEmail;
         }
         
-        const result = await transport.sendMail(mailOptions);
+        await transport.sendMail(mailOptions);
         
         console.log(`✅ Email enviado a ${overrideEmail}${ccEmail ? ` (CC: ${ccEmail})` : ''}`);
-        return result;
       },
     }),
   ],
