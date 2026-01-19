@@ -231,6 +231,17 @@ export default function NuevaOrdenPage() {
       return;
     }
 
+    // Validar que todos los items tengan precio unitario
+    const itemsSinPrecio = itemsOrden.filter(
+      (item) => !item.precioUnitario || item.precioUnitario <= 0
+    );
+    if (itemsSinPrecio.length > 0) {
+      setError(
+        `Todos los items deben tener un precio unitario válido. Revisa ${itemsSinPrecio.length} item(s) sin precio.`
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
