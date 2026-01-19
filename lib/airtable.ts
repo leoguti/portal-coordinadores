@@ -1647,7 +1647,7 @@ export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
           },
           body: JSON.stringify({
             fields: {
-              Estado: "Por Pagar",
+              EstadoPago: "Por Pagar",
             },
           }),
         });
