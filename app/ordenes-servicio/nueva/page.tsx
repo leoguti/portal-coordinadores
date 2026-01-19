@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
+import BeneficiarioForm from "@/components/BeneficiarioForm";
 import {
   getKardexPorPagar,
   getCatalogoServicios,
   createOrdenServicio,
+  updateTercero,
   type Kardex,
   type CatalogoServicio,
   type CreateItemOrdenParams,
@@ -202,9 +204,48 @@ export default function NuevaOrdenPage() {
       return;
     }
 
+    // Validar campos obligatorios del beneficiario
+    const validateEmail = (email: string): boolean => {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    };
+
+    const camposFaltantes: string[] = [];
+    if (!beneficiario.direccion || beneficiario.direccion.length < 8) {
+      camposFaltantes.push("Dirección (mínimo 8 caracteres)");
+    }
+    if (!beneficiario.movil) {
+      camposFaltantes.push("Teléfono/Móvil");
+    }
+    if (!beneficiario.correo || !validateEmail(beneficiario.correo)) {
+      camposFaltantes.push("Correo Electrónico válido");
+    }
+    if (!beneficiario.municipioId) {
+      camposFaltantes.push("Municipio");
+    }
+
+    if (camposFaltantes.length > 0) {
+      setError(
+        `Por favor completa los siguientes campos del beneficiario: ${camposFaltantes.join(", ")}`
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
+
+      // Actualizar datos del tercero en Airtable si hay cambios
+      const terceroActualizado = await updateTercero(beneficiario.id, {
+        direccion: beneficiario.direccion,
+        movil: beneficiario.movil,
+        correoElectronico: beneficiario.correo,
+        municipioId: beneficiario.municipioId,
+      });
+
+      if (!terceroActualizado) {
+        console.warn("No se pudo actualizar el tercero, pero continuamos con la orden");
+      }
 
       const items: CreateItemOrdenParams[] = itemsOrden.map((item) => {
         if (item.tipo === "KARDEX") {
@@ -451,15 +492,12 @@ export default function NuevaOrdenPage() {
 
           {/* Datos del beneficiario */}
           {beneficiario && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-2">{beneficiario.razonSocial}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                {beneficiario.nit && <p><strong>NIT:</strong> {beneficiario.nit}</p>}
-                {beneficiario.direccion && <p><strong>Dirección:</strong> {beneficiario.direccion}</p>}
-                {beneficiario.movil && <p><strong>Teléfono:</strong> {beneficiario.movil}</p>}
-                {beneficiario.correo && <p><strong>Email:</strong> {beneficiario.correo}</p>}
-              </div>
-            </div>
+            <BeneficiarioForm
+              beneficiario={beneficiario}
+              onUpdate={(data) => {
+                setBeneficiario({ ...beneficiario, ...data });
+              }}
+            />
           )}
 
           {/* Items de la orden */}
@@ -704,6 +742,25 @@ export default function NuevaOrdenPage() {
                   // Validar beneficiario
                   if (!beneficiario) {
                     errores.push("⚠️ Falta seleccionar beneficiario");
+                  } else {
+                    // Validar campos obligatorios del beneficiario
+                    if (!beneficiario.direccion || beneficiario.direccion.length < 8) {
+                      errores.push("⚠️ Beneficiario: Dirección debe tener al menos 8 caracteres");
+                    }
+                    if (!beneficiario.movil) {
+                      errores.push("⚠️ Beneficiario: Falta teléfono/móvil");
+                    }
+                    if (!beneficiario.correo) {
+                      errores.push("⚠️ Beneficiario: Falta correo electrónico");
+                    } else {
+                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                      if (!emailRegex.test(beneficiario.correo)) {
+                        errores.push("⚠️ Beneficiario: Correo electrónico inválido");
+                      }
+                    }
+                    if (!beneficiario.municipioId) {
+                      errores.push("⚠️ Beneficiario: Falta seleccionar municipio");
+                    }
                   }
                   
                   // Validar items
