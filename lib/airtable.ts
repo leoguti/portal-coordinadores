@@ -911,24 +911,21 @@ export async function createOrdenServicio(
           observaciones: params.observaciones,
         });
 
-        // Save PDF locally
-        await uploadPDFToAirtable(
-          pdfBuffer,
-          `Orden_${ordenData.fields.NumeroOrden}.pdf`
-        );
+        // Upload PDF to Vercel Blob
+        console.log("Uploading PDF to Vercel Blob...");
+        const { put, del } = await import("@vercel/blob");
+        
+        const filename = `Orden_${ordenData.fields.NumeroOrden}.pdf`;
+        const blob = await put(filename, pdfBuffer, {
+          access: "public",
+          contentType: "application/pdf",
+        });
+        
+        console.log(`PDF uploaded to Vercel Blob: ${blob.url}`);
+        
+        // Update Airtable with PDF URL
+        const pdfAttachment = [{ url: blob.url }];
 
-        // Upload PDF directly to Airtable
-        console.log("Uploading PDF to Airtable...");
-        
-        // Use ngrok URL if in development, otherwise use production URL
-        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-        const pdfUrl = `${baseUrl}/temp/Orden_${ordenData.fields.NumeroOrden}.pdf`;
-        
-        console.log(`PDF URL for Airtable: ${pdfUrl}`);
-        
-        const pdfAttachment = [{ url: pdfUrl }];
-
-        // Update orden with PDF
         const updateResponse = await fetch(`${ordenUrl}/${ordenData.id}`, {
           method: "PATCH",
           headers: {
@@ -943,12 +940,22 @@ export async function createOrdenServicio(
         });
 
         if (updateResponse.ok) {
+          console.log(`PDF URL sent to Airtable for Orden #${ordenData.fields.NumeroOrden}`);
+          
+          // Wait a moment for Airtable to download the file
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Delete from Vercel Blob (Airtable has it now)
+          await del(blob.url);
+          console.log(`PDF deleted from Vercel Blob: ${filename}`);
+          
           const updatedOrden = await updateResponse.json();
-          console.log(`PDF uploaded successfully to Orden #${ordenData.fields.NumeroOrden}`);
           return updatedOrden;
         } else {
           const errorText = await updateResponse.text();
           console.error("Failed to upload PDF to Airtable:", errorText);
+          // Clean up blob even if Airtable update failed
+          await del(blob.url);
         }
       } catch (pdfError) {
         console.error("Error generating/uploading PDF:", pdfError);
