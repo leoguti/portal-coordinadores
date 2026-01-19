@@ -20,8 +20,10 @@ interface TerceroSeleccionado {
   razonSocial: string;
   nit?: string;
   direccion?: string;
-  movil?: string;
+  movil?: number;
   correo?: string;
+  municipioId?: string;
+  municipioDepartamento?: string;
 }
 
 interface ItemOrden {
