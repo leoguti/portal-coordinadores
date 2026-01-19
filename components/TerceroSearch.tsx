@@ -6,6 +6,11 @@ interface Tercero {
   id: string;
   razonSocial: string;
   nit?: string;
+  direccion?: string;
+  movil?: number;
+  correo?: string;
+  municipioId?: string;
+  municipioDepartamento?: string;
 }
 
 interface TerceroSearchProps {

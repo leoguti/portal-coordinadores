@@ -7,6 +7,11 @@ interface TerceroRecord {
   fields: {
     RazonSocial?: string;
     NIT?: string;
+    Direccion?: string;
+    Movil?: number;
+    "Correo Electrónico"?: string;
+    Municipio?: string[];
+    "Municipio-Departamento"?: string[];
   };
 }
 
@@ -19,6 +24,11 @@ interface CachedTercero {
   id: string;
   razonSocial: string;
   nit?: string;
+  direccion?: string;
+  movil?: number;
+  correo?: string;
+  municipioId?: string;
+  municipioDepartamento?: string;
   razonSocialNormalized: string;
 }
 
@@ -76,6 +86,11 @@ async function loadAllTerceros(): Promise<CachedTercero[]> {
           id: record.id,
           razonSocial,
           nit: record.fields.NIT,
+          direccion: record.fields.Direccion,
+          movil: record.fields.Movil,
+          correo: record.fields["Correo Electrónico"],
+          municipioId: record.fields.Municipio?.[0],
+          municipioDepartamento: record.fields["Municipio-Departamento"]?.[0],
           razonSocialNormalized: normalizeText(razonSocial),
         });
       }

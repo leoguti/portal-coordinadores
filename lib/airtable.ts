@@ -117,9 +117,12 @@ interface TerceroFields {
   RazonSocial?: string;
   NIT?: string;
   Direccion?: string;
-  Movil?: string;
+  Movil?: number;
   "Correo Electrónico"?: string;
+  Municipio?: string[]; // Linked to MUNICIPIOS table
+  "Municipio-Departamento"?: string[]; // Lookup field
   Tipo?: string;
+  Ordenes?: string[]; // Linked to Ordenes
 }
 
 interface CentroAcopioFields {
@@ -1137,6 +1140,60 @@ export async function getTerceroById(terceroId: string): Promise<Tercero | null>
   } catch (error) {
     console.error("Error fetching Tercero:", error);
     return null;
+  }
+}
+
+/**
+ * Update Tercero (beneficiary) information
+ * Used to update contact details when creating orders
+ */
+export async function updateTercero(
+  terceroId: string,
+  data: {
+    direccion?: string;
+    movil?: number;
+    correoElectronico?: string;
+    municipioId?: string;
+  }
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID || "appniHwKiUMS0imXD";
+
+  if (!apiKey) {
+    console.error("AIRTABLE_API_KEY not configured");
+    return false;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Terceros/${terceroId}`;
+
+    const fields: Record<string, any> = {};
+    
+    if (data.direccion !== undefined) fields.Direccion = data.direccion;
+    if (data.movil !== undefined) fields.Movil = data.movil;
+    if (data.correoElectronico !== undefined) fields["Correo Electrónico"] = data.correoElectronico;
+    if (data.municipioId !== undefined) fields.Municipio = [data.municipioId];
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error updating Tercero: ${response.status}`, errorText);
+      return false;
+    }
+
+    console.log(`Tercero ${terceroId} updated successfully`);
+    return true;
+  } catch (error) {
+    console.error("Error updating Tercero:", error);
+    return false;
   }
 }
 
