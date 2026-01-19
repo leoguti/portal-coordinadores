@@ -8,7 +8,7 @@
 ## Tareas Priorizadas (en orden)
 
 ### 🔴 PRIORIDAD 1: Chatbot
-- [ ] **BUG**: Revisar opciones del chatbot - Oscar (coordinador) reporta que aparecen 4 opciones cuando solo deberían ser 3
+- [x] **BUG**: Revisar opciones del chatbot - Oscar (coordinador) reporta que aparecen 4 opciones cuando solo deberían ser 3 ✅ **SOLUCIONADO**
 
 ### 🔴 PRIORIDAD 2: Órdenes de Servicio
 - [x] Revisar proceso completo de órdenes de servicio ✅
@@ -30,6 +30,13 @@
 ### 🟡 PENDIENTE (Menor prioridad)
 - [ ] **VALIDAR CON CLIENTE**: Confirmar si se debe agregar funcionalidad para editar y mantener las ubicaciones de fincas
 - [ ] **BUG**: Revisar Certificado No. 88167 - Problema de visualización en el agrupamiento
+
+### 🔵 OPTIMIZACIÓN AIRTABLE
+- [ ] **CRÍTICO**: Hacer backup de registros antiguos y borrarlos de Airtable
+  - Objetivo: Liberar espacio y evitar costos por registros viejos
+  - Prioridad: Certificados muy antiguos
+  - Proceso: Exportar → Guardar backup → Eliminar de Airtable
+  - Evitar pagar por registros que exceden límites del plan
 
 ---
 *Notas tomadas durante sesión de trabajo*

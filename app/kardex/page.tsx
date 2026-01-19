@@ -63,6 +63,7 @@ export default function KardexPage() {
   // Vista de resúmenes
   const [showResumen, setShowResumen] = useState(false);
   const [datosYaCargados, setDatosYaCargados] = useState(false);
+  const [expandedMes, setExpandedMes] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -428,12 +429,24 @@ export default function KardexPage() {
     const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
     const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
     
+    // DESGLOSE POR TIPO DE MATERIAL (saldo acumulado histórico)
+    const materiales = ['Reciclaje', 'Incineracion', 'Flexibles', 'PlasticoContaminado', 'Lonas', 'Carton', 'Metal'] as const;
+    const desgloseMateriales = materiales.map(material => {
+      const entradasMaterial = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields[material] || 0), 0);
+      const salidasMaterial = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields[material] || 0), 0);
+      return {
+        material,
+        saldo: entradasMaterial - salidasMaterial
+      };
+    });
+    
     return {
       mes,
       entradas: totalEntradasMes,     // Solo del mes
       salidas: totalSalidasMes,       // Solo del mes
       saldo: totalEntradasAcum - totalSalidasAcum,  // Acumulado histórico
-      estaAbierto: !esMesCerrado(mes)  // Abierto si NO ha pasado más de 7 días desde fin de mes
+      estaAbierto: !esMesCerrado(mes),  // Abierto si NO ha pasado más de 7 días desde fin de mes
+      desgloseMateriales // Desglose por tipo de material
     };
   });
   
@@ -635,34 +648,70 @@ export default function KardexPage() {
                       </tr>
                     ) : (
                       resumenMensual.map((item) => (
-                        <tr key={item.mes} className={`hover:bg-gray-50 ${item.estaAbierto ? 'bg-yellow-50' : ''}`}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                            {item.mes}
-                            {item.estaAbierto && <span className="ml-2 text-xs text-yellow-600">⚠️</span>}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-700 font-semibold">
-                            {item.entradas.toLocaleString("es-CO")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-700 font-semibold">
-                            {item.salidas.toLocaleString("es-CO")}
-                          </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${
-                            item.saldo >= 0 ? "text-blue-700" : "text-red-700"
-                          }`}>
-                            {item.saldo.toLocaleString("es-CO")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            {item.estaAbierto ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                🔓 Abierto
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                ✅ Cerrado
-                              </span>
-                            )}
-                          </td>
-                        </tr>
+                        <Fragment key={item.mes}>
+                          <tr 
+                            className={`hover:bg-gray-50 cursor-pointer ${item.estaAbierto ? 'bg-yellow-50' : ''}`}
+                            onClick={() => setExpandedMes(expandedMes === item.mes ? null : item.mes)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                              {expandedMes === item.mes ? '▼' : '▶'} {item.mes}
+                              {item.estaAbierto && <span className="ml-2 text-xs text-yellow-600">⚠️</span>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-700 font-semibold">
+                              {item.entradas.toLocaleString("es-CO")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-700 font-semibold">
+                              {item.salidas.toLocaleString("es-CO")}
+                            </td>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${
+                              item.saldo >= 0 ? "text-blue-700" : "text-red-700"
+                            }`}>
+                              {item.saldo.toLocaleString("es-CO")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              {item.estaAbierto ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  🔓 Abierto
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✅ Cerrado
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                          
+                          {/* Fila expandible con desglose por material */}
+                          {expandedMes === item.mes && (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-4 bg-gray-50">
+                                <div className="ml-8">
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                                    📦 Desglose por Tipo de Material (Saldo Acumulado al {item.mes})
+                                  </h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {item.desgloseMateriales.map(({ material, saldo }) => (
+                                      <div 
+                                        key={material}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm"
+                                      >
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          {material === 'PlasticoContaminado' ? 'Plástico Cont.' : 
+                                           material === 'Incineracion' ? 'Incineración' : material}
+                                        </div>
+                                        <div className={`text-lg font-bold ${
+                                          saldo >= 0 ? 'text-blue-600' : 'text-red-600'
+                                        }`}>
+                                          {saldo.toLocaleString("es-CO")} kg
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))
                     )}
                   </tbody>
