@@ -42,7 +42,7 @@ interface TerceroSeleccionado {
   razonSocial: string;
   nit?: string;
   direccion?: string;
-  movil?: string;
+  movil?: number;
   email?: string;
 }
 
