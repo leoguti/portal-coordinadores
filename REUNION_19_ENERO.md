@@ -11,13 +11,18 @@
 - [ ] **BUG**: Revisar opciones del chatbot - Oscar (coordinador) reporta que aparecen 4 opciones cuando solo deberían ser 3
 
 ### 🔴 PRIORIDAD 2: Órdenes de Servicio
-- [ ] **Definir URL definitiva del proyecto** (actualmente: portal.rumbo.digital)
 - [x] Revisar proceso completo de órdenes de servicio ✅
 - [x] Implementar subida de PDF a Airtable (Vercel Blob Storage) ✅ **FUNCIONA**
-- [ ] **DEFINIR**: Quién será responsable de llenar emails en tabla Terceros (Airtable)
-  - Campo email existe pero está vacío
-  - Necesario para envío automático de órdenes por correo
-- [ ] Habilitar envío automático de órdenes de servicio por correo electrónico (pendiente definir emails)
+- [x] Validación y captura de datos de Terceros ✅ **FUNCIONA**
+- [x] Habilitar envío automático de órdenes por correo electrónico ✅ **FUNCIONA**
+- [ ] **DEFINIR**: Migrar email remitente para órdenes de servicio
+  - **Actualmente usa:** info@rumbo.digital (SMTP: smtpout.secureserver.net)
+  - **Debe cambiar a:** facturaelectronica@campolimpio.org
+  - Requiere configurar SMTP y actualizar variables de entorno
+- [ ] **DEFINIR**: Migrar URL del portal
+  - **Actualmente:** portal.rumbo.digital
+  - **Debe cambiar a:** portal.campolimpio.org
+  - Requiere configurar dominio en Vercel
 
 ### 🔴 PRIORIDAD 3: Documentación
 - [ ] Generar manual de interacciones (Chatbot + Órdenes de Servicio)

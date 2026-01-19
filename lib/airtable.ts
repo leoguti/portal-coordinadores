@@ -701,7 +701,7 @@ export async function getOrdenById(ordenId: string): Promise<Orden | null> {
 export async function createOrdenServicio(
   params: CreateOrdenParams,
   coordinatorData?: { name: string; email: string },
-  beneficiarioData?: { razonSocial: string; nit: string; direccion: string }
+  beneficiarioData?: { razonSocial: string; nit: string; direccion: string; email?: string }
 ): Promise<Orden> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
