@@ -945,6 +945,37 @@ export async function createOrdenServicio(
         if (updateResponse.ok) {
           console.log(`PDF URL sent to Airtable for Orden #${ordenData.fields.NumeroOrden}`);
           
+          // Send email to beneficiary with PDF attachment
+          console.log("Sending email to beneficiary...");
+          try {
+            const { sendOrdenEmail } = await import("@/lib/sendEmail");
+            const emailSent = await sendOrdenEmail({
+              to: beneficiarioData.email || "",
+              cc: [coordinatorData.email],
+              numeroOrden: ordenData.fields.NumeroOrden || 0,
+              beneficiario: {
+                razonSocial: beneficiarioData.razonSocial,
+                nit: beneficiarioData.nit,
+              },
+              coordinador: {
+                nombre: coordinatorData.name,
+                email: coordinatorData.email,
+              },
+              fechaPedido: params.fechaPedido,
+              total: totalCalculated,
+              pdfBuffer,
+            });
+            
+            if (emailSent) {
+              console.log(`✅ Email sent successfully to ${beneficiarioData.email}`);
+            } else {
+              console.warn(`⚠️ Email could not be sent to ${beneficiarioData.email}`);
+            }
+          } catch (emailError) {
+            console.error("Error sending email:", emailError);
+            // Continue even if email fails - orden was created successfully
+          }
+          
           // Wait a moment for Airtable to download the file
           await new Promise(resolve => setTimeout(resolve, 3000));
           
