@@ -196,7 +196,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     }
     
     // 2. Al menos un material con valor > 0
-    const totalKilos = calcularTotal();
+    const totalKilos = calculateTotal();
     if (totalKilos === 0) {
       alert("⚠️ Debes registrar al menos un material con kilos > 0");
       return;
