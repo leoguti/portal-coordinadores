@@ -201,6 +201,25 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         return typeof val === "number" ? val : parseFloat(val) || 0;
       };
       
+      // Convert File to base64 if foto exists
+      let fotoData: { url: string; name: string } | undefined;
+      if (fotoBascula.length > 0) {
+        const file = fotoBascula[0].file;
+        const reader = new FileReader();
+        
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        const base64 = await base64Promise;
+        fotoData = {
+          url: base64,
+          name: file.name,
+        };
+      }
+      
       const submitData = {
         ...formData,
         // Para SALIDA: enviar municipio o centro según origenTipo
@@ -219,10 +238,11 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         Lonas: toNumber(formData.Lonas),
         Carton: toNumber(formData.Carton),
         Metal: toNumber(formData.Metal),
-        fotoBascula: fotoBascula.length > 0 ? fotoBascula[0] : undefined, // Enviar foto si existe
+        fotoBascula: fotoData, // Enviar foto como { url: base64, name }
       };
 
       console.log("🔍 [KARDEX FORM] fotoBascula state:", fotoBascula);
+      console.log("🔍 [KARDEX FORM] fotoData converted:", fotoData);
       console.log("🔍 [KARDEX FORM] submitData.fotoBascula:", submitData.fotoBascula);
 
       await onSubmit(submitData);
