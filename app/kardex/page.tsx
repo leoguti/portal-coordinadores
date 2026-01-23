@@ -273,7 +273,12 @@ export default function KardexPage() {
     allKardexRecords.forEach((record) => {
       const value = record.fields[field];
       if (Array.isArray(value)) {
-        value.forEach((v) => values.add(v));
+        value.forEach((v) => {
+          // Skip attachment objects (like soportebascula)
+          if (typeof v === 'string') {
+            values.add(v);
+          }
+        });
       } else if (value) {
         values.add(String(value));
       }
