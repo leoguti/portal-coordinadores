@@ -148,6 +148,7 @@ export async function POST(request: Request) {
       Lonas: body.Lonas,
       Carton: body.Carton,
       Metal: body.Metal,
+      fotoBascula: body.fotoBascula, // Pass photo if provided
     });
 
     if (!newKardex) {

@@ -29,6 +29,7 @@ interface KardexRecord {
     nombregestor?: string[];
     AÑO?: string;
     MES?: string;
+    soportebascula?: Array<{ url: string }>;
   };
 }
 
@@ -996,6 +997,14 @@ export default function KardexPage() {
                           <span className="inline-flex items-center gap-1">
                             {getTipoIcon(record.fields.TipoMovimiento)}
                             <span className="font-medium text-gray-900">{record.fields.TipoMovimiento || "-"}</span>
+                            {record.fields.soportebascula && record.fields.soportebascula.length > 0 && (
+                              <span 
+                                className="ml-1 text-base" 
+                                title="Tiene foto de báscula"
+                              >
+                                📸
+                              </span>
+                            )}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
@@ -1080,6 +1089,30 @@ export default function KardexPage() {
                                   })}
                                 </div>
                               </div>
+                              
+                              {/* Foto de Báscula */}
+                              {record.fields.soportebascula && record.fields.soportebascula.length > 0 && (
+                                <div className="pt-3 border-t border-purple-200">
+                                  <span className="text-xs font-medium text-gray-500">📸 Foto de Báscula</span>
+                                  <div className="mt-2">
+                                    <a
+                                      href={record.fields.soportebascula[0].url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block"
+                                    >
+                                      <img
+                                        src={record.fields.soportebascula[0].url}
+                                        alt="Foto de báscula"
+                                        className="max-w-xs rounded-lg border-2 border-purple-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                                      />
+                                    </a>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Click en la imagen para ver en tamaño completo
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                               
                               {/* Acciones en desplegable */}
                               {record.fields.fechakardex && puedeEliminarKardex(record.fields.fechakardex, record.fields.EstadoPago) ? (
