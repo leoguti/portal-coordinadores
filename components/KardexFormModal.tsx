@@ -187,7 +187,34 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     
     const isSalida = formData.TipoMovimiento === "SALIDA";
     
-    // Validar foto de báscula obligatoria para SALIDAS
+    // Validaciones de reglas de negocio
+    
+    // 1. Municipio obligatorio
+    if (!municipio) {
+      alert("⚠️ Debes seleccionar un municipio");
+      return;
+    }
+    
+    // 2. Al menos un material con valor > 0
+    const totalKilos = calcularTotal();
+    if (totalKilos === 0) {
+      alert("⚠️ Debes registrar al menos un material con kilos > 0");
+      return;
+    }
+    
+    // 3. ENTRADA: Centro de Acopio obligatorio
+    if (!isSalida && !formData.CentroAcopio) {
+      alert("⚠️ Para ENTRADAS, el Centro de Acopio es obligatorio");
+      return;
+    }
+    
+    // 4. SALIDA: Gestor obligatorio
+    if (isSalida && !formData.Gestor) {
+      alert("⚠️ Para SALIDAS, el Gestor es obligatorio");
+      return;
+    }
+    
+    // 5. Foto de báscula obligatoria para SALIDAS
     if (isSalida && fotoBascula.length === 0) {
       alert("⚠️ La foto de báscula es obligatoria para las SALIDAS");
       return;

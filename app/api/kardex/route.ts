@@ -135,6 +135,51 @@ export async function POST(request: Request) {
 
     console.log("🔍 [API KARDEX] body.fotoBascula:", body.fotoBascula);
     
+    // Validaciones de reglas de negocio
+    const isSalida = body.TipoMovimiento === "SALIDA";
+    
+    // 1. Municipio obligatorio
+    if (!body.MunicipioOrigen) {
+      return NextResponse.json(
+        { error: "El municipio es obligatorio" },
+        { status: 400 }
+      );
+    }
+    
+    // 2. Al menos un material con valor > 0
+    const totalKilos = (
+      (body.Reciclaje || 0) +
+      (body.Incineracion || 0) +
+      (body.Flexibles || 0) +
+      (body.PlasticoContaminado || 0) +
+      (body.Lonas || 0) +
+      (body.Carton || 0) +
+      (body.Metal || 0)
+    );
+    
+    if (totalKilos === 0) {
+      return NextResponse.json(
+        { error: "Debes registrar al menos un material con kilos > 0" },
+        { status: 400 }
+      );
+    }
+    
+    // 3. ENTRADA: Centro de Acopio obligatorio
+    if (!isSalida && !body.CentroAcopio) {
+      return NextResponse.json(
+        { error: "Para ENTRADAS, el Centro de Acopio es obligatorio" },
+        { status: 400 }
+      );
+    }
+    
+    // 4. SALIDA: Gestor obligatorio
+    if (isSalida && !body.Gestor) {
+      return NextResponse.json(
+        { error: "Para SALIDAS, el Gestor es obligatorio" },
+        { status: 400 }
+      );
+    }
+    
     // Create kardex record
     const newKardex = await createKardex(session.user.coordinatorRecordId, {
       fechakardex: body.fechakardex,
