@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import MunicipioSearch from "./MunicipioSearch";
+import ImageUpload, { ImageFile } from "./ImageUpload";
 
 interface KardexFormData {
   fechakardex: string;
@@ -47,6 +48,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
   const [gestores, setGestores] = useState<Gestor[]>([]);
   const [loadingGestores, setLoadingGestores] = useState(true);
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [fotoBascula, setFotoBascula] = useState<ImageFile[]>([]);
   
   const [formData, setFormData] = useState<KardexFormData>({
     fechakardex: new Date().toISOString().split("T")[0],
@@ -121,9 +123,10 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
   ) => {
     const { name, value } = e.target;
     
-    // Si cambia el tipo de movimiento, resetear origen
+    // Si cambia el tipo de movimiento, resetear origen y foto báscula
     if (name === "TipoMovimiento") {
       setMunicipio(null);
+      setFotoBascula([]); // Limpiar foto al cambiar tipo
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -181,6 +184,15 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const isSalida = formData.TipoMovimiento === "SALIDA";
+    
+    // Validar foto de báscula obligatoria para SALIDAS
+    if (isSalida && fotoBascula.length === 0) {
+      alert("⚠️ La foto de báscula es obligatoria para las SALIDAS");
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -188,8 +200,6 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         if (val === "" || val === null || val === undefined) return 0;
         return typeof val === "number" ? val : parseFloat(val) || 0;
       };
-
-      const isSalida = formData.TipoMovimiento === "SALIDA";
       
       const submitData = {
         ...formData,
@@ -209,6 +219,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         Lonas: toNumber(formData.Lonas),
         Carton: toNumber(formData.Carton),
         Metal: toNumber(formData.Metal),
+        fotoBascula: fotoBascula.length > 0 ? fotoBascula[0] : undefined, // Enviar foto si existe
       };
 
       await onSubmit(submitData);
@@ -585,6 +596,37 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Foto de Báscula */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+              📸 Foto de Báscula {isSalida && <span className="text-red-500">*</span>}
+            </h3>
+            
+            {isSalida && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
+                <p className="text-amber-800 text-sm">
+                  <span className="font-semibold">⚠️ Obligatorio:</span> Para salidas, la foto de la báscula es requerida.
+                </p>
+              </div>
+            )}
+            
+            {!isSalida && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                <p className="text-blue-800 text-sm">
+                  <span className="font-semibold">ℹ️ Opcional:</span> Para entradas, la foto de la báscula es opcional pero recomendada.
+                </p>
+              </div>
+            )}
+
+            <ImageUpload
+              images={fotoBascula}
+              onChange={setFotoBascula}
+              maxFiles={1}
+              maxSizeMB={5}
+              disabled={loading}
+            />
           </div>
 
           {/* Botones */}
