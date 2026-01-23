@@ -222,6 +222,9 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         fotoBascula: fotoBascula.length > 0 ? fotoBascula[0] : undefined, // Enviar foto si existe
       };
 
+      console.log("🔍 [KARDEX FORM] fotoBascula state:", fotoBascula);
+      console.log("🔍 [KARDEX FORM] submitData.fotoBascula:", submitData.fotoBascula);
+
       await onSubmit(submitData);
       onClose();
     } catch (error) {

@@ -184,6 +184,9 @@ export default function KardexPage() {
 
   const handleCreateKardex = async (formData: any) => {
     try {
+      console.log("🔍 [KARDEX PAGE] formData recibido:", formData);
+      console.log("🔍 [KARDEX PAGE] formData.fotoBascula:", formData.fotoBascula);
+      
       const response = await fetch("/api/kardex", {
         method: "POST",
         headers: {
@@ -193,11 +196,17 @@ export default function KardexPage() {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ [KARDEX PAGE] Error response:", errorText);
         throw new Error("Error al crear movimiento");
       }
 
+      const result = await response.json();
+      console.log("✅ [KARDEX PAGE] Respuesta exitosa:", result);
+
       await fetchKardex();
     } catch (err) {
+      console.error("❌ [KARDEX PAGE] Error:", err);
       throw err;
     }
   };

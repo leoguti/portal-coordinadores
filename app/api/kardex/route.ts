@@ -133,6 +133,8 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("🔍 [API KARDEX] body.fotoBascula:", body.fotoBascula);
+    
     // Create kardex record
     const newKardex = await createKardex(session.user.coordinatorRecordId, {
       fechakardex: body.fechakardex,
@@ -150,6 +152,8 @@ export async function POST(request: Request) {
       Metal: body.Metal,
       fotoBascula: body.fotoBascula, // Pass photo if provided
     });
+    
+    console.log("🔍 [API KARDEX] newKardex creado:", newKardex ? "✅" : "❌");
 
     if (!newKardex) {
       return NextResponse.json(
