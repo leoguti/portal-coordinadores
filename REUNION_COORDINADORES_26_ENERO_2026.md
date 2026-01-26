@@ -37,9 +37,10 @@
 - **Reporte**: No aparece activado
 - **Problema adicional**: Al descargar, el archivo tiene nombre hash (ej: "2a5f0dfc") sin extensión .pdf
 - **✅ SOLUCIONADO**: 
-  - Configurado `addRandomSuffix: false` en Vercel Blob
-  - Ahora el archivo se guarda con el nombre exacto: `Orden_{numeroOrden}.pdf`
-  - El PDF se descarga con el nombre correcto
+  - Ahora se usa el campo `filename` del attachment de Airtable
+  - Airtable preserva el nombre original del archivo (`Orden_{numeroOrden}.pdf`)
+  - El atributo `download` usa el nombre correcto del attachment
+  - El PDF se descarga con el nombre y extensión correctos
 
 ### TODO: Visualización de Órdenes de Servicio - Vista Administrador
 - **Problema**: No están viendo órdenes de servicio en la visualización de administrador
