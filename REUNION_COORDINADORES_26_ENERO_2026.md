@@ -24,7 +24,7 @@
 - **Angela**: Pregunta por los filtros
 - **DECISIÓN TOMADA**: Hay que activarlos para coordinador
 - **ACLARACIÓN**: Los filtros YA ESTÁN en la interfaz de administrador, pero NO están en la interfaz de coordinador
-- **✅ COMPLETADO**: Filtros implementados para coordinadores (Mes, Año, Municipio, Tipo)
+- **✅ COMPLETADO Y VERIFICADO**: Filtros implementados y funcionando correctamente para coordinadores (Mes, Año, Municipio, Tipo)
 
 ### Correos - Gestores y Proveedores
 - **Johan**: El correo debe llegar al gestor
@@ -35,7 +35,10 @@
 - **Reporte**: En la vista de PDF no aparece en qué registro está
 - **Reporte**: No abre el PDF de la orden de servicio
 - **Reporte**: No aparece activado
-- **Acción**: Revisar funcionalidad de generación/visualización de PDF de órdenes de servicio
+- **✅ SOLUCIONADO**: 
+  - Agregado atributo `download` con nombre correcto: `Orden_{numeroOrden}.pdf`
+  - Ahora descarga el PDF con el consecutivo correcto
+  - Cambiado texto de "Ver PDF" a "Descargar PDF" para mayor claridad
 
 ### TODO: Visualización de Órdenes de Servicio - Vista Administrador
 - **Problema**: No están viendo órdenes de servicio en la visualización de administrador
@@ -75,7 +78,7 @@
 - **Problema**: En el usuario de coordinador no aparece el filtro de año
 - **Necesidad**: Quieren poder filtrar por año
 - **ACLARACIÓN**: El filtro de año existe en vista administrador, falta en vista coordinador
-- **✅ COMPLETADO**: Filtros completos implementados para coordinadores (año, mes, municipio, tipo)
+- **✅ COMPLETADO Y VERIFICADO**: Filtros completos implementados y funcionando para coordinadores (año, mes, municipio, tipo)
 
 ### Problema con Kardex - Material No Suma
 - **Queja**: El material no suma en el registro de kardex

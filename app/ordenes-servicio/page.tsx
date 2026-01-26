@@ -252,10 +252,11 @@ export default function OrdenesServicioPage() {
                             {pdfUrl ? (
                               <a
                                 href={pdfUrl}
+                                download={`Orden_${numeroOrden}.pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:underline"
-                                title="Ver PDF"
+                                title="Descargar PDF"
                               >
                                 📄 PDF
                               </a>

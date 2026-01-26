@@ -133,11 +133,12 @@ export default function OrdenDetallePage() {
             {orden.fields.PDF && orden.fields.PDF[0]?.url && (
               <a
                 href={orden.fields.PDF[0].url}
+                download={`Orden_${numeroOrden}.pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
               >
-                📄 Ver PDF
+                📄 Descargar PDF
               </a>
             )}
           </div>
