@@ -138,15 +138,7 @@ export async function POST(request: Request) {
     // Validaciones de reglas de negocio
     const isSalida = body.TipoMovimiento === "SALIDA";
     
-    // 1. Municipio obligatorio
-    if (!body.MunicipioOrigen) {
-      return NextResponse.json(
-        { error: "El municipio es obligatorio" },
-        { status: 400 }
-      );
-    }
-    
-    // 2. Al menos un material con valor > 0
+    // 1. Al menos un material con valor > 0
     const totalKilos = (
       (body.Reciclaje || 0) +
       (body.Incineracion || 0) +
@@ -164,10 +156,18 @@ export async function POST(request: Request) {
       );
     }
     
-    // 3. ENTRADA: Centro de Acopio obligatorio
+    // 2. ENTRADA: Centro de Acopio obligatorio
     if (!isSalida && !body.CentroAcopio) {
       return NextResponse.json(
         { error: "Para ENTRADAS, el Centro de Acopio es obligatorio" },
+        { status: 400 }
+      );
+    }
+    
+    // 3. ENTRADA: Municipio obligatorio
+    if (!isSalida && !body.MunicipioOrigen) {
+      return NextResponse.json(
+        { error: "Para ENTRADAS, el municipio es obligatorio" },
         { status: 400 }
       );
     }
