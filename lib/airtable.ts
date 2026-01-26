@@ -927,6 +927,7 @@ export async function createOrdenServicio(
         const blob = await put(filename, pdfBuffer, {
           access: "public",
           contentType: "application/pdf",
+          addRandomSuffix: false, // Usar el nombre exacto sin suffix random
         });
         
         console.log(`PDF uploaded to Vercel Blob: ${blob.url}`);

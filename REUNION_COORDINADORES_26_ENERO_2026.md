@@ -35,10 +35,11 @@
 - **Reporte**: En la vista de PDF no aparece en qué registro está
 - **Reporte**: No abre el PDF de la orden de servicio
 - **Reporte**: No aparece activado
+- **Problema adicional**: Al descargar, el archivo tiene nombre hash (ej: "2a5f0dfc") sin extensión .pdf
 - **✅ SOLUCIONADO**: 
-  - Agregado atributo `download` con nombre correcto: `Orden_{numeroOrden}.pdf`
-  - Ahora descarga el PDF con el consecutivo correcto
-  - Cambiado texto de "Ver PDF" a "Descargar PDF" para mayor claridad
+  - Configurado `addRandomSuffix: false` en Vercel Blob
+  - Ahora el archivo se guarda con el nombre exacto: `Orden_{numeroOrden}.pdf`
+  - El PDF se descarga con el nombre correcto
 
 ### TODO: Visualización de Órdenes de Servicio - Vista Administrador
 - **Problema**: No están viendo órdenes de servicio en la visualización de administrador
