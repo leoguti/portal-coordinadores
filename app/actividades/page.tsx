@@ -77,27 +77,31 @@ export default function ActividadesPage() {
     const calcularOpciones = (excluirFiltro: string) => {
       let data = actividades;
       
-      if (isAdmin) {
-        if (selectedCoordinador) {
-          data = data.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
-        }
-        
-        // Aplicar filtros según qué estamos calculando
-        if (excluirFiltro !== 'ano' && selectedAno) {
-          data = data.filter(a => String(a.fields.Año) === selectedAno);
-        }
-        
-        if (excluirFiltro !== 'mes' && selectedMes) {
-          data = data.filter(a => String(a.fields.Mes) === selectedMes);
-        }
-        
-        if (excluirFiltro !== 'municipio' && selectedMunicipio) {
-          data = data.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
-        }
-        
-        if (excluirFiltro !== 'tipo' && selectedTipo) {
-          data = data.filter(a => a.fields.Tipo === selectedTipo);
-        }
+      // Si es admin, aplicar filtro de coordinador
+      if (isAdmin && selectedCoordinador) {
+        data = data.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+      }
+      
+      // Si NO es admin, filtrar solo actividades del coordinador actual
+      if (!isAdmin && session?.user?.coordinatorRecordId) {
+        data = data.filter(a => a.fields.Coordinador?.[0] === session.user.coordinatorRecordId);
+      }
+      
+      // Aplicar filtros según qué estamos calculando
+      if (excluirFiltro !== 'ano' && selectedAno) {
+        data = data.filter(a => String(a.fields.Año) === selectedAno);
+      }
+      
+      if (excluirFiltro !== 'mes' && selectedMes) {
+        data = data.filter(a => String(a.fields.Mes) === selectedMes);
+      }
+      
+      if (excluirFiltro !== 'municipio' && selectedMunicipio) {
+        data = data.filter(a => a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio);
+      }
+      
+      if (excluirFiltro !== 'tipo' && selectedTipo) {
+        data = data.filter(a => a.fields.Tipo === selectedTipo);
       }
       
       return data;
@@ -153,43 +157,46 @@ export default function ActividadesPage() {
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
-  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo]);
+  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo, session?.user?.coordinatorRecordId]);
 
-  // Filtrar actividades por coordinador, mes, año, municipio y tipo (admin)
+  // Filtrar actividades por coordinador, mes, año, municipio y tipo
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
-    if (isAdmin) {
-      // Filtro por coordinador
-      if (selectedCoordinador) {
-        filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
-      }
+    // Si es admin, aplicar filtro de coordinador
+    if (isAdmin && selectedCoordinador) {
+      filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
+    }
 
-      // Filtro por mes
-      if (selectedMes) {
-        filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
-      }
+    // Si NO es admin, filtrar solo actividades del coordinador actual
+    if (!isAdmin && session?.user?.coordinatorRecordId) {
+      filtered = filtered.filter(a => a.fields.Coordinador?.[0] === session.user.coordinatorRecordId);
+    }
 
-      // Filtro por año
-      if (selectedAno) {
-        filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
-      }
+    // Filtro por mes
+    if (selectedMes) {
+      filtered = filtered.filter(a => String(a.fields.Mes) === selectedMes);
+    }
 
-      // Filtro por municipio
-      if (selectedMunicipio) {
-        filtered = filtered.filter(a => 
-          a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
-        );
-      }
+    // Filtro por año
+    if (selectedAno) {
+      filtered = filtered.filter(a => String(a.fields.Año) === selectedAno);
+    }
 
-      // Filtro por tipo
-      if (selectedTipo) {
-        filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
-      }
+    // Filtro por municipio
+    if (selectedMunicipio) {
+      filtered = filtered.filter(a => 
+        a.fields["mundep (from Municipio)"]?.[0] === selectedMunicipio
+      );
+    }
+
+    // Filtro por tipo
+    if (selectedTipo) {
+      filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
     }
 
     return filtered;
-  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin]);
+  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin, session?.user?.coordinatorRecordId]);
 
   // Agrupar actividades por mes
   const actividadesPorMes = React.useMemo(() => {
@@ -329,42 +336,44 @@ export default function ActividadesPage() {
           </Link>
         </div>
 
-        {/* Filtros - Solo admin */}
-        {isAdmin && (coordinadores.length > 0 || opcionesFiltros.meses.length > 0) && (
+        {/* Filtros - Admin y Coordinadores */}
+        {(opcionesFiltros.meses.length > 0 || opcionesFiltros.anos.length > 0) && (
           <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               🔍 Filtros de Búsqueda
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Filtro por Coordinador */}
-              <div>
-                <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Coordinador
-                </label>
-                <select
-                  id="coordinador-filter"
-                  value={selectedCoordinador}
-                  onChange={(e) => {
-                    setSelectedCoordinador(e.target.value);
-                    // Limpiar otros filtros al cambiar coordinador
-                    setSelectedMes("");
-                    setSelectedAno("");
-                    setSelectedMunicipio("");
-                    setSelectedTipo("");
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos ({actividades.length})</option>
-                  {coordinadores.map((coord) => {
-                    const countActividades = actividades.filter(a => a.fields.Coordinador?.[0] === coord.id).length;
-                    return (
-                      <option key={coord.id} value={coord.id}>
-                        {coord.name} ({countActividades})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+            <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'md:grid-cols-2 lg:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
+              {/* Filtro por Coordinador - Solo admin */}
+              {isAdmin && (
+                <div>
+                  <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                    Coordinador
+                  </label>
+                  <select
+                    id="coordinador-filter"
+                    value={selectedCoordinador}
+                    onChange={(e) => {
+                      setSelectedCoordinador(e.target.value);
+                      // Limpiar otros filtros al cambiar coordinador
+                      setSelectedMes("");
+                      setSelectedAno("");
+                      setSelectedMunicipio("");
+                      setSelectedTipo("");
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos ({actividades.length})</option>
+                    {coordinadores.map((coord) => {
+                      const countActividades = actividades.filter(a => a.fields.Coordinador?.[0] === coord.id).length;
+                      return (
+                        <option key={coord.id} value={coord.id}>
+                          {coord.name} ({countActividades})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
 
               {/* Filtro por Mes */}
               <div>
@@ -462,10 +471,10 @@ export default function ActividadesPage() {
             </div>
 
             {/* Botón para limpiar filtros */}
-            {(selectedCoordinador || selectedMes || selectedAno || selectedMunicipio || selectedTipo) && (
+            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || (isAdmin && selectedCoordinador)) && (
               <button
                 onClick={() => {
-                  setSelectedCoordinador("");
+                  if (isAdmin) setSelectedCoordinador("");
                   setSelectedMes("");
                   setSelectedAno("");
                   setSelectedMunicipio("");
