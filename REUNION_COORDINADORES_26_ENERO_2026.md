@@ -36,11 +36,9 @@
 - **Reporte**: No abre el PDF de la orden de servicio
 - **Reporte**: No aparece activado
 - **Problema adicional**: Al descargar, el archivo tiene nombre hash (ej: "2a5f0dfc") sin extensión .pdf
-- **✅ SOLUCIONADO**: 
-  - Ahora se usa el campo `filename` del attachment de Airtable
-  - Airtable preserva el nombre original del archivo (`Orden_{numeroOrden}.pdf`)
-  - El atributo `download` usa el nombre correcto del attachment
-  - El PDF se descarga con el nombre y extensión correctos
+- **✅ SOLUCIONADO**: PDF funciona y se descarga correctamente
+- **Limitación técnica**: El nombre del archivo es un hash de Airtable por políticas CORS del navegador
+- **Solución acordada**: Los coordinadores renombran manualmente el archivo después de descargarlo
 
 ### TODO: Visualización de Órdenes de Servicio - Vista Administrador
 - **Problema**: No están viendo órdenes de servicio en la visualización de administrador

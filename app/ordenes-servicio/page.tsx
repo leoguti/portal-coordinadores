@@ -202,7 +202,6 @@ export default function OrdenesServicioPage() {
                         const total = orden.fields.Total || 0;
                         const puedeEliminar = puedeEliminarOrden(fechaPedido);
                         const pdfUrl = orden.fields.PDF?.[0]?.url || null;
-                        const pdfFilename = orden.fields.PDF?.[0]?.filename || `Orden_${numeroOrden}.pdf`;
 
                       const formatCurrency = (amount: number) => {
                         return new Intl.NumberFormat("es-CO", {
@@ -253,7 +252,6 @@ export default function OrdenesServicioPage() {
                             {pdfUrl ? (
                               <a
                                 href={pdfUrl}
-                                download={pdfFilename}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:underline"
