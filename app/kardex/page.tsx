@@ -208,7 +208,7 @@ export default function KardexPage() {
 
       // Guardar datos del kardex creado para mostrar en modal
       setKardexCreado({
-        ...result,
+        ...result.kardex, // Acceder a result.kardex, no result directamente
         formData, // Guardar también los datos del formulario para el resumen
       });
       setShowConfirmModal(true);
