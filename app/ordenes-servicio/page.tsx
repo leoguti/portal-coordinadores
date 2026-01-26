@@ -202,6 +202,7 @@ export default function OrdenesServicioPage() {
                         const total = orden.fields.Total || 0;
                         const puedeEliminar = puedeEliminarOrden(fechaPedido);
                         const pdfUrl = orden.fields.PDF?.[0]?.url || null;
+                        const pdfFilename = orden.fields.PDF?.[0]?.filename || `Orden_${numeroOrden}.pdf`;
 
                       const formatCurrency = (amount: number) => {
                         return new Intl.NumberFormat("es-CO", {
