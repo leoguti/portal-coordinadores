@@ -977,6 +977,9 @@ export default function KardexPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-purple-600 uppercase tracking-wider font-bold">
+                      # Consecutivo
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fecha
                     </th>
@@ -1003,6 +1006,11 @@ export default function KardexPage() {
                         onClick={() => toggleRow(record.id)}
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
                       >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="font-bold text-purple-700 text-base">
+                            #{record.fields.idkardex || "S/N"}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">
