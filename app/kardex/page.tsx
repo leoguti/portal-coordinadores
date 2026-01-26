@@ -41,6 +41,8 @@ export default function KardexPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [kardexCreado, setKardexCreado] = useState<any>(null);
   
   // Pagination (cliente)
   const [currentPage, setCurrentPage] = useState(1);
@@ -203,6 +205,13 @@ export default function KardexPage() {
 
       const result = await response.json();
       console.log("✅ [KARDEX PAGE] Respuesta exitosa:", result);
+
+      // Guardar datos del kardex creado para mostrar en modal
+      setKardexCreado({
+        ...result,
+        formData, // Guardar también los datos del formulario para el resumen
+      });
+      setShowConfirmModal(true);
 
       await fetchKardex();
     } catch (err) {
@@ -1208,6 +1217,165 @@ export default function KardexPage() {
             onClose={() => setShowAddModal(false)}
             onSubmit={handleCreateKardex}
           />
+        )}
+
+        {/* Modal de confirmación después de crear Kardex */}
+        {showConfirmModal && kardexCreado && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="bg-green-600 text-white p-6 rounded-t-lg">
+                <div className="flex items-center gap-3">
+                  <div className="text-4xl">✅</div>
+                  <div>
+                    <h2 className="text-2xl font-bold">¡Movimiento Registrado!</h2>
+                    <p className="text-green-100 mt-1">El registro se ha creado exitosamente en el sistema</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-6">
+                {/* Consecutivo destacado */}
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 text-center">
+                  <div className="text-sm text-purple-600 font-medium mb-2">Consecutivo Asignado</div>
+                  <div className="text-5xl font-bold text-purple-700">
+                    #{kardexCreado.fields?.idkardex || "N/A"}
+                  </div>
+                </div>
+
+                {/* Resumen de datos */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b">
+                    <h3 className="font-semibold text-gray-900">Resumen del Movimiento</h3>
+                  </div>
+                  
+                  <div className="divide-y">
+                    {/* Fecha */}
+                    <div className="px-4 py-3 flex justify-between">
+                      <span className="text-gray-600">Fecha:</span>
+                      <span className="font-medium">
+                        {kardexCreado.formData?.fechakardex ? 
+                          new Date(kardexCreado.formData.fechakardex + 'T00:00:00').toLocaleDateString('es-CO', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          }) : 'N/A'}
+                      </span>
+                    </div>
+
+                    {/* Tipo de Movimiento */}
+                    <div className="px-4 py-3 flex justify-between">
+                      <span className="text-gray-600">Tipo de Movimiento:</span>
+                      <span className={`font-bold ${
+                        kardexCreado.formData?.TipoMovimiento === 'ENTRADA' 
+                          ? 'text-green-600' 
+                          : 'text-orange-600'
+                      }`}>
+                        {kardexCreado.formData?.TipoMovimiento === 'ENTRADA' ? '⬇️ ENTRADA' : '⬆️ SALIDA'}
+                      </span>
+                    </div>
+
+                    {/* Materiales */}
+                    <div className="px-4 py-3">
+                      <div className="text-gray-600 mb-3 font-medium">Materiales Registrados:</div>
+                      <div className="space-y-2">
+                        {kardexCreado.formData?.Reciclaje > 0 && (
+                          <div className="flex justify-between bg-blue-50 px-3 py-2 rounded">
+                            <span>♻️ Reciclaje</span>
+                            <span className="font-bold">{kardexCreado.formData.Reciclaje} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.Incineracion > 0 && (
+                          <div className="flex justify-between bg-red-50 px-3 py-2 rounded">
+                            <span>🔥 Incineración</span>
+                            <span className="font-bold">{kardexCreado.formData.Incineracion} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.Flexibles > 0 && (
+                          <div className="flex justify-between bg-yellow-50 px-3 py-2 rounded">
+                            <span>📦 Flexibles</span>
+                            <span className="font-bold">{kardexCreado.formData.Flexibles} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.PlasticoContaminado > 0 && (
+                          <div className="flex justify-between bg-orange-50 px-3 py-2 rounded">
+                            <span>⚠️ Plástico Contaminado</span>
+                            <span className="font-bold">{kardexCreado.formData.PlasticoContaminado} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.Lonas > 0 && (
+                          <div className="flex justify-between bg-gray-100 px-3 py-2 rounded">
+                            <span>🏕️ Lonas</span>
+                            <span className="font-bold">{kardexCreado.formData.Lonas} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.Carton > 0 && (
+                          <div className="flex justify-between bg-amber-50 px-3 py-2 rounded">
+                            <span>📦 Cartón</span>
+                            <span className="font-bold">{kardexCreado.formData.Carton} kg</span>
+                          </div>
+                        )}
+                        {kardexCreado.formData?.Metal > 0 && (
+                          <div className="flex justify-between bg-gray-200 px-3 py-2 rounded">
+                            <span>🔩 Metal</span>
+                            <span className="font-bold">{kardexCreado.formData.Metal} kg</span>
+                          </div>
+                        )}
+                        
+                        {/* Total */}
+                        <div className="flex justify-between bg-purple-100 px-3 py-3 rounded border-2 border-purple-300 mt-3">
+                          <span className="font-bold text-purple-900">TOTAL</span>
+                          <span className="font-bold text-purple-900 text-lg">
+                            {(Number(kardexCreado.formData?.Reciclaje || 0) +
+                              Number(kardexCreado.formData?.Incineracion || 0) +
+                              Number(kardexCreado.formData?.Flexibles || 0) +
+                              Number(kardexCreado.formData?.PlasticoContaminado || 0) +
+                              Number(kardexCreado.formData?.Lonas || 0) +
+                              Number(kardexCreado.formData?.Carton || 0) +
+                              Number(kardexCreado.formData?.Metal || 0))} kg
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Centro de Acopio / Gestor */}
+                    {kardexCreado.formData?.TipoMovimiento === 'SALIDA' && kardexCreado.fields?.nombregestor && (
+                      <div className="px-4 py-3 flex justify-between">
+                        <span className="text-gray-600">Gestor:</span>
+                        <span className="font-medium">{kardexCreado.fields.nombregestor[0]}</span>
+                      </div>
+                    )}
+                    
+                    {/* Estado de Pago */}
+                    <div className="px-4 py-3 flex justify-between">
+                      <span className="text-gray-600">Estado de Pago:</span>
+                      <span className={`font-medium ${
+                        kardexCreado.formData?.EstadoPago === 'Pagado' 
+                          ? 'text-green-600' 
+                          : 'text-yellow-600'
+                      }`}>
+                        {kardexCreado.formData?.EstadoPago}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 rounded-b-lg">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setKardexCreado(null);
+                  }}
+                  className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AuthenticatedLayout>

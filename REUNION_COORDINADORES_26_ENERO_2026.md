@@ -90,9 +90,20 @@
 ### URGENTE: Visualización de Fotos de Báscula
 - **Problema**: No permite visualizar las fotos de báscula después de subidas
 - **Alcance**: En todo el sistema
-- **Acción**: Revisar funcionalidad de visualización de fotos de báscula en Kardex
+- **✅ VERIFICADO**: Las fotos SÍ se visualizan correctamente
+- **Aclaración para coordinadores**: Solo se pueden ver las fotos en los registros que tienen foto. Si un registro no tiene foto, no aparece nada (es el comportamiento esperado)
 
 ### Confirmación de Registro de Actividades
 - **Necesidad**: Confirmación de que el registro de actividades fue exitoso
 - **Acción**: Implementar mensaje de confirmación exitosa para registro de actividades
+
+### Confirmación de Registro de Kardex
+- **Necesidad**: Confirmación de que el registro de kardex fue exitoso
+- **Necesidad**: Mostrar el consecutivo asignado
+- **Necesidad**: Resumen de datos como en el bot
+- **✅ COMPLETADO**: Modal de confirmación implementado con:
+  - Consecutivo destacado del Kardex
+  - Resumen completo: fecha, tipo de movimiento, materiales, totales
+  - Estado de pago y gestor/centro según corresponda
+  - Diseño similar a la experiencia del bot
 
