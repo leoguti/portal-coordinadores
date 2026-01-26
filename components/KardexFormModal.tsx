@@ -189,8 +189,9 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     
     // Validaciones de reglas de negocio
     
-    // 1. Municipio obligatorio
-    if (!municipio) {
+    // 1. Municipio obligatorio EXCEPTO en SALIDAS desde centro de acopio
+    const necesitaMunicipio = !isSalida || (isSalida && formData.origenTipo === "municipio");
+    if (necesitaMunicipio && !municipio) {
       alert("⚠️ Debes seleccionar un municipio");
       return;
     }
@@ -214,7 +215,19 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
       return;
     }
     
-    // 5. Foto de báscula obligatoria para SALIDAS
+    // 5. SALIDA desde municipio: Municipio obligatorio
+    if (isSalida && formData.origenTipo === "municipio" && !municipio) {
+      alert("⚠️ Para SALIDAS desde municipio, debes seleccionar el municipio de origen");
+      return;
+    }
+    
+    // 6. SALIDA desde centro: Centro de Acopio obligatorio
+    if (isSalida && formData.origenTipo === "centro" && !formData.CentroAcopio) {
+      alert("⚠️ Para SALIDAS desde centro de acopio, debes seleccionar el centro de origen");
+      return;
+    }
+    
+    // 7. Foto de báscula obligatoria para SALIDAS
     if (isSalida && fotoBascula.length === 0) {
       alert("⚠️ La foto de báscula es obligatoria para las SALIDAS");
       return;

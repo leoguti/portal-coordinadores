@@ -5,6 +5,11 @@
 
 ## Notas de la Reunión
 
+### Bug: Validación Municipio en SALIDAS desde Centro de Acopio
+- **Problema**: Cuando se crea una SALIDA desde centro de acopio, el sistema exige municipio aunque el centro ya lo tiene asociado
+- **Esperado**: Si origen = centro de acopio → NO debe pedir municipio (el centro ya lo tiene)
+- **✅ SOLUCIONADO**: Corregida validación para no exigir municipio en SALIDAS desde centro de acopio
+
 ### Consecutivos
 - **Pregunta**: ¿Los consecutivos son diferentes?
 - **Respuesta (Angela)**: Son lo mismo
