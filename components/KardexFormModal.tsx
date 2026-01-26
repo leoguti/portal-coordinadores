@@ -189,23 +189,22 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     
     // Validaciones de reglas de negocio
     
-    // 1. Municipio obligatorio EXCEPTO en SALIDAS desde centro de acopio
-    const necesitaMunicipio = !isSalida || (isSalida && formData.origenTipo === "municipio");
-    if (necesitaMunicipio && !municipio) {
-      alert("⚠️ Debes seleccionar un municipio");
-      return;
-    }
-    
-    // 2. Al menos un material con valor > 0
+    // 1. Al menos un material con valor > 0
     const totalKilos = calculateTotal();
     if (totalKilos === 0) {
       alert("⚠️ Debes registrar al menos un material con kilos > 0");
       return;
     }
     
-    // 3. ENTRADA: Centro de Acopio obligatorio
+    // 2. ENTRADA: Centro de Acopio obligatorio
     if (!isSalida && !formData.CentroAcopio) {
       alert("⚠️ Para ENTRADAS, el Centro de Acopio es obligatorio");
+      return;
+    }
+    
+    // 3. ENTRADA: Municipio obligatorio
+    if (!isSalida && !municipio) {
+      alert("⚠️ Para ENTRADAS, debes seleccionar un municipio");
       return;
     }
     
