@@ -34,6 +34,7 @@ interface SelectOption {
 interface CentroAcopio {
   id: string;
   name: string;
+  municipioId?: string; // ID del municipio asociado al centro
 }
 
 interface Gestor {
@@ -48,6 +49,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
   const [gestores, setGestores] = useState<Gestor[]>([]);
   const [loadingGestores, setLoadingGestores] = useState(true);
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [centroSeleccionado, setCentroSeleccionado] = useState<CentroAcopio | null>(null); // Guardar centro completo
   const [fotoBascula, setFotoBascula] = useState<ImageFile[]>([]);
   
   const [formData, setFormData] = useState<KardexFormData>({
@@ -126,6 +128,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     // Si cambia el tipo de movimiento, resetear origen y foto báscula
     if (name === "TipoMovimiento") {
       setMunicipio(null);
+      setCentroSeleccionado(null);
       setFotoBascula([]); // Limpiar foto al cambiar tipo
       setFormData((prev) => ({
         ...prev,
@@ -140,6 +143,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     // Si cambia el tipo de origen en SALIDA, limpiar campos correspondientes
     if (name === "origenTipo") {
       setMunicipio(null);
+      setCentroSeleccionado(null);
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -147,6 +151,15 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         CentroAcopio: undefined,
       }));
       return;
+    }
+    
+    // Si cambia el centro de acopio, guardar el objeto completo con municipioId
+    if (name === "CentroAcopio" && value) {
+      const centroCompleto = centrosAcopio.find(c => c.id === value);
+      setCentroSeleccionado(centroCompleto || null);
+      console.log('🔍 [KARDEX FORM] Centro seleccionado:', centroCompleto);
+    } else if (name === "CentroAcopio" && !value) {
+      setCentroSeleccionado(null);
     }
     
     // Para campos numéricos, evitar que se guarden con ceros prefijados
@@ -261,10 +274,13 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
       
       const submitData = {
         ...formData,
-        // Para SALIDA: enviar municipio o centro según origenTipo
-        // Para ENTRADA: siempre enviar municipio si hay, centro como destino
+        // Para SALIDA desde centro: enviar municipioId del centro automáticamente
+        // Para SALIDA desde municipio: enviar municipio seleccionado
+        // Para ENTRADA: siempre enviar municipio seleccionado
         MunicipioOrigen: isSalida 
-          ? (formData.origenTipo === "municipio" ? municipio?.id : undefined)
+          ? (formData.origenTipo === "municipio" 
+              ? municipio?.id 
+              : centroSeleccionado?.municipioId) // NUEVO: municipio del centro
           : municipio?.id,
         CentroAcopio: isSalida
           ? (formData.origenTipo === "centro" ? formData.CentroAcopio : undefined)
@@ -283,6 +299,8 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
       console.log("🔍 [KARDEX FORM] fotoBascula state:", fotoBascula);
       console.log("🔍 [KARDEX FORM] fotoData converted:", fotoData);
       console.log("🔍 [KARDEX FORM] submitData.fotoBascula:", submitData.fotoBascula);
+      console.log("🔍 [KARDEX FORM] centroSeleccionado:", centroSeleccionado);
+      console.log("🔍 [KARDEX FORM] submitData.MunicipioOrigen:", submitData.MunicipioOrigen);
 
       await onSubmit(submitData);
       onClose();

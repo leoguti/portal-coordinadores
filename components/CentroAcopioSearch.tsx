@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 interface CentroAcopio {
   id: string;
   name: string;
+  municipioId?: string; // ID del municipio asociado al centro
 }
 
 interface CentroAcopioSearchProps {

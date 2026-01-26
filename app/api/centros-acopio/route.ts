@@ -56,12 +56,14 @@ export async function GET(request: Request) {
 
     const centros = data.records.map((record) => {
       const municipio = record.fields["mundep (from Municipio)"]?.[0] || "";
+      const municipioId = record.fields.Municipio?.[0] || ""; // ID del municipio linked
       const nombre = record.fields.Nombre || "Sin nombre";
       const displayName = municipio ? `${nombre} (${municipio})` : nombre;
       
       return {
         id: record.id,
         name: displayName,
+        municipioId, // Incluir el ID del municipio del centro
       };
     });
 
