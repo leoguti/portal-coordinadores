@@ -206,9 +206,11 @@ export default function KardexPage() {
       const result = await response.json();
       console.log("✅ [KARDEX PAGE] Respuesta exitosa:", result);
 
-      // Guardar datos del kardex creado para mostrar en modal
+      // Guardar datos del kardex creado (y conciliación si existe) para mostrar en modal
       setKardexCreado({
-        ...result.kardex, // Acceder a result.kardex, no result directamente
+        kardex: result.kardex,
+        conciliacion: result.conciliacion || null, // Puede ser null si no se creó
+        message: result.message,
         formData, // Guardar también los datos del formulario para el resumen
       });
       setShowConfirmModal(true);
@@ -1248,9 +1250,45 @@ export default function KardexPage() {
                 <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 text-center">
                   <div className="text-sm text-purple-600 font-medium mb-2">Consecutivo Asignado</div>
                   <div className="text-5xl font-bold text-purple-700">
-                    #{kardexCreado.fields?.idkardex || "N/A"}
+                    #{kardexCreado.kardex?.fields?.idkardex || "N/A"}
                   </div>
                 </div>
+
+                {/* Sección de Conciliación (si existe) */}
+                {kardexCreado.conciliacion && (
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-4xl">🔄</div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-blue-900 text-lg mb-2">
+                          Registro de Conciliación Automática
+                        </h4>
+                        <p className="text-sm text-blue-800 mb-3">
+                          Se generó automáticamente una ENTRADA de conciliación porque esta salida no pasó por centro de acopio.
+                        </p>
+                        <div className="bg-white rounded-lg p-4 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Consecutivo conciliación:</span>
+                            <span className="font-bold text-blue-700 text-lg">
+                              #{kardexCreado.conciliacion.fields?.idkardex || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Tipo:</span>
+                            <span className="font-medium text-green-600">⬇️ ENTRADA</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Estado:</span>
+                            <span className="font-medium text-gray-600">Sin Costo</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-3 italic">
+                          💡 Este registro cuadra el inventario del municipio.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Resumen de datos */}
                 <div className="border rounded-lg overflow-hidden">

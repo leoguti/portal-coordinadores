@@ -96,6 +96,8 @@ interface KardexFields {
     url: string;
     filename: string;
   }>;
+  RegistroConciliacion?: string[]; // Linked to Kardex - vincula SALIDA con ENTRADA de conciliación
+  Observaciones?: string; // Observaciones del registro
 }
 
 interface OrdenFields {
@@ -1759,6 +1761,238 @@ export async function createKardex(
   } catch (error) {
     console.error("Error creating Kardex in Airtable:", error);
     return null;
+  }
+}
+
+/**
+ * Create a SALIDA Kardex with automatic ENTRADA de conciliación
+ * When creating a SALIDA from municipio (not from centro de acopio),
+ * automatically creates an ENTRADA de conciliación to balance inventory.
+ * 
+ * @param coordinatorRecordId - Airtable record ID of coordinator
+ * @param kardexData - Data for the SALIDA
+ * @param origenTipo - Type of origin: "Municipio" or "Centro de Acopio"
+ * @returns Object with both SALIDA and CONCILIACION records (or just SALIDA if no conciliacion needed)
+ */
+export async function createKardexWithConciliacion(
+  coordinatorRecordId: string,
+  kardexData: {
+    fechakardex: string;
+    TipoMovimiento: string;
+    EstadoPago: string;
+    MunicipioOrigen?: string;
+    CentroAcopio?: string;
+    Gestor?: string;
+    Reciclaje?: number;
+    Incineracion?: number;
+    Flexibles?: number;
+    PlasticoContaminado?: number;
+    Lonas?: number;
+    Carton?: number;
+    Metal?: number;
+    fotoBascula?: { url: string; name: string };
+  },
+  origenTipo: "Municipio" | "Centro de Acopio"
+): Promise<{
+  salida: AirtableRecord<KardexFields> | null;
+  conciliacion: AirtableRecord<KardexFields> | null;
+}> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return { salida: null, conciliacion: null };
+  }
+
+  // Verificar si necesita conciliación
+  const needsConciliacion =
+    kardexData.TipoMovimiento === "SALIDA" && origenTipo === "Municipio";
+
+  // 1. Crear SALIDA
+  console.log(`Creating SALIDA kardex${needsConciliacion ? " with conciliación" : ""}...`);
+  const salida = await createKardex(coordinatorRecordId, kardexData);
+
+  if (!salida) {
+    console.error("Failed to create SALIDA kardex");
+    return { salida: null, conciliacion: null };
+  }
+
+  // Si no necesita conciliación, retornar solo la salida
+  if (!needsConciliacion) {
+    return { salida, conciliacion: null };
+  }
+
+  // 2. Crear ENTRADA de conciliación
+  try {
+    console.log("Creating ENTRADA de conciliación...");
+
+    const conciliacionData = {
+      fechakardex: kardexData.fechakardex,
+      TipoMovimiento: "ENTRADA",
+      EstadoPago: "Sin Costo",
+      MunicipioOrigen: kardexData.MunicipioOrigen,
+      Reciclaje: kardexData.Reciclaje || 0,
+      Incineracion: kardexData.Incineracion || 0,
+      Flexibles: kardexData.Flexibles || 0,
+      PlasticoContaminado: kardexData.PlasticoContaminado || 0,
+      Lonas: kardexData.Lonas || 0,
+      Carton: kardexData.Carton || 0,
+      Metal: kardexData.Metal || 0,
+      // NO incluir: gestor, CentroAcopio, fotoBascula
+    };
+
+    const url = `https://api.airtable.com/v0/${baseId}/Kardex`;
+    const fields: any = {
+      Coordinador: [coordinatorRecordId],
+      fechakardex: conciliacionData.fechakardex,
+      TipoMovimiento: conciliacionData.TipoMovimiento,
+      EstadoPago: conciliacionData.EstadoPago,
+      Reciclaje: conciliacionData.Reciclaje,
+      Incineracion: conciliacionData.Incineracion,
+      Flexibles: conciliacionData.Flexibles,
+      PlasticoContaminado: conciliacionData.PlasticoContaminado,
+      Lonas: conciliacionData.Lonas,
+      Carton: conciliacionData.Carton,
+      Metal: conciliacionData.Metal,
+      Observaciones: "Entrada automática de conciliación",
+      RegistroConciliacion: [salida.id], // Vincular a la SALIDA
+    };
+
+    if (conciliacionData.MunicipioOrigen) {
+      fields.MunicipioOrigen = [conciliacionData.MunicipioOrigen];
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Error creating ENTRADA de conciliación: ${response.status}`,
+        errorText
+      );
+      return { salida, conciliacion: null };
+    }
+
+    const conciliacion: AirtableRecord<KardexFields> = await response.json();
+    console.log(`ENTRADA de conciliación created: ${conciliacion.id}`);
+
+    // 3. Actualizar SALIDA para vincular con CONCILIACIÓN
+    const updateResponse = await fetch(`${url}/${salida.id}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          RegistroConciliacion: [conciliacion.id],
+        },
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      console.error(
+        `Error linking SALIDA to conciliación: ${updateResponse.status}`,
+        errorText
+      );
+      // Continuar - la conciliación existe, solo faltó el vínculo inverso
+    } else {
+      console.log(`SALIDA ${salida.id} linked to conciliación ${conciliacion.id}`);
+    }
+
+    return { salida, conciliacion };
+  } catch (error) {
+    console.error("Error creating conciliación:", error);
+    return { salida, conciliacion: null };
+  }
+}
+
+/**
+ * Delete a Kardex record and its linked conciliación (if exists)
+ * If the kardex has a RegistroConciliacion field, it will also delete the linked record
+ * 
+ * @param kardexId - Airtable record ID of the kardex to delete
+ * @returns true if successful, false otherwise
+ */
+export async function deleteKardexWithConciliacion(kardexId: string): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    console.log(`Deleting Kardex ${kardexId} with conciliación check...`);
+
+    // 1. Get the kardex record to check if it has a conciliación
+    const kardexList = await getKardexByIds([kardexId]);
+    
+    if (kardexList.length === 0) {
+      console.error(`Kardex ${kardexId} not found`);
+      return false;
+    }
+
+    const kardex = kardexList[0];
+    const conciliacionIds = kardex.fields.RegistroConciliacion;
+
+    // 2. If has linked conciliación, delete it first
+    if (conciliacionIds && conciliacionIds.length > 0) {
+      const conciliacionId = conciliacionIds[0];
+      console.log(`Found linked conciliación: ${conciliacionId}`);
+
+      const conciliacionUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${conciliacionId}`;
+      
+      const conciliacionResponse = await fetch(conciliacionUrl, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (conciliacionResponse.ok) {
+        console.log(`✅ Conciliación ${conciliacionId} deleted successfully`);
+      } else {
+        const errorText = await conciliacionResponse.text();
+        console.error(`⚠️ Error deleting conciliación ${conciliacionId}:`, errorText);
+        // Continue anyway to delete the main kardex
+      }
+    } else {
+      console.log("No conciliación linked to this kardex");
+    }
+
+    // 3. Delete the main kardex record
+    const kardexUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${kardexId}`;
+    
+    const kardexResponse = await fetch(kardexUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!kardexResponse.ok) {
+      const errorText = await kardexResponse.text();
+      console.error(`Error deleting Kardex ${kardexId}:`, errorText);
+      return false;
+    }
+
+    console.log(`✅ Kardex ${kardexId} deleted successfully`);
+    return true;
+
+  } catch (error) {
+    console.error(`Error in deleteKardexWithConciliacion for ${kardexId}:`, error);
+    return false;
   }
 }
 

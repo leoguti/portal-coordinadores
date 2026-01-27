@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { 
   listKardexForCoordinatorPaginated, 
-  createKardex, 
+  createKardex,
+  createKardexWithConciliacion,
+  deleteKardexWithConciliacion,
   getAllKardexPaginated
 } from "@/lib/airtable";
 
@@ -180,34 +182,52 @@ export async function POST(request: Request) {
       );
     }
     
-    // Create kardex record
-    const newKardex = await createKardex(session.user.coordinatorRecordId, {
-      fechakardex: body.fechakardex,
-      TipoMovimiento: body.TipoMovimiento,
-      EstadoPago: body.EstadoPago,
-      MunicipioOrigen: body.MunicipioOrigen,
-      CentroAcopio: body.CentroAcopio,
-      Gestor: body.Gestor,
-      Reciclaje: body.Reciclaje,
-      Incineracion: body.Incineracion,
-      Flexibles: body.Flexibles,
-      PlasticoContaminado: body.PlasticoContaminado,
-      Lonas: body.Lonas,
-      Carton: body.Carton,
-      Metal: body.Metal,
-      fotoBascula: body.fotoBascula, // Pass photo if provided
-    });
+    // Determinar tipo de origen (para conciliación)
+    const origenTipo: "Municipio" | "Centro de Acopio" = body.origenTipo || 
+      (body.CentroAcopio ? "Centro de Acopio" : "Municipio");
     
-    console.log("🔍 [API KARDEX] newKardex creado:", newKardex ? "✅" : "❌");
+    // Create kardex record con o sin conciliación
+    const result = await createKardexWithConciliacion(
+      session.user.coordinatorRecordId,
+      {
+        fechakardex: body.fechakardex,
+        TipoMovimiento: body.TipoMovimiento,
+        EstadoPago: body.EstadoPago,
+        MunicipioOrigen: body.MunicipioOrigen,
+        CentroAcopio: body.CentroAcopio,
+        Gestor: body.Gestor,
+        Reciclaje: body.Reciclaje,
+        Incineracion: body.Incineracion,
+        Flexibles: body.Flexibles,
+        PlasticoContaminado: body.PlasticoContaminado,
+        Lonas: body.Lonas,
+        Carton: body.Carton,
+        Metal: body.Metal,
+        fotoBascula: body.fotoBascula, // Pass photo if provided
+      },
+      origenTipo
+    );
+    
+    console.log("🔍 [API KARDEX] Resultado creación:", {
+      salida: result.salida ? "✅" : "❌",
+      conciliacion: result.conciliacion ? "✅ (creada)" : "⚪ (no requerida)"
+    });
 
-    if (!newKardex) {
+    if (!result.salida) {
       return NextResponse.json(
         { error: "Error al crear movimiento de kardex" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ kardex: newKardex }, { status: 201 });
+    // Retornar ambos registros si hay conciliación
+    return NextResponse.json({ 
+      kardex: result.salida,
+      conciliacion: result.conciliacion,
+      message: result.conciliacion 
+        ? "SALIDA creada con ENTRADA de conciliación automática"
+        : "Movimiento creado exitosamente"
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating kardex:", error);
     return NextResponse.json(
