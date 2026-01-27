@@ -234,7 +234,8 @@ export default function KardexPage() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("es-CO");
+    const [year, month, day] = dateStr.split('-');
+    return `${parseInt(day)}/${parseInt(month)}/${year}`;
   };
 
   const getTipoIcon = (tipo?: string) => {
