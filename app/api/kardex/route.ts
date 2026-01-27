@@ -183,8 +183,21 @@ export async function POST(request: Request) {
     }
     
     // Determinar tipo de origen (para conciliación)
-    const origenTipo: "Municipio" | "Centro de Acopio" = body.origenTipo || 
-      (body.CentroAcopio ? "Centro de Acopio" : "Municipio");
+    // Frontend envía "municipio" o "centro", necesitamos mapear a formato esperado
+    let origenTipo: "Municipio" | "Centro de Acopio";
+    if (body.origenTipo) {
+      origenTipo = body.origenTipo === "municipio" ? "Municipio" : "Centro de Acopio";
+    } else {
+      // Fallback: si no viene origenTipo, inferir de CentroAcopio
+      origenTipo = body.CentroAcopio ? "Centro de Acopio" : "Municipio";
+    }
+    
+    console.log("🔍 [API KARDEX] Detectando origen:", {
+      bodyOrigenTipo: body.origenTipo,
+      hasCentroAcopio: !!body.CentroAcopio,
+      origenTipoFinal: origenTipo,
+      tipoMovimiento: body.TipoMovimiento
+    });
     
     // Create kardex record con o sin conciliación
     const result = await createKardexWithConciliacion(

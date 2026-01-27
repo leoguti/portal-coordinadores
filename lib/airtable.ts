@@ -1809,6 +1809,12 @@ export async function createKardexWithConciliacion(
   const needsConciliacion =
     kardexData.TipoMovimiento === "SALIDA" && origenTipo === "Municipio";
 
+  console.log("🔍 [AIRTABLE] Verificando necesidad de conciliación:", {
+    tipoMovimiento: kardexData.TipoMovimiento,
+    origenTipo: origenTipo,
+    needsConciliacion: needsConciliacion,
+  });
+
   // 1. Crear SALIDA
   console.log(`Creating SALIDA kardex${needsConciliacion ? " with conciliación" : ""}...`);
   const salida = await createKardex(coordinatorRecordId, kardexData);
