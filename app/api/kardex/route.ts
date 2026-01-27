@@ -249,3 +249,13 @@ export async function POST(request: Request) {
     );
   }
 }
+
+/**
+ * DELETE /api/kardex/[id]
+ * Delete a kardex record (and its linked conciliación if exists)
+ * 
+ * This endpoint is actually at /api/kardex/[id]/route.ts
+ * But we can also implement a simple version here using query params
+ * 
+ * For now, the actual DELETE is in /app/api/kardex/[id]/route.ts
+ */

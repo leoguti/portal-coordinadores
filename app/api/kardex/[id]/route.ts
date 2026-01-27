@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { deleteKardexWithConciliacion, getKardexByIds } from "@/lib/airtable";
 
 export async function DELETE(
   request: Request,
@@ -14,33 +15,18 @@ export async function DELETE(
     }
 
     const { id: kardexId } = await params;
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_BASE_ID;
 
-    if (!apiKey || !baseId) {
-      return NextResponse.json(
-        { error: "Configuración de Airtable no disponible" },
-        { status: 500 }
-      );
-    }
-
-    // Verificar que el kardex pertenece al coordinador
-    const getUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${kardexId}`;
-    const getResponse = await fetch(getUrl, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!getResponse.ok) {
+    // Verificar que el kardex existe y pertenece al coordinador
+    const kardexList = await getKardexByIds([kardexId]);
+    
+    if (kardexList.length === 0) {
       return NextResponse.json(
         { error: "Kardex no encontrado" },
         { status: 404 }
       );
     }
 
-    const kardexData = await getResponse.json();
+    const kardexData = kardexList[0];
     const coordinadorIds = kardexData.fields.Coordinador || [];
 
     if (!coordinadorIds.includes(session.user.coordinatorRecordId)) {
@@ -86,18 +72,19 @@ export async function DELETE(
       );
     }
 
-    // Eliminar el kardex
-    const deleteUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${kardexId}`;
-    const deleteResponse = await fetch(deleteUrl, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+    // Verificar si tiene conciliación vinculada
+    const hasConciliacion = kardexData.fields.RegistroConciliacion && 
+                           kardexData.fields.RegistroConciliacion.length > 0;
+
+    console.log(`🔍 [DELETE KARDEX] ${kardexId}`, {
+      hasConciliacion,
+      conciliacionId: hasConciliacion ? kardexData.fields.RegistroConciliacion[0] : null
     });
 
-    if (!deleteResponse.ok) {
-      const errorText = await deleteResponse.text();
-      console.error("Error eliminando kardex:", errorText);
+    // Eliminar usando función que maneja conciliación
+    const success = await deleteKardexWithConciliacion(kardexId);
+
+    if (!success) {
       return NextResponse.json(
         { error: "Error al eliminar el movimiento" },
         { status: 500 }
@@ -106,7 +93,9 @@ export async function DELETE(
 
     return NextResponse.json({ 
       success: true, 
-      message: "Movimiento eliminado correctamente" 
+      message: hasConciliacion 
+        ? "Movimiento y su registro de conciliación eliminados correctamente"
+        : "Movimiento eliminado correctamente"
     });
 
   } catch (error) {
