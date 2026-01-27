@@ -78,7 +78,7 @@ export async function DELETE(
 
     console.log(`🔍 [DELETE KARDEX] ${kardexId}`, {
       hasConciliacion,
-      conciliacionId: hasConciliacion ? kardexData.fields.RegistroConciliacion[0] : null
+      conciliacionId: kardexData.fields.RegistroConciliacion?.[0] ?? null
     });
 
     // Eliminar usando función que maneja conciliación
