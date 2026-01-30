@@ -23,6 +23,7 @@ export default function OrdenDetallePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const facturaInputRef = useRef<HTMLInputElement>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; filename: string; kardexId: number } | null>(null);
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -486,6 +487,69 @@ export default function OrdenDetallePage() {
             )}
           </div>
 
+          {/* Fotos de Báscula (de los kardex vinculados) */}
+          {(() => {
+            const fotosBascula: Array<{ url: string; filename: string; kardexId: number; tipoMov: string }> = [];
+            items.forEach((item) => {
+              const kardexId = item.fields.Kardex?.[0];
+              const kardex = kardexId ? kardexMap.get(kardexId) : undefined;
+              if (kardex?.fields.soportebascula && kardex.fields.soportebascula.length > 0) {
+                kardex.fields.soportebascula.forEach((foto) => {
+                  fotosBascula.push({
+                    url: foto.url,
+                    filename: foto.filename,
+                    kardexId: kardex.fields.idkardex || 0,
+                    tipoMov: kardex.fields.TipoMovimiento || "",
+                  });
+                });
+              }
+            });
+
+            if (fotosBascula.length === 0) return null;
+
+            return (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Fotos de Bascula ({fotosBascula.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {fotosBascula.map((foto, idx) => (
+                    <button
+                      key={`foto-${idx}`}
+                      onClick={() => setSelectedPhoto({ url: foto.url, filename: foto.filename, kardexId: foto.kardexId })}
+                      className="relative group overflow-hidden rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+                    >
+                      <img
+                        src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
+                        alt={`Bascula - Kardex #${foto.kardexId}`}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          Ver foto
+                        </span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                        <span className="text-white text-xs font-medium">
+                          Kardex #{foto.kardexId}
+                          {foto.tipoMov && (
+                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              foto.tipoMov === "ENTRADA"
+                                ? "bg-green-600 text-white"
+                                : "bg-red-600 text-white"
+                            }`}>
+                              {foto.tipoMov}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Total */}
           <div className="border-t-2 border-gray-300 pt-4 mb-6">
             <div className="flex justify-between items-center">
@@ -519,6 +583,31 @@ export default function OrdenDetallePage() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox para fotos de bascula */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 z-10"
+          >
+            &times;
+          </button>
+          <div className="text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 text-white text-sm font-medium">
+              Kardex #{selectedPhoto.kardexId} — {selectedPhoto.filename}
+            </div>
+            <img
+              src={`/api/image-proxy?url=${encodeURIComponent(selectedPhoto.url)}`}
+              alt={selectedPhoto.filename}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
     </AuthenticatedLayout>
   );
 }

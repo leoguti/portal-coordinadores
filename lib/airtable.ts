@@ -91,7 +91,7 @@ interface KardexFields {
   nombregestor?: string[];
   AÑO?: string; // Year as string (e.g., "2025")
   MES?: string; // Year-Month format (e.g., "2025-02")
-  FotoBascula?: Array<{
+  soportebascula?: Array<{
     id: string;
     url: string;
     filename: string;
