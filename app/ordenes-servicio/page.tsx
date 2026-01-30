@@ -17,10 +17,11 @@ export default function OrdenesServicioPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  // Filtros admin
+  // Filtros
   const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
   const [filtroBeneficiario, setFiltroBeneficiario] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [filtroMes, setFiltroMes] = useState<string>("");
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -95,12 +96,14 @@ export default function OrdenesServicioPage() {
   const coordinadoresUnicos = [...new Set(ordenes.map(o => o.fields.NombreCoordinador?.[0] || "").filter(Boolean))].sort();
   const beneficiariosUnicos = [...new Set(ordenes.map(o => o.fields.RazonSocial?.[0] || "").filter(Boolean))].sort();
   const estadosUnicos = [...new Set(ordenes.map(o => o.fields.Estado || "").filter(Boolean))].sort();
+  const mesesUnicos = [...new Set(ordenes.map(o => (o.fields["Fecha de pedido"] || "").substring(0, 7)).filter(Boolean))].sort().reverse();
 
   // Aplicar filtros
   const ordenesFiltradas = ordenes.filter(orden => {
     if (filtroCoordinador && (orden.fields.NombreCoordinador?.[0] || "") !== filtroCoordinador) return false;
     if (filtroBeneficiario && (orden.fields.RazonSocial?.[0] || "") !== filtroBeneficiario) return false;
     if (filtroEstado && orden.fields.Estado !== filtroEstado) return false;
+    if (filtroMes && (orden.fields["Fecha de pedido"] || "").substring(0, 7) !== filtroMes) return false;
     return true;
   });
 
@@ -133,11 +136,11 @@ export default function OrdenesServicioPage() {
           </Link>
         </div>
 
-        {/* Filtros (solo admin o cuando hay filtros relevantes) */}
-        {isAdmin && (
-          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Filtros */}
+        <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+          <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
+          <div className={`grid grid-cols-1 gap-4 ${isAdmin ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+            {isAdmin && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
                 <select
@@ -151,45 +154,58 @@ export default function OrdenesServicioPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Beneficiario</label>
-                <select
-                  value={filtroBeneficiario}
-                  onChange={(e) => { setFiltroBeneficiario(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                >
-                  <option value="">Todos</option>
-                  {beneficiariosUnicos.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
-                <select
-                  value={filtroEstado}
-                  onChange={(e) => { setFiltroEstado(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                >
-                  <option value="">Todos</option>
-                  {estadosUnicos.map(e => (
-                    <option key={e} value={e}>{e}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {(filtroCoordinador || filtroBeneficiario || filtroEstado) && (
-              <div className="mt-3">
-                <button
-                  onClick={() => { setFiltroCoordinador(""); setFiltroBeneficiario(""); setFiltroEstado(""); setCurrentPage(1); }}
-                  className="text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
             )}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Beneficiario</label>
+              <select
+                value={filtroBeneficiario}
+                onChange={(e) => { setFiltroBeneficiario(e.target.value); setCurrentPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Todos</option>
+                {beneficiariosUnicos.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+              <select
+                value={filtroEstado}
+                onChange={(e) => { setFiltroEstado(e.target.value); setCurrentPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Todos</option>
+                {estadosUnicos.map(e => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+              <select
+                value={filtroMes}
+                onChange={(e) => { setFiltroMes(e.target.value); setCurrentPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Todos</option>
+                {mesesUnicos.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        )}
+          {(filtroCoordinador || filtroBeneficiario || filtroEstado || filtroMes) && (
+            <div className="mt-3">
+              <button
+                onClick={() => { setFiltroCoordinador(""); setFiltroBeneficiario(""); setFiltroEstado(""); setFiltroMes(""); setCurrentPage(1); }}
+                className="text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Error Message */}
         {error && (
