@@ -16,10 +16,10 @@
 | Categoría | Pendientes | Completados | Descartados |
 |-----------|-----------|-------------|-------------|
 | Compromisos cliente (P1) | 4 | 1 | 0 |
-| Requests coordinadores (P2) | 5 | 2 | 0 |
+| Requests coordinadores (P2) | 6 | 1 | 0 |
 | Features nuevas (P3) | 5 | 0 | 1 |
 | Mejoras técnicas (P4) | 27 | 0 | 0 |
-| **Total** | **41** | **3** | **1** |
+| **Total** | **42** | **2** | **1** |
 
 ---
 
@@ -89,14 +89,14 @@ Estos son compromisos directos adquiridos con el cliente. Son la máxima priorid
 
 Problemas y necesidades reportados directamente por los usuarios en la reunión del 26 de enero.
 
-### ~~P2-01: Vista administrador para TODAS las órdenes de servicio~~ COMPLETADO
+### P2-01: Vista administrador para TODAS las órdenes de servicio
 - **Origen:** Reunión coordinadores 26 ene
 - **Reporta:** Administradores
-- **Estado:** Completado
+- **Estado:** No implementado
 - **Detalle:**
-  - [x] En `/ordenes-servicio`, si el usuario es Administrador, mostrar órdenes de todos los coordinadores
-  - [x] Filtro por coordinador en vista admin
-  - [x] Vista filtrada por coordinador actual si el usuario es Coordinador
+  - [ ] En `/ordenes-servicio`, si el usuario es Administrador, mostrar órdenes de todos los coordinadores
+  - [ ] Filtro por coordinador en vista admin
+  - [ ] Vista filtrada por coordinador actual si el usuario es Coordinador
 
 ### P2-02: Visibilidad de estados post-pago para coordinadores
 - **Origen:** Reunión coordinadores 26 ene
@@ -290,7 +290,7 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 ### Sprint 1 — Lo urgente del cliente + bloqueadores críticos
 1. ~~**P1-01** — Foto de báscula obligatoria~~ COMPLETADO
 2. **P3-01** — Filtro centros por coordinador (integridad de datos)
-3. ~~**P2-01** — Vista admin para todas las órdenes~~ COMPLETADO
+3. **P2-01** — Vista admin para todas las órdenes
 4. **P2-02** — Estados post-pago visibles
 5. **M-01** — Responsive sidebar (coordinadores usan celular)
 6. **M-04** — Fix SSRF image-proxy (vulnerabilidad activa)
@@ -339,6 +339,9 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 ---
 
 ## Completado Recientemente (referencia)
+
+### 30 enero 2026
+- [x] Fix webhook kardex en TextIt: campo EstadoPago no se enviaba en el body principal (siempre quedaba "Por Pagar"). Corregido con tres expresiones @(if()) separadas comparando estadopago_num como string.
 
 ### 27 enero 2026
 - [x] Fix bug timezone en fechas kardex (22312eb)

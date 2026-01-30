@@ -146,6 +146,7 @@ interface CentroAcopioFields {
   Tipo?: string;
   Autonumber?: number;
   Departamento?: string[];
+  Coordinador?: string[]; // Linked record to Coordinadores
   SaldoInicialTotal?: number;
   SaldoInicial_Reciclaje?: number;
   SaldoInicial_Incineracion?: number;
@@ -1314,6 +1315,35 @@ export async function getCentrosAcopio(): Promise<CentroAcopio[]> {
     return data.records || [];
   } catch (error) {
     console.error("Error fetching Centros de Acopio:", error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener Centros de Acopio asignados a un coordinador específico
+ * Obtiene todos los centros y filtra por el campo Coordinador (linked record)
+ *
+ * @param coordinatorRecordId - ID del registro Airtable del coordinador
+ * @returns Array de CentroAcopio asignados a este coordinador
+ */
+export async function getCentrosCoordinador(
+  coordinatorRecordId: string
+): Promise<CentroAcopio[]> {
+  try {
+    console.log(`Obteniendo Centros de Acopio para coordinador: ${coordinatorRecordId}`);
+
+    // Obtener todos los centros y filtrar por coordinador
+    const allCentros = await getCentrosAcopio();
+
+    const filtered = allCentros.filter((centro) => {
+      const coordinadores = centro.fields.Coordinador || [];
+      return coordinadores.includes(coordinatorRecordId);
+    });
+
+    console.log(`Encontrados ${filtered.length} centros para coordinador ${coordinatorRecordId} (de ${allCentros.length} totales)`);
+    return filtered;
+  } catch (error) {
+    console.error("Error obteniendo Centros de Acopio para coordinador:", error);
     throw error;
   }
 }

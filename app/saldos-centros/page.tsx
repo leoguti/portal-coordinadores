@@ -4,7 +4,7 @@ import { useEffect, useState, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getCentrosAcopio, getAllKardex, type CentroAcopio, type Kardex } from "@/lib/airtable";
+import { getCentrosAcopio, getCentrosCoordinador, getAllKardex, type CentroAcopio, type Kardex } from "@/lib/airtable";
 
 interface SaldoCentroPorMes {
   centroId: string;
@@ -45,18 +45,27 @@ export default function SaldosCentrosPage() {
     }
   }, [status, router]);
 
+  const isAdmin = session?.user?.rol === "Administrador";
+  const coordinatorRecordId = session?.user?.coordinatorRecordId;
+
   useEffect(() => {
     async function cargarDatos() {
       // Solo cargar si no se han cargado antes
       if (datosYaCargados) return;
-      
+
       try {
         setLoading(true);
         setError(null);
 
-        // Cargar centros y kardex
+        // Cargar centros según rol: admin ve todos, coordinador solo los suyos
+        const centrosPromise = isAdmin
+          ? getCentrosAcopio()
+          : coordinatorRecordId
+            ? getCentrosCoordinador(coordinatorRecordId)
+            : Promise.resolve([]);
+
         const [centrosData, kardexData] = await Promise.all([
-          getCentrosAcopio(),
+          centrosPromise,
           getAllKardex(),
         ]);
 
@@ -97,7 +106,7 @@ export default function SaldosCentrosPage() {
     if (session && !datosYaCargados) {
       cargarDatos();
     }
-  }, [session, datosYaCargados, mesSeleccionado]);
+  }, [session, datosYaCargados, mesSeleccionado, isAdmin, coordinatorRecordId]);
 
   // Recalcular saldos cuando cambia el mes seleccionado
   useEffect(() => {
@@ -268,6 +277,29 @@ export default function SaldosCentrosPage() {
     return null;
   }
 
+  // Si el coordinador no tiene centros asignados
+  if (!loading && !isAdmin && centros.length === 0) {
+    return (
+      <AuthenticatedLayout>
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">
+              ⚖️ Saldos por Centro de Acopio
+            </h1>
+          </div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+            <p className="text-yellow-800 text-lg">
+              No tienes centros de acopio asignados.
+            </p>
+            <p className="text-yellow-700 text-sm mt-2">
+              Contacta al administrador para que te asigne un centro de acopio.
+            </p>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    );
+  }
+
   // Si no hay meses disponibles, mostrar mensaje
   if (!loading && mesesDisponibles.length === 0) {
     return (
@@ -299,7 +331,9 @@ export default function SaldosCentrosPage() {
             ⚖️ Saldos por Centro de Acopio
           </h1>
           <p className="text-gray-600 mt-1">
-            Balance mensual de inventario por centro con saldo acumulado histórico
+            {isAdmin
+              ? "Balance mensual de inventario por centro con saldo acumulado histórico"
+              : "Balance mensual de inventario de tus centros asignados"}
           </p>
         </div>
 
