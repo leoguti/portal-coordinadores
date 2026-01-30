@@ -31,13 +31,8 @@ export async function GET() {
     const isAdmin = session.user?.rol === "Administrador";
     const coordinatorRecordId = session.user?.coordinatorRecordId;
 
-    // Admin ve todos los centros, coordinador solo los suyos
-    let filterFormula: string;
-    if (isAdmin) {
-      filterFormula = "{Tipo}='Centro de Acopio'";
-    } else {
-      filterFormula = `AND({Tipo}='Centro de Acopio',FIND("${coordinatorRecordId}",ARRAYJOIN({Coordinador})))`;
-    }
+    // Traer todos los centros de acopio (FIND/ARRAYJOIN no funciona con linked records en Airtable)
+    const filterFormula = "{Tipo}='Centro de Acopio'";
     const url = `https://api.airtable.com/v0/${baseId}/Puntos%20Logisticos?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=Nombre&sort[0][direction]=asc`;
 
     const response = await fetch(url, {
@@ -55,11 +50,18 @@ export async function GET() {
 
     const data: { records: AirtableRecord[] } = await response.json();
 
-    const centros = data.records.map((record) => {
+    // Filtrar por coordinador en el servidor (admin ve todos)
+    const registros = isAdmin
+      ? data.records
+      : data.records.filter((record) =>
+          record.fields.Coordinador?.includes(coordinatorRecordId || "")
+        );
+
+    const centros = registros.map((record) => {
       const municipio = record.fields["mundep (from Municipio)"]?.[0] || "";
       const nombre = record.fields.Nombre || "Sin nombre";
       const displayName = municipio ? `${nombre} (${municipio})` : nombre;
-      
+
       return {
         id: record.id,
         name: displayName,
