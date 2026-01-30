@@ -8,6 +8,7 @@ interface AirtableRecord {
     Nombre?: string;
     Municipio?: string[];
     "mundep (from Municipio)"?: string[];
+    Coordinador?: string[];
     Autonumber?: number;
   };
 }
@@ -15,7 +16,7 @@ interface AirtableRecord {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -27,8 +28,16 @@ export async function GET() {
       return NextResponse.json({ error: "Configuración de Airtable no disponible" }, { status: 500 });
     }
 
-    // Get all Centros de Acopio
-    const filterFormula = "{Tipo}='Centro de Acopio'";
+    const isAdmin = session.user?.rol === "Administrador";
+    const coordinatorRecordId = session.user?.coordinatorRecordId;
+
+    // Admin ve todos los centros, coordinador solo los suyos
+    let filterFormula: string;
+    if (isAdmin) {
+      filterFormula = "{Tipo}='Centro de Acopio'";
+    } else {
+      filterFormula = `AND({Tipo}='Centro de Acopio',FIND("${coordinatorRecordId}",ARRAYJOIN({Coordinador})))`;
+    }
     const url = `https://api.airtable.com/v0/${baseId}/Puntos%20Logisticos?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=Nombre&sort[0][direction]=asc`;
 
     const response = await fetch(url, {
