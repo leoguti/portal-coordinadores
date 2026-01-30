@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById } from "@/lib/airtable";
+import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
 /**
  * DELETE /api/ordenes-servicio/[id]
  * Elimina una orden de servicio
+ * Validaciones:
+ * - No se puede eliminar si estado es "Facturada" o "Pagada"
+ * - Regla de 7 días: solo se elimina si la fecha está en período modificable
  */
 export async function DELETE(
   request: NextRequest,
@@ -19,6 +23,33 @@ export async function DELETE(
     }
 
     const { id: ordenId } = await params;
+
+    // Verificar que la orden existe
+    const orden = await getOrdenById(ordenId);
+    if (!orden) {
+      return NextResponse.json(
+        { error: "Orden no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // No se puede eliminar si está Facturada o Pagada
+    const estado = orden.fields.Estado;
+    if (estado === "Facturada" || estado === "Pagada") {
+      return NextResponse.json(
+        { error: `No se puede eliminar una orden en estado "${estado}"` },
+        { status: 403 }
+      );
+    }
+
+    // Validar restricción de fecha (regla de 7 días)
+    const fechaPedido = orden.fields["Fecha de pedido"];
+    if (fechaPedido && !puedeModificarFecha(fechaPedido)) {
+      return NextResponse.json(
+        { error: getMensajeErrorFecha() },
+        { status: 403 }
+      );
+    }
 
     console.log(`Deleting orden ${ordenId}...`);
 

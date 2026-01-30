@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { deleteKardexWithConciliacion, getKardexByIds } from "@/lib/airtable";
+import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
 export async function DELETE(
   request: Request,
@@ -36,7 +37,7 @@ export async function DELETE(
       );
     }
 
-    // Verificar restricción de fecha (misma lógica que órdenes)
+    // Verificar restricción de fecha (regla de 7 días)
     const fechaKardex = kardexData.fields.fechakardex;
     if (!fechaKardex) {
       return NextResponse.json(
@@ -45,29 +46,9 @@ export async function DELETE(
       );
     }
 
-    const fechaMovimiento = new Date(fechaKardex + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const diaActual = hoy.getDate();
-
-    let puedeEliminar = false;
-    if (diaActual > 7) {
-      // Después del día 7: solo mes actual
-      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      puedeEliminar = fechaMovimiento >= inicioMesActual;
-    } else {
-      // Días 1-7: mes anterior y actual
-      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-      puedeEliminar = fechaMovimiento >= inicioMesAnterior;
-    }
-
-    if (!puedeEliminar) {
+    if (!puedeModificarFecha(fechaKardex)) {
       return NextResponse.json(
-        { 
-          error: diaActual > 7
-            ? "Solo se pueden eliminar movimientos del mes actual después del día 7"
-            : "Solo se pueden eliminar movimientos del mes actual y anterior durante los primeros 7 días del mes"
-        },
+        { error: getMensajeErrorFecha() },
         { status: 403 }
       );
     }

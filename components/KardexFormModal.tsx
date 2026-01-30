@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import MunicipioSearch from "./MunicipioSearch";
 import ImageUpload, { ImageFile } from "./ImageUpload";
+import { getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
 
 interface KardexFormData {
   fechakardex: string;
@@ -66,25 +67,9 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
     Metal: "",
   });
 
-  // Calcular fecha mínima permitida según regla de negocio
-  const calcularFechaMinima = (): string => {
-    const hoy = new Date();
-    const diaActual = hoy.getDate();
-    
-    if (diaActual > 7) {
-      // Después del día 7: solo mes actual
-      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      return inicioMesActual.toISOString().split('T')[0];
-    } else {
-      // Días 1-7: mes anterior y actual
-      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-      return inicioMesAnterior.toISOString().split('T')[0];
-    }
-  };
-
-  // Fecha máxima es hoy
-  const fechaMaxima = new Date().toISOString().split('T')[0];
-  const fechaMinima = calcularFechaMinima();
+  // Fechas permitidas según regla de 7 días (función centralizada)
+  const fechaMinima = getFechaMinimaPermitida();
+  const fechaMaxima = getFechaMaximaPermitida();
 
   // Cargar centros de acopio y gestores al montar el componente
   useEffect(() => {

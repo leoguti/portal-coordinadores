@@ -16,6 +16,7 @@ import {
   type CatalogoServicio,
   type CreateItemOrdenParams,
 } from "@/lib/airtable";
+import { getFechaMinimaPermitida, getFechaMaximaPermitida, puedeModificarFecha } from "@/lib/dateValidations";
 
 interface TerceroSeleccionado {
   id: string;
@@ -330,28 +331,9 @@ export default function NuevaOrdenPage() {
     }).format(amount);
   };
 
-  // Calcular fecha límite para mostrar registros
+  // Fecha límite para mostrar registros (usa función centralizada)
   const getFechaLimite = () => {
-    const hoy = new Date();
-    const diaActual = hoy.getDate();
-    
-    let mesDesde, anioDesde;
-    
-    if (diaActual > 7) {
-      // Mostrar desde inicio del mes actual
-      mesDesde = hoy.getMonth();
-      anioDesde = hoy.getFullYear();
-    } else {
-      // Mostrar desde inicio del mes anterior
-      mesDesde = hoy.getMonth() - 1;
-      anioDesde = hoy.getFullYear();
-      if (mesDesde < 0) {
-        mesDesde = 11;
-        anioDesde -= 1;
-      }
-    }
-    
-    return new Date(anioDesde, mesDesde, 1);
+    return new Date(getFechaMinimaPermitida() + 'T00:00:00');
   };
 
   // Filtrar items según búsqueda, tipo de movimiento, fecha Y que no estén ya agregados
@@ -458,32 +440,13 @@ export default function NuevaOrdenPage() {
                 type="date"
                 value={fechaPedido}
                 onChange={(e) => setFechaPedido(e.target.value)}
-                max={new Date().toISOString().split("T")[0]}
-                min={(() => {
-                  const hoy = new Date();
-                  const diaActual = hoy.getDate();
-                  
-                  if (diaActual > 7) {
-                    // Si ya pasó día 7, permitir desde inicio del mes actual
-                    return new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split("T")[0];
-                  } else {
-                    // Si no ha llegado día 7, permitir desde inicio del mes anterior
-                    return new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toISOString().split("T")[0];
-                  }
-                })()}
+                max={getFechaMaximaPermitida()}
+                min={getFechaMinimaPermitida()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                📅 Solo fechas desde {(() => {
-                  const hoy = new Date();
-                  const diaActual = hoy.getDate();
-                  if (diaActual > 7) {
-                    return new Date(hoy.getFullYear(), hoy.getMonth(), 1).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
-                  } else {
-                    return new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
-                  }
-                })()} hasta hoy
+                Solo fechas desde {new Date(getFechaMinimaPermitida() + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })} hasta hoy
               </p>
             </div>
 
@@ -729,25 +692,8 @@ export default function NuevaOrdenPage() {
                   // Validar fecha
                   if (!fechaPedido) {
                     errores.push("⚠️ Falta seleccionar fecha de pedido");
-                  } else {
-                    const fechaSeleccionada = new Date(fechaPedido + 'T00:00:00');
-                    const hoy = new Date();
-                    hoy.setHours(0, 0, 0, 0);
-                    
-                    // Validar que no sea futura
-                    if (fechaSeleccionada > hoy) {
-                      errores.push("⚠️ La fecha no puede ser futura");
-                    }
-                    
-                    // Validar bloqueo día 7
-                    const diaActual = hoy.getDate();
-                    if (diaActual > 7) {
-                      // Bloquear registros del mes anterior
-                      const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-                      if (fechaSeleccionada < mesAnterior) {
-                        errores.push("⚠️ La fecha está en un mes bloqueado (después del día 7)");
-                      }
-                    }
+                  } else if (!puedeModificarFecha(fechaPedido)) {
+                    errores.push("⚠️ La fecha está fuera del período permitido");
                   }
                   
                   // Validar beneficiario

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { 
-  listKardexForCoordinatorPaginated, 
+import {
+  listKardexForCoordinatorPaginated,
   createKardex,
   createKardexWithConciliacion,
   deleteKardexWithConciliacion,
   getAllKardexPaginated
 } from "@/lib/airtable";
+import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
 /**
  * GET /api/kardex
@@ -94,43 +95,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar restricción de fecha (misma lógica que eliminación)
-    const fechaKardex = body.fechakardex;
-    const fechaMovimiento = new Date(fechaKardex + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const diaActual = hoy.getDate();
-
-    // No permitir fechas futuras
-    if (fechaMovimiento > hoy) {
+    // Validar restricción de fecha (regla de 7 días)
+    if (!puedeModificarFecha(body.fechakardex)) {
       return NextResponse.json(
-        { error: "No se pueden crear movimientos con fecha futura" },
-        { status: 400 }
-      );
-    }
-
-    let puedeCrear = false;
-    let finMesPermitido = hoy;
-    
-    if (diaActual > 7) {
-      // Después del día 7: solo mes actual
-      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      puedeCrear = fechaMovimiento >= inicioMesActual && fechaMovimiento <= hoy;
-      finMesPermitido = inicioMesActual;
-    } else {
-      // Días 1-7: mes anterior y actual
-      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-      puedeCrear = fechaMovimiento >= inicioMesAnterior && fechaMovimiento <= hoy;
-      finMesPermitido = inicioMesAnterior;
-    }
-
-    if (!puedeCrear) {
-      return NextResponse.json(
-        { 
-          error: diaActual > 7
-            ? "Solo se pueden crear movimientos con fecha del mes actual después del día 7"
-            : "Solo se pueden crear movimientos con fecha del mes actual y anterior durante los primeros 7 días del mes"
-        },
+        { error: getMensajeErrorFecha() },
         { status: 400 }
       );
     }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenesCoordinador, getAllOrdenes, type Orden } from "@/lib/airtable";
+import { puedeModificarFecha } from "@/lib/dateValidations";
 
 export default function OrdenesServicioPage() {
   const { data: session, status } = useSession();
@@ -82,24 +83,12 @@ export default function OrdenesServicioPage() {
     Rechazada: "bg-red-100 text-red-800",
   };
 
-  // Verificar si una orden puede ser eliminada (restriccion de fecha dia 7)
-  const puedeEliminarOrden = (fechaPedido: string): boolean => {
+  // Verificar si una orden puede ser eliminada
+  // Regla: No eliminar si Facturada/Pagada + regla de 7 días
+  const puedeEliminarOrden = (fechaPedido: string, estado: string): boolean => {
     if (!fechaPedido) return false;
-
-    const fechaOrden = new Date(fechaPedido + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const diaActual = hoy.getDate();
-
-    if (diaActual > 7) {
-      // Despues del dia 7: solo mes actual
-      const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      return fechaOrden >= inicioMesActual;
-    } else {
-      // Dias 1-7: mes anterior y actual
-      const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-      return fechaOrden >= inicioMesAnterior;
-    }
+    if (estado === "Facturada" || estado === "Pagada") return false;
+    return puedeModificarFecha(fechaPedido);
   };
 
   // Obtener listas unicas para filtros
@@ -308,7 +297,7 @@ export default function OrdenesServicioPage() {
                         const coordinador = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
                         const itemsCount = orden.fields.ItemsOrden?.length || 0;
                         const total = orden.fields.Total || 0;
-                        const puedeEliminar = puedeEliminarOrden(fechaPedido);
+                        const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
                         const pdfUrl = orden.fields.PDF?.[0]?.url || null;
 
                       return (
