@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById } from "@/lib/airtable";
 
 /**
  * DELETE /api/ordenes-servicio/[id]
@@ -36,6 +36,167 @@ export async function DELETE(
     console.error("Error in DELETE /api/ordenes-servicio/[id]:", error);
     return NextResponse.json(
       { error: "Error al eliminar la orden" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/ordenes-servicio/[id]
+ * Actualizar estado o subir factura de una orden de servicio
+ * Solo para administradores
+ *
+ * Body (JSON): { action: "cambiar-estado", estado: "Pagada" | "Rechazada" }
+ * Body (FormData): action="subir-factura", factura=File
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // Solo administradores pueden cambiar estado y subir facturas
+    if (session.user.rol !== "Administrador") {
+      return NextResponse.json(
+        { error: "Solo los administradores pueden realizar esta acción" },
+        { status: 403 }
+      );
+    }
+
+    const { id: ordenId } = await params;
+
+    // Check content type to determine if it's JSON or FormData
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle file upload (subir factura)
+      const formData = await request.formData();
+      const action = formData.get("action") as string;
+
+      if (action !== "subir-factura") {
+        return NextResponse.json(
+          { error: "Acción no válida" },
+          { status: 400 }
+        );
+      }
+
+      const file = formData.get("factura") as File;
+      if (!file) {
+        return NextResponse.json(
+          { error: "No se proporcionó archivo de factura" },
+          { status: 400 }
+        );
+      }
+
+      // Validate file type
+      if (file.type !== "application/pdf") {
+        return NextResponse.json(
+          { error: "El archivo debe ser un PDF" },
+          { status: 400 }
+        );
+      }
+
+      // Verify orden exists and is in valid state for factura upload
+      const orden = await getOrdenById(ordenId);
+      if (!orden) {
+        return NextResponse.json(
+          { error: "Orden no encontrada" },
+          { status: 404 }
+        );
+      }
+
+      if (orden.fields.Estado !== "Enviada") {
+        return NextResponse.json(
+          { error: "Solo se puede subir factura a órdenes en estado 'Enviada'" },
+          { status: 400 }
+        );
+      }
+
+      // Convert File to Buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const success = await uploadFacturaOrden(ordenId, buffer, file.name);
+
+      if (!success) {
+        return NextResponse.json(
+          { error: "Error al subir la factura" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Factura subida y orden marcada como Facturada",
+      });
+    } else {
+      // Handle JSON body (cambiar estado)
+      const body = await request.json();
+      const { action, estado } = body;
+
+      if (action !== "cambiar-estado") {
+        return NextResponse.json(
+          { error: "Acción no válida" },
+          { status: 400 }
+        );
+      }
+
+      // Verify orden exists
+      const orden = await getOrdenById(ordenId);
+      if (!orden) {
+        return NextResponse.json(
+          { error: "Orden no encontrada" },
+          { status: 404 }
+        );
+      }
+
+      const estadoActual = orden.fields.Estado;
+
+      // Validate state transitions
+      if (estado === "Pagada") {
+        if (estadoActual !== "Facturada") {
+          return NextResponse.json(
+            { error: "Solo se puede marcar como Pagada una orden Facturada" },
+            { status: 400 }
+          );
+        }
+      } else if (estado === "Rechazada") {
+        if (estadoActual !== "Enviada") {
+          return NextResponse.json(
+            { error: "Solo se puede rechazar una orden en estado Enviada" },
+            { status: 400 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Estado no válido. Opciones: Pagada, Rechazada" },
+          { status: 400 }
+        );
+      }
+
+      const success = await updateEstadoOrden(ordenId, estado);
+
+      if (!success) {
+        return NextResponse.json(
+          { error: "Error al actualizar el estado" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Orden marcada como ${estado}`,
+      });
+    }
+  } catch (error) {
+    console.error("Error in PATCH /api/ordenes-servicio/[id]:", error);
+    return NextResponse.json(
+      { error: "Error al procesar la solicitud" },
       { status: 500 }
     );
   }

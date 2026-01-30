@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenById, getItemsOrden, getKardexByIds, type Orden, type ItemOrden, type Kardex } from "@/lib/airtable";
@@ -9,6 +10,7 @@ import { getOrdenById, getItemsOrden, getKardexByIds, type Orden, type ItemOrden
 export default function OrdenDetallePage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const ordenId = params.id as string;
 
   const [orden, setOrden] = useState<Orden | null>(null);
@@ -17,50 +19,52 @@ export default function OrdenDetallePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadOrden() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Cargar orden
-        const ordenData = await getOrdenById(ordenId);
-        
-        if (!ordenData) {
-          setError("Orden no encontrada");
-          return;
-        }
-        
-        setOrden(ordenData);
-        
-        // Cargar items de la orden
-        const itemsData = await getItemsOrden(ordenId);
-        setItems(itemsData);
-        
-        // Cargar datos de Kardex para items que los tengan
-        const kardexIds = itemsData
-          .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
-          .map(item => item.fields.Kardex![0]);
-        
-        if (kardexIds.length > 0) {
-          const kardexData = await getKardexByIds(kardexIds);
-          const kardexMapTemp = new Map<string, Kardex>();
-          kardexData.forEach(k => kardexMapTemp.set(k.id, k));
-          setKardexMap(kardexMapTemp);
-        }
-        
-      } catch (err) {
-        console.error("Error loading orden:", err);
-        setError("Error al cargar la orden");
-      } finally {
-        setLoading(false);
-      }
-    }
+  // Admin action states
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const facturaInputRef = useRef<HTMLInputElement>(null);
 
-    if (ordenId) {
-      loadOrden();
-    }
+  const isAdmin = session?.user?.rol === "Administrador";
+
+  useEffect(() => {
+    loadOrden();
   }, [ordenId]);
+
+  async function loadOrden() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const ordenData = await getOrdenById(ordenId);
+
+      if (!ordenData) {
+        setError("Orden no encontrada");
+        return;
+      }
+
+      setOrden(ordenData);
+
+      const itemsData = await getItemsOrden(ordenId);
+      setItems(itemsData);
+
+      const kardexIds = itemsData
+        .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
+        .map(item => item.fields.Kardex![0]);
+
+      if (kardexIds.length > 0) {
+        const kardexData = await getKardexByIds(kardexIds);
+        const kardexMapTemp = new Map<string, Kardex>();
+        kardexData.forEach(k => kardexMapTemp.set(k.id, k));
+        setKardexMap(kardexMapTemp);
+      }
+
+    } catch (err) {
+      console.error("Error loading orden:", err);
+      setError("Error al cargar la orden");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -68,6 +72,77 @@ export default function OrdenDetallePage() {
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Admin actions
+  async function handleSubirFactura(file: File) {
+    setActionLoading(true);
+    setActionMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("action", "subir-factura");
+      formData.append("factura", file);
+
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setActionMessage({ type: "success", text: "Factura subida correctamente. La orden ahora esta en estado Facturada." });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al subir la factura" });
+      }
+    } catch (err) {
+      console.error("Error subiendo factura:", err);
+      setActionMessage({ type: "error", text: "Error al subir la factura" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleCambiarEstado(nuevoEstado: "Pagada" | "Rechazada") {
+    const confirmMsg = nuevoEstado === "Pagada"
+      ? "Marcar esta orden como Pagada?"
+      : "Rechazar esta orden? Esta accion no se puede deshacer.";
+
+    if (!confirm(confirmMsg)) return;
+
+    setActionLoading(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cambiar-estado", estado: nuevoEstado }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setActionMessage({ type: "success", text: `Orden marcada como ${nuevoEstado}` });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al cambiar el estado" });
+      }
+    } catch (err) {
+      console.error("Error cambiando estado:", err);
+      setActionMessage({ type: "error", text: "Error al cambiar el estado" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const estadoColors: Record<string, string> = {
+    Enviada: "bg-blue-100 text-blue-800 border-blue-300",
+    Facturada: "bg-amber-100 text-amber-800 border-amber-300",
+    Pagada: "bg-green-700 text-white border-green-800",
+    Rechazada: "bg-red-100 text-red-800 border-red-300",
   };
 
   if (loading) {
@@ -94,7 +169,7 @@ export default function OrdenDetallePage() {
               href="/ordenes-servicio"
               className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
-              Volver a órdenes
+              Volver a ordenes
             </Link>
           </div>
         </div>
@@ -105,10 +180,12 @@ export default function OrdenDetallePage() {
   const numeroOrden = orden.fields.NumeroOrden || "S/N";
   const fechaPedido = orden.fields["Fecha de pedido"] || "";
   const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
+  const coordinador = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const estado = orden.fields.Estado || "Sin estado";
   const observaciones = orden.fields.Observaciones || "";
   const total = orden.fields.Total || 0;
   const itemsCount = orden.fields.ItemsOrden?.length || 0;
+  const facturaUrl = orden.fields.Factura?.[0]?.url || null;
 
   return (
     <AuthenticatedLayout>
@@ -120,36 +197,131 @@ export default function OrdenDetallePage() {
               href="/ordenes-servicio"
               className="hover:text-[#00d084] transition-colors"
             >
-              Órdenes de Servicio
+              Ordenes de Servicio
             </Link>
-            <span>›</span>
+            <span>&rsaquo;</span>
             <span>Orden #{numeroOrden}</span>
           </div>
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Detalle de Orden #{numeroOrden}
-            </h1>
-            {/* Botón Ver PDF */}
-            {orden.fields.PDF && orden.fields.PDF[0]?.url && (
-              <a
-                href={orden.fields.PDF[0].url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold text-gray-900">
+                Detalle de Orden #{numeroOrden}
+              </h1>
+              <span
+                className={`inline-block px-3 py-1 text-sm font-bold rounded border ${
+                  estadoColors[estado] || "bg-gray-100 text-gray-800 border-gray-300"
+                }`}
               >
-                📄 Ver PDF
-              </a>
-            )}
+                {estado}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Boton Ver PDF de la orden */}
+              {orden.fields.PDF && orden.fields.PDF[0]?.url && (
+                <a
+                  href={orden.fields.PDF[0].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  Ver PDF Orden
+                </a>
+              )}
+              {/* Boton Descargar Factura */}
+              {facturaUrl && (
+                <a
+                  href={facturaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  Ver Factura
+                </a>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Action messages */}
+        {actionMessage && (
+          <div className={`mb-4 p-4 rounded-lg border ${
+            actionMessage.type === "success"
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}>
+            <p>{actionMessage.text}</p>
+          </div>
+        )}
+
+        {/* Admin Actions Panel */}
+        {isAdmin && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Acciones de Administrador</h3>
+            <div className="flex flex-wrap gap-3">
+              {/* Subir Factura - solo si estado es "Enviada" */}
+              {estado === "Enviada" && (
+                <>
+                  <input
+                    ref={facturaInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleSubirFactura(file);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => facturaInputRef.current?.click()}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? "Subiendo..." : "Subir Factura (PDF)"}
+                  </button>
+                </>
+              )}
+
+              {/* Marcar como Pagada - solo si estado es "Facturada" */}
+              {estado === "Facturada" && (
+                <button
+                  onClick={() => handleCambiarEstado("Pagada")}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? "Procesando..." : "Marcar como Pagada"}
+                </button>
+              )}
+
+              {/* Rechazar - solo si estado es "Enviada" */}
+              {estado === "Enviada" && (
+                <button
+                  onClick={() => handleCambiarEstado("Rechazada")}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? "Procesando..." : "Rechazar Orden"}
+                </button>
+              )}
+
+              {/* Message when no actions available */}
+              {estado !== "Enviada" && estado !== "Facturada" && (
+                <p className="text-sm text-gray-500 italic">
+                  No hay acciones disponibles para ordenes en estado &quot;{estado}&quot;
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Contenido de la orden - Solo lectura */}
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">
-            📄 Información de la Orden
+            Informacion de la Orden
           </h2>
 
-          {/* Datos básicos */}
+          {/* Datos basicos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -171,18 +343,20 @@ export default function OrdenDetallePage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
-              </label>
-              <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg">
-                <span className="text-sm font-semibold text-gray-900">{estado}</span>
+            {isAdmin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Coordinador
+                </label>
+                <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900">
+                  {coordinador}
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de items
+                Numero de items
               </label>
               <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900">
                 {itemsCount} {itemsCount === 1 ? "item" : "items"}
@@ -190,10 +364,32 @@ export default function OrdenDetallePage() {
             </div>
           </div>
 
+          {/* Factura info */}
+          {facturaUrl && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-amber-800">Factura del proveedor</h3>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Archivo: {orden.fields.Factura?.[0]?.filename || "factura.pdf"}
+                  </p>
+                </div>
+                <a
+                  href={facturaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded transition-colors"
+                >
+                  Descargar Factura
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Items */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Items de la Orden</h3>
-            
+
             {items.length === 0 ? (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500">
                 No hay items en esta orden
@@ -204,7 +400,7 @@ export default function OrdenDetallePage() {
                   <thead className="bg-gray-100 border-b-2 border-gray-300">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripción</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripcion</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Precio Unit.</th>
@@ -219,8 +415,7 @@ export default function OrdenDetallePage() {
                       const precioUnitario = item.fields.PrecioUnitario || 0;
                       const subtotal = item.fields["Cálculo"] || (cantidad * precioUnitario);
                       const nombre = item.fields.Name || "Sin nombre";
-                      
-                      // Obtener datos del Kardex si existe
+
                       const kardexId = item.fields.Kardex?.[0];
                       const kardex = kardexId ? kardexMap.get(kardexId) : undefined;
                       const tipoMovimiento = kardex?.fields.TipoMovimiento;
@@ -242,14 +437,14 @@ export default function OrdenDetallePage() {
                                     : "bg-purple-100 text-purple-700 border border-purple-300"
                                 }`}
                               >
-                                {tipoItem === "CON Kardex" ? "KARDEX" : "CATÁLOGO"}
+                                {tipoItem === "CON Kardex" ? "KARDEX" : "CATALOGO"}
                               </span>
                             </div>
                             {tipoMovimiento && (
                               <div>
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                                  tipoMovimiento === "ENTRADA" 
-                                    ? "bg-green-100 text-green-700 border border-green-300" 
+                                  tipoMovimiento === "ENTRADA"
+                                    ? "bg-green-100 text-green-700 border border-green-300"
                                     : "bg-red-100 text-red-700 border border-red-300"
                                 }`}>
                                   {tipoMovimiento}
@@ -258,7 +453,7 @@ export default function OrdenDetallePage() {
                             )}
                           </td>
 
-                          {/* Descripción/Nombre */}
+                          {/* Descripcion/Nombre */}
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {nombre}
                           </td>
@@ -313,13 +508,13 @@ export default function OrdenDetallePage() {
             </div>
           )}
 
-          {/* Botón volver */}
+          {/* Boton volver */}
           <div className="mt-6 pt-6 border-t border-gray-300">
             <Link
               href="/ordenes-servicio"
               className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              ← Volver a órdenes
+              Volver a ordenes
             </Link>
           </div>
         </div>

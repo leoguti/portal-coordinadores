@@ -106,7 +106,7 @@ interface OrdenFields {
   NombreCoordinador?: string[]; // Lookup
   Beneficiario?: string[]; // Linked to Terceros
   RazonSocial?: string[]; // Lookup from Beneficiario
-  Estado?: string; // "Borrador" | "Enviada" | "Aprobada" | "Pagada" | "Rechazada"
+  Estado?: string; // "Borrador" | "Enviada" | "Facturada" | "Pagada" | "Rechazada"
   "Fecha de pedido"?: string;
   ItemsOrden?: string[]; // Linked record IDs
   Observaciones?: string;
@@ -117,6 +117,13 @@ interface OrdenFields {
     filename: string;
     size: number;
     type: string;
+  }>;
+  Factura?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    size?: number;
+    type?: string;
   }>;
 }
 
@@ -2104,5 +2111,172 @@ export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
   } catch (error) {
     console.error(`Error deleting Orden ${ordenId}:`, error);
     return false;
+  }
+}
+
+/**
+ * Update the Estado of an Orden de Servicio
+ * @param ordenId - Airtable record ID of the orden
+ * @param nuevoEstado - New estado value
+ * @returns true if successful
+ */
+export async function updateEstadoOrden(
+  ordenId: string,
+  nuevoEstado: string
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          Estado: nuevoEstado,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error updating estado of Orden ${ordenId}:`, errorText);
+      return false;
+    }
+
+    console.log(`Orden ${ordenId} estado updated to "${nuevoEstado}"`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating estado of Orden ${ordenId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Upload a factura (invoice) to an Orden and set estado to "Facturada"
+ * Uses Vercel Blob for temporary storage, then sends URL to Airtable
+ * @param ordenId - Airtable record ID of the orden
+ * @param facturaBuffer - PDF file as Buffer
+ * @param filename - Original filename
+ * @returns true if successful
+ */
+export async function uploadFacturaOrden(
+  ordenId: string,
+  facturaBuffer: Buffer,
+  filename: string
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    // Upload to Vercel Blob
+    const { put, del } = await import("@vercel/blob");
+    const blobFilename = `factura_${ordenId}_${Date.now()}_${filename}`;
+    const blob = await put(blobFilename, facturaBuffer, {
+      access: "public",
+      contentType: "application/pdf",
+    });
+
+    console.log(`Factura uploaded to Vercel Blob: ${blob.url}`);
+
+    // Update Airtable: set Factura attachment + change Estado to "Facturada"
+    const url = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          Factura: [{ url: blob.url }],
+          Estado: "Facturada",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error uploading factura to Orden ${ordenId}:`, errorText);
+      await del(blob.url);
+      return false;
+    }
+
+    console.log(`Factura uploaded and Orden ${ordenId} set to "Facturada"`);
+
+    // Wait for Airtable to download, then clean up blob
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await del(blob.url);
+    console.log(`Factura deleted from Vercel Blob: ${blobFilename}`);
+
+    return true;
+  } catch (error) {
+    console.error(`Error uploading factura for Orden ${ordenId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Get ALL Ordenes de Servicio (for admin view)
+ * Paginates through all records
+ * @returns Array of all Orden records sorted by NumeroOrden desc
+ */
+export async function getAllOrdenes(): Promise<Orden[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const allOrdenes: Orden[] = [];
+    let offset: string | undefined;
+
+    do {
+      const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=NumeroOrden&sort[0][direction]=desc${offset ? `&offset=${offset}` : ""}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Airtable API error fetching all Ordenes: ${response.status}`, errorText);
+        break;
+      }
+
+      const data: AirtableResponse<OrdenFields> = await response.json();
+      allOrdenes.push(...(data.records || []));
+      offset = data.offset;
+
+      console.log(`Fetched ${data.records?.length || 0} ordenes, total: ${allOrdenes.length}`);
+    } while (offset);
+
+    console.log(`Total ordenes fetched: ${allOrdenes.length}`);
+    return allOrdenes;
+  } catch (error) {
+    console.error("Error fetching all Ordenes:", error);
+    return [];
   }
 }
