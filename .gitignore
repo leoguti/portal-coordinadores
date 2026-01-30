@@ -38,6 +38,13 @@ yarn-error.log*
 config/credentials.json
 airtable-api-key.txt
 
+# Scripts con credenciales OAuth (uso único)
+scripts/generate-gmail-refresh-token.js
+
+# Chatbot flows (exports temporales de TextIt)
+chatbot/flows/*
+!chatbot/flows/.gitkeep
+
 # vercel
 .vercel
 

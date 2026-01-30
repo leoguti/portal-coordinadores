@@ -9,6 +9,17 @@
 - **Problema**: Cuando se crea una SALIDA desde centro de acopio, el sistema exige municipio aunque el centro ya lo tiene asociado
 - **Esperado**: Si origen = centro de acopio → NO debe pedir municipio (el centro ya lo tiene)
 - **✅ SOLUCIONADO**: Corregida validación para no exigir municipio en SALIDAS desde centro de acopio
+- **🔧 ANÁLISIS ADICIONAL (26/01 - noche)**: 
+  - Revisamos flujo TextIt "30-Kardex Airtable"
+  - **DESCUBRIMIENTO CRÍTICO**: El bot SÍ envía el municipio a Airtable aunque no se lo pregunte al usuario
+  - Cuando el usuario selecciona centro de acopio en SALIDA, el bot automáticamente obtiene y envía:
+    * `idmunicipio`: ID del municipio del centro
+    * `textomunicipio`: Nombre del municipio
+  - **✅ CORREGIDO EN PORTAL**: Ahora el portal replica este comportamiento:
+    * API `/api/centros-acopio` devuelve `municipioId` para cada centro
+    * `KardexFormModal` guarda el centro completo con su `municipioId`
+    * En SALIDAS desde centro, automáticamente envía el `municipioId` del centro en `MunicipioOrigen`
+  - **Resultado**: Portal ahora tiene paridad completa con el bot de TextIt
 
 ### Consecutivos
 - **Pregunta**: ¿Los consecutivos son diferentes?
@@ -18,7 +29,7 @@
 - **Andrés**: Hay un registro que no tiene costo pero que está por relacionar en la orden de servicio
 - **Acción**: Preguntarle a Andrés qué registro específico es
 - **Andrea**: Está enviando el registro sin costo que aparece para meter en una orden
-- **Pendiente**: Número de registro específico
+- **✅ RESUELTO**: El problema fue identificado y corregido
 
 ### Problema de Fechas / Timezone
 - **Reporte**: Los coordinadores se quejan que los datos de fecha pueden cambiar
