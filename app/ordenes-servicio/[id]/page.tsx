@@ -402,6 +402,7 @@ export default function OrdenDetallePage() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripcion</th>
+                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Bascula</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Precio Unit.</th>
@@ -420,6 +421,7 @@ export default function OrdenDetallePage() {
                       const kardexId = item.fields.Kardex?.[0];
                       const kardex = kardexId ? kardexMap.get(kardexId) : undefined;
                       const tipoMovimiento = kardex?.fields.TipoMovimiento;
+                      const fotoBascula = kardex?.fields.soportebascula?.[0];
 
                       return (
                         <tr
@@ -459,6 +461,29 @@ export default function OrdenDetallePage() {
                             {nombre}
                           </td>
 
+                          {/* Foto Bascula */}
+                          <td className="px-4 py-3 text-center">
+                            {fotoBascula ? (
+                              <button
+                                onClick={() => setSelectedPhoto({
+                                  url: fotoBascula.url,
+                                  filename: fotoBascula.filename,
+                                  kardexId: kardex?.fields.idkardex || 0,
+                                })}
+                                className="inline-block group relative"
+                                title={`Ver foto - Kardex #${kardex?.fields.idkardex}`}
+                              >
+                                <img
+                                  src={`/api/image-proxy?url=${encodeURIComponent(fotoBascula.url)}`}
+                                  alt={`Bascula - Kardex #${kardex?.fields.idkardex}`}
+                                  className="w-12 h-12 object-cover rounded border border-gray-300 group-hover:border-[#00d084] group-hover:shadow-md transition-all"
+                                />
+                              </button>
+                            ) : (
+                              <span className="text-gray-300 text-xs">—</span>
+                            )}
+                          </td>
+
                           {/* Cantidad */}
                           <td className="px-4 py-3 text-right text-sm font-mono text-gray-900">
                             {cantidad.toFixed(2)}
@@ -486,69 +511,6 @@ export default function OrdenDetallePage() {
               </div>
             )}
           </div>
-
-          {/* Fotos de Báscula (de los kardex vinculados) */}
-          {(() => {
-            const fotosBascula: Array<{ url: string; filename: string; kardexId: number; tipoMov: string }> = [];
-            items.forEach((item) => {
-              const kardexId = item.fields.Kardex?.[0];
-              const kardex = kardexId ? kardexMap.get(kardexId) : undefined;
-              if (kardex?.fields.soportebascula && kardex.fields.soportebascula.length > 0) {
-                kardex.fields.soportebascula.forEach((foto) => {
-                  fotosBascula.push({
-                    url: foto.url,
-                    filename: foto.filename,
-                    kardexId: kardex.fields.idkardex || 0,
-                    tipoMov: kardex.fields.TipoMovimiento || "",
-                  });
-                });
-              }
-            });
-
-            if (fotosBascula.length === 0) return null;
-
-            return (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Fotos de Bascula ({fotosBascula.length})
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {fotosBascula.map((foto, idx) => (
-                    <button
-                      key={`foto-${idx}`}
-                      onClick={() => setSelectedPhoto({ url: foto.url, filename: foto.filename, kardexId: foto.kardexId })}
-                      className="relative group overflow-hidden rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
-                    >
-                      <img
-                        src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
-                        alt={`Bascula - Kardex #${foto.kardexId}`}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                          Ver foto
-                        </span>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
-                        <span className="text-white text-xs font-medium">
-                          Kardex #{foto.kardexId}
-                          {foto.tipoMov && (
-                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              foto.tipoMov === "ENTRADA"
-                                ? "bg-green-600 text-white"
-                                : "bg-red-600 text-white"
-                            }`}>
-                              {foto.tipoMov}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Total */}
           <div className="border-t-2 border-gray-300 pt-4 mb-6">
