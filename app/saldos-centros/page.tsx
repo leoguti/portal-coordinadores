@@ -172,7 +172,7 @@ export default function SaldosCentrosPage() {
       const saldoInicialCentro = centro.fields.SaldoInicialTotal || 0;
       const saldoAcumulado = saldoInicialCentro + totalEntradasAcum - totalSalidasAcum;
 
-      // Calcular por material (del mes seleccionado + saldo inicial)
+      // Calcular por material (acumulado histórico hasta fin del mes + saldo inicial)
       const saldoInicialMateriales = {
         reciclaje: centro.fields.SaldoInicial_Reciclaje || 0,
         incineracion: centro.fields.SaldoInicial_Incineracion || 0,
@@ -193,7 +193,7 @@ export default function SaldosCentrosPage() {
         metal: saldoInicialMateriales.metal,
       };
 
-      kardexDelMes.forEach((k) => {
+      kardexHastaFinMes.forEach((k) => {
         const factor = k.fields.TipoMovimiento === "ENTRADA" ? 1 : -1;
         materiales.reciclaje += (k.fields.Reciclaje || 0) * factor;
         materiales.incineracion += (k.fields.Incineracion || 0) * factor;
@@ -496,7 +496,7 @@ export default function SaldosCentrosPage() {
                       <tr className="bg-blue-50 border-b border-gray-200">
                         <td colSpan={6} className="px-4 py-4">
                           <div className="text-sm font-semibold text-gray-700 mb-2">
-                            Desglose por Material (del mes seleccionado):
+                            Desglose por Material (saldo acumulado):
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div className="bg-white p-2 rounded border">
