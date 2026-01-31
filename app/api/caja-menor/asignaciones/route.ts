@@ -52,13 +52,10 @@ export async function POST(request: Request) {
 
     const asignacion = await createAsignacionCajaMenor(coordinadorId, mes, monto);
 
-    if (!asignacion) {
-      return NextResponse.json({ error: "Error al crear asignacion" }, { status: 500 });
-    }
-
     return NextResponse.json({ asignacion }, { status: 201 });
   } catch (error) {
     console.error("Error creating asignacion:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Error interno";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -2713,44 +2713,45 @@ export async function createAsignacionCajaMenor(
   coordinadorId: string,
   mes: string,
   monto: number
-): Promise<AsignacionCajaMenor | null> {
+): Promise<AsignacionCajaMenor> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
   if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return null;
+    throw new Error("Credenciales de Airtable no configuradas");
   }
 
-  try {
-    const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
+  const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fields: {
+        Coordinador: [coordinadorId],
+        Mes: mes,
+        MontoAsignado: monto,
       },
-      body: JSON.stringify({
-        fields: {
-          Coordinador: [coordinadorId],
-          Mes: mes,
-          MontoAsignado: monto,
-        },
-      }),
-    });
+    }),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error creating asignacion: ${response.status}`, errorText);
-      return null;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Error creating asignacion: ${response.status}`, errorText);
+    let detail = `Error de Airtable (${response.status})`;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.error?.message) detail = parsed.error.message;
+    } catch {
+      // usar detail por defecto
     }
-
-    const asignacion: AsignacionCajaMenor = await response.json();
-    console.log(`Asignacion caja menor created: ${asignacion.id}`);
-    return asignacion;
-  } catch (error) {
-    console.error("Error creating asignacion caja menor:", error);
-    return null;
+    throw new Error(detail);
   }
+
+  const asignacion: AsignacionCajaMenor = await response.json();
+  console.log(`Asignacion caja menor created: ${asignacion.id}`);
+  return asignacion;
 }
