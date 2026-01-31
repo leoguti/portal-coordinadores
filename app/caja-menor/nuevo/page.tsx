@@ -79,6 +79,10 @@ export default function NuevoGastoCajaMenorPage() {
       setError("El valor debe ser mayor a 0");
       return;
     }
+    if (!factura) {
+      setError("Debes adjuntar la factura o soporte del gasto");
+      return;
+    }
 
     setSaving(true);
 
@@ -285,7 +289,7 @@ export default function NuevoGastoCajaMenorPage() {
           {/* Factura */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Factura / Soporte
+              Factura / Soporte <span className="text-red-500">*</span>
             </label>
             <input
               ref={facturaInputRef}
