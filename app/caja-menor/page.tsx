@@ -10,6 +10,7 @@ import {
   getAllGastosCajaMenor,
   type GastoCajaMenor,
   type AsignacionCajaMenor,
+  type ReembolsoCajaMenor,
 } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
 
@@ -35,6 +36,19 @@ export default function CajaMenorPage() {
   const [nuevoCoordinadorId, setNuevoCoordinadorId] = useState("");
   const [nuevoMonto, setNuevoMonto] = useState("");
   const [creandoAsignacion, setCreandoAsignacion] = useState(false);
+
+  // Admin: edit asignacion inline
+  const [editingAsignacionId, setEditingAsignacionId] = useState<string | null>(null);
+  const [editMonto, setEditMonto] = useState("");
+  const [updatingAsignacion, setUpdatingAsignacion] = useState(false);
+
+  // Admin: batch reembolso selection
+  const [selectedGastos, setSelectedGastos] = useState<Set<string>>(new Set());
+  const [creandoReembolso, setCreandoReembolso] = useState(false);
+  const [observacionesReembolso, setObservacionesReembolso] = useState("");
+
+  // Reembolsos history
+  const [reembolsos, setReembolsos] = useState<ReembolsoCajaMenor[]>([]);
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -90,6 +104,17 @@ export default function CajaMenorPage() {
           }
         } catch {
           // No es critico si falla la carga de asignaciones
+        }
+
+        // Cargar reembolsos
+        try {
+          const resReemb = await fetch("/api/caja-menor/reembolsos");
+          if (resReemb.ok) {
+            const { reembolsos: reembData } = await resReemb.json();
+            setReembolsos(reembData);
+          }
+        } catch {
+          // No es critico si falla la carga de reembolsos
         }
       } catch (err) {
         console.error("Error loading gastos:", err);
@@ -199,30 +224,44 @@ export default function CajaMenorPage() {
     }).format(amount);
   };
 
-  // Admin: resumen por coordinador (asignaciones son tope fijo, saldo es global)
-  const resumenAdmin = allAsignaciones.map((asig) => {
-    const coordId = asig.fields.Coordinador?.[0] || "";
-    const nombre = asig.fields.NombreCoordinador?.[0] || "Sin nombre";
-    const anticipo = asig.fields.MontoAsignado || 0;
-    // Saldo global: Anticipo - Aprobados sin reembolsar
-    const aprobadoSinReembolsarCoord = gastos
-      .filter((g) => g.fields.Coordinador?.includes(coordId) && g.fields.Estado === "Aprobado")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    // Stats del mes filtrado
-    const gastosCoordMes = gastosDelMes.filter((g) =>
-      g.fields.Coordinador?.includes(coordId)
-    );
-    const aprobado = gastosCoordMes
-      .filter((g) => g.fields.Estado === "Aprobado")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    const pendiente = gastosCoordMes
-      .filter((g) => g.fields.Estado === "Pendiente")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    const rechazado = gastosCoordMes
-      .filter((g) => g.fields.Estado === "Rechazado")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobadoSinReembolsarCoord };
-  });
+  // Admin: resumen por coordinador (agrupar asignaciones por coordinador para evitar duplicados)
+  const resumenAdmin = (() => {
+    // Agrupar asignaciones por coordinador (quedarse con el anticipo más reciente)
+    const porCoord = new Map<string, { nombre: string; anticipo: number }>();
+    allAsignaciones.forEach((asig) => {
+      const coordId = asig.fields.Coordinador?.[0] || "";
+      if (!coordId) return;
+      const existing = porCoord.get(coordId);
+      const monto = asig.fields.MontoAsignado || 0;
+      if (!existing || monto > existing.anticipo) {
+        porCoord.set(coordId, {
+          nombre: asig.fields.NombreCoordinador?.[0] || "Sin nombre",
+          anticipo: monto,
+        });
+      }
+    });
+
+    return Array.from(porCoord.entries()).map(([coordId, { nombre, anticipo }]) => {
+      // Saldo global: Anticipo - Aprobados sin reembolsar
+      const aprobadoSinReembolsarCoord = gastos
+        .filter((g) => g.fields.Coordinador?.includes(coordId) && g.fields.Estado === "Aprobado")
+        .reduce((s, g) => s + calcValorNeto(g), 0);
+      // Stats del mes filtrado
+      const gastosCoordMes = gastosDelMes.filter((g) =>
+        g.fields.Coordinador?.includes(coordId)
+      );
+      const aprobado = gastosCoordMes
+        .filter((g) => g.fields.Estado === "Aprobado")
+        .reduce((s, g) => s + calcValorNeto(g), 0);
+      const pendiente = gastosCoordMes
+        .filter((g) => g.fields.Estado === "Pendiente")
+        .reduce((s, g) => s + calcValorNeto(g), 0);
+      const rechazado = gastosCoordMes
+        .filter((g) => g.fields.Estado === "Rechazado")
+        .reduce((s, g) => s + calcValorNeto(g), 0);
+      return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobadoSinReembolsarCoord };
+    });
+  })();
   const totalesAdmin = resumenAdmin.reduce(
     (acc, r) => ({
       anticipo: acc.anticipo + r.anticipo,
@@ -295,6 +334,109 @@ export default function CajaMenorPage() {
       setCreandoAsignacion(false);
     }
   };
+
+  const handleUpdateAsignacion = async (asignacionId: string) => {
+    if (!editMonto) return;
+    setUpdatingAsignacion(true);
+    try {
+      const res = await fetch("/api/caja-menor/asignaciones", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asignacionId, monto: parseFloat(editMonto) }),
+      });
+      if (res.ok) {
+        setAllAsignaciones((prev) =>
+          prev.map((a) =>
+            a.id === asignacionId
+              ? { ...a, fields: { ...a.fields, MontoAsignado: parseFloat(editMonto) } }
+              : a
+          )
+        );
+        setEditingAsignacionId(null);
+        setEditMonto("");
+      } else {
+        const data = await res.json();
+        alert(`Error: ${data.error || "No se pudo actualizar"}`);
+      }
+    } catch {
+      alert("Error al actualizar la asignación");
+    } finally {
+      setUpdatingAsignacion(false);
+    }
+  };
+
+  const handleToggleGasto = (gastoId: string) => {
+    setSelectedGastos((prev) => {
+      const next = new Set(prev);
+      if (next.has(gastoId)) next.delete(gastoId);
+      else next.add(gastoId);
+      return next;
+    });
+  };
+
+  const handleSelectAllAprobados = () => {
+    const aprobadosFiltrados = gastosFiltrados.filter((g) => g.fields.Estado === "Aprobado");
+    const allSelected = aprobadosFiltrados.every((g) => selectedGastos.has(g.id));
+    if (allSelected) {
+      setSelectedGastos(new Set());
+    } else {
+      setSelectedGastos(new Set(aprobadosFiltrados.map((g) => g.id)));
+    }
+  };
+
+  const handleCrearReembolso = async () => {
+    if (selectedGastos.size === 0 || !filtroCoordinador) return;
+    if (!confirm(`¿Crear reembolso con ${selectedGastos.size} gasto(s)?`)) return;
+
+    setCreandoReembolso(true);
+    try {
+      const res = await fetch("/api/caja-menor/reembolsos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coordinadorId: filtroCoordinador,
+          gastoIds: Array.from(selectedGastos),
+          observaciones: observacionesReembolso.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        const { reembolso } = await res.json();
+        // Update local state: mark gastos as Reembolsado
+        setGastos((prev) =>
+          prev.map((g) =>
+            selectedGastos.has(g.id)
+              ? { ...g, fields: { ...g.fields, Estado: "Reembolsado", Reembolso: [reembolso.id] } }
+              : g
+          )
+        );
+        setReembolsos((prev) => [reembolso, ...prev]);
+        setSelectedGastos(new Set());
+        setObservacionesReembolso("");
+      } else {
+        const data = await res.json();
+        alert(`Error: ${data.error || "No se pudo crear el reembolso"}`);
+      }
+    } catch {
+      alert("Error al crear el reembolso");
+    } finally {
+      setCreandoReembolso(false);
+    }
+  };
+
+  // Coordinadores sin asignación (para el form de nueva asignación)
+  const coordsSinAsignacion = coordinadoresList.filter(
+    (c) => !allAsignaciones.some((a) => a.fields.Coordinador?.includes(c.id))
+  );
+
+  // Selected gastos totals
+  const selectedGastosTotal = gastosFiltrados
+    .filter((g) => selectedGastos.has(g.id))
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+
+  // Reembolsos for the current coordinator filter (admin) or the coordinator (non-admin)
+  const reembolsosFiltrados = filtroCoordinador
+    ? reembolsos.filter((r) => r.fields.Coordinador?.includes(filtroCoordinador))
+    : reembolsos;
 
   const handleEliminar = async (gastoId: string, numero: number) => {
     if (
@@ -425,6 +567,7 @@ export default function CajaMenorPage() {
                     value={filtroCoordinador}
                     onChange={(e) => {
                       setFiltroCoordinador(e.target.value);
+                      setSelectedGastos(new Set());
                       setCurrentPage(1);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
@@ -475,6 +618,7 @@ export default function CajaMenorPage() {
                       setFiltroCoordinador("");
                       setFiltroEstado("");
                       setFiltroMes("");
+                      setSelectedGastos(new Set());
                       setCurrentPage(1);
                     }}
                     className="text-sm text-red-600 hover:text-red-800 underline"
@@ -514,10 +658,13 @@ export default function CajaMenorPage() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                         >
                           <option value="">Seleccionar...</option>
-                          {coordinadoresList.map((c) => (
+                          {coordsSinAsignacion.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
+                        {coordsSinAsignacion.length === 0 && (
+                          <p className="text-xs text-gray-500 mt-1">Todos los coordinadores ya tienen anticipo asignado.</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
@@ -545,7 +692,7 @@ export default function CajaMenorPage() {
                 {/* Tabla resumen por coordinador */}
                 {allAsignaciones.length === 0 ? (
                   <p className="text-sm text-gray-500 py-4 text-center">
-                    No hay anticipos asignados para este mes.
+                    No hay anticipos asignados.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -555,22 +702,28 @@ export default function CajaMenorPage() {
                           <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
                           <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
                           <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
+                          <th className="text-center py-2 px-2 text-xs font-bold text-gray-600 uppercase w-20"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {resumenAdmin.map((r) => {
+                          const asig = allAsignaciones.find((a) => a.fields.Coordinador?.includes(r.coordId));
                           const comprometido = r.anticipo - r.saldo;
                           const pctUsado = r.anticipo > 0 ? (comprometido / r.anticipo) * 100 : 0;
+                          const isEditing = editingAsignacionId === asig?.id;
                           return (
                             <tr
                               key={r.coordId}
-                              className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
-                              onClick={() => {
-                                setFiltroCoordinador(r.coordId);
-                                setCurrentPage(1);
-                              }}
+                              className="border-b border-gray-200 hover:bg-gray-50"
                             >
-                              <td className="py-2 px-2 font-medium text-gray-900">
+                              <td
+                                className="py-2 px-2 font-medium text-gray-900 cursor-pointer"
+                                onClick={() => {
+                                  setFiltroCoordinador(r.coordId);
+                                  setSelectedGastos(new Set());
+                                  setCurrentPage(1);
+                                }}
+                              >
                                 <span className="text-[#00d084] hover:underline">{r.nombre}</span>
                                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                                   <div
@@ -579,8 +732,52 @@ export default function CajaMenorPage() {
                                   />
                                 </div>
                               </td>
-                              <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(r.anticipo)}</td>
+                              <td className="py-2 px-2 text-right font-mono text-gray-900">
+                                {isEditing ? (
+                                  <div className="flex items-center justify-end gap-1">
+                                    <input
+                                      type="number"
+                                      value={editMonto}
+                                      onChange={(e) => setEditMonto(e.target.value)}
+                                      min="1"
+                                      step="1"
+                                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm font-mono text-right focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleUpdateAsignacion(asig!.id); }}
+                                      disabled={updatingAsignacion || !editMonto}
+                                      className="px-2 py-1 bg-[#00d084] text-white text-xs rounded hover:bg-[#00a868] disabled:opacity-50"
+                                    >
+                                      {updatingAsignacion ? "..." : "OK"}
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setEditingAsignacionId(null); }}
+                                      className="px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded hover:bg-gray-300"
+                                    >
+                                      X
+                                    </button>
+                                  </div>
+                                ) : (
+                                  formatCurrency(r.anticipo)
+                                )}
+                              </td>
                               <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
+                              <td className="py-2 px-2 text-center">
+                                {!isEditing && asig && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingAsignacionId(asig.id);
+                                      setEditMonto(String(r.anticipo));
+                                    }}
+                                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                                    title="Editar anticipo"
+                                  >
+                                    Editar
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
@@ -590,6 +787,7 @@ export default function CajaMenorPage() {
                           <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
                           <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
                           <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
+                          <td></td>
                         </tr>
                       </tfoot>
                     </table>
@@ -789,6 +987,22 @@ export default function CajaMenorPage() {
                 <table className="w-full">
                   <thead className="bg-gray-100 border-b-2 border-gray-300">
                     <tr>
+                      {isAdmin && filtroCoordinador && (
+                        <th className="px-2 py-3 text-center w-10">
+                          <input
+                            type="checkbox"
+                            checked={
+                              gastosFiltrados.filter((g) => g.fields.Estado === "Aprobado").length > 0 &&
+                              gastosFiltrados
+                                .filter((g) => g.fields.Estado === "Aprobado")
+                                .every((g) => selectedGastos.has(g.id))
+                            }
+                            onChange={handleSelectAllAprobados}
+                            className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
+                            title="Seleccionar todos los aprobados"
+                          />
+                        </th>
+                      )}
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                         #
                       </th>
@@ -841,9 +1055,21 @@ export default function CajaMenorPage() {
                           <tr
                             key={gasto.id}
                             className={`border-b border-gray-200 ${
-                              index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              selectedGastos.has(gasto.id) ? "bg-blue-50" : index % 2 === 0 ? "bg-white" : "bg-gray-50"
                             } hover:bg-blue-50 transition-colors`}
                           >
+                            {isAdmin && filtroCoordinador && (
+                              <td className="px-2 py-3 text-center">
+                                {estado === "Aprobado" && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedGastos.has(gasto.id)}
+                                    onChange={() => handleToggleGasto(gasto.id)}
+                                    className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
+                                  />
+                                )}
+                              </td>
+                            )}
                             <td className="px-4 py-3">
                               <span className="font-bold text-[#00d084]">#{numero}</span>
                             </td>
@@ -934,9 +1160,113 @@ export default function CajaMenorPage() {
                 </div>
               </div>
             )}
+
+            {/* Historial de Reembolsos */}
+            {(isAdmin ? filtroCoordinador : true) && reembolsosFiltrados.length > 0 && (
+              <div className="mt-8 bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">
+                  Historial de Reembolsos
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-gray-300">
+                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">#</th>
+                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                        {isAdmin && !filtroCoordinador && (
+                          <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
+                        )}
+                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Monto Total</th>
+                        <th className="text-center py-2 px-2 text-xs font-bold text-gray-600 uppercase">Gastos</th>
+                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reembolsosFiltrados.map((r, index) => {
+                        const montoTotal = r.fields.MontoTotal ||
+                          (r.fields.Gastos || []).reduce((sum, gId) => {
+                            const g = gastos.find((x) => x.id === gId);
+                            return sum + (g ? calcValorNeto(g) : 0);
+                          }, 0);
+                        return (
+                          <tr
+                            key={r.id}
+                            className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50`}
+                          >
+                            <td className="py-2 px-2 font-bold text-blue-600">
+                              #{r.fields.NumeroReembolso || "-"}
+                            </td>
+                            <td className="py-2 px-2 text-gray-700">
+                              {r.fields.Fecha
+                                ? new Date(r.fields.Fecha + "T00:00:00").toLocaleDateString("es-CO")
+                                : "-"}
+                            </td>
+                            {isAdmin && !filtroCoordinador && (
+                              <td className="py-2 px-2 text-gray-700">
+                                {r.fields.NombreCoordinador?.[0] || "-"}
+                              </td>
+                            )}
+                            <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">
+                              {formatCurrency(montoTotal)}
+                            </td>
+                            <td className="py-2 px-2 text-center text-gray-600">
+                              {r.fields.Gastos?.length || 0}
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              <Link
+                                href={`/caja-menor/reembolsos/${r.id}`}
+                                className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                              >
+                                Ver
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* Floating bar for batch reembolso */}
+      {isAdmin && selectedGastos.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-blue-700 text-white shadow-lg z-40 border-t border-blue-800">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="font-bold">
+                {selectedGastos.size} {selectedGastos.size === 1 ? "gasto" : "gastos"} seleccionado{selectedGastos.size !== 1 ? "s" : ""}
+              </span>
+              <span className="font-mono text-lg">{formatCurrency(selectedGastosTotal)}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={observacionesReembolso}
+                onChange={(e) => setObservacionesReembolso(e.target.value)}
+                placeholder="Observaciones (opcional)"
+                className="px-3 py-1.5 rounded text-sm text-gray-900 border-0 focus:ring-2 focus:ring-white w-56"
+              />
+              <button
+                onClick={() => { setSelectedGastos(new Set()); setObservacionesReembolso(""); }}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCrearReembolso}
+                disabled={creandoReembolso}
+                className="px-4 py-1.5 bg-white text-blue-700 font-bold text-sm rounded hover:bg-blue-50 transition-colors disabled:opacity-50"
+              >
+                {creandoReembolso ? "Creando..." : "Crear Reembolso"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthenticatedLayout>
   );
 }

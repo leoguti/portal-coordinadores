@@ -234,15 +234,15 @@ interface GastoCajaMenorFields {
   ValorRetencion?: number;
   ValorNeto?: number;
   Factura?: Array<{ id: string; url: string; filename: string }>;
-  Estado?: string; // "Pendiente" | "Aprobado" | "Rechazado"
+  Estado?: string; // "Pendiente" | "Aprobado" | "Rechazado" | "Reembolsado"
   ObservacionesAdmin?: string;
   MesLegalizacion?: string;
+  Reembolso?: string[]; // Linked to ReembolsosCajaMenor
 }
 
 interface AsignacionCajaMenorFields {
   Coordinador?: string[];
   NombreCoordinador?: string[];
-  Mes?: string;
   MontoAsignado?: number;
 }
 
@@ -256,6 +256,22 @@ export interface AsignacionCajaMenor {
   id: string;
   createdTime: string;
   fields: AsignacionCajaMenorFields;
+}
+
+interface ReembolsoCajaMenorFields {
+  NumeroReembolso?: number;
+  Coordinador?: string[];
+  NombreCoordinador?: string[];
+  Fecha?: string;
+  Gastos?: string[]; // Linked to GastosCajaMenor
+  MontoTotal?: number; // Rollup SUM ValorNeto
+  Observaciones?: string;
+}
+
+export interface ReembolsoCajaMenor {
+  id: string;
+  createdTime: string;
+  fields: ReembolsoCajaMenorFields;
 }
 
 // Interfaces for creating new records
@@ -2663,11 +2679,9 @@ export async function deleteGastoCajaMenor(gastoId: string): Promise<boolean> {
 }
 
 /**
- * Get asignaciones de caja menor, optionally filtered by mes
+ * Get asignaciones de caja menor (anticipo fijo por coordinador)
  */
-export async function getAsignacionesCajaMenor(
-  mes?: string
-): Promise<AsignacionCajaMenor[]> {
+export async function getAsignacionesCajaMenor(): Promise<AsignacionCajaMenor[]> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
@@ -2677,12 +2691,7 @@ export async function getAsignacionesCajaMenor(
   }
 
   try {
-    let url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor?sort[0][field]=Mes&sort[0][direction]=desc`;
-
-    if (mes) {
-      const filterFormula = `{Mes}="${mes}"`;
-      url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
-    }
+    const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
 
     const response = await fetch(url, {
       headers: {
@@ -2707,11 +2716,11 @@ export async function getAsignacionesCajaMenor(
 }
 
 /**
- * Create a new asignacion de caja menor
+ * Create a new asignacion de caja menor (anticipo fijo).
+ * Validates that the coordinator doesn't already have an asignacion.
  */
 export async function createAsignacionCajaMenor(
   coordinadorId: string,
-  mes: string,
   monto: number
 ): Promise<AsignacionCajaMenor> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -2719,6 +2728,15 @@ export async function createAsignacionCajaMenor(
 
   if (!apiKey || !baseId) {
     throw new Error("Credenciales de Airtable no configuradas");
+  }
+
+  // Check for duplicate: coordinator should only have one asignacion
+  const existing = await getAsignacionesCajaMenor();
+  const duplicate = existing.find(
+    (a) => a.fields.Coordinador?.includes(coordinadorId)
+  );
+  if (duplicate) {
+    throw new Error("Este coordinador ya tiene un anticipo asignado. Use la opción de editar para modificar el monto.");
   }
 
   const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
@@ -2732,7 +2750,6 @@ export async function createAsignacionCajaMenor(
     body: JSON.stringify({
       fields: {
         Coordinador: [coordinadorId],
-        Mes: mes,
         MontoAsignado: monto,
       },
     }),
@@ -2754,4 +2771,220 @@ export async function createAsignacionCajaMenor(
   const asignacion: AsignacionCajaMenor = await response.json();
   console.log(`Asignacion caja menor created: ${asignacion.id}`);
   return asignacion;
+}
+
+/**
+ * Update monto of an existing asignacion de caja menor
+ */
+export async function updateAsignacionCajaMenor(
+  asignacionId: string,
+  monto: number
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor/${asignacionId}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields: { MontoAsignado: monto } }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error updating asignacion ${asignacionId}: ${response.status}`, errorText);
+      return false;
+    }
+
+    console.log(`Asignacion ${asignacionId} updated to ${monto}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating asignacion ${asignacionId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Create a reembolso en lote: links multiple gastos, marks them as Reembolsado
+ */
+export async function createReembolsoCajaMenor(params: {
+  coordinadorId: string;
+  gastoIds: string[];
+  observaciones?: string;
+}): Promise<ReembolsoCajaMenor> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    throw new Error("Credenciales de Airtable no configuradas");
+  }
+
+  // 1. Create ReembolsosCajaMenor record
+  const url = `https://api.airtable.com/v0/${baseId}/ReembolsosCajaMenor`;
+  const fields: Record<string, unknown> = {
+    Coordinador: [params.coordinadorId],
+    Fecha: new Date().toISOString().split("T")[0],
+    Gastos: params.gastoIds,
+  };
+  if (params.observaciones) {
+    fields.Observaciones = params.observaciones;
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Error creating reembolso: ${response.status}`, errorText);
+    let detail = `Error de Airtable (${response.status})`;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.error?.message) detail = parsed.error.message;
+    } catch {
+      // usar detail por defecto
+    }
+    throw new Error(detail);
+  }
+
+  const reembolso: ReembolsoCajaMenor = await response.json();
+  console.log(`Reembolso created: ${reembolso.id} with ${params.gastoIds.length} gastos`);
+
+  // 2. Update each gasto to "Reembolsado" (batch PATCH, max 10 per call)
+  const chunks: string[][] = [];
+  for (let i = 0; i < params.gastoIds.length; i += 10) {
+    chunks.push(params.gastoIds.slice(i, i + 10));
+  }
+
+  for (const chunk of chunks) {
+    const patchUrl = `https://api.airtable.com/v0/${baseId}/GastosCajaMenor`;
+    const records = chunk.map((id) => ({
+      id,
+      fields: { Estado: "Reembolsado" },
+    }));
+
+    const patchResponse = await fetch(patchUrl, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ records }),
+    });
+
+    if (!patchResponse.ok) {
+      const errorText = await patchResponse.text();
+      console.error(`Error updating gastos batch: ${patchResponse.status}`, errorText);
+      // Continue with other chunks even if one fails
+    }
+  }
+
+  return reembolso;
+}
+
+/**
+ * Get reembolsos de caja menor, optionally filtered by coordinator
+ */
+export async function getReembolsosCajaMenor(
+  coordinadorId?: string
+): Promise<ReembolsoCajaMenor[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const allReembolsos: ReembolsoCajaMenor[] = [];
+    let offset: string | undefined;
+
+    do {
+      let url = `https://api.airtable.com/v0/${baseId}/ReembolsosCajaMenor?sort[0][field]=Fecha&sort[0][direction]=desc`;
+      if (offset) url += `&offset=${offset}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error fetching reembolsos: ${response.status}`, errorText);
+        break;
+      }
+
+      const data: AirtableResponse<ReembolsoCajaMenorFields> = await response.json();
+      allReembolsos.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
+    if (coordinadorId) {
+      return allReembolsos.filter((r) =>
+        r.fields.Coordinador?.includes(coordinadorId)
+      );
+    }
+
+    return allReembolsos;
+  } catch (error) {
+    console.error("Error fetching reembolsos caja menor:", error);
+    return [];
+  }
+}
+
+/**
+ * Get a single reembolso by ID
+ */
+export async function getReembolsoCajaMenorById(
+  reembolsoId: string
+): Promise<ReembolsoCajaMenor | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return null;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/ReembolsosCajaMenor/${reembolsoId}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Error fetching reembolso ${reembolsoId}: ${response.status}`);
+      return null;
+    }
+
+    const data: ReembolsoCajaMenor = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching reembolso ${reembolsoId}:`, error);
+    return null;
+  }
 }

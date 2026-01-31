@@ -205,41 +205,6 @@ export default function GastoDetallePage() {
     }
   }
 
-  async function handleReembolsar() {
-    if (!confirm("¿Marcar este gasto como reembolsado?")) return;
-
-    setActionLoading(true);
-    setActionMessage(null);
-
-    try {
-      const response = await fetch(`/api/caja-menor/${gastoId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "reembolsar",
-          observaciones: observaciones.trim() || undefined,
-        }),
-      });
-
-      if (response.ok) {
-        setActionMessage({ type: "success", text: "Gasto marcado como reembolsado" });
-        setObservaciones("");
-        await loadGasto();
-      } else {
-        const data = await response.json();
-        setActionMessage({
-          type: "error",
-          text: data.error || "Error al reembolsar",
-        });
-      }
-    } catch (err) {
-      console.error("Error reembolsando gasto:", err);
-      setActionMessage({ type: "error", text: "Error al reembolsar el gasto" });
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
@@ -407,42 +372,46 @@ export default function GastoDetallePage() {
           </div>
         )}
 
-        {/* Admin: reembolsar gasto aprobado */}
+        {/* Admin: gasto aprobado - reembolso se hace en lote */}
         {isAdmin && estado === "Aprobado" && (
-          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
-              Acciones de Administrador
-            </h3>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Observaciones (opcional)
-              </label>
-              <textarea
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Agregar observaciones al reembolsar..."
-                rows={2}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent text-sm"
-              />
-            </div>
-            <button
-              onClick={handleReembolsar}
-              disabled={actionLoading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {actionLoading ? "Procesando..." : "Marcar como Reembolsado"}
-            </button>
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              Los reembolsos se realizan en lote desde la{" "}
+              <Link href="/caja-menor" className="font-bold underline hover:text-blue-900">vista principal</Link>.
+              Selecciona los gastos aprobados de un coordinador para crear un reembolso.
+            </p>
           </div>
         )}
 
-        {/* Admin: no actions for other states */}
-        {isAdmin && estado !== "Pendiente" && estado !== "Aprobado" && (
+        {/* Reembolsado: show link to reembolso or legacy label */}
+        {estado === "Reembolsado" && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            {gasto.fields.Reembolso?.[0] ? (
+              <p className="text-sm text-blue-800">
+                Este gasto fue incluido en el{" "}
+                <Link
+                  href={`/caja-menor/reembolsos/${gasto.fields.Reembolso[0]}`}
+                  className="font-bold underline hover:text-blue-900"
+                >
+                  reembolso correspondiente
+                </Link>.
+              </p>
+            ) : (
+              <p className="text-sm text-blue-700 italic">
+                Reembolsado (legacy) — Este gasto fue reembolsado antes de la implementacion del sistema de reembolsos en lote.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Admin: no actions for Rechazado state */}
+        {isAdmin && estado === "Rechazado" && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
               Acciones de Administrador
             </h3>
             <p className="text-sm text-gray-500 italic">
-              No hay acciones disponibles para gastos en estado &quot;{estado}&quot;
+              Este gasto fue rechazado. El coordinador puede corregirlo y reenviarlo.
             </p>
           </div>
         )}

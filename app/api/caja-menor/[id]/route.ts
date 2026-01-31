@@ -92,25 +92,6 @@ export async function PATCH(
       return NextResponse.json({ success: true, estado });
     }
 
-    // Admin: reembolsar gasto aprobado
-    if (action === "reembolsar") {
-      if (!isAdmin) {
-        return NextResponse.json({ error: "Solo admin puede reembolsar" }, { status: 403 });
-      }
-
-      if (gasto.fields.Estado !== "Aprobado") {
-        return NextResponse.json({ error: "Solo se pueden reembolsar gastos aprobados" }, { status: 400 });
-      }
-
-      const success = await updateEstadoGasto(id, "Reembolsado", body.observaciones);
-
-      if (!success) {
-        return NextResponse.json({ error: "Error al reembolsar" }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, estado: "Reembolsado" });
-    }
-
     // Coordinador: corregir gasto rechazado
     if (action === "corregir") {
       const coordinadores = gasto.fields.Coordinador || [];
