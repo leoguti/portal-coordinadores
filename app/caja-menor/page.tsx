@@ -141,21 +141,21 @@ export default function CajaMenorPage() {
   };
 
   // Listas unicas para filtros
-  const coordinadoresUnicos = [
-    ...new Set(gastos.map((g) => g.fields.NombreCoordinador?.[0] || "").filter(Boolean)),
-  ].sort();
   const estadosUnicos = [
     ...new Set(gastos.map((g) => g.fields.Estado || "").filter(Boolean)),
   ].sort();
   const mesesUnicos = [
-    ...new Set(gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean)),
+    ...new Set([
+      ...gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean),
+      ...(isAdmin ? allAsignaciones.map((a) => a.fields.Mes || "").filter(Boolean) : []),
+    ]),
   ]
     .sort()
     .reverse();
 
-  // Aplicar filtros
+  // Aplicar filtros (admin usa ID de coordinador, non-admin no filtra por coordinador)
   const gastosFiltrados = gastos.filter((gasto) => {
-    if (filtroCoordinador && (gasto.fields.NombreCoordinador?.[0] || "") !== filtroCoordinador)
+    if (filtroCoordinador && !gasto.fields.Coordinador?.includes(filtroCoordinador))
       return false;
     if (filtroEstado && gasto.fields.Estado !== filtroEstado) return false;
     if (filtroMes && (gasto.fields.Fecha || "").substring(0, 7) !== filtroMes) return false;
@@ -231,6 +231,32 @@ export default function CajaMenorPage() {
     }),
     { anticipo: 0, aprobado: 0, pendiente: 0, rechazado: 0, saldo: 0 }
   );
+
+  // Admin: detalle del coordinador seleccionado
+  const adminCoordAsignacion = filtroCoordinador
+    ? asignacionesDelMes.find((a) => a.fields.Coordinador?.includes(filtroCoordinador))
+    : null;
+  const adminCoordNombre = filtroCoordinador
+    ? coordinadoresList.find((c) => c.id === filtroCoordinador)?.name || ""
+    : "";
+  const adminCoordGastos = filtroCoordinador
+    ? gastosDelMes.filter((g) => g.fields.Coordinador?.includes(filtroCoordinador))
+    : [];
+  const adminCoordAprobado = adminCoordGastos
+    .filter((g) => g.fields.Estado === "Aprobado")
+    .reduce((s, g) => s + calcValorNeto(g), 0);
+  const adminCoordPendiente = adminCoordGastos
+    .filter((g) => g.fields.Estado === "Pendiente")
+    .reduce((s, g) => s + calcValorNeto(g), 0);
+  const adminCoordRechazado = adminCoordGastos
+    .filter((g) => g.fields.Estado === "Rechazado")
+    .reduce((s, g) => s + calcValorNeto(g), 0);
+  const adminCoordCantAprobados = adminCoordGastos.filter((g) => g.fields.Estado === "Aprobado").length;
+  const adminCoordCantPendientes = adminCoordGastos.filter((g) => g.fields.Estado === "Pendiente").length;
+  const adminCoordCantRechazados = adminCoordGastos.filter((g) => g.fields.Estado === "Rechazado").length;
+  const adminCoordAnticipo = adminCoordAsignacion?.fields.MontoAsignado || 0;
+  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobado;
+  const adminCoordPctEjec = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobado / adminCoordAnticipo) * 100, 100) : 0;
 
   const handleCrearAsignacion = async () => {
     if (!nuevoCoordinadorId || !nuevoMonto || !nuevoMes) return;
@@ -403,211 +429,338 @@ export default function CajaMenorPage() {
           </>
         )}
 
-        {/* Dashboard admin: anticipos del mes */}
+        {/* Admin: filtros globales + contenido */}
         {isAdmin && !loading && (
-          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                Anticipos del Mes — <span className="capitalize">{nombreMes}</span>
-              </h2>
-              <button
-                onClick={() => setShowAsignarForm(!showAsignarForm)}
-                className="px-3 py-1.5 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                {showAsignarForm ? "Cancelar" : "+ Asignar Anticipo"}
-              </button>
-            </div>
-
-            {/* Formulario de asignación */}
-            {showAsignarForm && (
-              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <h3 className="text-sm font-bold text-gray-700 mb-3">Nueva Asignación</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
-                    <select
-                      value={nuevoCoordinadorId}
-                      onChange={(e) => setNuevoCoordinadorId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                    >
-                      <option value="">Seleccionar...</option>
-                      {coordinadoresList.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
-                    <input
-                      type="month"
-                      value={nuevoMes}
-                      onChange={(e) => setNuevoMes(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
-                    <input
-                      type="number"
-                      value={nuevoMonto}
-                      onChange={(e) => setNuevoMonto(e.target.value)}
-                      placeholder="0"
-                      min="1"
-                      step="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCrearAsignacion}
-                    disabled={creandoAsignacion || !nuevoCoordinadorId || !nuevoMonto}
-                    className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          <>
+            {/* Barra de filtros globales */}
+            <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
+                  <select
+                    value={filtroCoordinador}
+                    onChange={(e) => {
+                      setFiltroCoordinador(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
-                    {creandoAsignacion ? "Creando..." : "Asignar"}
-                  </button>
+                    <option value="">Todos (resumen)</option>
+                    {coordinadoresList.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+                  <select
+                    value={filtroMes}
+                    onChange={(e) => {
+                      setFiltroMes(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                  >
+                    <option value="">Mes actual</option>
+                    {mesesUnicos.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+                  <select
+                    value={filtroEstado}
+                    onChange={(e) => {
+                      setFiltroEstado(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                  >
+                    <option value="">Todos</option>
+                    {estadosUnicos.map((e) => (
+                      <option key={e} value={e}>{e}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            )}
+              {(filtroCoordinador || filtroEstado || filtroMes) && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => {
+                      setFiltroCoordinador("");
+                      setFiltroEstado("");
+                      setFiltroMes("");
+                      setCurrentPage(1);
+                    }}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {/* Tabla resumen por coordinador */}
-            {asignacionesDelMes.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">
-                No hay anticipos asignados para este mes.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
-                      <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
-                      <th className="text-right py-2 px-2 text-xs font-bold text-green-700 uppercase">Aprobado</th>
-                      <th className="text-right py-2 px-2 text-xs font-bold text-yellow-700 uppercase">Pendiente</th>
-                      <th className="text-right py-2 px-2 text-xs font-bold text-red-700 uppercase">Rechazado</th>
-                      <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resumenAdmin.map((r) => {
-                      const pctEjec = r.anticipo > 0 ? (r.aprobado / r.anticipo) * 100 : 0;
-                      return (
-                        <tr key={r.coordId} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-2 px-2 font-medium text-gray-900">
-                            {r.nombre}
-                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                              <div
-                                className="h-full rounded-full bg-green-500"
-                                style={{ width: `${Math.min(pctEjec, 100)}%` }}
-                              />
-                            </div>
-                          </td>
-                          <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(r.anticipo)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(r.aprobado)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(r.pendiente)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(r.rechazado)}</td>
-                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
+            {/* Contenido: resumen general o detalle de coordinador */}
+            {!filtroCoordinador ? (
+              /* Vista resumen: tabla de todos los coordinadores */
+              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    Anticipos del Mes — <span className="capitalize">{nombreMes}</span>
+                  </h2>
+                  <button
+                    onClick={() => setShowAsignarForm(!showAsignarForm)}
+                    className="px-3 py-1.5 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {showAsignarForm ? "Cancelar" : "+ Asignar Anticipo"}
+                  </button>
+                </div>
+
+                {/* Formulario de asignación */}
+                {showAsignarForm && (
+                  <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Nueva Asignación</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
+                        <select
+                          value={nuevoCoordinadorId}
+                          onChange={(e) => setNuevoCoordinadorId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                        >
+                          <option value="">Seleccionar...</option>
+                          {coordinadoresList.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+                        <input
+                          type="month"
+                          value={nuevoMes}
+                          onChange={(e) => setNuevoMes(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
+                        <input
+                          type="number"
+                          value={nuevoMonto}
+                          onChange={(e) => setNuevoMonto(e.target.value)}
+                          placeholder="0"
+                          min="1"
+                          step="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                        />
+                      </div>
+                      <button
+                        onClick={handleCrearAsignacion}
+                        disabled={creandoAsignacion || !nuevoCoordinadorId || !nuevoMonto}
+                        className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {creandoAsignacion ? "Creando..." : "Asignar"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tabla resumen por coordinador */}
+                {asignacionesDelMes.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-4 text-center">
+                    No hay anticipos asignados para este mes.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
+                          <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
+                          <th className="text-right py-2 px-2 text-xs font-bold text-green-700 uppercase">Aprobado</th>
+                          <th className="text-right py-2 px-2 text-xs font-bold text-yellow-700 uppercase">Pendiente</th>
+                          <th className="text-right py-2 px-2 text-xs font-bold text-red-700 uppercase">Rechazado</th>
+                          <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
-                      <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
-                      <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
-                      <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(totalesAdmin.aprobado)}</td>
-                      <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(totalesAdmin.pendiente)}</td>
-                      <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(totalesAdmin.rechazado)}</td>
-                      <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                      </thead>
+                      <tbody>
+                        {resumenAdmin.map((r) => {
+                          const pctEjec = r.anticipo > 0 ? (r.aprobado / r.anticipo) * 100 : 0;
+                          return (
+                            <tr
+                              key={r.coordId}
+                              className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
+                              onClick={() => {
+                                setFiltroCoordinador(r.coordId);
+                                setCurrentPage(1);
+                              }}
+                            >
+                              <td className="py-2 px-2 font-medium text-gray-900">
+                                <span className="text-[#00d084] hover:underline">{r.nombre}</span>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                  <div
+                                    className="h-full rounded-full bg-green-500"
+                                    style={{ width: `${Math.min(pctEjec, 100)}%` }}
+                                  />
+                                </div>
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(r.anticipo)}</td>
+                              <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(r.aprobado)}</td>
+                              <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(r.pendiente)}</td>
+                              <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(r.rechazado)}</td>
+                              <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
+                          <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
+                          <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(totalesAdmin.aprobado)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(totalesAdmin.pendiente)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(totalesAdmin.rechazado)}</td>
+                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Vista detalle: anticipo del coordinador seleccionado */
+              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    Anticipo — {adminCoordNombre} — <span className="capitalize">{nombreMes}</span>
+                  </h2>
+                </div>
+
+                {adminCoordAsignacion ? (
+                  <>
+                    {/* Barra de progreso */}
+                    <div className="mb-5">
+                      <p className="text-3xl font-bold text-gray-900 mb-2">
+                        {formatCurrency(adminCoordAnticipo)}
+                      </p>
+                      <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-green-500 transition-all duration-500"
+                          style={{ width: `${adminCoordPctEjec}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-gray-500">
+                          {formatCurrency(adminCoordAprobado)} aprobado
+                        </span>
+                        <span className="text-xs font-bold text-gray-600">
+                          {adminCoordPctEjec.toFixed(0)}% ejecutado
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 4 tarjetas */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
+                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobado)}</p>
+                        <p className="text-xs text-green-600 mt-1">{adminCoordCantAprobados} {adminCoordCantAprobados === 1 ? "gasto" : "gastos"}</p>
+                      </div>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
+                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendiente)}</p>
+                        <p className="text-xs text-yellow-600 mt-1">{adminCoordCantPendientes} {adminCoordCantPendientes === 1 ? "gasto" : "gastos"}</p>
+                      </div>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
+                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazado)}</p>
+                        <p className="text-xs text-red-600 mt-1">{adminCoordCantRechazados} {adminCoordCantRechazados === 1 ? "gasto" : "gastos"}</p>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-blue-700 uppercase mb-1">Saldo</p>
+                        <p className="text-xl font-bold text-blue-800 font-mono">{formatCurrency(adminCoordSaldo)}</p>
+                        <p className="text-xs text-blue-600 mt-1">Anticipo - Aprobados</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-4 text-center">
+                    <p className="text-gray-500 mb-3">Sin anticipo asignado para este mes.</p>
+                    <button
+                      onClick={() => {
+                        setNuevoCoordinadorId(filtroCoordinador);
+                        setNuevoMes(mesFiltro);
+                        setFiltroCoordinador("");
+                        setShowAsignarForm(true);
+                        setCurrentPage(1);
+                      }}
+                      className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      + Asignar Anticipo
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* Filtros */}
-        <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
-          <div
-            className={`grid grid-cols-1 gap-4 ${
-              isAdmin ? "md:grid-cols-3" : "md:grid-cols-2"
-            }`}
-          >
-            {isAdmin && (
+        {/* Filtros (solo coordinador, no admin) */}
+        {!isAdmin && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Coordinador
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
                 <select
-                  value={filtroCoordinador}
+                  value={filtroEstado}
                   onChange={(e) => {
-                    setFiltroCoordinador(e.target.value);
+                    setFiltroEstado(e.target.value);
                     setCurrentPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
                   <option value="">Todos</option>
-                  {coordinadoresUnicos.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                  {estadosUnicos.map((e) => (
+                    <option key={e} value={e}>{e}</option>
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+                <select
+                  value={filtroMes}
+                  onChange={(e) => {
+                    setFiltroMes(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                >
+                  <option value="">Todos</option>
+                  {mesesUnicos.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {(filtroEstado || filtroMes) && (
+              <div className="mt-3">
+                <button
+                  onClick={() => {
+                    setFiltroEstado("");
+                    setFiltroMes("");
+                    setCurrentPage(1);
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
             )}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
-              <select
-                value={filtroEstado}
-                onChange={(e) => {
-                  setFiltroEstado(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-              >
-                <option value="">Todos</option>
-                {estadosUnicos.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
-              <select
-                value={filtroMes}
-                onChange={(e) => {
-                  setFiltroMes(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-              >
-                <option value="">Todos</option>
-                {mesesUnicos.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
-          {(filtroCoordinador || filtroEstado || filtroMes) && (
-            <div className="mt-3">
-              <button
-                onClick={() => {
-                  setFiltroCoordinador("");
-                  setFiltroEstado("");
-                  setFiltroMes("");
-                  setCurrentPage(1);
-                }}
-                className="text-sm text-red-600 hover:text-red-800 underline"
-              >
-                Limpiar filtros
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -678,7 +831,7 @@ export default function CajaMenorPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                         Fecha
                       </th>
-                      {isAdmin && (
+                      {isAdmin && !filtroCoordinador && (
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                           Coordinador
                         </th>
@@ -735,7 +888,7 @@ export default function CajaMenorPage() {
                                 ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO")
                                 : "Sin fecha"}
                             </td>
-                            {isAdmin && (
+                            {isAdmin && !filtroCoordinador && (
                               <td className="px-4 py-3 text-sm text-gray-700">{coordinador}</td>
                             )}
                             <td className="px-4 py-3 text-sm text-gray-900 font-medium">
