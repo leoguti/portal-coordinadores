@@ -101,7 +101,7 @@ export default function GastoDetallePage() {
     );
     setEditConcepto(gasto.fields.Concepto || "");
     setEditValor(String(gasto.fields.Valor || ""));
-    setEditPorcentajeRetencion(String(gasto.fields.PorcentajeRetencion || 0));
+    setEditPorcentajeRetencion(String((gasto.fields.PorcentajeRetencion || 0) * 100));
     setEditFactura(null);
     setEditMode(true);
     setActionMessage(null);
@@ -259,9 +259,8 @@ export default function GastoDetallePage() {
   const coordinador = gasto.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const concepto = gasto.fields.Concepto || "";
   const valor = gasto.fields.Valor || 0;
-  const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0;
-  // Calcular en frontend (formula+currency de Airtable puede retornar null)
-  const valorRetencion = valor * porcentajeRetencion / 100;
+  const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
+  const valorRetencion = valor * porcentajeRetencion;
   const valorNeto = valor - valorRetencion;
   const estado = gasto.fields.Estado || "Pendiente";
   const observacionesAdmin = gasto.fields.ObservacionesAdmin || "";
@@ -275,8 +274,8 @@ export default function GastoDetallePage() {
   // Edit mode values for calculations
   const editValorNum = parseFloat(editValor) || 0;
   const editRetencionNum = parseFloat(editPorcentajeRetencion) || 0;
-  const editValorRetencion = editValorNum * editRetencionNum / 100;
-  const editValorNeto = editValorNum - editValorRetencion;
+  const editValorRetencion = editValorNum * editRetencionNum / 100; // editRetencionNum is user-entered (e.g. 3 for 3%)
+  const editValorNeto = editValorNum - editValorRetencion; // API conversion (/100) happens in lib/airtable.ts
 
   return (
     <AuthenticatedLayout>
@@ -642,7 +641,7 @@ export default function GastoDetallePage() {
               <div>
                 <p className="text-xs text-gray-500 uppercase mb-1">% Retencion</p>
                 <p className="text-lg font-mono font-bold text-gray-900">
-                  {porcentajeRetencion}%
+                  {(porcentajeRetencion * 100).toFixed(1).replace(/\.0$/, "")}%
                 </p>
               </div>
               <div>

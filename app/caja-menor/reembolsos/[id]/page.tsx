@@ -75,7 +75,7 @@ export default function ReembolsoDetallePage() {
   const calcValorNeto = (g: GastoCajaMenor) => {
     const valor = g.fields.Valor || 0;
     const pct = g.fields.PorcentajeRetencion || 0;
-    return valor - (valor * pct) / 100;
+    return valor - valor * pct; // Airtable Percent: 0.03 = 3%
   };
 
   if (loading) {

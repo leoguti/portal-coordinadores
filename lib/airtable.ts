@@ -2503,7 +2503,7 @@ export async function createGastoCajaMenor(data: {
       Beneficiario: [data.beneficiarioId],
       Concepto: data.concepto,
       Valor: data.valor,
-      PorcentajeRetencion: data.porcentajeRetencion,
+      PorcentajeRetencion: data.porcentajeRetencion / 100,
       Estado: "Pendiente",
     };
 
@@ -2615,7 +2615,7 @@ export async function updateGastoCajaMenor(
     if (data.beneficiarioId) fields.Beneficiario = [data.beneficiarioId];
     if (data.concepto) fields.Concepto = data.concepto;
     if (data.valor !== undefined) fields.Valor = data.valor;
-    if (data.porcentajeRetencion !== undefined) fields.PorcentajeRetencion = data.porcentajeRetencion;
+    if (data.porcentajeRetencion !== undefined) fields.PorcentajeRetencion = data.porcentajeRetencion / 100;
     if (data.facturaUrl) fields.Factura = [{ url: data.facturaUrl }];
 
     const response = await fetch(url, {

@@ -145,8 +145,8 @@ export default function CajaMenorPage() {
   // Calcular valores en frontend (Airtable formula+currency puede retornar null)
   const calcValorNeto = (g: GastoCajaMenor) => {
     const valor = g.fields.Valor || 0;
-    const pct = g.fields.PorcentajeRetencion || 0;
-    return valor - (valor * pct / 100);
+    const pct = g.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
+    return valor - (valor * pct);
   };
 
   const estadoColors: Record<string, string> = {
