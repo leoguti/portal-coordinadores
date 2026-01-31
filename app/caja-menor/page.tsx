@@ -138,16 +138,35 @@ export default function CajaMenorPage() {
   });
 
   // Calcular resumen del mes filtrado (o mes actual)
-  const mesFiltro = filtroMes || new Date().toISOString().substring(0, 7);
+  const mesActualStr = new Date().toISOString().substring(0, 7);
+  const mesFiltro = filtroMes || mesActualStr;
   const gastosDelMes = gastos.filter(
     (g) => (g.fields.Fecha || "").substring(0, 7) === mesFiltro
   );
-  const totalGastadoMes = gastosDelMes
-    .filter((g) => g.fields.Estado !== "Rechazado")
-    .reduce((sum, g) => sum + (g.fields.Valor || 0), 0);
   const totalAprobadoMes = gastosDelMes
     .filter((g) => g.fields.Estado === "Aprobado")
     .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const totalPendienteMes = gastosDelMes
+    .filter((g) => g.fields.Estado === "Pendiente")
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const gastosRechazadosMes = gastosDelMes.filter((g) => g.fields.Estado === "Rechazado");
+  const totalRechazadoMes = gastosRechazadosMes.reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const cantRechazados = gastosRechazadosMes.length;
+  const cantAprobados = gastosDelMes.filter((g) => g.fields.Estado === "Aprobado").length;
+  const cantPendientes = gastosDelMes.filter((g) => g.fields.Estado === "Pendiente").length;
+
+  const anticipoMonto = asignacion?.fields.MontoAsignado || 0;
+  const saldoMes = anticipoMonto - totalAprobadoMes;
+  const porcentajeEjecutado = anticipoMonto > 0 ? Math.min((totalAprobadoMes / anticipoMonto) * 100, 100) : 0;
+
+  // Nombre del mes en español
+  const nombreMes = (() => {
+    const [year, month] = mesFiltro.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  })();
+
+  const tieneAsignacion = asignacion !== null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -195,7 +214,7 @@ export default function CajaMenorPage() {
                 : "Registra y consulta tus gastos de caja menor"}
             </p>
           </div>
-          {!isAdmin && (
+          {!isAdmin && tieneAsignacion && (
             <Link
               href="/caja-menor/nuevo"
               className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -205,34 +224,97 @@ export default function CajaMenorPage() {
           )}
         </div>
 
-        {/* Resumen del mes (solo coordinador) */}
-        {!isAdmin && (
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                Asignado ({mesFiltro})
-              </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {asignacion ? formatCurrency(asignacion.fields.MontoAsignado || 0) : "—"}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                Registrado (sin rechazados)
-              </p>
-              <p className="text-2xl font-bold text-yellow-700">
-                {formatCurrency(totalGastadoMes)}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                Aprobado (neto)
-              </p>
-              <p className="text-2xl font-bold text-green-700">
-                {formatCurrency(totalAprobadoMes)}
-              </p>
-            </div>
-          </div>
+        {/* Dashboard coordinador */}
+        {!isAdmin && !loading && (
+          <>
+            {!tieneAsignacion ? (
+              /* Alerta sin asignación */
+              <div className="mb-6 bg-orange-50 border border-orange-300 rounded-lg p-5 flex items-start gap-3">
+                <svg className="w-6 h-6 text-orange-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+                <div>
+                  <p className="font-bold text-orange-800">No tienes anticipo asignado para este mes</p>
+                  <p className="text-orange-700 text-sm mt-1">Contacta al administrador para que te asigne un anticipo de operación.</p>
+                </div>
+              </div>
+            ) : (
+              /* Panel Anticipo de Operación */
+              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+                {/* Título del panel */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    Anticipo de Operación — <span className="capitalize">{nombreMes}</span>
+                  </h2>
+                </div>
+
+                {/* Monto anticipo y barra de progreso */}
+                <div className="mb-5">
+                  <p className="text-3xl font-bold text-gray-900 mb-2">
+                    {formatCurrency(anticipoMonto)}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-green-500 transition-all duration-500"
+                      style={{ width: `${porcentajeEjecutado}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-gray-500">
+                      {formatCurrency(totalAprobadoMes)} aprobado
+                    </span>
+                    <span className="text-xs font-bold text-gray-600">
+                      {porcentajeEjecutado.toFixed(0)}% ejecutado
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 tarjetas de estado */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Aprobado */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
+                    <p className="text-xl font-bold text-green-800 font-mono">
+                      {formatCurrency(totalAprobadoMes)}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {cantAprobados} {cantAprobados === 1 ? "gasto" : "gastos"}
+                    </p>
+                  </div>
+                  {/* Pendiente */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
+                    <p className="text-xl font-bold text-yellow-800 font-mono">
+                      {formatCurrency(totalPendienteMes)}
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      {cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"}
+                    </p>
+                  </div>
+                  {/* Rechazado */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
+                    <p className="text-xl font-bold text-red-800 font-mono">
+                      {formatCurrency(totalRechazadoMes)}
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">
+                      {cantRechazados} {cantRechazados === 1 ? "gasto" : "gastos"}
+                    </p>
+                  </div>
+                  {/* Saldo */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-blue-700 uppercase mb-1">Saldo</p>
+                    <p className="text-xl font-bold text-blue-800 font-mono">
+                      {formatCurrency(saldoMes)}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Anticipo − Aprobados
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Filtros */}
@@ -367,7 +449,7 @@ export default function CajaMenorPage() {
                     ? "Aun no has registrado ningun gasto de caja menor."
                     : "Intenta cambiar los filtros de busqueda."}
                 </p>
-                {gastos.length === 0 && !isAdmin && (
+                {gastos.length === 0 && !isAdmin && tieneAsignacion && (
                   <Link
                     href="/caja-menor/nuevo"
                     className="inline-block px-6 py-3 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"

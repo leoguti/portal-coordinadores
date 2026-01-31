@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -18,6 +18,35 @@ interface Tercero {
 export default function NuevoGastoCajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [verificandoAsignacion, setVerificandoAsignacion] = useState(true);
+
+  // Verificar que exista asignación para el mes actual (defensa en profundidad)
+  useEffect(() => {
+    async function verificarAsignacion() {
+      if (!session?.user?.coordinatorRecordId) return;
+      try {
+        const mesActual = new Date().toISOString().substring(0, 7);
+        const res = await fetch(`/api/caja-menor/asignaciones?mes=${mesActual}`);
+        if (res.ok) {
+          const { asignaciones } = await res.json();
+          const miAsignacion = asignaciones.find(
+            (a: { fields: { Coordinador?: string[] } }) =>
+              a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
+          );
+          if (!miAsignacion) {
+            router.replace("/caja-menor");
+            return;
+          }
+        }
+      } catch {
+        // Si falla la verificación, permitir continuar
+      }
+      setVerificandoAsignacion(false);
+    }
+    if (session?.user?.coordinatorRecordId) {
+      verificarAsignacion();
+    }
+  }, [session?.user?.coordinatorRecordId, router]);
 
   const [fecha, setFecha] = useState(getFechaMaximaPermitida());
   const [beneficiario, setBeneficiario] = useState<Tercero | null>(null);
@@ -29,7 +58,7 @@ export default function NuevoGastoCajaMenorPage() {
   const [error, setError] = useState<string | null>(null);
   const facturaInputRef = useRef<HTMLInputElement>(null);
 
-  if (status === "loading") {
+  if (status === "loading" || verificandoAsignacion) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
