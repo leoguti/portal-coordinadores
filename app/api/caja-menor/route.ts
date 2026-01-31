@@ -1,0 +1,54 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { createGastoCajaMenor } from "@/lib/airtable";
+import { puedeModificarFecha } from "@/lib/dateValidations";
+
+/**
+ * POST /api/caja-menor — Crear nuevo gasto de caja menor
+ * Body: { fecha, beneficiarioId, concepto, valor, porcentajeRetencion, facturaUrl? }
+ */
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.coordinatorRecordId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { fecha, beneficiarioId, concepto, valor, porcentajeRetencion, facturaUrl } = body;
+
+    // Validaciones
+    if (!fecha || !beneficiarioId || !concepto || valor === undefined) {
+      return NextResponse.json({ error: "Faltan campos requeridos (fecha, beneficiarioId, concepto, valor)" }, { status: 400 });
+    }
+
+    // Validar regla de 7 dias
+    if (!puedeModificarFecha(fecha)) {
+      return NextResponse.json({ error: "La fecha esta fuera del periodo permitido (regla 7 dias)" }, { status: 400 });
+    }
+
+    if (valor <= 0) {
+      return NextResponse.json({ error: "El valor debe ser mayor a 0" }, { status: 400 });
+    }
+
+    const gasto = await createGastoCajaMenor({
+      coordinatorRecordId: session.user.coordinatorRecordId,
+      fecha,
+      beneficiarioId,
+      concepto,
+      valor,
+      porcentajeRetencion: porcentajeRetencion || 0,
+      facturaUrl,
+    });
+
+    if (!gasto) {
+      return NextResponse.json({ error: "Error al crear el gasto" }, { status: 500 });
+    }
+
+    return NextResponse.json({ gasto }, { status: 201 });
+  } catch (error) {
+    console.error("Error creating gasto:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}

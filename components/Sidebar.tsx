@@ -11,6 +11,7 @@ const navItems = [
   { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧", roles: ["Coordinador", "Administrador"] },
   { name: "Reporte Facturas", href: "/reportes-facturas", icon: "📑", roles: ["Administrador"] },
   { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️", roles: ["Coordinador", "Administrador"] },
+  { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador"] },
   // { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador"] },
 ];
 
