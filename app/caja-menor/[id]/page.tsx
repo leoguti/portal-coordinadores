@@ -259,8 +259,9 @@ export default function GastoDetallePage() {
   const concepto = gasto.fields.Concepto || "";
   const valor = gasto.fields.Valor || 0;
   const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0;
-  const valorRetencion = gasto.fields.ValorRetencion || 0;
-  const valorNeto = gasto.fields.ValorNeto || valor;
+  // Calcular en frontend (formula+currency de Airtable puede retornar null)
+  const valorRetencion = valor * porcentajeRetencion / 100;
+  const valorNeto = valor - valorRetencion;
   const estado = gasto.fields.Estado || "Pendiente";
   const observacionesAdmin = gasto.fields.ObservacionesAdmin || "";
   const factura = gasto.fields.Factura?.[0] || null;

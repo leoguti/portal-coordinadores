@@ -96,6 +96,13 @@ export default function CajaMenorPage() {
 
   if (!session) return null;
 
+  // Calcular valores en frontend (Airtable formula+currency puede retornar null)
+  const calcValorNeto = (g: GastoCajaMenor) => {
+    const valor = g.fields.Valor || 0;
+    const pct = g.fields.PorcentajeRetencion || 0;
+    return valor - (valor * pct / 100);
+  };
+
   const estadoColors: Record<string, string> = {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Aprobado: "bg-green-100 text-green-800",
@@ -140,7 +147,7 @@ export default function CajaMenorPage() {
     .reduce((sum, g) => sum + (g.fields.Valor || 0), 0);
   const totalAprobadoMes = gastosDelMes
     .filter((g) => g.fields.Estado === "Aprobado")
-    .reduce((sum, g) => sum + (g.fields.ValorNeto || g.fields.Valor || 0), 0);
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -419,7 +426,7 @@ export default function CajaMenorPage() {
                         const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
                         const concepto = gasto.fields.Concepto || "";
                         const valor = gasto.fields.Valor || 0;
-                        const valorNeto = gasto.fields.ValorNeto || valor;
+                        const valorNeto = calcValorNeto(gasto);
                         const estado = gasto.fields.Estado || "Pendiente";
                         const puedeEliminar = puedeEliminarGasto(fecha, estado);
 

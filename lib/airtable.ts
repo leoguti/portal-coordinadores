@@ -2362,49 +2362,15 @@ export async function getAllOrdenes(): Promise<Orden[]> {
 export async function getGastosCajaMenorCoordinador(
   coordinatorRecordId: string
 ): Promise<GastoCajaMenor[]> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return [];
-  }
-
-  try {
-    const allGastos: GastoCajaMenor[] = [];
-    let offset: string | undefined;
-
-    do {
-      const filterFormula = `FIND("${coordinatorRecordId}", ARRAYJOIN({Coordinador}))`;
-      const url = `https://api.airtable.com/v0/${baseId}/GastosCajaMenor?filterByFormula=${encodeURIComponent(
-        filterFormula
-      )}&sort[0][field]=Fecha&sort[0][direction]=desc${offset ? `&offset=${offset}` : ""}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error fetching GastosCajaMenor: ${response.status}`, errorText);
-        break;
-      }
-
-      const data: AirtableResponse<GastoCajaMenorFields> = await response.json();
-      allGastos.push(...(data.records || []));
-      offset = data.offset;
-    } while (offset);
-
-    console.log(`Fetched ${allGastos.length} gastos caja menor for coordinator`);
-    return allGastos;
-  } catch (error) {
-    console.error("Error fetching GastosCajaMenor:", error);
-    return [];
-  }
+  // ARRAYJOIN({Coordinador}) retorna nombres, no record IDs.
+  // Usamos el mismo patron que getOrdenesCoordinador: fetch all + filter JS.
+  const allGastos = await getAllGastosCajaMenor();
+  const filtered = allGastos.filter((gasto) => {
+    const coordinadores = gasto.fields.Coordinador || [];
+    return coordinadores.includes(coordinatorRecordId);
+  });
+  console.log(`Filtered ${filtered.length} gastos caja menor for coordinator (of ${allGastos.length} total)`);
+  return filtered;
 }
 
 /**
