@@ -50,6 +50,19 @@ export default function NuevoGastoCajaMenorPage() {
   const valorRetencion = valorNum * retencionNum / 100;
   const valorNeto = valorNum - valorRetencion;
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+    });
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -70,25 +83,7 @@ export default function NuevoGastoCajaMenorPage() {
     setSaving(true);
 
     try {
-      // Si hay factura, primero subirla
-      let facturaUrl: string | undefined;
-      if (factura) {
-        const formData = new FormData();
-        formData.append("file", factura);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          facturaUrl = uploadData.url;
-        } else {
-          setError("Error al subir la factura. Intenta de nuevo.");
-          setSaving(false);
-          return;
-        }
-      }
-
+      // 1. Crear el gasto primero (sin factura)
       const response = await fetch("/api/caja-menor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,16 +93,40 @@ export default function NuevoGastoCajaMenorPage() {
           concepto: concepto.trim(),
           valor: valorNum,
           porcentajeRetencion: retencionNum,
-          facturaUrl,
         }),
       });
 
-      if (response.ok) {
-        router.push("/caja-menor");
-      } else {
+      if (!response.ok) {
         const data = await response.json();
         setError(data.error || "Error al crear el gasto");
+        setSaving(false);
+        return;
       }
+
+      const { gasto: gastoCreado } = await response.json();
+
+      // 2. Si hay factura, subirla al registro creado
+      if (factura && gastoCreado?.id) {
+        const base64 = await fileToBase64(factura);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recordId: gastoCreado.id,
+            fieldName: "Factura",
+            file: base64,
+            filename: factura.name,
+            contentType: factura.type,
+          }),
+        });
+
+        if (!uploadRes.ok) {
+          // El gasto se creo pero la factura fallo - no es critico
+          console.error("Error subiendo factura, pero el gasto fue creado");
+        }
+      }
+
+      router.push("/caja-menor");
     } catch (err) {
       console.error("Error creating gasto:", err);
       setError("Error al crear el gasto. Intenta de nuevo.");

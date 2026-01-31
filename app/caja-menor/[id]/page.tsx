@@ -74,6 +74,19 @@ export default function GastoDetallePage() {
     }
   }
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+    });
+  };
+
   function enterEditMode() {
     if (!gasto) return;
     setEditFecha(gasto.fields.Fecha || "");
@@ -102,21 +115,7 @@ export default function GastoDetallePage() {
     setActionMessage(null);
 
     try {
-      // Upload new factura if provided
-      let facturaUrl: string | undefined;
-      if (editFactura) {
-        const formData = new FormData();
-        formData.append("file", editFactura);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          facturaUrl = uploadData.url;
-        }
-      }
-
+      // 1. Corregir el gasto primero
       const response = await fetch(`/api/caja-menor/${gastoId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -127,11 +126,26 @@ export default function GastoDetallePage() {
           concepto: editConcepto.trim(),
           valor: parseFloat(editValor) || 0,
           porcentajeRetencion: parseFloat(editPorcentajeRetencion) || 0,
-          facturaUrl,
         }),
       });
 
       if (response.ok) {
+        // 2. Si hay nueva factura, subirla al registro existente
+        if (editFactura) {
+          const base64 = await fileToBase64(editFactura);
+          await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recordId: gastoId,
+              fieldName: "Factura",
+              file: base64,
+              filename: editFactura.name,
+              contentType: editFactura.type,
+            }),
+          });
+        }
+
         setActionMessage({
           type: "success",
           text: "Gasto corregido y reenviado para revision",
