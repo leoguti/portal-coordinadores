@@ -28,6 +28,15 @@ export default function CajaMenorPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("");
 
+  // Admin: asignaciones y coordinadores
+  const [allAsignaciones, setAllAsignaciones] = useState<AsignacionCajaMenor[]>([]);
+  const [coordinadoresList, setCoordinadoresList] = useState<{ id: string; name: string }[]>([]);
+  const [showAsignarForm, setShowAsignarForm] = useState(false);
+  const [nuevoCoordinadorId, setNuevoCoordinadorId] = useState("");
+  const [nuevoMonto, setNuevoMonto] = useState("");
+  const [nuevoMes, setNuevoMes] = useState(new Date().toISOString().substring(0, 7));
+  const [creandoAsignacion, setCreandoAsignacion] = useState(false);
+
   const isAdmin = session?.user?.rol === "Administrador";
 
   useEffect(() => {
@@ -52,19 +61,35 @@ export default function CajaMenorPage() {
         }
         setGastos(data);
 
-        // Cargar asignacion del mes actual para el coordinador
+        // Cargar asignaciones
         const mesActual = new Date().toISOString().substring(0, 7);
         try {
-          const res = await fetch(`/api/caja-menor/asignaciones?mes=${mesActual}`);
-          if (res.ok) {
-            const { asignaciones } = await res.json();
-            if (!isAdmin && asignaciones.length > 0) {
-              // Buscar la asignacion de este coordinador
-              const miAsignacion = asignaciones.find(
-                (a: AsignacionCajaMenor) =>
-                  a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
-              );
-              setAsignacion(miAsignacion || null);
+          if (isAdmin) {
+            // Admin: cargar TODAS las asignaciones + lista de coordinadores
+            const [resAsig, resCoord] = await Promise.all([
+              fetch("/api/caja-menor/asignaciones"),
+              fetch("/api/coordinadores"),
+            ]);
+            if (resAsig.ok) {
+              const { asignaciones } = await resAsig.json();
+              setAllAsignaciones(asignaciones);
+            }
+            if (resCoord.ok) {
+              const { coordinadores } = await resCoord.json();
+              setCoordinadoresList(coordinadores);
+            }
+          } else {
+            // Coordinador: solo su asignacion del mes actual
+            const res = await fetch(`/api/caja-menor/asignaciones?mes=${mesActual}`);
+            if (res.ok) {
+              const { asignaciones } = await res.json();
+              if (asignaciones.length > 0) {
+                const miAsignacion = asignaciones.find(
+                  (a: AsignacionCajaMenor) =>
+                    a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
+                );
+                setAsignacion(miAsignacion || null);
+              }
             }
           }
         } catch {
@@ -174,6 +199,67 @@ export default function CajaMenorPage() {
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Admin: asignaciones del mes filtrado y resumen por coordinador
+  const asignacionesDelMes = allAsignaciones.filter((a) => a.fields.Mes === mesFiltro);
+  const resumenAdmin = asignacionesDelMes.map((asig) => {
+    const coordId = asig.fields.Coordinador?.[0] || "";
+    const nombre = asig.fields.NombreCoordinador?.[0] || "Sin nombre";
+    const anticipo = asig.fields.MontoAsignado || 0;
+    const gastosCoord = gastosDelMes.filter((g) =>
+      g.fields.Coordinador?.includes(coordId)
+    );
+    const aprobado = gastosCoord
+      .filter((g) => g.fields.Estado === "Aprobado")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    const pendiente = gastosCoord
+      .filter((g) => g.fields.Estado === "Pendiente")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    const rechazado = gastosCoord
+      .filter((g) => g.fields.Estado === "Rechazado")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobado };
+  });
+  const totalesAdmin = resumenAdmin.reduce(
+    (acc, r) => ({
+      anticipo: acc.anticipo + r.anticipo,
+      aprobado: acc.aprobado + r.aprobado,
+      pendiente: acc.pendiente + r.pendiente,
+      rechazado: acc.rechazado + r.rechazado,
+      saldo: acc.saldo + r.saldo,
+    }),
+    { anticipo: 0, aprobado: 0, pendiente: 0, rechazado: 0, saldo: 0 }
+  );
+
+  const handleCrearAsignacion = async () => {
+    if (!nuevoCoordinadorId || !nuevoMonto || !nuevoMes) return;
+    setCreandoAsignacion(true);
+    try {
+      const res = await fetch("/api/caja-menor/asignaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coordinadorId: nuevoCoordinadorId,
+          mes: nuevoMes,
+          monto: parseFloat(nuevoMonto),
+        }),
+      });
+      if (res.ok) {
+        const { asignacion: nueva } = await res.json();
+        setAllAsignaciones((prev) => [...prev, nueva]);
+        setShowAsignarForm(false);
+        setNuevoCoordinadorId("");
+        setNuevoMonto("");
+      } else {
+        const data = await res.json();
+        alert(`Error: ${data.error || "No se pudo crear la asignación"}`);
+      }
+    } catch {
+      alert("Error al crear la asignación");
+    } finally {
+      setCreandoAsignacion(false);
+    }
   };
 
   const handleEliminar = async (gastoId: string, numero: number) => {
@@ -315,6 +401,128 @@ export default function CajaMenorPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Dashboard admin: anticipos del mes */}
+        {isAdmin && !loading && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                Anticipos del Mes — <span className="capitalize">{nombreMes}</span>
+              </h2>
+              <button
+                onClick={() => setShowAsignarForm(!showAsignarForm)}
+                className="px-3 py-1.5 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {showAsignarForm ? "Cancelar" : "+ Asignar Anticipo"}
+              </button>
+            </div>
+
+            {/* Formulario de asignación */}
+            {showAsignarForm && (
+              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h3 className="text-sm font-bold text-gray-700 mb-3">Nueva Asignación</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
+                    <select
+                      value={nuevoCoordinadorId}
+                      onChange={(e) => setNuevoCoordinadorId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {coordinadoresList.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+                    <input
+                      type="month"
+                      value={nuevoMes}
+                      onChange={(e) => setNuevoMes(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
+                    <input
+                      type="number"
+                      value={nuevoMonto}
+                      onChange={(e) => setNuevoMonto(e.target.value)}
+                      placeholder="0"
+                      min="1"
+                      step="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCrearAsignacion}
+                    disabled={creandoAsignacion || !nuevoCoordinadorId || !nuevoMonto}
+                    className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {creandoAsignacion ? "Creando..." : "Asignar"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tabla resumen por coordinador */}
+            {asignacionesDelMes.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4 text-center">
+                No hay anticipos asignados para este mes.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
+                      <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
+                      <th className="text-right py-2 px-2 text-xs font-bold text-green-700 uppercase">Aprobado</th>
+                      <th className="text-right py-2 px-2 text-xs font-bold text-yellow-700 uppercase">Pendiente</th>
+                      <th className="text-right py-2 px-2 text-xs font-bold text-red-700 uppercase">Rechazado</th>
+                      <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumenAdmin.map((r) => {
+                      const pctEjec = r.anticipo > 0 ? (r.aprobado / r.anticipo) * 100 : 0;
+                      return (
+                        <tr key={r.coordId} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="py-2 px-2 font-medium text-gray-900">
+                            {r.nombre}
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                              <div
+                                className="h-full rounded-full bg-green-500"
+                                style={{ width: `${Math.min(pctEjec, 100)}%` }}
+                              />
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(r.anticipo)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(r.aprobado)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(r.pendiente)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(r.rechazado)}</td>
+                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
+                      <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
+                      <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
+                      <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(totalesAdmin.aprobado)}</td>
+                      <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(totalesAdmin.pendiente)}</td>
+                      <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(totalesAdmin.rechazado)}</td>
+                      <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Filtros */}
