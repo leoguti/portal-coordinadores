@@ -263,7 +263,7 @@ interface ReembolsoCajaMenorFields {
   Coordinador?: string[];
   NombreCoordinador?: string[];
   Fecha?: string;
-  Gastos?: string[]; // Linked to GastosCajaMenor
+  GastosCajaMenor?: string[]; // Linked to GastosCajaMenor
   MontoTotal?: number; // Rollup SUM ValorNeto
   Observaciones?: string;
 }
@@ -2834,7 +2834,7 @@ export async function createReembolsoCajaMenor(params: {
   const fields: Record<string, unknown> = {
     Coordinador: [params.coordinadorId],
     Fecha: new Date().toISOString().split("T")[0],
-    Gastos: params.gastoIds,
+    GastosCajaMenor: params.gastoIds,
   };
   if (params.observaciones) {
     fields.Observaciones = params.observaciones;

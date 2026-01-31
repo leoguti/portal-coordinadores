@@ -1184,7 +1184,7 @@ export default function CajaMenorPage() {
                     <tbody>
                       {reembolsosFiltrados.map((r, index) => {
                         const montoTotal = r.fields.MontoTotal ||
-                          (r.fields.Gastos || []).reduce((sum, gId) => {
+                          (r.fields.GastosCajaMenor || []).reduce((sum, gId) => {
                             const g = gastos.find((x) => x.id === gId);
                             return sum + (g ? calcValorNeto(g) : 0);
                           }, 0);
@@ -1210,7 +1210,7 @@ export default function CajaMenorPage() {
                               {formatCurrency(montoTotal)}
                             </td>
                             <td className="py-2 px-2 text-center text-gray-600">
-                              {r.fields.Gastos?.length || 0}
+                              {r.fields.GastosCajaMenor?.length || 0}
                             </td>
                             <td className="py-2 px-2 text-right">
                               <Link

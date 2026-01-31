@@ -37,7 +37,7 @@ export default function ReembolsoDetallePage() {
         setReembolso(r);
 
         // Fetch each gasto included in this reembolso
-        const gastoIds = r.fields.Gastos || [];
+        const gastoIds = r.fields.GastosCajaMenor || [];
         const gastosData: GastoCajaMenor[] = [];
         for (const id of gastoIds) {
           try {
