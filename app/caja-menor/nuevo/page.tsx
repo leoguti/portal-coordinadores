@@ -25,8 +25,7 @@ export default function NuevoGastoCajaMenorPage() {
     async function verificarAsignacion() {
       if (!session?.user?.coordinatorRecordId) return;
       try {
-        const mesActual = new Date().toISOString().substring(0, 7);
-        const res = await fetch(`/api/caja-menor/asignaciones?mes=${mesActual}`);
+        const res = await fetch("/api/caja-menor/asignaciones");
         if (res.ok) {
           const { asignaciones } = await res.json();
           const miAsignacion = asignaciones.find(

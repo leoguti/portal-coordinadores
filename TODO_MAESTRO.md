@@ -201,6 +201,17 @@ Features solicitadas por el cliente pero sin fecha de entrega comprometida.
 - **Estado:** Descartado — no se implementará
 - **Razón:** Decisión de proyecto
 
+### P3-07: Exportar .zip de órdenes de servicio filtradas
+- **Origen:** Requerimiento de auditoría fiscal (30 ene 2026)
+- **Prioridad:** Media
+- **Estado:** No implementado
+- **Detalle:**
+  - [ ] Desde la lista de órdenes de servicio, permitir exportar las órdenes filtradas como archivo .zip
+  - [ ] El .zip debe incluir los PDFs de las órdenes y las facturas asociadas
+  - [ ] Respetar los filtros activos (coordinador, beneficiario, estado, mes)
+  - [ ] Útil para auditoría fiscal: entregar paquete completo de soportes
+- **Nota:** Evaluar si incluir también fotos de báscula de los kardex vinculados
+
 ### P3-06: Interfaz de certificados
 - **Origen:** Reunión 19 ene + TODO_PORTAL.md
 - **Prioridad:** Baja (pendiente definir alcance con cliente)

@@ -34,7 +34,6 @@ export default function CajaMenorPage() {
   const [showAsignarForm, setShowAsignarForm] = useState(false);
   const [nuevoCoordinadorId, setNuevoCoordinadorId] = useState("");
   const [nuevoMonto, setNuevoMonto] = useState("");
-  const [nuevoMes, setNuevoMes] = useState(new Date().toISOString().substring(0, 7));
   const [creandoAsignacion, setCreandoAsignacion] = useState(false);
 
   const isAdmin = session?.user?.rol === "Administrador";
@@ -61,8 +60,7 @@ export default function CajaMenorPage() {
         }
         setGastos(data);
 
-        // Cargar asignaciones
-        const mesActual = new Date().toISOString().substring(0, 7);
+        // Cargar asignaciones (sin filtro de mes — el anticipo es un tope fijo)
         try {
           if (isAdmin) {
             // Admin: cargar TODAS las asignaciones + lista de coordinadores
@@ -79,17 +77,15 @@ export default function CajaMenorPage() {
               setCoordinadoresList(coordinadores);
             }
           } else {
-            // Coordinador: solo su asignacion del mes actual
-            const res = await fetch(`/api/caja-menor/asignaciones?mes=${mesActual}`);
+            // Coordinador: buscar su asignacion (tope fijo, sin mes)
+            const res = await fetch("/api/caja-menor/asignaciones");
             if (res.ok) {
               const { asignaciones } = await res.json();
-              if (asignaciones.length > 0) {
-                const miAsignacion = asignaciones.find(
-                  (a: AsignacionCajaMenor) =>
-                    a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
-                );
-                setAsignacion(miAsignacion || null);
-              }
+              const miAsignacion = asignaciones.find(
+                (a: AsignacionCajaMenor) =>
+                  a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
+              );
+              setAsignacion(miAsignacion || null);
             }
           }
         } catch {
@@ -132,6 +128,7 @@ export default function CajaMenorPage() {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Aprobado: "bg-green-100 text-green-800",
     Rechazado: "bg-red-100 text-red-800",
+    Reembolsado: "bg-blue-100 text-blue-800",
   };
 
   const puedeEliminarGasto = (fecha: string, estado: string): boolean => {
@@ -145,10 +142,7 @@ export default function CajaMenorPage() {
     ...new Set(gastos.map((g) => g.fields.Estado || "").filter(Boolean)),
   ].sort();
   const mesesUnicos = [
-    ...new Set([
-      ...gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean),
-      ...(isAdmin ? allAsignaciones.map((a) => a.fields.Mes || "").filter(Boolean) : []),
-    ]),
+    ...new Set(gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean)),
   ]
     .sort()
     .reverse();
@@ -180,9 +174,13 @@ export default function CajaMenorPage() {
   const cantAprobados = gastosDelMes.filter((g) => g.fields.Estado === "Aprobado").length;
   const cantPendientes = gastosDelMes.filter((g) => g.fields.Estado === "Pendiente").length;
 
+  // Saldo GLOBAL = Anticipo - Aprobados (sin reembolsar). Pendientes/rechazados no afectan.
   const anticipoMonto = asignacion?.fields.MontoAsignado || 0;
-  const saldoMes = anticipoMonto - totalAprobadoMes;
-  const porcentajeEjecutado = anticipoMonto > 0 ? Math.min((totalAprobadoMes / anticipoMonto) * 100, 100) : 0;
+  const totalAprobadoSinReembolsar = gastos
+    .filter((g) => g.fields.Estado === "Aprobado")
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const saldoGlobal = anticipoMonto - totalAprobadoSinReembolsar;
+  const porcentajeUsado = anticipoMonto > 0 ? Math.min((totalAprobadoSinReembolsar / anticipoMonto) * 100, 100) : 0;
 
   // Nombre del mes en español
   const nombreMes = (() => {
@@ -201,25 +199,29 @@ export default function CajaMenorPage() {
     }).format(amount);
   };
 
-  // Admin: asignaciones del mes filtrado y resumen por coordinador
-  const asignacionesDelMes = allAsignaciones.filter((a) => a.fields.Mes === mesFiltro);
-  const resumenAdmin = asignacionesDelMes.map((asig) => {
+  // Admin: resumen por coordinador (asignaciones son tope fijo, saldo es global)
+  const resumenAdmin = allAsignaciones.map((asig) => {
     const coordId = asig.fields.Coordinador?.[0] || "";
     const nombre = asig.fields.NombreCoordinador?.[0] || "Sin nombre";
     const anticipo = asig.fields.MontoAsignado || 0;
-    const gastosCoord = gastosDelMes.filter((g) =>
+    // Saldo global: Anticipo - Aprobados sin reembolsar
+    const aprobadoSinReembolsarCoord = gastos
+      .filter((g) => g.fields.Coordinador?.includes(coordId) && g.fields.Estado === "Aprobado")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    // Stats del mes filtrado
+    const gastosCoordMes = gastosDelMes.filter((g) =>
       g.fields.Coordinador?.includes(coordId)
     );
-    const aprobado = gastosCoord
+    const aprobado = gastosCoordMes
       .filter((g) => g.fields.Estado === "Aprobado")
       .reduce((s, g) => s + calcValorNeto(g), 0);
-    const pendiente = gastosCoord
+    const pendiente = gastosCoordMes
       .filter((g) => g.fields.Estado === "Pendiente")
       .reduce((s, g) => s + calcValorNeto(g), 0);
-    const rechazado = gastosCoord
+    const rechazado = gastosCoordMes
       .filter((g) => g.fields.Estado === "Rechazado")
       .reduce((s, g) => s + calcValorNeto(g), 0);
-    return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobado };
+    return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobadoSinReembolsarCoord };
   });
   const totalesAdmin = resumenAdmin.reduce(
     (acc, r) => ({
@@ -234,32 +236,39 @@ export default function CajaMenorPage() {
 
   // Admin: detalle del coordinador seleccionado
   const adminCoordAsignacion = filtroCoordinador
-    ? asignacionesDelMes.find((a) => a.fields.Coordinador?.includes(filtroCoordinador))
+    ? allAsignaciones.find((a) => a.fields.Coordinador?.includes(filtroCoordinador))
     : null;
   const adminCoordNombre = filtroCoordinador
     ? coordinadoresList.find((c) => c.id === filtroCoordinador)?.name || ""
     : "";
-  const adminCoordGastos = filtroCoordinador
+  // Stats del mes filtrado (para las tarjetas mensuales)
+  const adminCoordGastosMes = filtroCoordinador
     ? gastosDelMes.filter((g) => g.fields.Coordinador?.includes(filtroCoordinador))
     : [];
-  const adminCoordAprobado = adminCoordGastos
+  const adminCoordAprobadoMes = adminCoordGastosMes
     .filter((g) => g.fields.Estado === "Aprobado")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordPendiente = adminCoordGastos
+  const adminCoordPendienteMes = adminCoordGastosMes
     .filter((g) => g.fields.Estado === "Pendiente")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordRechazado = adminCoordGastos
+  const adminCoordRechazadoMes = adminCoordGastosMes
     .filter((g) => g.fields.Estado === "Rechazado")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordCantAprobados = adminCoordGastos.filter((g) => g.fields.Estado === "Aprobado").length;
-  const adminCoordCantPendientes = adminCoordGastos.filter((g) => g.fields.Estado === "Pendiente").length;
-  const adminCoordCantRechazados = adminCoordGastos.filter((g) => g.fields.Estado === "Rechazado").length;
+  const adminCoordCantAprobados = adminCoordGastosMes.filter((g) => g.fields.Estado === "Aprobado").length;
+  const adminCoordCantPendientes = adminCoordGastosMes.filter((g) => g.fields.Estado === "Pendiente").length;
+  const adminCoordCantRechazados = adminCoordGastosMes.filter((g) => g.fields.Estado === "Rechazado").length;
+  // Saldo global: Anticipo - Aprobados sin reembolsar (todos los meses)
   const adminCoordAnticipo = adminCoordAsignacion?.fields.MontoAsignado || 0;
-  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobado;
-  const adminCoordPctEjec = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobado / adminCoordAnticipo) * 100, 100) : 0;
+  const adminCoordAprobadoGlobal = filtroCoordinador
+    ? gastos
+        .filter((g) => g.fields.Coordinador?.includes(filtroCoordinador) && g.fields.Estado === "Aprobado")
+        .reduce((s, g) => s + calcValorNeto(g), 0)
+    : 0;
+  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobadoGlobal;
+  const adminCoordPctUsado = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobadoGlobal / adminCoordAnticipo) * 100, 100) : 0;
 
   const handleCrearAsignacion = async () => {
-    if (!nuevoCoordinadorId || !nuevoMonto || !nuevoMes) return;
+    if (!nuevoCoordinadorId || !nuevoMonto) return;
     setCreandoAsignacion(true);
     try {
       const res = await fetch("/api/caja-menor/asignaciones", {
@@ -267,7 +276,6 @@ export default function CajaMenorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           coordinadorId: nuevoCoordinadorId,
-          mes: nuevoMes,
           monto: parseFloat(nuevoMonto),
         }),
       });
@@ -346,82 +354,58 @@ export default function CajaMenorPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                 </svg>
                 <div>
-                  <p className="font-bold text-orange-800">No tienes anticipo asignado para este mes</p>
-                  <p className="text-orange-700 text-sm mt-1">Contacta al administrador para que te asigne un anticipo de operación.</p>
+                  <p className="font-bold text-orange-800">No tienes anticipo asignado</p>
+                  <p className="text-orange-700 text-sm mt-1">Contacta al administrador para que te asigne un fondo de caja menor.</p>
                 </div>
               </div>
             ) : (
-              /* Panel Anticipo de Operación */
+              /* Panel Fondo de Caja Menor */
               <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-                {/* Título del panel */}
-                <div className="flex items-center justify-between mb-4">
+                {/* Saldo global (siempre visible) */}
+                <div className="flex items-center justify-between mb-2">
                   <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Anticipo de Operación — <span className="capitalize">{nombreMes}</span>
+                    Mi Fondo de Caja Menor
                   </h2>
                 </div>
-
-                {/* Monto anticipo y barra de progreso */}
-                <div className="mb-5">
-                  <p className="text-3xl font-bold text-gray-900 mb-2">
-                    {formatCurrency(anticipoMonto)}
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-green-500 transition-all duration-500"
-                      style={{ width: `${porcentajeEjecutado}%` }}
-                    />
+                <div className="flex items-baseline gap-6 mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Anticipo</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(anticipoMonto)}</p>
                   </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-xs text-gray-500">
-                      {formatCurrency(totalAprobadoMes)} aprobado
-                    </span>
-                    <span className="text-xs font-bold text-gray-600">
-                      {porcentajeEjecutado.toFixed(0)}% ejecutado
-                    </span>
+                  <div>
+                    <p className="text-xs text-blue-600 font-bold">Saldo disponible</p>
+                    <p className="text-2xl font-bold text-blue-700">{formatCurrency(saldoGlobal)}</p>
                   </div>
                 </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-1">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                    style={{ width: `${porcentajeUsado}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mb-5">
+                  {porcentajeUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
+                </p>
 
-                {/* 4 tarjetas de estado */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {/* Aprobado */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                    <p className="text-xl font-bold text-green-800 font-mono">
-                      {formatCurrency(totalAprobadoMes)}
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">
-                      {cantAprobados} {cantAprobados === 1 ? "gasto" : "gastos"}
-                    </p>
-                  </div>
-                  {/* Pendiente */}
+                {/* Tarjetas mensuales */}
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">
+                  Gastos de <span className="capitalize">{nombreMes}</span>
+                </p>
+                <div className="grid grid-cols-3 gap-3">
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                    <p className="text-xl font-bold text-yellow-800 font-mono">
-                      {formatCurrency(totalPendienteMes)}
-                    </p>
-                    <p className="text-xs text-yellow-600 mt-1">
-                      {cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"}
-                    </p>
+                    <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(totalPendienteMes)}</p>
+                    <p className="text-xs text-yellow-600 mt-1">{cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"}</p>
                   </div>
-                  {/* Rechazado */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
+                    <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(totalAprobadoMes)}</p>
+                    <p className="text-xs text-green-600 mt-1">{cantAprobados} {cantAprobados === 1 ? "gasto" : "gastos"}</p>
+                  </div>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                    <p className="text-xl font-bold text-red-800 font-mono">
-                      {formatCurrency(totalRechazadoMes)}
-                    </p>
-                    <p className="text-xs text-red-600 mt-1">
-                      {cantRechazados} {cantRechazados === 1 ? "gasto" : "gastos"}
-                    </p>
-                  </div>
-                  {/* Saldo */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-blue-700 uppercase mb-1">Saldo</p>
-                    <p className="text-xl font-bold text-blue-800 font-mono">
-                      {formatCurrency(saldoMes)}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Anticipo − Aprobados
-                    </p>
+                    <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(totalRechazadoMes)}</p>
+                    <p className="text-xs text-red-600 mt-1">{cantRechazados} {cantRechazados === 1 ? "gasto" : "gastos"}</p>
                   </div>
                 </div>
               </div>
@@ -507,7 +491,7 @@ export default function CajaMenorPage() {
               <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Anticipos del Mes — <span className="capitalize">{nombreMes}</span>
+                    Fondos de Caja Menor
                   </h2>
                   <button
                     onClick={() => setShowAsignarForm(!showAsignarForm)}
@@ -521,7 +505,7 @@ export default function CajaMenorPage() {
                 {showAsignarForm && (
                   <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                     <h3 className="text-sm font-bold text-gray-700 mb-3">Nueva Asignación</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
                         <select
@@ -534,15 +518,6 @@ export default function CajaMenorPage() {
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
-                        <input
-                          type="month"
-                          value={nuevoMes}
-                          onChange={(e) => setNuevoMes(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
@@ -568,7 +543,7 @@ export default function CajaMenorPage() {
                 )}
 
                 {/* Tabla resumen por coordinador */}
-                {asignacionesDelMes.length === 0 ? (
+                {allAsignaciones.length === 0 ? (
                   <p className="text-sm text-gray-500 py-4 text-center">
                     No hay anticipos asignados para este mes.
                   </p>
@@ -579,15 +554,13 @@ export default function CajaMenorPage() {
                         <tr className="border-b-2 border-gray-300">
                           <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
                           <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
-                          <th className="text-right py-2 px-2 text-xs font-bold text-green-700 uppercase">Aprobado</th>
-                          <th className="text-right py-2 px-2 text-xs font-bold text-yellow-700 uppercase">Pendiente</th>
-                          <th className="text-right py-2 px-2 text-xs font-bold text-red-700 uppercase">Rechazado</th>
                           <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
                         </tr>
                       </thead>
                       <tbody>
                         {resumenAdmin.map((r) => {
-                          const pctEjec = r.anticipo > 0 ? (r.aprobado / r.anticipo) * 100 : 0;
+                          const comprometido = r.anticipo - r.saldo;
+                          const pctUsado = r.anticipo > 0 ? (comprometido / r.anticipo) * 100 : 0;
                           return (
                             <tr
                               key={r.coordId}
@@ -601,15 +574,12 @@ export default function CajaMenorPage() {
                                 <span className="text-[#00d084] hover:underline">{r.nombre}</span>
                                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                                   <div
-                                    className="h-full rounded-full bg-green-500"
-                                    style={{ width: `${Math.min(pctEjec, 100)}%` }}
+                                    className="h-full rounded-full bg-amber-500"
+                                    style={{ width: `${Math.min(pctUsado, 100)}%` }}
                                   />
                                 </div>
                               </td>
                               <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(r.anticipo)}</td>
-                              <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(r.aprobado)}</td>
-                              <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(r.pendiente)}</td>
-                              <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(r.rechazado)}</td>
                               <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
                             </tr>
                           );
@@ -619,9 +589,6 @@ export default function CajaMenorPage() {
                         <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
                           <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
                           <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-green-700">{formatCurrency(totalesAdmin.aprobado)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-yellow-700">{formatCurrency(totalesAdmin.pendiente)}</td>
-                          <td className="py-2 px-2 text-right font-mono text-red-700">{formatCurrency(totalesAdmin.rechazado)}</td>
                           <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
                         </tr>
                       </tfoot>
@@ -630,68 +597,65 @@ export default function CajaMenorPage() {
                 )}
               </div>
             ) : (
-              /* Vista detalle: anticipo del coordinador seleccionado */
+              /* Vista detalle: fondo del coordinador seleccionado */
               <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-2">
                   <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Anticipo — {adminCoordNombre} — <span className="capitalize">{nombreMes}</span>
+                    Fondo — {adminCoordNombre}
                   </h2>
                 </div>
 
                 {adminCoordAsignacion ? (
                   <>
-                    {/* Barra de progreso */}
-                    <div className="mb-5">
-                      <p className="text-3xl font-bold text-gray-900 mb-2">
-                        {formatCurrency(adminCoordAnticipo)}
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-green-500 transition-all duration-500"
-                          style={{ width: `${adminCoordPctEjec}%` }}
-                        />
+                    {/* Saldo global */}
+                    <div className="flex items-baseline gap-6 mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Anticipo</p>
+                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(adminCoordAnticipo)}</p>
                       </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-gray-500">
-                          {formatCurrency(adminCoordAprobado)} aprobado
-                        </span>
-                        <span className="text-xs font-bold text-gray-600">
-                          {adminCoordPctEjec.toFixed(0)}% ejecutado
-                        </span>
+                      <div>
+                        <p className="text-xs text-blue-600 font-bold">Saldo disponible</p>
+                        <p className="text-2xl font-bold text-blue-700">{formatCurrency(adminCoordSaldo)}</p>
                       </div>
                     </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-1">
+                      <div
+                        className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                        style={{ width: `${adminCoordPctUsado}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mb-5">
+                      {adminCoordPctUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
+                    </p>
 
-                    {/* 4 tarjetas */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobado)}</p>
-                        <p className="text-xs text-green-600 mt-1">{adminCoordCantAprobados} {adminCoordCantAprobados === 1 ? "gasto" : "gastos"}</p>
-                      </div>
+                    {/* Tarjetas mensuales */}
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">
+                      Gastos de <span className="capitalize">{nombreMes}</span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendiente)}</p>
+                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendienteMes)}</p>
                         <p className="text-xs text-yellow-600 mt-1">{adminCoordCantPendientes} {adminCoordCantPendientes === 1 ? "gasto" : "gastos"}</p>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
+                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobadoMes)}</p>
+                        <p className="text-xs text-green-600 mt-1">{adminCoordCantAprobados} {adminCoordCantAprobados === 1 ? "gasto" : "gastos"}</p>
                       </div>
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazado)}</p>
+                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazadoMes)}</p>
                         <p className="text-xs text-red-600 mt-1">{adminCoordCantRechazados} {adminCoordCantRechazados === 1 ? "gasto" : "gastos"}</p>
-                      </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs font-bold text-blue-700 uppercase mb-1">Saldo</p>
-                        <p className="text-xl font-bold text-blue-800 font-mono">{formatCurrency(adminCoordSaldo)}</p>
-                        <p className="text-xs text-blue-600 mt-1">Anticipo - Aprobados</p>
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="py-4 text-center">
-                    <p className="text-gray-500 mb-3">Sin anticipo asignado para este mes.</p>
+                    <p className="text-gray-500 mb-3">Sin anticipo asignado.</p>
                     <button
                       onClick={() => {
                         setNuevoCoordinadorId(filtroCoordinador);
-                        setNuevoMes(mesFiltro);
                         setFiltroCoordinador("");
                         setShowAsignarForm(true);
                         setCurrentPage(1);

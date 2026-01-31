@@ -48,7 +48,7 @@ export async function GET(
 /**
  * PATCH /api/caja-menor/[id] — Cambiar estado (admin) o corregir gasto rechazado (coordinador)
  *
- * Body para admin: { action: "aprobar" | "rechazar", observaciones?: string }
+ * Body para admin: { action: "aprobar" | "rechazar" | "reembolsar", observaciones?: string }
  * Body para coordinador: { action: "corregir", fecha?, beneficiarioId?, concepto?, valor?, porcentajeRetencion?, facturaUrl? }
  */
 export async function PATCH(
@@ -90,6 +90,25 @@ export async function PATCH(
       }
 
       return NextResponse.json({ success: true, estado });
+    }
+
+    // Admin: reembolsar gasto aprobado
+    if (action === "reembolsar") {
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Solo admin puede reembolsar" }, { status: 403 });
+      }
+
+      if (gasto.fields.Estado !== "Aprobado") {
+        return NextResponse.json({ error: "Solo se pueden reembolsar gastos aprobados" }, { status: 400 });
+      }
+
+      const success = await updateEstadoGasto(id, "Reembolsado", body.observaciones);
+
+      if (!success) {
+        return NextResponse.json({ error: "Error al reembolsar" }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, estado: "Reembolsado" });
     }
 
     // Coordinador: corregir gasto rechazado

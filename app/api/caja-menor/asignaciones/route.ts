@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/caja-menor/asignaciones — Crear asignacion (solo admin)
- * Body: { coordinadorId: string, mes: string, monto: number }
+ * Body: { coordinadorId: string, monto: number }
  */
 export async function POST(request: Request) {
   try {
@@ -44,13 +44,13 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { coordinadorId, mes, monto } = body;
+    const { coordinadorId, monto } = body;
 
-    if (!coordinadorId || !mes || monto === undefined) {
+    if (!coordinadorId || monto === undefined) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
     }
 
-    const asignacion = await createAsignacionCajaMenor(coordinadorId, mes, monto);
+    const asignacion = await createAsignacionCajaMenor(coordinadorId, "", monto);
 
     return NextResponse.json({ asignacion }, { status: 201 });
   } catch (error) {

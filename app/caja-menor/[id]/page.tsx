@@ -205,6 +205,41 @@ export default function GastoDetallePage() {
     }
   }
 
+  async function handleReembolsar() {
+    if (!confirm("¿Marcar este gasto como reembolsado?")) return;
+
+    setActionLoading(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/caja-menor/${gastoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reembolsar",
+          observaciones: observaciones.trim() || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        setActionMessage({ type: "success", text: "Gasto marcado como reembolsado" });
+        setObservaciones("");
+        await loadGasto();
+      } else {
+        const data = await response.json();
+        setActionMessage({
+          type: "error",
+          text: data.error || "Error al reembolsar",
+        });
+      }
+    } catch (err) {
+      console.error("Error reembolsando gasto:", err);
+      setActionMessage({ type: "error", text: "Error al reembolsar el gasto" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
@@ -217,6 +252,7 @@ export default function GastoDetallePage() {
     Pendiente: "bg-yellow-100 text-yellow-800 border-yellow-300",
     Aprobado: "bg-green-100 text-green-800 border-green-300",
     Rechazado: "bg-red-100 text-red-800 border-red-300",
+    Reembolsado: "bg-blue-100 text-blue-800 border-blue-300",
   };
 
   if (loading) {
@@ -371,8 +407,36 @@ export default function GastoDetallePage() {
           </div>
         )}
 
-        {/* Admin: no actions for non-Pendiente */}
-        {isAdmin && estado !== "Pendiente" && (
+        {/* Admin: reembolsar gasto aprobado */}
+        {isAdmin && estado === "Aprobado" && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
+              Acciones de Administrador
+            </h3>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observaciones (opcional)
+              </label>
+              <textarea
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                placeholder="Agregar observaciones al reembolsar..."
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent text-sm"
+              />
+            </div>
+            <button
+              onClick={handleReembolsar}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {actionLoading ? "Procesando..." : "Marcar como Reembolsado"}
+            </button>
+          </div>
+        )}
+
+        {/* Admin: no actions for other states */}
+        {isAdmin && estado !== "Pendiente" && estado !== "Aprobado" && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
               Acciones de Administrador

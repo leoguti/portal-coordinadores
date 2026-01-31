@@ -2524,7 +2524,7 @@ export async function createGastoCajaMenor(data: {
  */
 export async function updateEstadoGasto(
   gastoId: string,
-  estado: "Aprobado" | "Rechazado",
+  estado: "Aprobado" | "Rechazado" | "Reembolsado",
   observaciones?: string
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
