@@ -54,8 +54,12 @@ next-env.d.ts
 
 # Python virtual environments
 chatbot/venv/
+chatbot/.venv/
 chatbot/__pycache__/
 *.pyc
+
+# Telegram session (Telethon)
+chatbot/*.session
 
 # Development logs
 dev.log
