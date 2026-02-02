@@ -30,7 +30,7 @@ TESTS = {
         {"text": "salir"},
         {"text": "ks+01/01/2026"},
         {"text": "ca+222+0+0+0+0+0+0"},
-        {"text": "40"},
+        {"text": "51"},       # centro de acopio (P.R ALIAR)
         {"text": "311"},
         {"text": "2"},
         {"photo": "../public/logo-campolimpio-white.png"},
@@ -52,7 +52,7 @@ TESTS = {
         {"text": "ke+01/01/2026"},
         {"text": "duitama+333+0+0+0+0+0+0"},
         {"text": "SI"},       # buscar municipio
-        {"text": "40"},       # centro de acopio destino
+        {"text": "51"},       # centro de acopio destino (P.R ALIAR)
         {"text": "2"},        # forma de pago: Sin Costo
         {"text": "Si"},       # sí enviar foto de báscula
         {"photo": "../public/logo-campolimpio-white.png"},
