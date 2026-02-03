@@ -238,23 +238,28 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
         return typeof val === "number" ? val : parseFloat(val) || 0;
       };
       
-      // Convert File to base64 if foto exists
-      let fotoData: { url: string; name: string } | undefined;
+      // Convert Files to base64 if fotos exist
+      let fotoData: { url: string; name: string }[] | undefined;
       if (fotoBascula.length > 0) {
-        const file = fotoBascula[0].file;
-        const reader = new FileReader();
-        
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        
-        const base64 = await base64Promise;
-        fotoData = {
-          url: base64,
-          name: file.name,
-        };
+        const convertedFiles: { url: string; name: string }[] = [];
+
+        for (const img of fotoBascula) {
+          const file = img.file;
+          const reader = new FileReader();
+
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+
+          convertedFiles.push({
+            url: base64,
+            name: file.name,
+          });
+        }
+
+        fotoData = convertedFiles;
       }
       
       const submitData = {
@@ -688,9 +693,10 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
             <ImageUpload
               images={fotoBascula}
               onChange={setFotoBascula}
-              maxFiles={1}
+              maxFiles={5}
               maxSizeMB={5}
               disabled={loading}
+              acceptPdf={true}
             />
           </div>
 

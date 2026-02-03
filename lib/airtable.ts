@@ -1732,7 +1732,7 @@ export async function createKardex(
     Lonas?: number;
     Carton?: number;
     Metal?: number;
-    fotoBascula?: { url: string; name: string }; // Photo from web upload
+    fotoBascula?: { url: string; name: string }[]; // Photos/PDFs from web upload (array)
   }
 ): Promise<AirtableRecord<KardexFields> | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -1793,28 +1793,41 @@ export async function createKardex(
     const data: AirtableRecord<KardexFields> = await response.json();
     console.log(`Successfully created Kardex record with ID: ${data.id}`);
     
-    // Upload photo to Airtable if provided
-    if (kardexData.fotoBascula) {
+    // Upload photos/PDFs to Airtable if provided
+    if (kardexData.fotoBascula && kardexData.fotoBascula.length > 0) {
       try {
-        console.log("Uploading foto de báscula to Vercel Blob...");
+        console.log(`Uploading ${kardexData.fotoBascula.length} archivo(s) de báscula to Vercel Blob...`);
         const { put, del } = await import("@vercel/blob");
-        
-        // 1. Fetch the image data from the data URL
-        const response = await fetch(kardexData.fotoBascula.url);
-        const buffer = await response.arrayBuffer();
-        
-        // 2. Upload to Vercel Blob
-        const filename = `kardex_${data.id}_${Date.now()}.jpg`;
-        const blob = await put(filename, buffer, {
-          access: "public",
-          contentType: "image/jpeg",
-        });
-        
-        console.log(`Foto uploaded to Vercel Blob: ${blob.url}`);
-        
-        // 3. Update Airtable with the photo URL
-        const fotoAttachment = [{ url: blob.url }];
-        
+
+        const uploadedBlobs: { url: string; blobUrl: string }[] = [];
+
+        // Upload each file to Vercel Blob
+        for (let i = 0; i < kardexData.fotoBascula.length; i++) {
+          const foto = kardexData.fotoBascula[i];
+
+          // 1. Fetch the file data from the data URL
+          const fetchResponse = await fetch(foto.url);
+          const buffer = await fetchResponse.arrayBuffer();
+
+          // 2. Determine content type and extension from filename
+          const extension = foto.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const isPdf = extension === 'pdf';
+          const contentType = isPdf ? 'application/pdf' : 'image/jpeg';
+
+          // 3. Upload to Vercel Blob
+          const filename = `kardex_${data.id}_${Date.now()}_${i}.${extension}`;
+          const blob = await put(filename, buffer, {
+            access: "public",
+            contentType,
+          });
+
+          console.log(`Archivo ${i + 1} uploaded to Vercel Blob: ${blob.url}`);
+          uploadedBlobs.push({ url: blob.url, blobUrl: blob.url });
+        }
+
+        // 4. Update Airtable with all photo URLs
+        const fotoAttachments = uploadedBlobs.map(b => ({ url: b.url }));
+
         const updateResponse = await fetch(`${url}/${data.id}`, {
           method: "PATCH",
           headers: {
@@ -1823,30 +1836,35 @@ export async function createKardex(
           },
           body: JSON.stringify({
             fields: {
-              soportebascula: fotoAttachment,
+              soportebascula: fotoAttachments,
             },
           }),
         });
-        
+
         if (updateResponse.ok) {
-          console.log(`Foto URL sent to Airtable for Kardex ${data.id}`);
-          
-          // 4. Wait for Airtable to download the file, then delete from Vercel Blob
+          console.log(`${uploadedBlobs.length} archivo(s) URL sent to Airtable for Kardex ${data.id}`);
+
+          // 5. Wait for Airtable to download the files, then delete from Vercel Blob
           await new Promise(resolve => setTimeout(resolve, 3000));
-          await del(blob.url);
-          console.log(`Foto deleted from Vercel Blob: ${filename}`);
-          
+
+          for (const blob of uploadedBlobs) {
+            await del(blob.blobUrl);
+            console.log(`Archivo deleted from Vercel Blob: ${blob.blobUrl}`);
+          }
+
           const updatedData = await updateResponse.json();
           return updatedData;
         } else {
           const errorText = await updateResponse.text();
-          console.error("Failed to upload foto to Airtable:", errorText);
-          // Clean up blob even if Airtable update failed
-          await del(blob.url);
+          console.error("Failed to upload archivos to Airtable:", errorText);
+          // Clean up blobs even if Airtable update failed
+          for (const blob of uploadedBlobs) {
+            await del(blob.blobUrl);
+          }
         }
       } catch (fotoError) {
-        console.error("Error uploading foto:", fotoError);
-        // Continue - kardex was created successfully, just without photo
+        console.error("Error uploading archivos:", fotoError);
+        // Continue - kardex was created successfully, just without photos
       }
     }
     
@@ -1883,7 +1901,7 @@ export async function createKardexWithConciliacion(
     Lonas?: number;
     Carton?: number;
     Metal?: number;
-    fotoBascula?: { url: string; name: string };
+    fotoBascula?: { url: string; name: string }[];
   },
   origenTipo: "Municipio" | "Centro de Acopio"
 ): Promise<{

@@ -17,6 +17,7 @@ interface ImageUploadProps {
   maxFiles?: number;
   maxSizeMB?: number;
   disabled?: boolean;
+  acceptPdf?: boolean; // Permitir archivos PDF además de imágenes
 }
 
 export type { ImageFile };
@@ -27,6 +28,7 @@ export default function ImageUpload({
   maxFiles = 10,
   maxSizeMB = 5,
   disabled = false,
+  acceptPdf = false,
 }: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,8 +43,11 @@ export default function ImageUpload({
 
     Array.from(files).forEach((file) => {
       // Validar tipo
-      if (!file.type.startsWith("image/")) {
-        console.warn(`Archivo ignorado (no es imagen): ${file.name}`);
+      const isImage = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf";
+
+      if (!isImage && !(acceptPdf && isPdf)) {
+        console.warn(`Archivo ignorado (tipo no permitido): ${file.name}`);
         return;
       }
 
@@ -54,14 +59,14 @@ export default function ImageUpload({
 
       // Validar cantidad máxima
       if (images.length + newImages.length >= maxFiles) {
-        console.warn(`Máximo ${maxFiles} imágenes permitidas`);
+        console.warn(`Máximo ${maxFiles} archivos permitidos`);
         return;
       }
 
       newImages.push({
         id: generateId(),
         file,
-        preview: URL.createObjectURL(file),
+        preview: isImage ? URL.createObjectURL(file) : "", // PDFs no tienen preview de imagen
       });
     });
 
@@ -127,38 +132,47 @@ export default function ImageUpload({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={acceptPdf ? "image/*,application/pdf" : "image/*"}
           multiple
           onChange={handleChange}
           className="hidden"
           disabled={disabled}
         />
-        
+
         <div className="space-y-2">
-          <div className="text-4xl">📷</div>
+          <div className="text-4xl">{acceptPdf ? "📷📄" : "📷"}</div>
           <p className="text-gray-600">
-            {dragActive 
-              ? "Suelta las imágenes aquí" 
-              : "Arrastra imágenes o haz clic para seleccionar"
+            {dragActive
+              ? `Suelta ${acceptPdf ? "los archivos" : "las imágenes"} aquí`
+              : `Arrastra ${acceptPdf ? "imágenes o PDFs" : "imágenes"} o haz clic para seleccionar`
             }
           </p>
           <p className="text-xs text-gray-500">
-            Máximo {maxFiles} imágenes, {maxSizeMB}MB cada una
+            Máximo {maxFiles} {acceptPdf ? "archivos" : "imágenes"}, {maxSizeMB}MB cada uno
           </p>
         </div>
       </div>
 
-      {/* Preview de imágenes */}
+      {/* Preview de archivos */}
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {images.map((img) => (
+          {images.map((img) => {
+            const isPdf = img.file.type === "application/pdf";
+            return (
             <div key={img.id} className="relative group">
               <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  src={img.preview}
-                  alt={img.file.name}
-                  className="w-full h-full object-cover"
-                />
+                {isPdf ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                    <span className="text-4xl">📄</span>
+                    <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                  </div>
+                ) : (
+                  <img
+                    src={img.preview}
+                    alt={img.file.name}
+                    className="w-full h-full object-cover"
+                  />
+                )}
                 
                 {/* Overlay de estado */}
                 {img.uploading && (
@@ -203,14 +217,15 @@ export default function ImageUpload({
                 {img.file.name}
               </p>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
       {/* Contador */}
       {images.length > 0 && (
         <p className="text-sm text-gray-500 text-right">
-          {images.length} / {maxFiles} imágenes
+          {images.length} / {maxFiles} {acceptPdf ? "archivos" : "imágenes"}
         </p>
       )}
     </div>

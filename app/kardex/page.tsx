@@ -1124,27 +1124,45 @@ export default function KardexPage() {
                                 </div>
                               </div>
                               
-                              {/* Foto de Báscula */}
+                              {/* Soportes de Báscula */}
                               {record.fields.soportebascula && record.fields.soportebascula.length > 0 && (
                                 <div className="pt-3 border-t border-purple-200">
-                                  <span className="text-xs font-medium text-gray-500">📸 Foto de Báscula</span>
-                                  <div className="mt-2">
-                                    <a
-                                      href={record.fields.soportebascula[0].url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-block"
-                                    >
-                                      <img
-                                        src={record.fields.soportebascula[0].url}
-                                        alt="Foto de báscula"
-                                        className="max-w-xs rounded-lg border-2 border-purple-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                                      />
-                                    </a>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Click en la imagen para ver en tamaño completo
-                                    </p>
+                                  <span className="text-xs font-medium text-gray-500">
+                                    📸 Soporte{record.fields.soportebascula.length > 1 ? 's' : ''} de Báscula ({record.fields.soportebascula.length})
+                                  </span>
+                                  <div className="mt-2 flex flex-wrap gap-3">
+                                    {record.fields.soportebascula.map((archivo, idx) => {
+                                      const url = archivo.url;
+                                      const isPdf = url.toLowerCase().includes('.pdf');
+
+                                      return (
+                                        <a
+                                          key={idx}
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-block"
+                                        >
+                                          {isPdf ? (
+                                            <div className="w-24 h-24 flex flex-col items-center justify-center bg-red-50 rounded-lg border-2 border-red-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                                              <span className="text-3xl">📄</span>
+                                              <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                                              <span className="text-xs text-gray-500">#{idx + 1}</span>
+                                            </div>
+                                          ) : (
+                                            <img
+                                              src={url}
+                                              alt={`Soporte de báscula ${idx + 1}`}
+                                              className="max-w-[150px] max-h-[150px] rounded-lg border-2 border-purple-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer object-cover"
+                                            />
+                                          )}
+                                        </a>
+                                      );
+                                    })}
                                   </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Click para ver/descargar en tamaño completo
+                                  </p>
                                 </div>
                               )}
                               
