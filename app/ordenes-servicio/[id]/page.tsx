@@ -423,6 +423,12 @@ export default function OrdenDetallePage() {
                       const tipoMovimiento = kardex?.fields.TipoMovimiento;
                       const fotoBascula = kardex?.fields.soportebascula?.[0];
 
+                      // Para items de Kardex, mostrar el consecutivo (idkardex)
+                      // Para items de Catálogo, mostrar el nombre del item
+                      const displayName = tipoItem === "CON Kardex" && kardex
+                        ? `Kardex #${kardex.fields.idkardex}`
+                        : nombre;
+
                       return (
                         <tr
                           key={item.id}
@@ -458,7 +464,7 @@ export default function OrdenDetallePage() {
 
                           {/* Descripcion/Nombre */}
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {nombre}
+                            {displayName}
                           </td>
 
                           {/* Foto Bascula */}
