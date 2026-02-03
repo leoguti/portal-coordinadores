@@ -1845,7 +1845,10 @@ export async function createKardex(
           console.log(`${uploadedBlobs.length} archivo(s) URL sent to Airtable for Kardex ${data.id}`);
 
           // 5. Wait for Airtable to download the files, then delete from Vercel Blob
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // Esperar 3 segundos por cada archivo para dar tiempo a Airtable
+          const waitTime = Math.max(3000, uploadedBlobs.length * 3000);
+          console.log(`Waiting ${waitTime}ms for Airtable to download ${uploadedBlobs.length} file(s)...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
 
           for (const blob of uploadedBlobs) {
             await del(blob.blobUrl);

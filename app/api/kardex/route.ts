@@ -103,7 +103,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("🔍 [API KARDEX] body.fotoBascula:", body.fotoBascula);
+    console.log("🔍 [API KARDEX] body.fotoBascula:", {
+      count: body.fotoBascula?.length || 0,
+      files: body.fotoBascula?.map((f: any) => f.name) || []
+    });
     
     // Validaciones de reglas de negocio
     const isSalida = body.TipoMovimiento === "SALIDA";
