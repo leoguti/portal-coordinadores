@@ -1134,35 +1134,51 @@ export async function getItemsOrden(ordenId: string): Promise<ItemOrden[]> {
   }
 
   try {
-    // Use filterByFormula to get items for this specific orden
-    // RECORD_ID() in linked record field matches the ordenId
-    const filterFormula = `FIND("${ordenId}", ARRAYJOIN({OrdenServicio}))`;
-    const url = `https://api.airtable.com/v0/${baseId}/ItemsOrden?filterByFormula=${encodeURIComponent(filterFormula)}`;
-
     console.log(`[getItemsOrden] Fetching items for orden ${ordenId}`);
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
+    // Fetch all records with pagination and filter client-side
+    // (Airtable doesn't support filtering by linked record ID directly)
+    const allRecords: ItemOrden[] = [];
+    let offset: string | undefined;
+
+    do {
+      const url = new URL(`https://api.airtable.com/v0/${baseId}/ItemsOrden`);
+      if (offset) {
+        url.searchParams.set("offset", offset);
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `Airtable API error fetching ItemsOrden: ${response.status}`,
+          errorText
+        );
+        return [];
+      }
+
+      const data: AirtableResponse<ItemOrdenFields> & { offset?: string } = await response.json();
+      allRecords.push(...data.records);
+      offset = data.offset;
+
+    } while (offset);
+
+    // Filter client-side by OrdenServicio linked record
+    const filteredItems = allRecords.filter((item) => {
+      const ordenServicio = item.fields.OrdenServicio || [];
+      return ordenServicio.includes(ordenId);
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Airtable API error fetching ItemsOrden: ${response.status}`,
-        errorText
-      );
-      return [];
-    }
+    console.log(`[getItemsOrden] Found ${filteredItems.length} items for orden ${ordenId} (total records: ${allRecords.length})`);
 
-    const data: AirtableResponse<ItemOrdenFields> = await response.json();
-
-    console.log(`[getItemsOrden] Found ${data.records.length} items for orden ${ordenId}`);
-
-    return data.records;
+    return filteredItems;
   } catch (error) {
     console.error("Error fetching ItemsOrden from Airtable:", error);
     return [];
