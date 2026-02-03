@@ -50,12 +50,24 @@ export async function GET() {
 
     const data: { records: AirtableRecord[] } = await response.json();
 
+    console.log("🔍 [CENTROS-ACOPIO] Total registros Airtable:", data.records.length);
+    console.log("🔍 [CENTROS-ACOPIO] isAdmin:", isAdmin);
+    console.log("🔍 [CENTROS-ACOPIO] coordinatorRecordId:", coordinatorRecordId);
+
     // Filtrar por coordinador en el servidor (admin ve todos)
     const registros = isAdmin
       ? data.records
       : data.records.filter((record) =>
           record.fields.Coordinador?.includes(coordinatorRecordId || "")
         );
+
+    console.log("🔍 [CENTROS-ACOPIO] Registros después de filtro:", registros.length);
+    if (!isAdmin && registros.length > 0) {
+      console.log("🔍 [CENTROS-ACOPIO] Ejemplo de centro filtrado:", {
+        nombre: registros[0].fields.Nombre,
+        coordinadores: registros[0].fields.Coordinador
+      });
+    }
 
     const centros = registros.map((record) => {
       const municipio = record.fields["mundep (from Municipio)"]?.[0] || "";
