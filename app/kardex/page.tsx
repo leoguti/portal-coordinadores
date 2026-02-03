@@ -30,6 +30,7 @@ interface KardexRecord {
     AÑO?: string;
     MES?: string;
     soportebascula?: Array<{ url: string }>;
+    OrdenServicio?: number[]; // Lookup del número de orden
   };
 }
 
@@ -1093,8 +1094,18 @@ export default function KardexPage() {
                                     {record.fields.nombregestor?.[0] || "-"}
                                   </p>
                                 </div>
+                                <div>
+                                  <span className="text-xs font-medium text-gray-500">Orden de Servicio</span>
+                                  <p className="text-sm font-semibold mt-1">
+                                    {record.fields.OrdenServicio?.[0] ? (
+                                      <span className="text-[#00d084]">#{record.fields.OrdenServicio[0]}</span>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </p>
+                                </div>
                               </div>
-                              
+
                               {/* Desglose de materiales */}
                               <div>
                                 <div className="flex items-center justify-between mb-2">
