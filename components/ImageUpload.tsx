@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface ImageFile {
   id: string;
@@ -33,11 +33,19 @@ export default function ImageUpload({
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Ref para mantener siempre la versión más reciente de images (evita stale closure)
+  const imagesRef = useRef(images);
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
   const generateId = () => Math.random().toString(36).substring(2, 9);
 
   const processFiles = useCallback((files: FileList | null) => {
     if (!files || disabled) return;
 
+    // Usar ref para obtener la versión más reciente de images
+    const currentImages = imagesRef.current;
     const newImages: ImageFile[] = [];
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
@@ -58,7 +66,7 @@ export default function ImageUpload({
       }
 
       // Validar cantidad máxima
-      if (images.length + newImages.length >= maxFiles) {
+      if (currentImages.length + newImages.length >= maxFiles) {
         console.warn(`Máximo ${maxFiles} archivos permitidos`);
         return;
       }
@@ -71,9 +79,9 @@ export default function ImageUpload({
     });
 
     if (newImages.length > 0) {
-      onChange([...images, ...newImages]);
+      onChange([...currentImages, ...newImages]);
     }
-  }, [images, onChange, maxFiles, maxSizeMB, disabled]);
+  }, [onChange, maxFiles, maxSizeMB, disabled, acceptPdf]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
