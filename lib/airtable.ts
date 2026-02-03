@@ -1134,8 +1134,12 @@ export async function getItemsOrden(ordenId: string): Promise<ItemOrden[]> {
   }
 
   try {
-    // Get all ItemsOrden and filter client-side (same pattern as getOrdenesCoordinador)
-    const url = `https://api.airtable.com/v0/${baseId}/ItemsOrden`;
+    // Use filterByFormula to get items for this specific orden
+    // RECORD_ID() in linked record field matches the ordenId
+    const filterFormula = `FIND("${ordenId}", ARRAYJOIN({OrdenServicio}))`;
+    const url = `https://api.airtable.com/v0/${baseId}/ItemsOrden?filterByFormula=${encodeURIComponent(filterFormula)}`;
+
+    console.log(`[getItemsOrden] Fetching items for orden ${ordenId}`);
 
     const response = await fetch(url, {
       headers: {
@@ -1155,16 +1159,10 @@ export async function getItemsOrden(ordenId: string): Promise<ItemOrden[]> {
     }
 
     const data: AirtableResponse<ItemOrdenFields> = await response.json();
-    
-    // Filter client-side by OrdenServicio
-    const filteredItems = data.records.filter((item) => {
-      const ordenServicio = item.fields.OrdenServicio || [];
-      return ordenServicio.includes(ordenId);
-    });
 
-    console.log(`Found ${filteredItems.length} items for orden ${ordenId}`);
+    console.log(`[getItemsOrden] Found ${data.records.length} items for orden ${ordenId}`);
 
-    return filteredItems;
+    return data.records;
   } catch (error) {
     console.error("Error fetching ItemsOrden from Airtable:", error);
     return [];
