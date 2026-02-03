@@ -919,7 +919,7 @@ export default function NuevaOrdenPage() {
                     kardexFiltrados.map((kardex) => {
                       const municipio = kardex.fields["mundep (from MunicipioOrigen)"]?.[0] || "Sin municipio";
                       const fecha = kardex.fields.fechakardex
-                        ? new Date(kardex.fields.fechakardex).toLocaleDateString("es-CO")
+                        ? new Date(kardex.fields.fechakardex + 'T00:00:00').toLocaleDateString("es-CO")
                         : "Sin fecha";
                       const tipo = kardex.fields.TipoMovimiento || "N/A";
                       const kg = Math.abs(kardex.fields.Total || 0);
