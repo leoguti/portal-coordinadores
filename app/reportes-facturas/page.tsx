@@ -310,7 +310,7 @@ export default function ReportesFacturasPage() {
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {orden.fields["Fecha de pedido"]
-                              ? new Date(orden.fields["Fecha de pedido"]).toLocaleDateString("es-CO")
+                              ? new Date(orden.fields["Fecha de pedido"] + 'T00:00:00').toLocaleDateString("es-CO")
                               : "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">

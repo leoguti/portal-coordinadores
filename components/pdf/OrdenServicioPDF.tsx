@@ -52,7 +52,7 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("es-CO", {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString("es-CO", {
       year: "numeric",
       month: "long",
       day: "numeric",

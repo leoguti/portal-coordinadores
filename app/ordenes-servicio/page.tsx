@@ -331,7 +331,7 @@ export default function OrdenesServicioPage() {
                           {/* Fecha */}
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {fechaPedido
-                              ? new Date(fechaPedido).toLocaleDateString("es-CO")
+                              ? new Date(fechaPedido + 'T00:00:00').toLocaleDateString("es-CO")
                               : "Sin fecha"}
                           </td>
 

@@ -55,7 +55,7 @@ export async function sendOrdenEmail(params: SendOrdenEmailParams): Promise<bool
     };
 
     const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString("es-CO", {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString("es-CO", {
         day: "2-digit",
         month: "long",
         year: "numeric",

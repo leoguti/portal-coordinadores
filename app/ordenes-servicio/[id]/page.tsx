@@ -330,7 +330,7 @@ export default function OrdenDetallePage() {
               </label>
               <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900">
                 {fechaPedido
-                  ? new Date(fechaPedido).toLocaleDateString("es-CO")
+                  ? new Date(fechaPedido + 'T00:00:00').toLocaleDateString("es-CO")
                   : "Sin fecha"}
               </div>
             </div>
