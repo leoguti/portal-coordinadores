@@ -58,6 +58,15 @@ TESTS = {
         {"photo": "../public/logo-campolimpio-white.png"},
         {"text": "SI"},       # confirmación final
     ],
+    "certificado": [
+        {"text": "salir"},
+        {"text": "C+13-02-2025"},
+        {"text": "800019277+200+800+0+0+si+SORA+SORA"},
+        {"text": "2"},
+        {"text": "si"},
+        {"text": "si"},
+        {"text": "si"},
+    ],
 }
 
 
