@@ -21,8 +21,6 @@ export default function CajaMenorPage() {
   const [asignacion, setAsignacion] = useState<AsignacionCajaMenor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 50;
 
   // Filtros
   const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
@@ -49,6 +47,9 @@ export default function CajaMenorPage() {
 
   // Reembolsos history
   const [reembolsos, setReembolsos] = useState<ReembolsoCajaMenor[]>([]);
+
+  // Meses expandidos en la vista agrupada
+  const [mesesExpandidos, setMesesExpandidos] = useState<Set<string>>(new Set());
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -221,6 +222,58 @@ export default function CajaMenorPage() {
     }).format(amount);
   };
 
+  // Agrupar gastos filtrados por mes
+  const gastosPorMes = (() => {
+    const grupos = new Map<string, GastoCajaMenor[]>();
+    gastosFiltrados.forEach((gasto) => {
+      const mes = (gasto.fields.Fecha || "").substring(0, 7) || "sin-fecha";
+      if (!grupos.has(mes)) {
+        grupos.set(mes, []);
+      }
+      grupos.get(mes)!.push(gasto);
+    });
+    // Ordenar por mes descendente (más reciente primero)
+    return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
+
+  // Función para formatear nombre del mes
+  const formatMesNombre = (mesStr: string) => {
+    if (mesStr === "sin-fecha") return "Sin fecha";
+    const [year, month] = mesStr.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  };
+
+  // Toggle mes expandido
+  const toggleMes = (mes: string) => {
+    setMesesExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(mes)) {
+        next.delete(mes);
+      } else {
+        next.add(mes);
+      }
+      return next;
+    });
+  };
+
+  // Calcular resumen de un grupo de gastos
+  const calcResumenGrupo = (gastosGrupo: GastoCajaMenor[]) => {
+    const pendiente = gastosGrupo
+      .filter((g) => g.fields.Estado === "Pendiente")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    const aprobado = gastosGrupo
+      .filter((g) => g.fields.Estado === "Aprobado")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    const rechazado = gastosGrupo
+      .filter((g) => g.fields.Estado === "Rechazado")
+      .reduce((s, g) => s + calcValorNeto(g), 0);
+    const cantPend = gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").length;
+    const cantAprob = gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").length;
+    const cantRech = gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").length;
+    return { pendiente, aprobado, rechazado, cantPend, cantAprob, cantRech, total: gastosGrupo.length };
+  };
+
   // Admin: resumen por coordinador (agrupar asignaciones por coordinador para evitar duplicados)
   const resumenAdmin = (() => {
     // Agrupar asignaciones por coordinador (quedarse con el anticipo más reciente)
@@ -358,16 +411,6 @@ export default function CajaMenorPage() {
       else next.add(gastoId);
       return next;
     });
-  };
-
-  const handleSelectAllAprobados = () => {
-    const aprobadosFiltrados = gastosFiltrados.filter((g) => g.fields.Estado === "Aprobado");
-    const allSelected = aprobadosFiltrados.every((g) => selectedGastos.has(g.id));
-    if (allSelected) {
-      setSelectedGastos(new Set());
-    } else {
-      setSelectedGastos(new Set(aprobadosFiltrados.map((g) => g.id)));
-    }
   };
 
   const handleCrearReembolso = async () => {
@@ -554,7 +597,6 @@ export default function CajaMenorPage() {
                     onChange={(e) => {
                       setFiltroCoordinador(e.target.value);
                       setSelectedGastos(new Set());
-                      setCurrentPage(1);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
@@ -570,7 +612,6 @@ export default function CajaMenorPage() {
                     value={filtroMes}
                     onChange={(e) => {
                       setFiltroMes(e.target.value);
-                      setCurrentPage(1);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
@@ -586,7 +627,6 @@ export default function CajaMenorPage() {
                     value={filtroEstado}
                     onChange={(e) => {
                       setFiltroEstado(e.target.value);
-                      setCurrentPage(1);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
@@ -605,7 +645,6 @@ export default function CajaMenorPage() {
                       setFiltroEstado("");
                       setFiltroMes("");
                       setSelectedGastos(new Set());
-                      setCurrentPage(1);
                     }}
                     className="text-sm text-red-600 hover:text-red-800 underline"
                   >
@@ -707,8 +746,7 @@ export default function CajaMenorPage() {
                                 onClick={() => {
                                   setFiltroCoordinador(r.coordId);
                                   setSelectedGastos(new Set());
-                                  setCurrentPage(1);
-                                }}
+                                            }}
                               >
                                 <span className="text-[#00d084] hover:underline">{r.nombre}</span>
                                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
@@ -842,8 +880,7 @@ export default function CajaMenorPage() {
                         setNuevoCoordinadorId(filtroCoordinador);
                         setFiltroCoordinador("");
                         setShowAsignarForm(true);
-                        setCurrentPage(1);
-                      }}
+                        }}
                       className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       + Asignar Anticipo
@@ -866,7 +903,6 @@ export default function CajaMenorPage() {
                   value={filtroEstado}
                   onChange={(e) => {
                     setFiltroEstado(e.target.value);
-                    setCurrentPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
@@ -882,7 +918,6 @@ export default function CajaMenorPage() {
                   value={filtroMes}
                   onChange={(e) => {
                     setFiltroMes(e.target.value);
-                    setCurrentPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
@@ -899,7 +934,6 @@ export default function CajaMenorPage() {
                   onClick={() => {
                     setFiltroEstado("");
                     setFiltroMes("");
-                    setCurrentPage(1);
                   }}
                   className="text-sm text-red-600 hover:text-red-800 underline"
                 >
@@ -935,12 +969,9 @@ export default function CajaMenorPage() {
                 {gastosFiltrados.length !== gastos.length && (
                   <span className="ml-1 text-gray-400">(de {gastos.length})</span>
                 )}
-                {gastosFiltrados.length > ITEMS_PER_PAGE && (
-                  <span className="ml-2">
-                    (Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                    {Math.min(currentPage * ITEMS_PER_PAGE, gastosFiltrados.length)})
-                  </span>
-                )}
+                <span className="ml-2 text-gray-400">
+                  en {gastosPorMes.length} {gastosPorMes.length === 1 ? "mes" : "meses"}
+                </span>
               </p>
             </div>
 
@@ -968,182 +999,191 @@ export default function CajaMenorPage() {
                 )}
               </div>
             ) : (
-              /* Tabla de gastos */
-              <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b-2 border-gray-300">
-                    <tr>
-                      {isAdmin && filtroCoordinador && (
-                        <th className="px-2 py-3 text-center w-10">
-                          <input
-                            type="checkbox"
-                            checked={
-                              gastosFiltrados.filter((g) => g.fields.Estado === "Aprobado").length > 0 &&
-                              gastosFiltrados
-                                .filter((g) => g.fields.Estado === "Aprobado")
-                                .every((g) => selectedGastos.has(g.id))
-                            }
-                            onChange={handleSelectAllAprobados}
-                            className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
-                            title="Seleccionar todos los aprobados"
-                          />
-                        </th>
-                      )}
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        #
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Fecha
-                      </th>
-                      {isAdmin && !filtroCoordinador && (
-                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                          Coordinador
-                        </th>
-                      )}
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Beneficiario
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Concepto
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
-                        Valor
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
-                        Neto
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                        Estado
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-                      const endIndex = startIndex + ITEMS_PER_PAGE;
-                      const gastosPaginados = gastosFiltrados.slice(startIndex, endIndex);
+              /* Vista agrupada por mes */
+              <div className="space-y-3">
+                {gastosPorMes.map(([mes, gastosDelMes]) => {
+                  const resumen = calcResumenGrupo(gastosDelMes);
+                  const expandido = mesesExpandidos.has(mes);
 
-                      return gastosPaginados.map((gasto, index) => {
-                        const numero = gasto.fields.NumeroGasto || 0;
-                        const fecha = gasto.fields.Fecha || "";
-                        const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
-                        const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
-                        const concepto = gasto.fields.Concepto || "";
-                        const valor = gasto.fields.Valor || 0;
-                        const valorNeto = calcValorNeto(gasto);
-                        const estado = gasto.fields.Estado || "Pendiente";
-                        const puedeEliminar = puedeEliminarGasto(fecha, estado);
-
-                        return (
-                          <tr
-                            key={gasto.id}
-                            className={`border-b border-gray-200 ${
-                              selectedGastos.has(gasto.id) ? "bg-blue-50" : index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                            } hover:bg-blue-50 transition-colors`}
+                  return (
+                    <div key={mes} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                      {/* Header del mes (siempre visible) */}
+                      <button
+                        onClick={() => toggleMes(mes)}
+                        className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <svg
+                            className={`w-5 h-5 text-gray-500 transition-transform ${expandido ? "rotate-90" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            {isAdmin && filtroCoordinador && (
-                              <td className="px-2 py-3 text-center">
-                                {estado === "Aprobado" && (
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedGastos.has(gasto.id)}
-                                    onChange={() => handleToggleGasto(gasto.id)}
-                                    className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
-                                  />
-                                )}
-                              </td>
-                            )}
-                            <td className="px-4 py-3">
-                              <span className="font-bold text-[#00d084]">#{numero}</span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">
-                              {fecha
-                                ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO")
-                                : "Sin fecha"}
-                            </td>
-                            {isAdmin && !filtroCoordinador && (
-                              <td className="px-4 py-3 text-sm text-gray-700">{coordinador}</td>
-                            )}
-                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                              {beneficiario}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px] truncate">
-                              {concepto}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-sm font-mono text-gray-900">
-                                {formatCurrency(valor)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="text-sm font-bold text-[#00d084] font-mono">
-                                {formatCurrency(valorNeto)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span
-                                className={`inline-block px-2 py-1 text-xs font-bold rounded ${
-                                  estadoColors[estado] || "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {estado}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-end gap-2">
-                                <Link
-                                  href={`/caja-menor/${gasto.id}`}
-                                  className="px-3 py-1.5 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors whitespace-nowrap"
-                                >
-                                  Ver
-                                </Link>
-                                {puedeEliminar && !isAdmin && (
-                                  <button
-                                    onClick={() => handleEliminar(gasto.id, numero)}
-                                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors whitespace-nowrap"
-                                  >
-                                    Eliminar
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span className="font-bold text-gray-900 capitalize">
+                            {formatMesNombre(mes)}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            ({resumen.total} {resumen.total === 1 ? "gasto" : "gastos"})
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          {resumen.cantPend > 0 && (
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-medium">
+                              Pend: {formatCurrency(resumen.pendiente)}
+                            </span>
+                          )}
+                          {resumen.cantAprob > 0 && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded font-medium">
+                              Aprob: {formatCurrency(resumen.aprobado)}
+                            </span>
+                          )}
+                          {resumen.cantRech > 0 && (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded font-medium">
+                              Rech: {formatCurrency(resumen.rechazado)}
+                            </span>
+                          )}
+                        </div>
+                      </button>
 
-            {/* Paginacion */}
-            {gastosFiltrados.length > ITEMS_PER_PAGE && (
-              <div className="mt-6 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Pagina {currentPage} de{" "}
-                  {Math.ceil(gastosFiltrados.length / ITEMS_PER_PAGE)}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={
-                      currentPage >= Math.ceil(gastosFiltrados.length / ITEMS_PER_PAGE)
-                    }
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Siguiente
-                  </button>
-                </div>
+                      {/* Detalle de gastos (solo si está expandido) */}
+                      {expandido && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-gray-100 border-b border-gray-200">
+                              <tr>
+                                {isAdmin && filtroCoordinador && (
+                                  <th className="px-2 py-2 text-center w-10">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        gastosDelMes.filter((g) => g.fields.Estado === "Aprobado").length > 0 &&
+                                        gastosDelMes
+                                          .filter((g) => g.fields.Estado === "Aprobado")
+                                          .every((g) => selectedGastos.has(g.id))
+                                      }
+                                      onChange={() => {
+                                        const aprobadosDelMes = gastosDelMes.filter((g) => g.fields.Estado === "Aprobado");
+                                        const todosSeleccionados = aprobadosDelMes.every((g) => selectedGastos.has(g.id));
+                                        setSelectedGastos((prev) => {
+                                          const next = new Set(prev);
+                                          aprobadosDelMes.forEach((g) => {
+                                            if (todosSeleccionados) {
+                                              next.delete(g.id);
+                                            } else {
+                                              next.add(g.id);
+                                            }
+                                          });
+                                          return next;
+                                        });
+                                      }}
+                                      className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
+                                      title="Seleccionar aprobados del mes"
+                                    />
+                                  </th>
+                                )}
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                                {isAdmin && !filtroCoordinador && (
+                                  <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coordinador</th>
+                                )}
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
+                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
+                                <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Neto</th>
+                                <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
+                                <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gastosDelMes.map((gasto, index) => {
+                                const numero = gasto.fields.NumeroGasto || 0;
+                                const fecha = gasto.fields.Fecha || "";
+                                const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
+                                const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
+                                const concepto = gasto.fields.Concepto || "";
+                                const valorNeto = calcValorNeto(gasto);
+                                const estado = gasto.fields.Estado || "Pendiente";
+                                const puedeEliminar = puedeEliminarGasto(fecha, estado);
+
+                                return (
+                                  <tr
+                                    key={gasto.id}
+                                    className={`border-b border-gray-100 ${
+                                      selectedGastos.has(gasto.id) ? "bg-blue-50" : index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                    } hover:bg-blue-50 transition-colors`}
+                                  >
+                                    {isAdmin && filtroCoordinador && (
+                                      <td className="px-2 py-2 text-center">
+                                        {estado === "Aprobado" && (
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedGastos.has(gasto.id)}
+                                            onChange={() => handleToggleGasto(gasto.id)}
+                                            className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
+                                          />
+                                        )}
+                                      </td>
+                                    )}
+                                    <td className="px-3 py-2">
+                                      <span className="font-bold text-[#00d084]">#{numero}</span>
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-700">
+                                      {fecha
+                                        ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" })
+                                        : "-"}
+                                    </td>
+                                    {isAdmin && !filtroCoordinador && (
+                                      <td className="px-3 py-2 text-sm text-gray-700">{coordinador}</td>
+                                    )}
+                                    <td className="px-3 py-2 text-sm text-gray-900 font-medium">
+                                      {beneficiario}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-700 max-w-[180px] truncate">
+                                      {concepto}
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                      <span className="text-sm font-bold text-[#00d084] font-mono">
+                                        {formatCurrency(valorNeto)}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                      <span
+                                        className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${
+                                          estadoColors[estado] || "bg-gray-100 text-gray-800"
+                                        }`}
+                                      >
+                                        {estado}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Link
+                                          href={`/caja-menor/${gasto.id}`}
+                                          className="px-2 py-1 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
+                                        >
+                                          Ver
+                                        </Link>
+                                        {puedeEliminar && !isAdmin && (
+                                          <button
+                                            onClick={() => handleEliminar(gasto.id, numero)}
+                                            className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                          >
+                                            Eliminar
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
