@@ -30,15 +30,6 @@ export default function CajaMenorPage() {
   // Admin: asignaciones y coordinadores
   const [allAsignaciones, setAllAsignaciones] = useState<AsignacionCajaMenor[]>([]);
   const [coordinadoresList, setCoordinadoresList] = useState<{ id: string; name: string }[]>([]);
-  const [showAsignarForm, setShowAsignarForm] = useState(false);
-  const [nuevoCoordinadorId, setNuevoCoordinadorId] = useState("");
-  const [nuevoMonto, setNuevoMonto] = useState("");
-  const [creandoAsignacion, setCreandoAsignacion] = useState(false);
-
-  // Admin: edit asignacion inline
-  const [editingAsignacionId, setEditingAsignacionId] = useState<string | null>(null);
-  const [editMonto, setEditMonto] = useState("");
-  const [updatingAsignacion, setUpdatingAsignacion] = useState(false);
 
   // Admin: batch reembolso selection
   const [selectedGastos, setSelectedGastos] = useState<Set<string>>(new Set());
@@ -274,49 +265,6 @@ export default function CajaMenorPage() {
     return { pendiente, aprobado, rechazado, cantPend, cantAprob, cantRech, total: gastosGrupo.length };
   };
 
-  // Admin: resumen por coordinador (agrupar asignaciones por coordinador para evitar duplicados)
-  const resumenAdmin = (() => {
-    // Agrupar asignaciones por coordinador (quedarse con el anticipo más reciente)
-    const porCoord = new Map<string, { nombre: string; anticipo: number }>();
-    allAsignaciones.forEach((asig) => {
-      const coordId = asig.fields.Coordinador?.[0] || "";
-      if (!coordId) return;
-      const existing = porCoord.get(coordId);
-      const monto = asig.fields.MontoAsignado || 0;
-      if (!existing || monto > existing.anticipo) {
-        porCoord.set(coordId, {
-          nombre: asig.fields.NombreCoordinador?.[0] || "Sin nombre",
-          anticipo: monto,
-        });
-      }
-    });
-
-    return Array.from(porCoord.entries()).map(([coordId, { nombre, anticipo }]) => {
-      // Stats ACUMULADOS (todos los meses)
-      const gastosCoord = gastos.filter((g) => g.fields.Coordinador?.includes(coordId));
-      const aprobado = gastosCoord
-        .filter((g) => g.fields.Estado === "Aprobado")
-        .reduce((s, g) => s + calcValorNeto(g), 0);
-      const pendiente = gastosCoord
-        .filter((g) => g.fields.Estado === "Pendiente")
-        .reduce((s, g) => s + calcValorNeto(g), 0);
-      const rechazado = gastosCoord
-        .filter((g) => g.fields.Estado === "Rechazado")
-        .reduce((s, g) => s + calcValorNeto(g), 0);
-      return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobado };
-    });
-  })();
-  const totalesAdmin = resumenAdmin.reduce(
-    (acc, r) => ({
-      anticipo: acc.anticipo + r.anticipo,
-      aprobado: acc.aprobado + r.aprobado,
-      pendiente: acc.pendiente + r.pendiente,
-      rechazado: acc.rechazado + r.rechazado,
-      saldo: acc.saldo + r.saldo,
-    }),
-    { anticipo: 0, aprobado: 0, pendiente: 0, rechazado: 0, saldo: 0 }
-  );
-
   // Admin: detalle del coordinador seleccionado
   const adminCoordAsignacion = filtroCoordinador
     ? allAsignaciones.find((a) => a.fields.Coordinador?.includes(filtroCoordinador))
@@ -344,65 +292,6 @@ export default function CajaMenorPage() {
   const adminCoordAnticipo = adminCoordAsignacion?.fields.MontoAsignado || 0;
   const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobadoAcum;
   const adminCoordPctUsado = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobadoAcum / adminCoordAnticipo) * 100, 100) : 0;
-
-  const handleCrearAsignacion = async () => {
-    if (!nuevoCoordinadorId || !nuevoMonto) return;
-    setCreandoAsignacion(true);
-    try {
-      const res = await fetch("/api/caja-menor/asignaciones", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          coordinadorId: nuevoCoordinadorId,
-          monto: parseFloat(nuevoMonto),
-        }),
-      });
-      if (res.ok) {
-        const { asignacion: nueva } = await res.json();
-        setAllAsignaciones((prev) => [...prev, nueva]);
-        setShowAsignarForm(false);
-        setNuevoCoordinadorId("");
-        setNuevoMonto("");
-      } else {
-        const data = await res.json();
-        alert(`Error: ${data.error || "No se pudo crear la asignación"}`);
-      }
-    } catch {
-      alert("Error al crear la asignación");
-    } finally {
-      setCreandoAsignacion(false);
-    }
-  };
-
-  const handleUpdateAsignacion = async (asignacionId: string) => {
-    if (!editMonto) return;
-    setUpdatingAsignacion(true);
-    try {
-      const res = await fetch("/api/caja-menor/asignaciones", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ asignacionId, monto: parseFloat(editMonto) }),
-      });
-      if (res.ok) {
-        setAllAsignaciones((prev) =>
-          prev.map((a) =>
-            a.id === asignacionId
-              ? { ...a, fields: { ...a.fields, MontoAsignado: parseFloat(editMonto) } }
-              : a
-          )
-        );
-        setEditingAsignacionId(null);
-        setEditMonto("");
-      } else {
-        const data = await res.json();
-        alert(`Error: ${data.error || "No se pudo actualizar"}`);
-      }
-    } catch {
-      alert("Error al actualizar la asignación");
-    } finally {
-      setUpdatingAsignacion(false);
-    }
-  };
 
   const handleToggleGasto = (gastoId: string) => {
     setSelectedGastos((prev) => {
@@ -451,11 +340,6 @@ export default function CajaMenorPage() {
       setCreandoReembolso(false);
     }
   };
-
-  // Coordinadores sin asignación (para el form de nueva asignación)
-  const coordsSinAsignacion = coordinadoresList.filter(
-    (c) => !allAsignaciones.some((a) => a.fields.Coordinador?.includes(c.id))
-  );
 
   // Selected gastos totals
   const selectedGastosTotal = gastosFiltrados
@@ -600,7 +484,7 @@ export default function CajaMenorPage() {
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
-                    <option value="">Todos (resumen)</option>
+                    <option value="">Seleccionar coordinador...</option>
                     {coordinadoresList.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -654,169 +538,17 @@ export default function CajaMenorPage() {
               )}
             </div>
 
-            {/* Contenido: resumen general o detalle de coordinador */}
+            {/* Contenido: mensaje de selección o detalle de coordinador */}
             {!filtroCoordinador ? (
-              /* Vista resumen: tabla de todos los coordinadores */
-              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Fondos de Caja Menor
-                  </h2>
-                  <button
-                    onClick={() => setShowAsignarForm(!showAsignarForm)}
-                    className="px-3 py-1.5 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
-                  >
-                    {showAsignarForm ? "Cancelar" : "+ Asignar Anticipo"}
-                  </button>
-                </div>
-
-                {/* Formulario de asignación */}
-                {showAsignarForm && (
-                  <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <h3 className="text-sm font-bold text-gray-700 mb-3">Nueva Asignación</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
-                        <select
-                          value={nuevoCoordinadorId}
-                          onChange={(e) => setNuevoCoordinadorId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                        >
-                          <option value="">Seleccionar...</option>
-                          {coordsSinAsignacion.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                        {coordsSinAsignacion.length === 0 && (
-                          <p className="text-xs text-gray-500 mt-1">Todos los coordinadores ya tienen anticipo asignado.</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Monto (COP)</label>
-                        <input
-                          type="number"
-                          value={nuevoMonto}
-                          onChange={(e) => setNuevoMonto(e.target.value)}
-                          placeholder="0"
-                          min="1"
-                          step="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                        />
-                      </div>
-                      <button
-                        onClick={handleCrearAsignacion}
-                        disabled={creandoAsignacion || !nuevoCoordinadorId || !nuevoMonto}
-                        className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {creandoAsignacion ? "Creando..." : "Asignar"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tabla resumen por coordinador */}
-                {allAsignaciones.length === 0 ? (
-                  <p className="text-sm text-gray-500 py-4 text-center">
-                    No hay anticipos asignados.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b-2 border-gray-300">
-                          <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
-                          <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Anticipo</th>
-                          <th className="text-right py-2 px-2 text-xs font-bold text-blue-700 uppercase">Saldo</th>
-                          <th className="text-center py-2 px-2 text-xs font-bold text-gray-600 uppercase w-20"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {resumenAdmin.map((r) => {
-                          const asig = allAsignaciones.find((a) => a.fields.Coordinador?.includes(r.coordId));
-                          const comprometido = r.anticipo - r.saldo;
-                          const pctUsado = r.anticipo > 0 ? (comprometido / r.anticipo) * 100 : 0;
-                          const isEditing = editingAsignacionId === asig?.id;
-                          return (
-                            <tr
-                              key={r.coordId}
-                              className="border-b border-gray-200 hover:bg-gray-50"
-                            >
-                              <td
-                                className="py-2 px-2 font-medium text-gray-900 cursor-pointer"
-                                onClick={() => {
-                                  setFiltroCoordinador(r.coordId);
-                                  setSelectedGastos(new Set());
-                                            }}
-                              >
-                                <span className="text-[#00d084] hover:underline">{r.nombre}</span>
-                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                  <div
-                                    className="h-full rounded-full bg-amber-500"
-                                    style={{ width: `${Math.min(pctUsado, 100)}%` }}
-                                  />
-                                </div>
-                              </td>
-                              <td className="py-2 px-2 text-right font-mono text-gray-900">
-                                {isEditing ? (
-                                  <div className="flex items-center justify-end gap-1">
-                                    <input
-                                      type="number"
-                                      value={editMonto}
-                                      onChange={(e) => setEditMonto(e.target.value)}
-                                      min="1"
-                                      step="1"
-                                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm font-mono text-right focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleUpdateAsignacion(asig!.id); }}
-                                      disabled={updatingAsignacion || !editMonto}
-                                      className="px-2 py-1 bg-[#00d084] text-white text-xs rounded hover:bg-[#00a868] disabled:opacity-50"
-                                    >
-                                      {updatingAsignacion ? "..." : "OK"}
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setEditingAsignacionId(null); }}
-                                      className="px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded hover:bg-gray-300"
-                                    >
-                                      X
-                                    </button>
-                                  </div>
-                                ) : (
-                                  formatCurrency(r.anticipo)
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(r.saldo)}</td>
-                              <td className="py-2 px-2 text-center">
-                                {!isEditing && asig && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingAsignacionId(asig.id);
-                                      setEditMonto(String(r.anticipo));
-                                    }}
-                                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-                                    title="Editar anticipo"
-                                  >
-                                    Editar
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
-                          <td className="py-2 px-2 text-gray-900 uppercase text-xs">Totales</td>
-                          <td className="py-2 px-2 text-right font-mono text-gray-900">{formatCurrency(totalesAdmin.anticipo)}</td>
-                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">{formatCurrency(totalesAdmin.saldo)}</td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
+              /* Mensaje para seleccionar coordinador */
+              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-8 text-center">
+                <div className="text-5xl mb-4">👆</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Selecciona un coordinador
+                </h3>
+                <p className="text-gray-600">
+                  Usa el filtro de arriba para ver los gastos de un coordinador específico.
+                </p>
               </div>
             ) : (
               /* Vista detalle: fondo del coordinador seleccionado */
@@ -874,17 +606,7 @@ export default function CajaMenorPage() {
                   </>
                 ) : (
                   <div className="py-4 text-center">
-                    <p className="text-gray-500 mb-3">Sin anticipo asignado.</p>
-                    <button
-                      onClick={() => {
-                        setNuevoCoordinadorId(filtroCoordinador);
-                        setFiltroCoordinador("");
-                        setShowAsignarForm(true);
-                        }}
-                      className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      + Asignar Anticipo
-                    </button>
+                    <p className="text-gray-500">Este coordinador no tiene anticipo asignado.</p>
                   </div>
                 )}
               </div>
