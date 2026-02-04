@@ -173,17 +173,20 @@ export default function CajaMenorPage() {
     .reverse();
 
   // Aplicar filtros (admin usa ID de coordinador, non-admin no filtra por coordinador)
+  // IMPORTANTE: siempre filtrar por mes (mes actual si no hay filtro explícito)
+  const mesActualStr = new Date().toISOString().substring(0, 7);
+  const mesFiltroEfectivo = filtroMes || mesActualStr;
   const gastosFiltrados = gastos.filter((gasto) => {
     if (filtroCoordinador && !gasto.fields.Coordinador?.includes(filtroCoordinador))
       return false;
     if (filtroEstado && gasto.fields.Estado !== filtroEstado) return false;
-    if (filtroMes && (gasto.fields.Fecha || "").substring(0, 7) !== filtroMes) return false;
+    // Siempre filtrar por mes (usa mes actual por defecto)
+    if ((gasto.fields.Fecha || "").substring(0, 7) !== mesFiltroEfectivo) return false;
     return true;
   });
 
   // Calcular resumen del mes filtrado (o mes actual)
-  const mesActualStr = new Date().toISOString().substring(0, 7);
-  const mesFiltro = filtroMes || mesActualStr;
+  const mesFiltro = mesFiltroEfectivo;
   const gastosDelMes = gastos.filter(
     (g) => (g.fields.Fecha || "").substring(0, 7) === mesFiltro
   );
