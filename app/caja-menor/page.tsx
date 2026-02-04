@@ -22,7 +22,7 @@ export default function CajaMenorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 50;
 
   // Filtros
   const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
@@ -172,35 +172,36 @@ export default function CajaMenorPage() {
     .sort()
     .reverse();
 
-  // Aplicar filtros (admin usa ID de coordinador, non-admin no filtra por coordinador)
-  // IMPORTANTE: siempre filtrar por mes (mes actual si no hay filtro explícito)
-  const mesActualStr = new Date().toISOString().substring(0, 7);
-  const mesFiltroEfectivo = filtroMes || mesActualStr;
+  // Aplicar filtros para la tabla
+  // Por defecto: excluir reembolsados, sin filtro de mes
+  // Filtro de mes es opcional, filtro de estado permite ver reembolsados
   const gastosFiltrados = gastos.filter((gasto) => {
     if (filtroCoordinador && !gasto.fields.Coordinador?.includes(filtroCoordinador))
       return false;
-    if (filtroEstado && gasto.fields.Estado !== filtroEstado) return false;
-    // Siempre filtrar por mes (usa mes actual por defecto)
-    if ((gasto.fields.Fecha || "").substring(0, 7) !== mesFiltroEfectivo) return false;
+    // Filtro de estado: si no hay filtro, excluir reembolsados por defecto
+    if (filtroEstado) {
+      if (gasto.fields.Estado !== filtroEstado) return false;
+    } else {
+      // Por defecto excluir reembolsados
+      if (gasto.fields.Estado === "Reembolsado") return false;
+    }
+    // Filtro de mes es opcional
+    if (filtroMes && (gasto.fields.Fecha || "").substring(0, 7) !== filtroMes) return false;
     return true;
   });
 
-  // Calcular resumen del mes filtrado (o mes actual)
-  const mesFiltro = mesFiltroEfectivo;
-  const gastosDelMes = gastos.filter(
-    (g) => (g.fields.Fecha || "").substring(0, 7) === mesFiltro
-  );
-  const totalAprobadoMes = gastosDelMes
+  // Calcular resumen ACUMULADO (todos los meses, histórico)
+  const totalAprobadoAcumulado = gastos
     .filter((g) => g.fields.Estado === "Aprobado")
     .reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const totalPendienteMes = gastosDelMes
+  const totalPendienteAcumulado = gastos
     .filter((g) => g.fields.Estado === "Pendiente")
     .reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const gastosRechazadosMes = gastosDelMes.filter((g) => g.fields.Estado === "Rechazado");
-  const totalRechazadoMes = gastosRechazadosMes.reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const cantRechazados = gastosRechazadosMes.length;
-  const cantAprobados = gastosDelMes.filter((g) => g.fields.Estado === "Aprobado").length;
-  const cantPendientes = gastosDelMes.filter((g) => g.fields.Estado === "Pendiente").length;
+  const gastosRechazadosAcumulado = gastos.filter((g) => g.fields.Estado === "Rechazado");
+  const totalRechazadoAcumulado = gastosRechazadosAcumulado.reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const cantRechazados = gastosRechazadosAcumulado.length;
+  const cantAprobados = gastos.filter((g) => g.fields.Estado === "Aprobado").length;
+  const cantPendientes = gastos.filter((g) => g.fields.Estado === "Pendiente").length;
 
   // Saldo GLOBAL = Anticipo - Aprobados (sin reembolsar). Pendientes/rechazados no afectan.
   const anticipoMonto = asignacion?.fields.MontoAsignado || 0;
@@ -209,13 +210,6 @@ export default function CajaMenorPage() {
     .reduce((sum, g) => sum + calcValorNeto(g), 0);
   const saldoGlobal = anticipoMonto - totalAprobadoSinReembolsar;
   const porcentajeUsado = anticipoMonto > 0 ? Math.min((totalAprobadoSinReembolsar / anticipoMonto) * 100, 100) : 0;
-
-  // Nombre del mes en español
-  const nombreMes = (() => {
-    const [year, month] = mesFiltro.split("-");
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
-  })();
 
   const tieneAsignacion = asignacion !== null;
 
@@ -245,24 +239,18 @@ export default function CajaMenorPage() {
     });
 
     return Array.from(porCoord.entries()).map(([coordId, { nombre, anticipo }]) => {
-      // Saldo global: Anticipo - Aprobados sin reembolsar
-      const aprobadoSinReembolsarCoord = gastos
-        .filter((g) => g.fields.Coordinador?.includes(coordId) && g.fields.Estado === "Aprobado")
-        .reduce((s, g) => s + calcValorNeto(g), 0);
-      // Stats del mes filtrado
-      const gastosCoordMes = gastosDelMes.filter((g) =>
-        g.fields.Coordinador?.includes(coordId)
-      );
-      const aprobado = gastosCoordMes
+      // Stats ACUMULADOS (todos los meses)
+      const gastosCoord = gastos.filter((g) => g.fields.Coordinador?.includes(coordId));
+      const aprobado = gastosCoord
         .filter((g) => g.fields.Estado === "Aprobado")
         .reduce((s, g) => s + calcValorNeto(g), 0);
-      const pendiente = gastosCoordMes
+      const pendiente = gastosCoord
         .filter((g) => g.fields.Estado === "Pendiente")
         .reduce((s, g) => s + calcValorNeto(g), 0);
-      const rechazado = gastosCoordMes
+      const rechazado = gastosCoord
         .filter((g) => g.fields.Estado === "Rechazado")
         .reduce((s, g) => s + calcValorNeto(g), 0);
-      return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobadoSinReembolsarCoord };
+      return { coordId, nombre, anticipo, aprobado, pendiente, rechazado, saldo: anticipo - aprobado };
     });
   })();
   const totalesAdmin = resumenAdmin.reduce(
@@ -283,31 +271,26 @@ export default function CajaMenorPage() {
   const adminCoordNombre = filtroCoordinador
     ? coordinadoresList.find((c) => c.id === filtroCoordinador)?.name || ""
     : "";
-  // Stats del mes filtrado (para las tarjetas mensuales)
-  const adminCoordGastosMes = filtroCoordinador
-    ? gastosDelMes.filter((g) => g.fields.Coordinador?.includes(filtroCoordinador))
+  // Stats ACUMULADOS (todos los meses) para el coordinador seleccionado
+  const adminCoordGastos = filtroCoordinador
+    ? gastos.filter((g) => g.fields.Coordinador?.includes(filtroCoordinador))
     : [];
-  const adminCoordAprobadoMes = adminCoordGastosMes
+  const adminCoordAprobadoAcum = adminCoordGastos
     .filter((g) => g.fields.Estado === "Aprobado")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordPendienteMes = adminCoordGastosMes
+  const adminCoordPendienteAcum = adminCoordGastos
     .filter((g) => g.fields.Estado === "Pendiente")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordRechazadoMes = adminCoordGastosMes
+  const adminCoordRechazadoAcum = adminCoordGastos
     .filter((g) => g.fields.Estado === "Rechazado")
     .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordCantAprobados = adminCoordGastosMes.filter((g) => g.fields.Estado === "Aprobado").length;
-  const adminCoordCantPendientes = adminCoordGastosMes.filter((g) => g.fields.Estado === "Pendiente").length;
-  const adminCoordCantRechazados = adminCoordGastosMes.filter((g) => g.fields.Estado === "Rechazado").length;
+  const adminCoordCantAprobados = adminCoordGastos.filter((g) => g.fields.Estado === "Aprobado").length;
+  const adminCoordCantPendientes = adminCoordGastos.filter((g) => g.fields.Estado === "Pendiente").length;
+  const adminCoordCantRechazados = adminCoordGastos.filter((g) => g.fields.Estado === "Rechazado").length;
   // Saldo global: Anticipo - Aprobados sin reembolsar (todos los meses)
   const adminCoordAnticipo = adminCoordAsignacion?.fields.MontoAsignado || 0;
-  const adminCoordAprobadoGlobal = filtroCoordinador
-    ? gastos
-        .filter((g) => g.fields.Coordinador?.includes(filtroCoordinador) && g.fields.Estado === "Aprobado")
-        .reduce((s, g) => s + calcValorNeto(g), 0)
-    : 0;
-  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobadoGlobal;
-  const adminCoordPctUsado = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobadoGlobal / adminCoordAnticipo) * 100, 100) : 0;
+  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobadoAcum;
+  const adminCoordPctUsado = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobadoAcum / adminCoordAnticipo) * 100, 100) : 0;
 
   const handleCrearAsignacion = async () => {
     if (!nuevoCoordinadorId || !nuevoMonto) return;
@@ -532,24 +515,24 @@ export default function CajaMenorPage() {
                   {porcentajeUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
                 </p>
 
-                {/* Tarjetas mensuales */}
+                {/* Tarjetas acumuladas */}
                 <p className="text-xs font-bold text-gray-400 uppercase mb-2">
-                  Gastos de <span className="capitalize">{nombreMes}</span>
+                  Resumen Acumulado
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                    <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(totalPendienteMes)}</p>
+                    <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(totalPendienteAcumulado)}</p>
                     <p className="text-xs text-yellow-600 mt-1">{cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"}</p>
                   </div>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                    <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(totalAprobadoMes)}</p>
+                    <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(totalAprobadoAcumulado)}</p>
                     <p className="text-xs text-green-600 mt-1">{cantAprobados} {cantAprobados === 1 ? "gasto" : "gastos"}</p>
                   </div>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                    <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(totalRechazadoMes)}</p>
+                    <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(totalRechazadoAcumulado)}</p>
                     <p className="text-xs text-red-600 mt-1">{cantRechazados} {cantRechazados === 1 ? "gasto" : "gastos"}</p>
                   </div>
                 </div>
@@ -591,7 +574,7 @@ export default function CajaMenorPage() {
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                   >
-                    <option value="">Mes actual</option>
+                    <option value="">Todos</option>
                     {mesesUnicos.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
@@ -829,24 +812,24 @@ export default function CajaMenorPage() {
                       {adminCoordPctUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
                     </p>
 
-                    {/* Tarjetas mensuales */}
+                    {/* Tarjetas acumuladas */}
                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">
-                      Gastos de <span className="capitalize">{nombreMes}</span>
+                      Resumen Acumulado
                     </p>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendienteMes)}</p>
+                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendienteAcum)}</p>
                         <p className="text-xs text-yellow-600 mt-1">{adminCoordCantPendientes} {adminCoordCantPendientes === 1 ? "gasto" : "gastos"}</p>
                       </div>
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobadoMes)}</p>
+                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobadoAcum)}</p>
                         <p className="text-xs text-green-600 mt-1">{adminCoordCantAprobados} {adminCoordCantAprobados === 1 ? "gasto" : "gastos"}</p>
                       </div>
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                         <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazadoMes)}</p>
+                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazadoAcum)}</p>
                         <p className="text-xs text-red-600 mt-1">{adminCoordCantRechazados} {adminCoordCantRechazados === 1 ? "gasto" : "gastos"}</p>
                       </div>
                     </div>
