@@ -316,7 +316,8 @@ export async function getCoordinatorByEmail(
 
   // Build Airtable API URL with filter
   // Using LOWER() formula for case-insensitive comparison
-  const filterFormula = `LOWER({email})="${normalizedEmail}"`;
+  // Exclude users with Rol="Desactivado" directly in the query
+  const filterFormula = `AND(LOWER({email})="${normalizedEmail}",{Rol}!="Desactivado")`;
   const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(
     filterFormula
   )}&maxRecords=1`;
