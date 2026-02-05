@@ -16,6 +16,7 @@
     "@auth/core": "^0.34.3",
     "@react-pdf/renderer": "^4.3.2",
     "@vercel/blob": "^1.1.1",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "next": "16.0.10",
     "next-auth": "^4.24.13",
