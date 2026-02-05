@@ -5,10 +5,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import {
-  type ReembolsoCajaMenor,
-  type GastoCajaMenor,
-} from "@/lib/airtable";
+import { type ReembolsoCajaMenor } from "@/lib/airtable";
 
 export default function ReembolsoDetallePage() {
   const params = useParams();
@@ -16,7 +13,6 @@ export default function ReembolsoDetallePage() {
   const reembolsoId = params.id as string;
 
   const [reembolso, setReembolso] = useState<ReembolsoCajaMenor | null>(null);
-  const [gastosIncluidos, setGastosIncluidos] = useState<GastoCajaMenor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,22 +31,6 @@ export default function ReembolsoDetallePage() {
 
         const { reembolso: r } = await res.json();
         setReembolso(r);
-
-        // Fetch each gasto included in this reembolso
-        const gastoIds = r.fields.GastosCajaMenor || [];
-        const gastosData: GastoCajaMenor[] = [];
-        for (const id of gastoIds) {
-          try {
-            const gRes = await fetch(`/api/caja-menor/${id}`);
-            if (gRes.ok) {
-              const { gasto } = await gRes.json();
-              gastosData.push(gasto);
-            }
-          } catch {
-            // Skip failed fetches
-          }
-        }
-        setGastosIncluidos(gastosData);
       } catch (err) {
         console.error("Error loading reembolso:", err);
         setError("Error al cargar el reembolso");
@@ -70,12 +50,6 @@ export default function ReembolsoDetallePage() {
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const calcValorNeto = (g: GastoCajaMenor) => {
-    const valor = g.fields.Valor || 0;
-    const pct = g.fields.PorcentajeRetencion || 0;
-    return valor - valor * pct; // Airtable Percent: 0.03 = 3%
   };
 
   if (loading) {
@@ -114,9 +88,7 @@ export default function ReembolsoDetallePage() {
   const fecha = reembolso.fields.Fecha || "";
   const coordinador = reembolso.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const observaciones = reembolso.fields.Observaciones || "";
-  const montoTotal =
-    reembolso.fields.MontoTotal ||
-    gastosIncluidos.reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const monto = reembolso.fields.Monto || 0;
 
   return (
     <AuthenticatedLayout>
@@ -164,19 +136,13 @@ export default function ReembolsoDetallePage() {
             </div>
           </div>
 
-          {/* Total */}
+          {/* Monto */}
           <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-baseline justify-between">
               <div>
-                <p className="text-xs text-blue-600 uppercase font-bold mb-1">Monto Total</p>
+                <p className="text-xs text-blue-600 uppercase font-bold mb-1">Monto del Reembolso</p>
                 <p className="text-3xl font-mono font-bold text-blue-700">
-                  {formatCurrency(montoTotal)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase font-bold mb-1">Gastos incluidos</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {gastosIncluidos.length}
+                  {formatCurrency(monto)}
                 </p>
               </div>
             </div>
@@ -188,82 +154,6 @@ export default function ReembolsoDetallePage() {
               <h3 className="text-sm font-bold text-amber-800 mb-1">Observaciones</h3>
               <p className="text-amber-700">{observaciones}</p>
             </div>
-          )}
-        </div>
-
-        {/* Gastos table */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-              Gastos Incluidos
-            </h3>
-          </div>
-          {gastosIncluidos.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              No se pudieron cargar los gastos.
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-gray-100 border-b-2 border-gray-300">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Beneficiario</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Concepto</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Valor Neto</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {gastosIncluidos.map((gasto, index) => (
-                  <tr
-                    key={gasto.id}
-                    className={`border-b border-gray-200 ${
-                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <span className="font-bold text-[#00d084]">
-                        #{gasto.fields.NumeroGasto || 0}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {gasto.fields.Fecha
-                        ? new Date(gasto.fields.Fecha + "T00:00:00").toLocaleDateString("es-CO")
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                      {gasto.fields.RazonSocial?.[0] || "Sin beneficiario"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px] truncate">
-                      {gasto.fields.Concepto || ""}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-[#00d084]">
-                      {formatCurrency(calcValorNeto(gasto))}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/caja-menor/${gasto.id}`}
-                        className="px-3 py-1.5 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
-                      >
-                        Ver
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-400 bg-gray-50 font-bold">
-                  <td colSpan={4} className="px-4 py-3 text-gray-900 uppercase text-xs">
-                    Total
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-bold text-blue-700 text-lg">
-                    {formatCurrency(montoTotal)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
           )}
         </div>
 

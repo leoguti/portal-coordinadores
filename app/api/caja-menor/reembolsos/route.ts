@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
   getReembolsosCajaMenor,
   createReembolsoCajaMenor,
-  getGastoCajaMenorById,
 } from "@/lib/airtable";
 
 /**
@@ -31,8 +30,8 @@ export async function GET() {
 }
 
 /**
- * POST /api/caja-menor/reembolsos — Crear reembolso en lote (solo admin)
- * Body: { coordinadorId: string, gastoIds: string[], observaciones?: string }
+ * POST /api/caja-menor/reembolsos — Crear reembolso (solo admin)
+ * Body: { coordinadorId: string, monto: number, fecha?: string, observaciones?: string }
  */
 export async function POST(request: Request) {
   try {
@@ -46,35 +45,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { coordinadorId, gastoIds, observaciones } = body;
+    const { coordinadorId, monto, fecha, observaciones } = body;
 
-    if (!coordinadorId || !gastoIds || !Array.isArray(gastoIds) || gastoIds.length === 0) {
-      return NextResponse.json({ error: "Faltan campos requeridos (coordinadorId, gastoIds)" }, { status: 400 });
-    }
-
-    // Validate all gastos exist, belong to the coordinator, and are in "Aprobado"
-    for (const gastoId of gastoIds) {
-      const gasto = await getGastoCajaMenorById(gastoId);
-      if (!gasto) {
-        return NextResponse.json({ error: `Gasto ${gastoId} no encontrado` }, { status: 400 });
-      }
-      if (!gasto.fields.Coordinador?.includes(coordinadorId)) {
-        return NextResponse.json(
-          { error: `Gasto #${gasto.fields.NumeroGasto || gastoId} no pertenece al coordinador indicado` },
-          { status: 400 }
-        );
-      }
-      if (gasto.fields.Estado !== "Aprobado") {
-        return NextResponse.json(
-          { error: `Gasto #${gasto.fields.NumeroGasto || gastoId} no está en estado Aprobado (está en "${gasto.fields.Estado}")` },
-          { status: 400 }
-        );
-      }
+    if (!coordinadorId || monto === undefined || monto <= 0) {
+      return NextResponse.json({ error: "Faltan campos requeridos (coordinadorId, monto > 0)" }, { status: 400 });
     }
 
     const reembolso = await createReembolsoCajaMenor({
       coordinadorId,
-      gastoIds,
+      monto,
+      fecha,
       observaciones,
     });
 

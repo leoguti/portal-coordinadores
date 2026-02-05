@@ -9,16 +9,21 @@ import {
   getGastosCajaMenorCoordinador,
   getAllGastosCajaMenor,
   type GastoCajaMenor,
-  type AsignacionCajaMenor,
   type ReembolsoCajaMenor,
 } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
+
+interface CoordinadorConSaldo {
+  id: string;
+  nombre: string;
+  saldoInicial: number;
+}
 
 export default function CajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [gastos, setGastos] = useState<GastoCajaMenor[]>([]);
-  const [asignacion, setAsignacion] = useState<AsignacionCajaMenor | null>(null);
+  const [saldoInicial, setSaldoInicial] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,17 +32,17 @@ export default function CajaMenorPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("");
 
-  // Admin: asignaciones y coordinadores
-  const [allAsignaciones, setAllAsignaciones] = useState<AsignacionCajaMenor[]>([]);
-  const [coordinadoresList, setCoordinadoresList] = useState<{ id: string; name: string }[]>([]);
+  // Admin: coordinadores con saldo
+  const [coordinadoresConSaldo, setCoordinadoresConSaldo] = useState<CoordinadorConSaldo[]>([]);
 
-  // Admin: batch reembolso selection
-  const [selectedGastos, setSelectedGastos] = useState<Set<string>>(new Set());
-  const [creandoReembolso, setCreandoReembolso] = useState(false);
-  const [observacionesReembolso, setObservacionesReembolso] = useState("");
-
-  // Reembolsos history
+  // Reembolsos
   const [reembolsos, setReembolsos] = useState<ReembolsoCajaMenor[]>([]);
+
+  // Modal crear reembolso (admin)
+  const [mostrarModalReembolso, setMostrarModalReembolso] = useState(false);
+  const [nuevoReembolsoMonto, setNuevoReembolsoMonto] = useState("");
+  const [nuevoReembolsoObs, setNuevoReembolsoObs] = useState("");
+  const [creandoReembolso, setCreandoReembolso] = useState(false);
 
   // Meses expandidos en la vista agrupada
   const [mesesExpandidos, setMesesExpandidos] = useState<Set<string>>(new Set());
@@ -66,36 +71,25 @@ export default function CajaMenorPage() {
         }
         setGastos(data);
 
-        // Cargar asignaciones (sin filtro de mes — el anticipo es un tope fijo)
+        // Cargar saldos iniciales
         try {
           if (isAdmin) {
-            // Admin: cargar TODAS las asignaciones + lista de coordinadores
-            const [resAsig, resCoord] = await Promise.all([
-              fetch("/api/caja-menor/asignaciones"),
-              fetch("/api/coordinadores"),
-            ]);
-            if (resAsig.ok) {
-              const { asignaciones } = await resAsig.json();
-              setAllAsignaciones(asignaciones);
-            }
-            if (resCoord.ok) {
-              const { coordinadores } = await resCoord.json();
-              setCoordinadoresList(coordinadores);
-            }
-          } else {
-            // Coordinador: buscar su asignacion (tope fijo, sin mes)
+            // Admin: cargar todos los coordinadores con saldo
             const res = await fetch("/api/caja-menor/asignaciones");
             if (res.ok) {
-              const { asignaciones } = await res.json();
-              const miAsignacion = asignaciones.find(
-                (a: AsignacionCajaMenor) =>
-                  a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
-              );
-              setAsignacion(miAsignacion || null);
+              const { coordinadores } = await res.json();
+              setCoordinadoresConSaldo(coordinadores || []);
+            }
+          } else {
+            // Coordinador: obtener su saldo inicial
+            const res = await fetch(`/api/caja-menor/asignaciones?coordinadorId=${session.user.coordinatorRecordId}`);
+            if (res.ok) {
+              const { saldoInicial: si } = await res.json();
+              setSaldoInicial(si || 0);
             }
           }
         } catch {
-          // No es critico si falla la carga de asignaciones
+          // No es critico si falla
         }
 
         // Cargar reembolsos
@@ -103,10 +97,10 @@ export default function CajaMenorPage() {
           const resReemb = await fetch("/api/caja-menor/reembolsos");
           if (resReemb.ok) {
             const { reembolsos: reembData } = await resReemb.json();
-            setReembolsos(reembData);
+            setReembolsos(reembData || []);
           }
         } catch {
-          // No es critico si falla la carga de reembolsos
+          // No es critico si falla
         }
       } catch (err) {
         console.error("Error loading gastos:", err);
@@ -134,10 +128,10 @@ export default function CajaMenorPage() {
 
   if (!session) return null;
 
-  // Calcular valores en frontend (Airtable formula+currency puede retornar null)
+  // Calcular valor neto
   const calcValorNeto = (g: GastoCajaMenor) => {
     const valor = g.fields.Valor || 0;
-    const pct = g.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
+    const pct = g.fields.PorcentajeRetencion || 0;
     return valor - (valor * pct);
   };
 
@@ -145,7 +139,6 @@ export default function CajaMenorPage() {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Aprobado: "bg-green-100 text-green-800",
     Rechazado: "bg-red-100 text-red-800",
-    Reembolsado: "bg-blue-100 text-blue-800",
   };
 
   const puedeEliminarGasto = (fecha: string, estado: string): boolean => {
@@ -153,57 +146,6 @@ export default function CajaMenorPage() {
     if (estado !== "Pendiente") return false;
     return puedeModificarFecha(fecha);
   };
-
-  // Listas unicas para filtros
-  const estadosUnicos = [
-    ...new Set(gastos.map((g) => g.fields.Estado || "").filter(Boolean)),
-  ].sort();
-  const mesesUnicos = [
-    ...new Set(gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean)),
-  ]
-    .sort()
-    .reverse();
-
-  // Aplicar filtros para la tabla
-  // Por defecto: excluir reembolsados, sin filtro de mes
-  // Filtro de mes es opcional, filtro de estado permite ver reembolsados
-  const gastosFiltrados = gastos.filter((gasto) => {
-    if (filtroCoordinador && !gasto.fields.Coordinador?.includes(filtroCoordinador))
-      return false;
-    // Filtro de estado: si no hay filtro, excluir reembolsados por defecto
-    if (filtroEstado) {
-      if (gasto.fields.Estado !== filtroEstado) return false;
-    } else {
-      // Por defecto excluir reembolsados
-      if (gasto.fields.Estado === "Reembolsado") return false;
-    }
-    // Filtro de mes es opcional
-    if (filtroMes && (gasto.fields.Fecha || "").substring(0, 7) !== filtroMes) return false;
-    return true;
-  });
-
-  // Calcular resumen ACUMULADO (todos los meses, histórico)
-  const totalAprobadoAcumulado = gastos
-    .filter((g) => g.fields.Estado === "Aprobado")
-    .reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const totalPendienteAcumulado = gastos
-    .filter((g) => g.fields.Estado === "Pendiente")
-    .reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const gastosRechazadosAcumulado = gastos.filter((g) => g.fields.Estado === "Rechazado");
-  const totalRechazadoAcumulado = gastosRechazadosAcumulado.reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const cantRechazados = gastosRechazadosAcumulado.length;
-  const cantAprobados = gastos.filter((g) => g.fields.Estado === "Aprobado").length;
-  const cantPendientes = gastos.filter((g) => g.fields.Estado === "Pendiente").length;
-
-  // Saldo GLOBAL = Anticipo - Aprobados (sin reembolsar). Pendientes/rechazados no afectan.
-  const anticipoMonto = asignacion?.fields.MontoAsignado || 0;
-  const totalAprobadoSinReembolsar = gastos
-    .filter((g) => g.fields.Estado === "Aprobado")
-    .reduce((sum, g) => sum + calcValorNeto(g), 0);
-  const saldoGlobal = anticipoMonto - totalAprobadoSinReembolsar;
-  const porcentajeUsado = anticipoMonto > 0 ? Math.min((totalAprobadoSinReembolsar / anticipoMonto) * 100, 100) : 0;
-
-  const tieneAsignacion = asignacion !== null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -213,21 +155,71 @@ export default function CajaMenorPage() {
     }).format(amount);
   };
 
-  // Agrupar gastos filtrados por mes
+  // Listas unicas para filtros
+  const estadosUnicos = [...new Set(gastos.map((g) => g.fields.Estado || "").filter(Boolean))].sort();
+  const mesesUnicos = [...new Set(gastos.map((g) => (g.fields.Fecha || "").substring(0, 7)).filter(Boolean))]
+    .sort()
+    .reverse();
+
+  // Aplicar filtros
+  const gastosFiltrados = gastos.filter((gasto) => {
+    if (filtroCoordinador && !gasto.fields.Coordinador?.includes(filtroCoordinador)) return false;
+    if (filtroEstado && gasto.fields.Estado !== filtroEstado) return false;
+    if (filtroMes && (gasto.fields.Fecha || "").substring(0, 7) !== filtroMes) return false;
+    return true;
+  });
+
+  // Reembolsos filtrados
+  const reembolsosFiltrados = filtroCoordinador
+    ? reembolsos.filter((r) => r.fields.Coordinador?.includes(filtroCoordinador))
+    : isAdmin ? [] : reembolsos;
+
+  // Calcular totales para coordinador actual o seleccionado
+  const getCoordinadorId = () => {
+    if (isAdmin) return filtroCoordinador;
+    return session?.user?.coordinatorRecordId || "";
+  };
+
+  const coordId = getCoordinadorId();
+  const gastosCoord = coordId ? gastos.filter((g) => g.fields.Coordinador?.includes(coordId)) : [];
+  const reembolsosCoord = coordId ? reembolsos.filter((r) => r.fields.Coordinador?.includes(coordId)) : [];
+
+  const totalFacturasAprobadas = gastosCoord
+    .filter((g) => g.fields.Estado === "Aprobado")
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const totalFacturasPendientes = gastosCoord
+    .filter((g) => g.fields.Estado === "Pendiente")
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const totalFacturasRechazadas = gastosCoord
+    .filter((g) => g.fields.Estado === "Rechazado")
+    .reduce((sum, g) => sum + calcValorNeto(g), 0);
+  const totalReembolsos = reembolsosCoord.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
+
+  // Saldo: Saldo Inicial + Reembolsos - Facturas Aprobadas
+  const saldoInicialCoord = isAdmin
+    ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.saldoInicial || 0)
+    : saldoInicial;
+  const saldoActual = saldoInicialCoord + totalReembolsos - totalFacturasAprobadas;
+
+  const cantAprobados = gastosCoord.filter((g) => g.fields.Estado === "Aprobado").length;
+  const cantPendientes = gastosCoord.filter((g) => g.fields.Estado === "Pendiente").length;
+  const cantRechazados = gastosCoord.filter((g) => g.fields.Estado === "Rechazado").length;
+
+  const coordNombre = isAdmin
+    ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.nombre || "")
+    : (session?.user?.name || "");
+
+  // Agrupar gastos por mes
   const gastosPorMes = (() => {
     const grupos = new Map<string, GastoCajaMenor[]>();
     gastosFiltrados.forEach((gasto) => {
       const mes = (gasto.fields.Fecha || "").substring(0, 7) || "sin-fecha";
-      if (!grupos.has(mes)) {
-        grupos.set(mes, []);
-      }
+      if (!grupos.has(mes)) grupos.set(mes, []);
       grupos.get(mes)!.push(gasto);
     });
-    // Ordenar por mes descendente (más reciente primero)
     return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
-  // Función para formatear nombre del mes
   const formatMesNombre = (mesStr: string) => {
     if (mesStr === "sin-fecha") return "Sin fecha";
     const [year, month] = mesStr.split("-");
@@ -235,135 +227,35 @@ export default function CajaMenorPage() {
     return date.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
   };
 
-  // Toggle mes expandido
   const toggleMes = (mes: string) => {
     setMesesExpandidos((prev) => {
       const next = new Set(prev);
-      if (next.has(mes)) {
-        next.delete(mes);
-      } else {
-        next.add(mes);
-      }
+      if (next.has(mes)) next.delete(mes);
+      else next.add(mes);
       return next;
     });
   };
 
-  // Calcular resumen de un grupo de gastos
   const calcResumenGrupo = (gastosGrupo: GastoCajaMenor[]) => {
-    const pendiente = gastosGrupo
-      .filter((g) => g.fields.Estado === "Pendiente")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    const aprobado = gastosGrupo
-      .filter((g) => g.fields.Estado === "Aprobado")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    const rechazado = gastosGrupo
-      .filter((g) => g.fields.Estado === "Rechazado")
-      .reduce((s, g) => s + calcValorNeto(g), 0);
-    const cantPend = gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").length;
-    const cantAprob = gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").length;
-    const cantRech = gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").length;
-    return { pendiente, aprobado, rechazado, cantPend, cantAprob, cantRech, total: gastosGrupo.length };
+    const pendiente = gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").reduce((s, g) => s + calcValorNeto(g), 0);
+    const aprobado = gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").reduce((s, g) => s + calcValorNeto(g), 0);
+    const rechazado = gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").reduce((s, g) => s + calcValorNeto(g), 0);
+    return {
+      pendiente,
+      aprobado,
+      rechazado,
+      cantPend: gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").length,
+      cantAprob: gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").length,
+      cantRech: gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").length,
+      total: gastosGrupo.length,
+    };
   };
-
-  // Admin: detalle del coordinador seleccionado
-  const adminCoordAsignacion = filtroCoordinador
-    ? allAsignaciones.find((a) => a.fields.Coordinador?.includes(filtroCoordinador))
-    : null;
-  const adminCoordNombre = filtroCoordinador
-    ? coordinadoresList.find((c) => c.id === filtroCoordinador)?.name || ""
-    : "";
-  // Stats ACUMULADOS (todos los meses) para el coordinador seleccionado
-  const adminCoordGastos = filtroCoordinador
-    ? gastos.filter((g) => g.fields.Coordinador?.includes(filtroCoordinador))
-    : [];
-  const adminCoordAprobadoAcum = adminCoordGastos
-    .filter((g) => g.fields.Estado === "Aprobado")
-    .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordPendienteAcum = adminCoordGastos
-    .filter((g) => g.fields.Estado === "Pendiente")
-    .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordRechazadoAcum = adminCoordGastos
-    .filter((g) => g.fields.Estado === "Rechazado")
-    .reduce((s, g) => s + calcValorNeto(g), 0);
-  const adminCoordCantAprobados = adminCoordGastos.filter((g) => g.fields.Estado === "Aprobado").length;
-  const adminCoordCantPendientes = adminCoordGastos.filter((g) => g.fields.Estado === "Pendiente").length;
-  const adminCoordCantRechazados = adminCoordGastos.filter((g) => g.fields.Estado === "Rechazado").length;
-  // Saldo global: Anticipo - Aprobados sin reembolsar (todos los meses)
-  const adminCoordAnticipo = adminCoordAsignacion?.fields.MontoAsignado || 0;
-  const adminCoordSaldo = adminCoordAnticipo - adminCoordAprobadoAcum;
-  const adminCoordPctUsado = adminCoordAnticipo > 0 ? Math.min((adminCoordAprobadoAcum / adminCoordAnticipo) * 100, 100) : 0;
-
-  const handleToggleGasto = (gastoId: string) => {
-    setSelectedGastos((prev) => {
-      const next = new Set(prev);
-      if (next.has(gastoId)) next.delete(gastoId);
-      else next.add(gastoId);
-      return next;
-    });
-  };
-
-  const handleCrearReembolso = async () => {
-    if (selectedGastos.size === 0 || !filtroCoordinador) return;
-    if (!confirm(`¿Crear reembolso con ${selectedGastos.size} gasto(s)?`)) return;
-
-    setCreandoReembolso(true);
-    try {
-      const res = await fetch("/api/caja-menor/reembolsos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          coordinadorId: filtroCoordinador,
-          gastoIds: Array.from(selectedGastos),
-          observaciones: observacionesReembolso.trim() || undefined,
-        }),
-      });
-      if (res.ok) {
-        const { reembolso } = await res.json();
-        // Update local state: mark gastos as Reembolsado
-        setGastos((prev) =>
-          prev.map((g) =>
-            selectedGastos.has(g.id)
-              ? { ...g, fields: { ...g.fields, Estado: "Reembolsado", Reembolso: [reembolso.id] } }
-              : g
-          )
-        );
-        setReembolsos((prev) => [reembolso, ...prev]);
-        setSelectedGastos(new Set());
-        setObservacionesReembolso("");
-      } else {
-        const data = await res.json();
-        alert(`Error: ${data.error || "No se pudo crear el reembolso"}`);
-      }
-    } catch {
-      alert("Error al crear el reembolso");
-    } finally {
-      setCreandoReembolso(false);
-    }
-  };
-
-  // Selected gastos totals
-  const selectedGastosTotal = gastosFiltrados
-    .filter((g) => selectedGastos.has(g.id))
-    .reduce((sum, g) => sum + calcValorNeto(g), 0);
-
-  // Reembolsos for the current coordinator filter (admin) or the coordinator (non-admin)
-  const reembolsosFiltrados = filtroCoordinador
-    ? reembolsos.filter((r) => r.fields.Coordinador?.includes(filtroCoordinador))
-    : reembolsos;
 
   const handleEliminar = async (gastoId: string, numero: number) => {
-    if (
-      !confirm(
-        `Estas seguro de eliminar el gasto #${numero}?\n\nEsta accion no se puede deshacer.`
-      )
-    )
-      return;
+    if (!confirm(`Estas seguro de eliminar el gasto #${numero}?\n\nEsta accion no se puede deshacer.`)) return;
 
     try {
-      const response = await fetch(`/api/caja-menor/${gastoId}`, {
-        method: "DELETE",
-      });
-
+      const response = await fetch(`/api/caja-menor/${gastoId}`, { method: "DELETE" });
       if (response.ok) {
         setGastos((prev) => prev.filter((g) => g.id !== gastoId));
       } else {
@@ -376,6 +268,44 @@ export default function CajaMenorPage() {
     }
   };
 
+  const handleCrearReembolso = async () => {
+    if (!filtroCoordinador || !nuevoReembolsoMonto) return;
+    const monto = parseFloat(nuevoReembolsoMonto);
+    if (isNaN(monto) || monto <= 0) {
+      alert("Ingresa un monto valido");
+      return;
+    }
+
+    setCreandoReembolso(true);
+    try {
+      const res = await fetch("/api/caja-menor/reembolsos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coordinadorId: filtroCoordinador,
+          monto,
+          observaciones: nuevoReembolsoObs.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        const { reembolso } = await res.json();
+        setReembolsos((prev) => [reembolso, ...prev]);
+        setMostrarModalReembolso(false);
+        setNuevoReembolsoMonto("");
+        setNuevoReembolsoObs("");
+      } else {
+        const data = await res.json();
+        alert(`Error: ${data.error || "No se pudo crear el reembolso"}`);
+      }
+    } catch {
+      alert("Error al crear el reembolso");
+    } finally {
+      setCreandoReembolso(false);
+    }
+  };
+
+  const tieneSaldoInicial = saldoInicialCoord > 0 || totalReembolsos > 0 || totalFacturasAprobadas > 0;
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -384,12 +314,10 @@ export default function CajaMenorPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Caja Menor</h1>
             <p className="text-gray-600 mt-1">
-              {isAdmin
-                ? "Vista de administrador - Todos los gastos"
-                : "Registra y consulta tus gastos de caja menor"}
+              {isAdmin ? "Vista de administrador - Todos los gastos" : "Registra y consulta tus gastos de caja menor"}
             </p>
           </div>
-          {!isAdmin && tieneAsignacion && (
+          {!isAdmin && (
             <Link
               href="/caja-menor/nuevo"
               className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -399,223 +327,126 @@ export default function CajaMenorPage() {
           )}
         </div>
 
-        {/* Dashboard coordinador */}
-        {!isAdmin && !loading && (
-          <>
-            {!tieneAsignacion ? (
-              /* Alerta sin asignación */
-              <div className="mb-6 bg-orange-50 border border-orange-300 rounded-lg p-5 flex items-start gap-3">
-                <svg className="w-6 h-6 text-orange-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-                </svg>
-                <div>
-                  <p className="font-bold text-orange-800">No tienes anticipo asignado</p>
-                  <p className="text-orange-700 text-sm mt-1">Contacta al administrador para que te asigne un fondo de caja menor.</p>
-                </div>
+        {/* Filtros Admin */}
+        {isAdmin && !loading && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
+                <select
+                  value={filtroCoordinador}
+                  onChange={(e) => setFiltroCoordinador(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                >
+                  <option value="">Seleccionar coordinador...</option>
+                  {coordinadoresConSaldo.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              /* Panel Fondo de Caja Menor */
-              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-                {/* Saldo global (siempre visible) */}
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Mi Fondo de Caja Menor
-                  </h2>
-                </div>
-                <div className="flex items-baseline gap-6 mb-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Anticipo</p>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(anticipoMonto)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-blue-600 font-bold">Saldo disponible</p>
-                    <p className="text-2xl font-bold text-blue-700">{formatCurrency(saldoGlobal)}</p>
-                  </div>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-1">
-                  <div
-                    className="h-full rounded-full bg-amber-500 transition-all duration-500"
-                    style={{ width: `${porcentajeUsado}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mb-5">
-                  {porcentajeUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
-                </p>
-
-                {/* Tarjetas acumuladas */}
-                <p className="text-xs font-bold text-gray-400 uppercase mb-2">
-                  Resumen Acumulado
-                </p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                    <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(totalPendienteAcumulado)}</p>
-                    <p className="text-xs text-yellow-600 mt-1">{cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"}</p>
-                  </div>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                    <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(totalAprobadoAcumulado)}</p>
-                    <p className="text-xs text-green-600 mt-1">{cantAprobados} {cantAprobados === 1 ? "gasto" : "gastos"}</p>
-                  </div>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                    <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(totalRechazadoAcumulado)}</p>
-                    <p className="text-xs text-red-600 mt-1">{cantRechazados} {cantRechazados === 1 ? "gasto" : "gastos"}</p>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
+                <select
+                  value={filtroMes}
+                  onChange={(e) => setFiltroMes(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                >
+                  <option value="">Todos</option>
+                  {mesesUnicos.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
               </div>
-            )}
-          </>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+                <select
+                  value={filtroEstado}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                >
+                  <option value="">Todos</option>
+                  {estadosUnicos.map((e) => (
+                    <option key={e} value={e}>{e}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Admin: filtros globales + contenido */}
-        {isAdmin && !loading && (
-          <>
-            {/* Barra de filtros globales */}
-            <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
-                  <select
-                    value={filtroCoordinador}
-                    onChange={(e) => {
-                      setFiltroCoordinador(e.target.value);
-                      setSelectedGastos(new Set());
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                  >
-                    <option value="">Seleccionar coordinador...</option>
-                    {coordinadoresList.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
-                  <select
-                    value={filtroMes}
-                    onChange={(e) => {
-                      setFiltroMes(e.target.value);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                  >
-                    <option value="">Todos</option>
-                    {mesesUnicos.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
-                  <select
-                    value={filtroEstado}
-                    onChange={(e) => {
-                      setFiltroEstado(e.target.value);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
-                  >
-                    <option value="">Todos</option>
-                    {estadosUnicos.map((e) => (
-                      <option key={e} value={e}>{e}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {(filtroCoordinador || filtroEstado || filtroMes) && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => {
-                      setFiltroCoordinador("");
-                      setFiltroEstado("");
-                      setFiltroMes("");
-                      setSelectedGastos(new Set());
-                    }}
-                    className="text-sm text-red-600 hover:text-red-800 underline"
-                  >
-                    Limpiar filtros
-                  </button>
-                </div>
+        {/* Panel de Saldo - Coordinador o Admin con filtro */}
+        {!loading && (isAdmin ? filtroCoordinador : true) && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                {isAdmin ? `Caja Menor - ${coordNombre}` : "Mi Caja Menor"}
+              </h2>
+              {isAdmin && filtroCoordinador && (
+                <button
+                  onClick={() => setMostrarModalReembolso(true)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+                >
+                  + Nuevo Reembolso
+                </button>
               )}
             </div>
 
-            {/* Contenido: mensaje de selección o detalle de coordinador */}
-            {!filtroCoordinador ? (
-              /* Mensaje para seleccionar coordinador */
-              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-8 text-center">
-                <div className="text-5xl mb-4">👆</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Selecciona un coordinador
-                </h3>
-                <p className="text-gray-600">
-                  Usa el filtro de arriba para ver los gastos de un coordinador específico.
+            {/* Tarjeta de Saldo */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-xs text-gray-500 mb-1">Saldo Inicial</p>
+                <p className="text-xl font-bold text-gray-900 font-mono">{formatCurrency(saldoInicialCoord)}</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-xs text-blue-600 mb-1">Total Reembolsos</p>
+                <p className="text-xl font-bold text-blue-700 font-mono">+{formatCurrency(totalReembolsos)}</p>
+                <p className="text-xs text-blue-500">{reembolsosCoord.length} reembolsos</p>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-xs text-green-600 mb-1">Facturas Aprobadas</p>
+                <p className="text-xl font-bold text-green-700 font-mono">-{formatCurrency(totalFacturasAprobadas)}</p>
+                <p className="text-xs text-green-500">{cantAprobados} facturas</p>
+              </div>
+              <div className={`border rounded-lg p-4 ${saldoActual >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
+                <p className={`text-xs mb-1 font-bold ${saldoActual >= 0 ? "text-emerald-600" : "text-red-600"}`}>SALDO ACTUAL</p>
+                <p className={`text-2xl font-bold font-mono ${saldoActual >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                  {formatCurrency(saldoActual)}
                 </p>
               </div>
-            ) : (
-              /* Vista detalle: fondo del coordinador seleccionado */
-              <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Fondo — {adminCoordNombre}
-                  </h2>
-                </div>
+            </div>
 
-                {adminCoordAsignacion ? (
-                  <>
-                    {/* Saldo global */}
-                    <div className="flex items-baseline gap-6 mb-3">
-                      <div>
-                        <p className="text-xs text-gray-500">Anticipo</p>
-                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(adminCoordAnticipo)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-blue-600 font-bold">Saldo disponible</p>
-                        <p className="text-2xl font-bold text-blue-700">{formatCurrency(adminCoordSaldo)}</p>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-1">
-                      <div
-                        className="h-full rounded-full bg-amber-500 transition-all duration-500"
-                        style={{ width: `${adminCoordPctUsado}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mb-5">
-                      {adminCoordPctUsado.toFixed(0)}% comprometido (aprobado sin reembolsar)
-                    </p>
-
-                    {/* Tarjetas acumuladas */}
-                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">
-                      Resumen Acumulado
-                    </p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                        <p className="text-xl font-bold text-yellow-800 font-mono">{formatCurrency(adminCoordPendienteAcum)}</p>
-                        <p className="text-xs text-yellow-600 mt-1">{adminCoordCantPendientes} {adminCoordCantPendientes === 1 ? "gasto" : "gastos"}</p>
-                      </div>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                        <p className="text-xl font-bold text-green-800 font-mono">{formatCurrency(adminCoordAprobadoAcum)}</p>
-                        <p className="text-xs text-green-600 mt-1">{adminCoordCantAprobados} {adminCoordCantAprobados === 1 ? "gasto" : "gastos"}</p>
-                      </div>
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                        <p className="text-xl font-bold text-red-800 font-mono">{formatCurrency(adminCoordRechazadoAcum)}</p>
-                        <p className="text-xs text-red-600 mt-1">{adminCoordCantRechazados} {adminCoordCantRechazados === 1 ? "gasto" : "gastos"}</p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-4 text-center">
-                    <p className="text-gray-500">Este coordinador no tiene anticipo asignado.</p>
-                  </div>
-                )}
+            {/* Resumen por estado */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
+                <p className="text-lg font-bold text-yellow-800 font-mono">{formatCurrency(totalFacturasPendientes)}</p>
+                <p className="text-xs text-yellow-600">{cantPendientes} gastos</p>
               </div>
-            )}
-          </>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
+                <p className="text-lg font-bold text-green-800 font-mono">{formatCurrency(totalFacturasAprobadas)}</p>
+                <p className="text-xs text-green-600">{cantAprobados} gastos</p>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
+                <p className="text-lg font-bold text-red-800 font-mono">{formatCurrency(totalFacturasRechazadas)}</p>
+                <p className="text-xs text-red-600">{cantRechazados} gastos</p>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Filtros (solo coordinador, no admin) */}
-        {!isAdmin && (
+        {/* Mensaje seleccionar coordinador (admin sin filtro) */}
+        {isAdmin && !filtroCoordinador && !loading && (
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-8 text-center">
+            <div className="text-5xl mb-4">👆</div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona un coordinador</h3>
+            <p className="text-gray-600">Usa el filtro de arriba para ver los gastos de un coordinador específico.</p>
+          </div>
+        )}
+
+        {/* Filtros (solo coordinador) */}
+        {!isAdmin && !loading && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -623,9 +454,7 @@ export default function CajaMenorPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
                 <select
                   value={filtroEstado}
-                  onChange={(e) => {
-                    setFiltroEstado(e.target.value);
-                  }}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
                   <option value="">Todos</option>
@@ -638,9 +467,7 @@ export default function CajaMenorPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
                 <select
                   value={filtroMes}
-                  onChange={(e) => {
-                    setFiltroMes(e.target.value);
-                  }}
+                  onChange={(e) => setFiltroMes(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
                   <option value="">Todos</option>
@@ -650,19 +477,6 @@ export default function CajaMenorPage() {
                 </select>
               </div>
             </div>
-            {(filtroEstado || filtroMes) && (
-              <div className="mt-3">
-                <button
-                  onClick={() => {
-                    setFiltroEstado("");
-                    setFiltroMes("");
-                  }}
-                  className="text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -684,16 +498,9 @@ export default function CajaMenorPage() {
         ) : (
           <>
             {/* Contador */}
-            <div className="mb-4 flex justify-between items-center">
+            <div className="mb-4">
               <p className="text-sm text-gray-600">
-                Total: {gastosFiltrados.length}{" "}
-                {gastosFiltrados.length === 1 ? "gasto" : "gastos"}
-                {gastosFiltrados.length !== gastos.length && (
-                  <span className="ml-1 text-gray-400">(de {gastos.length})</span>
-                )}
-                <span className="ml-2 text-gray-400">
-                  en {gastosPorMes.length} {gastosPorMes.length === 1 ? "mes" : "meses"}
-                </span>
+                Total: {gastosFiltrados.length} {gastosFiltrados.length === 1 ? "gasto" : "gastos"}
               </p>
             </div>
 
@@ -701,17 +508,11 @@ export default function CajaMenorPage() {
             {gastosFiltrados.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <div className="text-6xl mb-4">💰</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {gastos.length === 0
-                    ? "No hay gastos registrados"
-                    : "No hay gastos con estos filtros"}
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay gastos registrados</h3>
                 <p className="text-gray-600 mb-6">
-                  {gastos.length === 0
-                    ? "Aun no has registrado ningun gasto de caja menor."
-                    : "Intenta cambiar los filtros de busqueda."}
+                  {gastos.length === 0 ? "Aun no has registrado ningun gasto." : "No hay gastos con estos filtros."}
                 </p>
-                {gastos.length === 0 && !isAdmin && tieneAsignacion && (
+                {!isAdmin && gastos.length === 0 && (
                   <Link
                     href="/caja-menor/nuevo"
                     className="inline-block px-6 py-3 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -729,7 +530,6 @@ export default function CajaMenorPage() {
 
                   return (
                     <div key={mes} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                      {/* Header del mes (siempre visible) */}
                       <button
                         onClick={() => toggleMes(mes)}
                         className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
@@ -743,12 +543,8 @@ export default function CajaMenorPage() {
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                          <span className="font-bold text-gray-900 capitalize">
-                            {formatMesNombre(mes)}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            ({resumen.total} {resumen.total === 1 ? "gasto" : "gastos"})
-                          </span>
+                          <span className="font-bold text-gray-900 capitalize">{formatMesNombre(mes)}</span>
+                          <span className="text-sm text-gray-500">({resumen.total} gastos)</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           {resumen.cantPend > 0 && (
@@ -761,50 +557,14 @@ export default function CajaMenorPage() {
                               Aprob: {formatCurrency(resumen.aprobado)}
                             </span>
                           )}
-                          {resumen.cantRech > 0 && (
-                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded font-medium">
-                              Rech: {formatCurrency(resumen.rechazado)}
-                            </span>
-                          )}
                         </div>
                       </button>
 
-                      {/* Detalle de gastos (solo si está expandido) */}
                       {expandido && (
                         <div className="overflow-x-auto">
                           <table className="w-full">
                             <thead className="bg-gray-100 border-b border-gray-200">
                               <tr>
-                                {isAdmin && filtroCoordinador && (
-                                  <th className="px-2 py-2 text-center w-10">
-                                    <input
-                                      type="checkbox"
-                                      checked={
-                                        gastosDelMes.filter((g) => g.fields.Estado === "Aprobado").length > 0 &&
-                                        gastosDelMes
-                                          .filter((g) => g.fields.Estado === "Aprobado")
-                                          .every((g) => selectedGastos.has(g.id))
-                                      }
-                                      onChange={() => {
-                                        const aprobadosDelMes = gastosDelMes.filter((g) => g.fields.Estado === "Aprobado");
-                                        const todosSeleccionados = aprobadosDelMes.every((g) => selectedGastos.has(g.id));
-                                        setSelectedGastos((prev) => {
-                                          const next = new Set(prev);
-                                          aprobadosDelMes.forEach((g) => {
-                                            if (todosSeleccionados) {
-                                              next.delete(g.id);
-                                            } else {
-                                              next.add(g.id);
-                                            }
-                                          });
-                                          return next;
-                                        });
-                                      }}
-                                      className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
-                                      title="Seleccionar aprobados del mes"
-                                    />
-                                  </th>
-                                )}
                                 <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
                                 <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
                                 {isAdmin && !filtroCoordinador && (
@@ -831,50 +591,24 @@ export default function CajaMenorPage() {
                                 return (
                                   <tr
                                     key={gasto.id}
-                                    className={`border-b border-gray-100 ${
-                                      selectedGastos.has(gasto.id) ? "bg-blue-50" : index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                    } hover:bg-blue-50 transition-colors`}
+                                    className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}
                                   >
-                                    {isAdmin && filtroCoordinador && (
-                                      <td className="px-2 py-2 text-center">
-                                        {estado === "Aprobado" && (
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedGastos.has(gasto.id)}
-                                            onChange={() => handleToggleGasto(gasto.id)}
-                                            className="h-4 w-4 rounded border-gray-300 text-[#00d084] focus:ring-[#00d084]"
-                                          />
-                                        )}
-                                      </td>
-                                    )}
                                     <td className="px-3 py-2">
                                       <span className="font-bold text-[#00d084]">#{numero}</span>
                                     </td>
                                     <td className="px-3 py-2 text-sm text-gray-700">
-                                      {fecha
-                                        ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" })
-                                        : "-"}
+                                      {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" }) : "-"}
                                     </td>
                                     {isAdmin && !filtroCoordinador && (
                                       <td className="px-3 py-2 text-sm text-gray-700">{coordinador}</td>
                                     )}
-                                    <td className="px-3 py-2 text-sm text-gray-900 font-medium">
-                                      {beneficiario}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-700 max-w-[180px] truncate">
-                                      {concepto}
-                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-900 font-medium">{beneficiario}</td>
+                                    <td className="px-3 py-2 text-sm text-gray-700 max-w-[180px] truncate">{concepto}</td>
                                     <td className="px-3 py-2 text-right">
-                                      <span className="text-sm font-bold text-[#00d084] font-mono">
-                                        {formatCurrency(valorNeto)}
-                                      </span>
+                                      <span className="text-sm font-bold text-[#00d084] font-mono">{formatCurrency(valorNeto)}</span>
                                     </td>
                                     <td className="px-3 py-2 text-center">
-                                      <span
-                                        className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${
-                                          estadoColors[estado] || "bg-gray-100 text-gray-800"
-                                        }`}
-                                      >
+                                      <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
                                         {estado}
                                       </span>
                                     </td>
@@ -912,65 +646,32 @@ export default function CajaMenorPage() {
             {/* Historial de Reembolsos */}
             {(isAdmin ? filtroCoordinador : true) && reembolsosFiltrados.length > 0 && (
               <div className="mt-8 bg-white rounded-lg shadow border border-gray-200 p-6">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">
-                  Historial de Reembolsos
-                </h2>
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Historial de Reembolsos</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b-2 border-gray-300">
                         <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">#</th>
                         <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Fecha</th>
-                        {isAdmin && !filtroCoordinador && (
-                          <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Coordinador</th>
-                        )}
-                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Monto Total</th>
-                        <th className="text-center py-2 px-2 text-xs font-bold text-gray-600 uppercase">Gastos</th>
-                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase"></th>
+                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Monto</th>
+                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Observaciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {reembolsosFiltrados.map((r, index) => {
-                        const montoTotal = r.fields.MontoTotal ||
-                          (r.fields.GastosCajaMenor || []).reduce((sum, gId) => {
-                            const g = gastos.find((x) => x.id === gId);
-                            return sum + (g ? calcValorNeto(g) : 0);
-                          }, 0);
-                        return (
-                          <tr
-                            key={r.id}
-                            className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50`}
-                          >
-                            <td className="py-2 px-2 font-bold text-blue-600">
-                              #{r.fields.NumeroReembolso || "-"}
-                            </td>
-                            <td className="py-2 px-2 text-gray-700">
-                              {r.fields.Fecha
-                                ? new Date(r.fields.Fecha + "T00:00:00").toLocaleDateString("es-CO")
-                                : "-"}
-                            </td>
-                            {isAdmin && !filtroCoordinador && (
-                              <td className="py-2 px-2 text-gray-700">
-                                {r.fields.NombreCoordinador?.[0] || "-"}
-                              </td>
-                            )}
-                            <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">
-                              {formatCurrency(montoTotal)}
-                            </td>
-                            <td className="py-2 px-2 text-center text-gray-600">
-                              {r.fields.GastosCajaMenor?.length || 0}
-                            </td>
-                            <td className="py-2 px-2 text-right">
-                              <Link
-                                href={`/caja-menor/reembolsos/${r.id}`}
-                                className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
-                              >
-                                Ver
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {reembolsosFiltrados.map((r, index) => (
+                        <tr key={r.id} className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                          <td className="py-2 px-2 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
+                          <td className="py-2 px-2 text-gray-700">
+                            {r.fields.Fecha ? new Date(r.fields.Fecha + "T00:00:00").toLocaleDateString("es-CO") : "-"}
+                          </td>
+                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">
+                            {formatCurrency(r.fields.Monto || 0)}
+                          </td>
+                          <td className="py-2 px-2 text-gray-600 max-w-[200px] truncate">
+                            {r.fields.Observaciones || "-"}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -980,34 +681,44 @@ export default function CajaMenorPage() {
         )}
       </div>
 
-      {/* Floating bar for batch reembolso */}
-      {isAdmin && selectedGastos.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-blue-700 text-white shadow-lg z-40 border-t border-blue-800">
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="font-bold">
-                {selectedGastos.size} {selectedGastos.size === 1 ? "gasto" : "gastos"} seleccionado{selectedGastos.size !== 1 ? "s" : ""}
-              </span>
-              <span className="font-mono text-lg">{formatCurrency(selectedGastosTotal)}</span>
-            </div>
-            <div className="flex items-center gap-3">
+      {/* Modal Crear Reembolso */}
+      {mostrarModalReembolso && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Nuevo Reembolso</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Coordinador: <strong>{coordNombre}</strong>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
               <input
-                type="text"
-                value={observacionesReembolso}
-                onChange={(e) => setObservacionesReembolso(e.target.value)}
-                placeholder="Observaciones (opcional)"
-                className="px-3 py-1.5 rounded text-sm text-gray-900 border-0 focus:ring-2 focus:ring-white w-56"
+                type="number"
+                value={nuevoReembolsoMonto}
+                onChange={(e) => setNuevoReembolsoMonto(e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
+              <textarea
+                value={nuevoReembolsoObs}
+                onChange={(e) => setNuevoReembolsoObs(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
               <button
-                onClick={() => { setSelectedGastos(new Set()); setObservacionesReembolso(""); }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
+                onClick={() => setMostrarModalReembolso(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCrearReembolso}
-                disabled={creandoReembolso}
-                className="px-4 py-1.5 bg-white text-blue-700 font-bold text-sm rounded hover:bg-blue-50 transition-colors disabled:opacity-50"
+                disabled={creandoReembolso || !nuevoReembolsoMonto}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {creandoReembolso ? "Creando..." : "Crear Reembolso"}
               </button>

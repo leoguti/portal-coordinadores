@@ -18,21 +18,20 @@ interface Tercero {
 export default function NuevoGastoCajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [verificandoAsignacion, setVerificandoAsignacion] = useState(true);
+  const [verificandoSaldo, setVerificandoSaldo] = useState(true);
 
-  // Verificar que exista asignación para el mes actual (defensa en profundidad)
+  // Verificar que el coordinador tenga saldo inicial asignado
   useEffect(() => {
-    async function verificarAsignacion() {
+    async function verificarSaldo() {
       if (!session?.user?.coordinatorRecordId) return;
       try {
-        const res = await fetch("/api/caja-menor/asignaciones");
+        const res = await fetch(
+          `/api/caja-menor/asignaciones?coordinadorId=${session.user.coordinatorRecordId}`
+        );
         if (res.ok) {
-          const { asignaciones } = await res.json();
-          const miAsignacion = asignaciones.find(
-            (a: { fields: { Coordinador?: string[] } }) =>
-              a.fields.Coordinador?.includes(session.user.coordinatorRecordId!)
-          );
-          if (!miAsignacion) {
+          const { saldoInicial } = await res.json();
+          // Si no tiene saldo inicial, redirigir
+          if (saldoInicial === 0 || saldoInicial === undefined) {
             router.replace("/caja-menor");
             return;
           }
@@ -40,10 +39,10 @@ export default function NuevoGastoCajaMenorPage() {
       } catch {
         // Si falla la verificación, permitir continuar
       }
-      setVerificandoAsignacion(false);
+      setVerificandoSaldo(false);
     }
     if (session?.user?.coordinatorRecordId) {
-      verificarAsignacion();
+      verificarSaldo();
     }
   }, [session?.user?.coordinatorRecordId, router]);
 
@@ -57,7 +56,7 @@ export default function NuevoGastoCajaMenorPage() {
   const [error, setError] = useState<string | null>(null);
   const facturaInputRef = useRef<HTMLInputElement>(null);
 
-  if (status === "loading" || verificandoAsignacion) {
+  if (status === "loading" || verificandoSaldo) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

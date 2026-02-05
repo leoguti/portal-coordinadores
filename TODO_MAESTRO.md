@@ -2,7 +2,7 @@
 
 **Documento unificado de todos los pendientes del proyecto.**
 **Prioridad:** Lo que el cliente pidió primero, soporte técnico como habilitador.
-**Última actualización:** 29 de enero de 2026 (actualizado con estados reales)
+**Última actualización:** 5 de febrero de 2026
 
 > **Fuentes consolidadas:**
 > - `REUNION_19_ENERO.md` — Reunión con cliente
@@ -13,13 +13,13 @@
 
 ## Resumen de Estado
 
-| Categoría | Pendientes | Completados | Descartados |
-|-----------|-----------|-------------|-------------|
-| Compromisos cliente (P1) | 4 | 1 | 0 |
-| Requests coordinadores (P2) | 6 | 1 | 0 |
-| Features nuevas (P3) | 5 | 0 | 1 |
-| Mejoras técnicas (P4) | 27 | 0 | 0 |
-| **Total** | **42** | **2** | **1** |
+| Categoría | Pendientes | En Proceso | Completados | Descartados |
+|-----------|-----------|------------|-------------|-------------|
+| Compromisos cliente (P1) | 4 | 0 | 1 | 0 |
+| Requests coordinadores (P2) | 2 | 0 | 4 | 1 |
+| Features nuevas (P3) | 2 | 1 | 2 | 1 |
+| Mejoras técnicas (P4) | 27 | 0 | 0 | 0 |
+| **Total** | **35** | **1** | **7** | **2** |
 
 ---
 
@@ -89,14 +89,14 @@ Estos son compromisos directos adquiridos con el cliente. Son la máxima priorid
 
 Problemas y necesidades reportados directamente por los usuarios en la reunión del 26 de enero.
 
-### P2-01: Vista administrador para TODAS las órdenes de servicio
+### ~~P2-01: Vista administrador para TODAS las órdenes de servicio~~ COMPLETADO
 - **Origen:** Reunión coordinadores 26 ene
 - **Reporta:** Administradores
-- **Estado:** No implementado
+- **Estado:** Completado
 - **Detalle:**
-  - [ ] En `/ordenes-servicio`, si el usuario es Administrador, mostrar órdenes de todos los coordinadores
-  - [ ] Filtro por coordinador en vista admin
-  - [ ] Vista filtrada por coordinador actual si el usuario es Coordinador
+  - [x] En `/ordenes-servicio`, si el usuario es Administrador, mostrar órdenes de todos los coordinadores
+  - [x] Filtro por coordinador en vista admin
+  - [x] Vista filtrada por coordinador actual si el usuario es Coordinador
 
 ### P2-02: Visibilidad de estados post-pago para coordinadores
 - **Origen:** Reunión coordinadores 26 ene
@@ -108,14 +108,8 @@ Problemas y necesidades reportados directamente por los usuarios en la reunión 
   - [ ] Mostrarlos con badge de color en la lista de órdenes
   - [ ] Posible: notificación al coordinador cuando cambia el estado
 
-### P2-03: Proveedor ATICA con múltiples sucursales (mismo NIT, diferentes correos)
-- **Origen:** Reunión coordinadores 26 ene (María Paula)
-- **Estado:** No implementado
-- **Detalle:**
-  - [ ] Analizar cómo están estructurados los gestores en Airtable
-  - [ ] Opciones: (a) Un registro por sucursal con campo "zona", (b) Múltiples correos por gestor, (c) Campo adicional de sucursal
-  - [ ] Definir con el cliente la solución preferida
-  - [ ] Implementar en portal y chatbot
+### ~~P2-03: Proveedor ATICA con múltiples sucursales~~ DESCARTADO
+- **Estado:** Descartado — no se implementará
 
 ### P2-04: Confirmación exitosa al registrar actividades
 - **Origen:** Reunión coordinadores 26 ene
@@ -126,24 +120,13 @@ Problemas y necesidades reportados directamente por los usuarios en la reunión 
   - [ ] Botón para "Crear otra" o "Ver actividad"
 - **Nota:** El kardex YA tiene confirmación (implementado 26 ene). Replicar el mismo patrón para actividades.
 
-### P2-05: Control de sesión única
+### ~~P2-05: Control de sesión única~~ COMPLETADO
 - **Origen:** Reunión coordinadores 26 ene
-- **Problema:** Usuarios con dos zonas abren múltiples pestañas y se confunde la interfaz
-- **Estado:** No implementado
-- **Detalle:**
-  - [ ] Investigar opciones: (a) invalidar sesión anterior al iniciar nueva, (b) bloquear login si ya hay sesión activa, (c) tab detection con broadcast channel
-  - [ ] Definir con cliente qué comportamiento prefieren
-  - [ ] Implementar mecanismo elegido
-- **Complejidad:** Media-alta. El adapter in-memory actual no persiste sesiones, lo cual dificulta detección de sesiones activas.
+- **Estado:** Completado
 
-### P2-06: Material que no suma en kardex
+### ~~P2-06: Material que no suma en kardex~~ COMPLETADO
 - **Origen:** Reunión coordinadores 26 ene
-- **Estado:** Por investigar
-- **Detalle:**
-  - [ ] Reproducir el problema: ¿en qué escenario no suma?
-  - [ ] Verificar si es un bug de cálculo, de display, o de Airtable
-  - [ ] Pedir al coordinador que especifique qué registro tiene el problema
-  - [ ] Corregir
+- **Estado:** Completado
 
 ### ~~P2-07: Investigar problema de fotos en actividades (Andrés)~~ COMPLETADO
 - **Origen:** Reunión coordinadores 26 ene
@@ -157,36 +140,33 @@ Problemas y necesidades reportados directamente por los usuarios en la reunión 
 
 Features solicitadas por el cliente pero sin fecha de entrega comprometida.
 
-### P3-01: Filtrar centros de acopio por coordinador
+### ~~P3-01: Filtrar centros de acopio por coordinador~~ COMPLETADO
 - **Origen:** TODO_PORTAL.md + TODO_CENTROS_ACOPIO_POR_COORDINADOR.md
-- **Prioridad:** Alta (regla de negocio para integridad de datos)
-- **Estado:** No implementado. Diseño completo disponible.
+- **Estado:** Completado
 - **Detalle:**
-  - [ ] Backend: crear `getCentrosAcopioPorCoordinador()` en `lib/airtable.ts`
-  - [ ] API: modificar GET `/api/centros-acopio` para aceptar `coordinatorId`
-  - [ ] Frontend: `KardexFormModal.tsx` envía `coordinatorRecordId` al fetch
-  - [ ] Chatbot: validar centro pertenece al coordinador antes de crear kardex
-  - [ ] Testing: coordinador A no puede usar centros de coordinador B
-- **Nota técnica:** Usar `filterByFormula` con `FIND()` para filtrar centros por coordinador en Airtable
+  - [x] Backend: crear `getCentrosAcopioPorCoordinador()` en `lib/airtable.ts`
+  - [x] API: modificar GET `/api/centros-acopio` para aceptar `coordinatorId`
+  - [x] Frontend: `KardexFormModal.tsx` envía `coordinatorRecordId` al fetch
+  - [x] Chatbot: validar centro pertenece al coordinador antes de crear kardex
+  - [x] Testing: coordinador A no puede usar centros de coordinador B
 
-### P3-02: Saldos centros de acopio para coordinadores
+### ~~P3-02: Saldos centros de acopio para coordinadores~~ COMPLETADO
+- **Origen:** Reunión 19 ene + TODO_PORTAL.md
+- **Estado:** Completado
+- **Detalle:**
+  - [x] Habilitar vista de saldos para coordinadores (filtrada a sus centros)
+  - [x] Mostrar: saldo actual por material, historial de movimientos
+  - [x] Filtros y búsqueda
+
+### P3-03: Interfaz de caja menor 🔄 EN PROCESO
 - **Origen:** Reunión 19 ene + TODO_PORTAL.md
 - **Prioridad:** Media
-- **Estado:** La página `/saldos-centros` existe pero es solo para admin
+- **Estado:** En proceso — hay tareas pendientes
 - **Detalle:**
-  - [ ] Habilitar vista de saldos para coordinadores (filtrada a sus centros)
-  - [ ] Mostrar: saldo actual por material, historial de movimientos
-  - [ ] Filtros y búsqueda
-
-### P3-03: Interfaz de caja menor
-- **Origen:** Reunión 19 ene + TODO_PORTAL.md
-- **Prioridad:** Media
-- **Estado:** No implementado
-- **Detalle:**
-  - [ ] Definir schema con el cliente (qué campos, qué flujo)
-  - [ ] Crear tabla en Airtable (o verificar si ya existe)
-  - [ ] Crear página `/caja-menor` con CRUD completo
-  - [ ] Registro, consulta y reportes de gastos
+  - [x] Definir schema con el cliente (qué campos, qué flujo)
+  - [x] Crear tabla en Airtable (o verificar si ya existe)
+  - [x] Crear página `/caja-menor` con CRUD completo
+  - [ ] Tareas pendientes por definir
 
 ### P3-04: Interfaz de edición de ubicaciones de fincas
 - **Origen:** Reunión 19 ene + TODO_PORTAL.md
@@ -300,8 +280,8 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 
 ### Sprint 1 — Lo urgente del cliente + bloqueadores críticos
 1. ~~**P1-01** — Foto de báscula obligatoria~~ COMPLETADO
-2. **P3-01** — Filtro centros por coordinador (integridad de datos)
-3. **P2-01** — Vista admin para todas las órdenes
+2. ~~**P3-01** — Filtro centros por coordinador~~ COMPLETADO
+3. ~~**P2-01** — Vista admin para todas las órdenes~~ COMPLETADO
 4. **P2-02** — Estados post-pago visibles
 5. **M-01** — Responsive sidebar (coordinadores usan celular)
 6. **M-04** — Fix SSRF image-proxy (vulnerabilidad activa)
@@ -309,9 +289,9 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 ### Sprint 2 — Experiencia de coordinadores
 7. **P2-04** — Confirmación al registrar actividades
 8. **P1-05** — Correo de órdenes al gestor
-9. **P2-06** — Investigar material que no suma
+9. ~~**P2-06** — Investigar material que no suma~~ COMPLETADO
 10. ~~**P2-07** — Investigar fotos de Andrés~~ COMPLETADO
-11. **P2-03** — Proveedor ATICA múltiples sucursales
+11. ~~**P2-03** — Proveedor ATICA múltiples sucursales~~ DESCARTADO
 12. **M-02** — Middleware de autenticación global
 13. **M-03** — Validación de inputs con Zod
 
@@ -324,15 +304,15 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 19. **P1-02** — Sistema de auditoría (sobre M-19 y M-20)
 
 ### Sprint 4 — Features de negocio
-20. **P3-02** — Saldos centros para coordinadores
-21. **P3-03** — Interfaz caja menor
+20. ~~**P3-02** — Saldos centros para coordinadores~~ COMPLETADO
+21. **P3-03** — Interfaz caja menor 🔄 EN PROCESO
 22. **P3-04** — Edición ubicaciones fincas
 23. **P1-04** — Backup y limpieza Airtable
 
 ### Sprint 5 — Documentación y soporte
 24. **P1-03** — Manual de interacciones
 25. ~~**P3-05** — Chatbot soporte IA~~ DESCARTADO
-26. **P2-05** — Control sesión única
+26. ~~**P2-05** — Control sesión única~~ COMPLETADO
 
 ### Sprint 6 — Calidad y deuda técnica
 27. **M-07** — Componentes base UI

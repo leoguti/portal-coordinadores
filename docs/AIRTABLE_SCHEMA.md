@@ -16,6 +16,7 @@
 | `Certificados` | Link | Relación con certificados |
 | `Kardex` | Link | Relación con kardex |
 | `Actividades` | Link | Relación con actividades |
+| `SaldoInicialCajaMenor` | Currency (COP) | Saldo inicial para caja menor |
 
 ### 2. Actividades
 

@@ -240,22 +240,10 @@ interface GastoCajaMenorFields {
   Reembolso?: string[]; // Linked to ReembolsosCajaMenor
 }
 
-interface AsignacionCajaMenorFields {
-  Coordinador?: string[];
-  NombreCoordinador?: string[];
-  MontoAsignado?: number;
-}
-
 export interface GastoCajaMenor {
   id: string;
   createdTime: string;
   fields: GastoCajaMenorFields;
-}
-
-export interface AsignacionCajaMenor {
-  id: string;
-  createdTime: string;
-  fields: AsignacionCajaMenorFields;
 }
 
 interface ReembolsoCajaMenorFields {
@@ -263,8 +251,7 @@ interface ReembolsoCajaMenorFields {
   Coordinador?: string[];
   NombreCoordinador?: string[];
   Fecha?: string;
-  GastosCajaMenor?: string[]; // Linked to GastosCajaMenor
-  MontoTotal?: number; // Rollup SUM ValorNeto
+  Monto?: number; // Monto libre del reembolso
   Observaciones?: string;
 }
 
@@ -2715,19 +2702,21 @@ export async function deleteGastoCajaMenor(gastoId: string): Promise<boolean> {
 }
 
 /**
- * Get asignaciones de caja menor (anticipo fijo por coordinador)
+ * Get saldo inicial de caja menor de un coordinador
  */
-export async function getAsignacionesCajaMenor(): Promise<AsignacionCajaMenor[]> {
+export async function getSaldoInicialCajaMenor(
+  coordinadorId: string
+): Promise<number> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
   if (!apiKey || !baseId) {
     console.error("Airtable credentials not configured");
-    return [];
+    return 0;
   }
 
   try {
-    const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores/${coordinadorId}`;
 
     const response = await fetch(url, {
       headers: {
@@ -2738,82 +2727,23 @@ export async function getAsignacionesCajaMenor(): Promise<AsignacionCajaMenor[]>
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error fetching asignaciones: ${response.status}`, errorText);
-      return [];
+      console.error(`Error fetching coordinador: ${response.status}`);
+      return 0;
     }
 
-    const data: AirtableResponse<AsignacionCajaMenorFields> = await response.json();
-    return data.records || [];
+    const data = await response.json();
+    return data.fields?.SaldoInicialCajaMenor || 0;
   } catch (error) {
-    console.error("Error fetching asignaciones caja menor:", error);
-    return [];
+    console.error("Error fetching saldo inicial:", error);
+    return 0;
   }
 }
 
 /**
- * Create a new asignacion de caja menor (anticipo fijo).
- * Validates that the coordinator doesn't already have an asignacion.
+ * Update saldo inicial de caja menor de un coordinador
  */
-export async function createAsignacionCajaMenor(
+export async function updateSaldoInicialCajaMenor(
   coordinadorId: string,
-  monto: number
-): Promise<AsignacionCajaMenor> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    throw new Error("Credenciales de Airtable no configuradas");
-  }
-
-  // Check for duplicate: coordinator should only have one asignacion
-  const existing = await getAsignacionesCajaMenor();
-  const duplicate = existing.find(
-    (a) => a.fields.Coordinador?.includes(coordinadorId)
-  );
-  if (duplicate) {
-    throw new Error("Este coordinador ya tiene un anticipo asignado. Use la opción de editar para modificar el monto.");
-  }
-
-  const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      fields: {
-        Coordinador: [coordinadorId],
-        MontoAsignado: monto,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Error creating asignacion: ${response.status}`, errorText);
-    let detail = `Error de Airtable (${response.status})`;
-    try {
-      const parsed = JSON.parse(errorText);
-      if (parsed.error?.message) detail = parsed.error.message;
-    } catch {
-      // usar detail por defecto
-    }
-    throw new Error(detail);
-  }
-
-  const asignacion: AsignacionCajaMenor = await response.json();
-  console.log(`Asignacion caja menor created: ${asignacion.id}`);
-  return asignacion;
-}
-
-/**
- * Update monto of an existing asignacion de caja menor
- */
-export async function updateAsignacionCajaMenor(
-  asignacionId: string,
   monto: number
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -2825,7 +2755,7 @@ export async function updateAsignacionCajaMenor(
   }
 
   try {
-    const url = `https://api.airtable.com/v0/${baseId}/AsignacionesCajaMenor/${asignacionId}`;
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores/${coordinadorId}`;
 
     const response = await fetch(url, {
       method: "PATCH",
@@ -2833,29 +2763,74 @@ export async function updateAsignacionCajaMenor(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ fields: { MontoAsignado: monto } }),
+      body: JSON.stringify({ fields: { SaldoInicialCajaMenor: monto } }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Error updating asignacion ${asignacionId}: ${response.status}`, errorText);
+      console.error(`Error updating saldo inicial: ${response.status}`, errorText);
       return false;
     }
 
-    console.log(`Asignacion ${asignacionId} updated to ${monto}`);
+    console.log(`Saldo inicial actualizado a ${monto} para coordinador ${coordinadorId}`);
     return true;
   } catch (error) {
-    console.error(`Error updating asignacion ${asignacionId}:`, error);
+    console.error("Error updating saldo inicial:", error);
     return false;
   }
 }
 
 /**
- * Create a reembolso en lote: links multiple gastos, marks them as Reembolsado
+ * Get todos los coordinadores con su saldo inicial de caja menor
+ */
+export async function getCoordinadoresConSaldoInicial(): Promise<
+  Array<{ id: string; nombre: string; saldoInicial: number }>
+> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    // Filtrar solo coordinadores activos (no desactivados)
+    const filterFormula = `{Rol}!="Desactivado"`;
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(filterFormula)}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Error fetching coordinadores: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.records || []).map((record: { id: string; fields: { Name?: string; SaldoInicialCajaMenor?: number } }) => ({
+      id: record.id,
+      nombre: record.fields.Name || "Sin nombre",
+      saldoInicial: record.fields.SaldoInicialCajaMenor || 0,
+    }));
+  } catch (error) {
+    console.error("Error fetching coordinadores con saldo inicial:", error);
+    return [];
+  }
+}
+
+/**
+ * Create a reembolso de caja menor (monto libre, sin vinculacion a gastos)
  */
 export async function createReembolsoCajaMenor(params: {
   coordinadorId: string;
-  gastoIds: string[];
+  monto: number;
+  fecha?: string;
   observaciones?: string;
 }): Promise<ReembolsoCajaMenor> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -2865,12 +2840,11 @@ export async function createReembolsoCajaMenor(params: {
     throw new Error("Credenciales de Airtable no configuradas");
   }
 
-  // 1. Create ReembolsosCajaMenor record
   const url = `https://api.airtable.com/v0/${baseId}/ReembolsosCajaMenor`;
   const fields: Record<string, unknown> = {
     Coordinador: [params.coordinadorId],
-    Fecha: new Date().toISOString().split("T")[0],
-    GastosCajaMenor: params.gastoIds,
+    Fecha: params.fecha || new Date().toISOString().split("T")[0],
+    Monto: params.monto,
   };
   if (params.observaciones) {
     fields.Observaciones = params.observaciones;
@@ -2899,36 +2873,7 @@ export async function createReembolsoCajaMenor(params: {
   }
 
   const reembolso: ReembolsoCajaMenor = await response.json();
-  console.log(`Reembolso created: ${reembolso.id} with ${params.gastoIds.length} gastos`);
-
-  // 2. Update each gasto to "Reembolsado" (batch PATCH, max 10 per call)
-  const chunks: string[][] = [];
-  for (let i = 0; i < params.gastoIds.length; i += 10) {
-    chunks.push(params.gastoIds.slice(i, i + 10));
-  }
-
-  for (const chunk of chunks) {
-    const patchUrl = `https://api.airtable.com/v0/${baseId}/GastosCajaMenor`;
-    const records = chunk.map((id) => ({
-      id,
-      fields: { Estado: "Reembolsado" },
-    }));
-
-    const patchResponse = await fetch(patchUrl, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ records }),
-    });
-
-    if (!patchResponse.ok) {
-      const errorText = await patchResponse.text();
-      console.error(`Error updating gastos batch: ${patchResponse.status}`, errorText);
-      // Continue with other chunks even if one fails
-    }
-  }
+  console.log(`Reembolso created: ${reembolso.id} - Monto: ${params.monto}`);
 
   return reembolso;
 }
