@@ -39,15 +39,24 @@ export default function DashboardPage() {
       }
 
       try {
+        console.log("Fetching gastos for novedades...");
         const res = await fetch("/api/caja-menor");
+        console.log("Response status:", res.status);
+
         if (res.ok) {
-          const { gastos } = await res.json();
+          const data = await res.json();
+          console.log("Gastos recibidos:", data.gastos?.length || 0);
+
+          const gastos = data.gastos || [];
           // Filtrar gastos que tienen observaciones del admin o estado != Pendiente
           const conNovedades = (gastos as GastoCajaMenor[]).filter((g) => {
             const tieneObs = g.fields.ObservacionesAdmin && g.fields.ObservacionesAdmin.trim() !== "";
             const estadoCambiado = g.fields.Estado && g.fields.Estado !== "Pendiente";
+            console.log(`Gasto #${g.fields.NumeroGasto}: Estado=${g.fields.Estado}, Obs=${tieneObs}`);
             return tieneObs || estadoCambiado;
           });
+          console.log("Gastos con novedades:", conNovedades.length);
+
           // Ordenar por fecha más reciente
           conNovedades.sort((a, b) => {
             const fechaA = a.fields.Fecha || "";
@@ -56,6 +65,9 @@ export default function DashboardPage() {
           });
           // Tomar solo los últimos 5
           setGastosConNovedades(conNovedades.slice(0, 5));
+        } else {
+          const errorData = await res.json();
+          console.error("Error response:", errorData);
         }
       } catch (err) {
         console.error("Error loading gastos con novedades:", err);
