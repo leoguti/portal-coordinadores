@@ -41,7 +41,7 @@ export default function CajaMenorPage() {
   // Modal crear reembolso (admin)
   const [mostrarModalReembolso, setMostrarModalReembolso] = useState(false);
   const [nuevoReembolsoMonto, setNuevoReembolsoMonto] = useState("");
-  const [nuevoReembolsoFecha, setNuevoReembolsoFecha] = useState(getFechaMaximaPermitida());
+  const [nuevoReembolsoFecha, setNuevoReembolsoFecha] = useState("");
   const [nuevoReembolsoObs, setNuevoReembolsoObs] = useState("");
   const [creandoReembolso, setCreandoReembolso] = useState(false);
 
@@ -474,7 +474,10 @@ export default function CajaMenorPage() {
               </h2>
               {isAdmin && filtroCoordinador && (
                 <button
-                  onClick={() => setMostrarModalReembolso(true)}
+                  onClick={() => {
+                    setNuevoReembolsoFecha(getFechaMaximaPermitida());
+                    setMostrarModalReembolso(true);
+                  }}
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
                 >
                   + Nuevo Reembolso
