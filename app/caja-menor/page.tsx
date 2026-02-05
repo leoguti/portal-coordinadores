@@ -211,14 +211,36 @@ export default function CajaMenorPage() {
     ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.nombre || "")
     : (session?.user?.name || "");
 
-  // Agrupar gastos por mes
-  const gastosPorMes = (() => {
-    const grupos = new Map<string, GastoCajaMenor[]>();
+  // Tipo unificado para movimientos (gastos y reembolsos)
+  type MovimientoUnificado =
+    | { tipo: "gasto"; data: GastoCajaMenor; fecha: string }
+    | { tipo: "reembolso"; data: ReembolsoCajaMenor; fecha: string };
+
+  // Agrupar movimientos (gastos + reembolsos) por mes
+  const movimientosPorMes = (() => {
+    const grupos = new Map<string, MovimientoUnificado[]>();
+
+    // Agregar gastos filtrados
     gastosFiltrados.forEach((gasto) => {
-      const mes = (gasto.fields.Fecha || "").substring(0, 7) || "sin-fecha";
+      const fecha = gasto.fields.Fecha || "";
+      const mes = fecha.substring(0, 7) || "sin-fecha";
       if (!grupos.has(mes)) grupos.set(mes, []);
-      grupos.get(mes)!.push(gasto);
+      grupos.get(mes)!.push({ tipo: "gasto", data: gasto, fecha });
     });
+
+    // Agregar reembolsos filtrados
+    reembolsosFiltrados.forEach((reembolso) => {
+      const fecha = reembolso.fields.Fecha || "";
+      const mes = fecha.substring(0, 7) || "sin-fecha";
+      if (!grupos.has(mes)) grupos.set(mes, []);
+      grupos.get(mes)!.push({ tipo: "reembolso", data: reembolso, fecha });
+    });
+
+    // Ordenar cada grupo por fecha descendente
+    grupos.forEach((movimientos) => {
+      movimientos.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    });
+
     return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
@@ -238,29 +260,8 @@ export default function CajaMenorPage() {
     });
   };
 
-  const toggleMesReembolsos = (mes: string) => {
-    setMesesReembolsosExpandidos((prev) => {
-      const next = new Set(prev);
-      if (next.has(mes)) next.delete(mes);
-      else next.add(mes);
-      return next;
-    });
-  };
-
-  // Agrupar reembolsos por mes
-  const reembolsosPorMes = (() => {
-    const grupos = new Map<string, ReembolsoCajaMenor[]>();
-    reembolsosFiltrados.forEach((reembolso) => {
-      const mes = (reembolso.fields.Fecha || "").substring(0, 7) || "sin-fecha";
-      if (!grupos.has(mes)) grupos.set(mes, []);
-      grupos.get(mes)!.push(reembolso);
-    });
-    return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  })();
-
   // Calcular saldo acumulado por mes (todos los meses ordenados cronologicamente)
   const calcularSaldosMensuales = () => {
-    // Obtener todos los meses unicos de gastos y reembolsos del coordinador
     const mesesSet = new Set<string>();
     gastosCoord.forEach((g) => {
       const mes = (g.fields.Fecha || "").substring(0, 7);
@@ -303,18 +304,26 @@ export default function CajaMenorPage() {
 
   const saldosMensuales = coordId ? calcularSaldosMensuales() : {};
 
-  const calcResumenGrupo = (gastosGrupo: GastoCajaMenor[]) => {
-    const pendiente = gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").reduce((s, g) => s + calcValorNeto(g), 0);
-    const aprobado = gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").reduce((s, g) => s + calcValorNeto(g), 0);
-    const rechazado = gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").reduce((s, g) => s + calcValorNeto(g), 0);
+  const calcResumenGrupo = (movimientos: MovimientoUnificado[]) => {
+    const gastos = movimientos.filter((m) => m.tipo === "gasto").map((m) => m.data as GastoCajaMenor);
+    const reembolsosGrupo = movimientos.filter((m) => m.tipo === "reembolso").map((m) => m.data as ReembolsoCajaMenor);
+
+    const pendiente = gastos.filter((g) => g.fields.Estado === "Pendiente").reduce((s, g) => s + calcValorNeto(g), 0);
+    const aprobado = gastos.filter((g) => g.fields.Estado === "Aprobado").reduce((s, g) => s + calcValorNeto(g), 0);
+    const rechazado = gastos.filter((g) => g.fields.Estado === "Rechazado").reduce((s, g) => s + calcValorNeto(g), 0);
+    const totalReembolsosGrupo = reembolsosGrupo.reduce((s, r) => s + (r.fields.Monto || 0), 0);
+
     return {
       pendiente,
       aprobado,
       rechazado,
-      cantPend: gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").length,
-      cantAprob: gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").length,
-      cantRech: gastosGrupo.filter((g) => g.fields.Estado === "Rechazado").length,
-      total: gastosGrupo.length,
+      totalReembolsos: totalReembolsosGrupo,
+      cantPend: gastos.filter((g) => g.fields.Estado === "Pendiente").length,
+      cantAprob: gastos.filter((g) => g.fields.Estado === "Aprobado").length,
+      cantRech: gastos.filter((g) => g.fields.Estado === "Rechazado").length,
+      cantReemb: reembolsosGrupo.length,
+      totalGastos: gastos.length,
+      totalMovimientos: movimientos.length,
     };
   };
 
@@ -586,7 +595,7 @@ export default function CajaMenorPage() {
           <div className="flex justify-center items-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d084] mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando gastos...</p>
+              <p className="mt-4 text-gray-600">Cargando movimientos...</p>
             </div>
           </div>
         ) : (
@@ -594,19 +603,19 @@ export default function CajaMenorPage() {
             {/* Contador */}
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                Total: {gastosFiltrados.length} {gastosFiltrados.length === 1 ? "gasto" : "gastos"}
+                Total: {gastosFiltrados.length} gastos, {reembolsosFiltrados.length} reembolsos
               </p>
             </div>
 
             {/* Empty State */}
-            {gastosFiltrados.length === 0 ? (
+            {movimientosPorMes.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <div className="text-6xl mb-4">💰</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay gastos registrados</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay movimientos registrados</h3>
                 <p className="text-gray-600 mb-6">
-                  {gastos.length === 0 ? "Aun no has registrado ningun gasto." : "No hay gastos con estos filtros."}
+                  Aun no hay gastos ni reembolsos registrados.
                 </p>
-                {!isAdmin && gastos.length === 0 && (
+                {!isAdmin && (
                   <Link
                     href="/caja-menor/nuevo"
                     className="inline-block px-6 py-3 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -616,227 +625,229 @@ export default function CajaMenorPage() {
                 )}
               </div>
             ) : (
-              /* Vista agrupada por mes */
-              <div className="space-y-3">
-                {gastosPorMes.map(([mes, gastosDelMes]) => {
-                  const resumen = calcResumenGrupo(gastosDelMes);
+              /* Vista unificada por mes con subgrupos */
+              <div className="space-y-4">
+                {movimientosPorMes.map(([mes, movimientos]) => {
+                  const resumen = calcResumenGrupo(movimientos);
                   const expandido = mesesExpandidos.has(mes);
+                  const saldoMes = saldosMensuales[mes];
+
+                  // Separar en subgrupos
+                  const reembolsosMes = movimientos
+                    .filter((m) => m.tipo === "reembolso")
+                    .map((m) => m.data as ReembolsoCajaMenor);
+                  const gastosMes = movimientos
+                    .filter((m) => m.tipo === "gasto")
+                    .map((m) => m.data as GastoCajaMenor);
 
                   return (
                     <div key={mes} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                      {/* Header del mes */}
                       <button
                         onClick={() => toggleMes(mes)}
-                        className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                        className="w-full px-4 py-3 flex items-center justify-between bg-gray-100 hover:bg-gray-200 transition-colors border-b border-gray-300"
                       >
                         <div className="flex items-center gap-3">
                           <svg
-                            className={`w-5 h-5 text-gray-500 transition-transform ${expandido ? "rotate-90" : ""}`}
+                            className={`w-5 h-5 text-gray-600 transition-transform ${expandido ? "rotate-90" : ""}`}
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                          <span className="font-bold text-gray-900 capitalize">{formatMesNombre(mes)}</span>
-                          <span className="text-sm text-gray-500">({resumen.total} gastos)</span>
+                          <span className="font-bold text-gray-900 capitalize text-lg">{formatMesNombre(mes)}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          {resumen.cantPend > 0 && (
-                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-medium">
-                              Pend: {formatCurrency(resumen.pendiente)}
+                        <div className="flex items-center gap-3 text-sm">
+                          {resumen.cantReemb > 0 && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium font-mono">
+                              +{formatCurrency(resumen.totalReembolsos)}
                             </span>
                           )}
                           {resumen.cantAprob > 0 && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded font-medium">
-                              Aprob: {formatCurrency(resumen.aprobado)}
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded font-medium font-mono">
+                              -{formatCurrency(resumen.aprobado)}
+                            </span>
+                          )}
+                          {saldoMes && (
+                            <span className={`px-3 py-1 rounded font-bold font-mono ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                              Saldo: {formatCurrency(saldoMes.saldoAcumulado)}
                             </span>
                           )}
                         </div>
                       </button>
 
                       {expandido && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-gray-100 border-b border-gray-200">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
-                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
-                                {isAdmin && !filtroCoordinador && (
-                                  <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coordinador</th>
-                                )}
-                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
-                                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
-                                <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Neto</th>
-                                <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
-                                <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {gastosDelMes.map((gasto, index) => {
-                                const numero = gasto.fields.NumeroGasto || 0;
-                                const fecha = gasto.fields.Fecha || "";
-                                const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
-                                const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
-                                const concepto = gasto.fields.Concepto || "";
-                                const valorNeto = calcValorNeto(gasto);
-                                const estado = gasto.fields.Estado || "Pendiente";
-                                const puedeEliminar = puedeEliminarGasto(fecha, estado);
-
-                                return (
-                                  <tr
-                                    key={gasto.id}
-                                    className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}
-                                  >
-                                    <td className="px-3 py-2">
-                                      <span className="font-bold text-[#00d084]">#{numero}</span>
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-700">
-                                      {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" }) : "-"}
-                                    </td>
-                                    {isAdmin && !filtroCoordinador && (
-                                      <td className="px-3 py-2 text-sm text-gray-700">{coordinador}</td>
-                                    )}
-                                    <td className="px-3 py-2 text-sm text-gray-900 font-medium">{beneficiario}</td>
-                                    <td className="px-3 py-2 text-sm text-gray-700 max-w-[180px] truncate">{concepto}</td>
-                                    <td className="px-3 py-2 text-right">
-                                      <span className="text-sm font-bold text-[#00d084] font-mono">{formatCurrency(valorNeto)}</span>
-                                    </td>
-                                    <td className="px-3 py-2 text-center">
-                                      <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
-                                        {estado}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <div className="flex items-center justify-end gap-1">
-                                        <Link
-                                          href={`/caja-menor/${gasto.id}`}
-                                          className="px-2 py-1 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
-                                        >
-                                          Ver
-                                        </Link>
-                                        {puedeEliminar && !isAdmin && (
-                                          <button
-                                            onClick={() => handleEliminar(gasto.id, numero)}
-                                            className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
-                                          >
-                                            Eliminar
-                                          </button>
-                                        )}
-                                      </div>
-                                    </td>
+                        <div className="p-4 space-y-4">
+                          {/* Subgrupo: Reembolsos */}
+                          {reembolsosMes.length > 0 && (
+                            <div className="border border-blue-200 rounded-lg overflow-hidden">
+                              <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                                <h4 className="font-bold text-blue-800 text-sm uppercase flex items-center gap-2">
+                                  <span className="text-lg">💵</span> Reembolsos ({reembolsosMes.length})
+                                  <span className="ml-auto font-mono">+{formatCurrency(resumen.totalReembolsos)}</span>
+                                </h4>
+                              </div>
+                              <table className="w-full text-sm">
+                                <thead className="bg-blue-50/50">
+                                  <tr>
+                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">#</th>
+                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Fecha</th>
+                                    <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Monto</th>
+                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Observaciones</th>
+                                    {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase"></th>}
                                   </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                </thead>
+                                <tbody>
+                                  {reembolsosMes.map((r, index) => {
+                                    const fecha = r.fields.Fecha || "";
+                                    const puedeEliminar = isAdmin && puedeEliminarReembolso(fecha);
+                                    return (
+                                      <tr key={r.id} className={`border-t border-blue-100 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/30"}`}>
+                                        <td className="py-2 px-3 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
+                                        <td className="py-2 px-3 text-gray-700">
+                                          {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "-"}
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-mono font-bold text-blue-700">
+                                          +{formatCurrency(r.fields.Monto || 0)}
+                                        </td>
+                                        <td className="py-2 px-3 text-gray-600 max-w-[200px] truncate">
+                                          {r.fields.Observaciones || "-"}
+                                        </td>
+                                        {isAdmin && (
+                                          <td className="py-2 px-3 text-right">
+                                            {puedeEliminar && (
+                                              <button
+                                                onClick={() => handleEliminarReembolso(r.id, r.fields.NumeroReembolso || 0)}
+                                                className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                              >
+                                                Eliminar
+                                              </button>
+                                            )}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+
+                          {/* Subgrupo: Gastos */}
+                          {gastosMes.length > 0 && (
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                                <h4 className="font-bold text-gray-700 text-sm uppercase flex items-center gap-2">
+                                  <span className="text-lg">🧾</span> Gastos ({gastosMes.length})
+                                  <span className="ml-auto flex gap-2">
+                                    {resumen.cantPend > 0 && (
+                                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs font-mono">
+                                        Pend: {formatCurrency(resumen.pendiente)}
+                                      </span>
+                                    )}
+                                    {resumen.cantAprob > 0 && (
+                                      <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-mono">
+                                        Aprob: -{formatCurrency(resumen.aprobado)}
+                                      </span>
+                                    )}
+                                  </span>
+                                </h4>
+                              </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-50/50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                                      {isAdmin && !filtroCoordinador && (
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coord.</th>
+                                      )}
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
+                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Neto</th>
+                                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
+                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {gastosMes.map((gasto, index) => {
+                                      const numero = gasto.fields.NumeroGasto || 0;
+                                      const fecha = gasto.fields.Fecha || "";
+                                      const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
+                                      const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
+                                      const concepto = gasto.fields.Concepto || "";
+                                      const valorNeto = calcValorNeto(gasto);
+                                      const estado = gasto.fields.Estado || "Pendiente";
+                                      const puedeEliminar = puedeEliminarGasto(fecha, estado);
+
+                                      return (
+                                        <tr
+                                          key={gasto.id}
+                                          className={`border-t border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50 transition-colors`}
+                                        >
+                                          <td className="px-3 py-2">
+                                            <span className="font-bold text-[#00d084]">#{numero}</span>
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-700">
+                                            {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "-"}
+                                          </td>
+                                          {isAdmin && !filtroCoordinador && (
+                                            <td className="px-3 py-2 text-gray-700 text-xs">{coordinador}</td>
+                                          )}
+                                          <td className="px-3 py-2 text-gray-900 font-medium">{beneficiario}</td>
+                                          <td className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{concepto}</td>
+                                          <td className="px-3 py-2 text-right">
+                                            <span className="font-bold text-gray-900 font-mono">{formatCurrency(valorNeto)}</span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
+                                              {estado}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <div className="flex items-center justify-end gap-1">
+                                              <Link
+                                                href={`/caja-menor/${gasto.id}`}
+                                                className="px-2 py-1 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
+                                              >
+                                                Ver
+                                              </Link>
+                                              {puedeEliminar && !isAdmin && (
+                                                <button
+                                                  onClick={() => handleEliminar(gasto.id, numero)}
+                                                  className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                                >
+                                                  Eliminar
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Saldo del mes */}
+                          {saldoMes && (
+                            <div className={`p-3 rounded-lg flex items-center justify-between ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
+                              <span className={`text-sm font-bold ${saldoMes.saldoAcumulado >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                Saldo acumulado al cierre del mes:
+                              </span>
+                              <span className={`text-xl font-bold font-mono ${saldoMes.saldoAcumulado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                                {formatCurrency(saldoMes.saldoAcumulado)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Historial de Reembolsos agrupado por mes */}
-            {(isAdmin ? filtroCoordinador : true) && reembolsosFiltrados.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Historial de Reembolsos</h2>
-                <div className="space-y-3">
-                  {reembolsosPorMes.map(([mes, reembolsosDelMes]) => {
-                    const expandido = mesesReembolsosExpandidos.has(mes);
-                    const totalMes = reembolsosDelMes.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
-                    const saldoMes = saldosMensuales[mes];
-
-                    return (
-                      <div key={mes} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                        <button
-                          onClick={() => toggleMesReembolsos(mes)}
-                          className="w-full px-4 py-3 flex items-center justify-between bg-blue-50 hover:bg-blue-100 transition-colors border-b border-blue-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            <svg
-                              className={`w-5 h-5 text-blue-500 transition-transform ${expandido ? "rotate-90" : ""}`}
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            <span className="font-bold text-blue-900 capitalize">{formatMesNombre(mes)}</span>
-                            <span className="text-sm text-blue-600">({reembolsosDelMes.length} reembolsos)</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium font-mono">
-                              +{formatCurrency(totalMes)}
-                            </span>
-                            {saldoMes && (
-                              <span className={`px-2 py-1 rounded font-medium font-mono ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                                Saldo: {formatCurrency(saldoMes.saldoAcumulado)}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-
-                        {expandido && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead className="bg-blue-50 border-b border-blue-200">
-                                <tr>
-                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">#</th>
-                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Fecha</th>
-                                  <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Monto</th>
-                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Observaciones</th>
-                                  {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Acciones</th>}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {reembolsosDelMes.map((r, index) => {
-                                  const fecha = r.fields.Fecha || "";
-                                  const puedeEliminar = isAdmin && puedeEliminarReembolso(fecha);
-                                  return (
-                                    <tr key={r.id} className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                                      <td className="py-2 px-3 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
-                                      <td className="py-2 px-3 text-gray-700">
-                                        {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" }) : "-"}
-                                      </td>
-                                      <td className="py-2 px-3 text-right font-mono font-bold text-blue-700">
-                                        +{formatCurrency(r.fields.Monto || 0)}
-                                      </td>
-                                      <td className="py-2 px-3 text-gray-600 max-w-[200px] truncate">
-                                        {r.fields.Observaciones || "-"}
-                                      </td>
-                                      {isAdmin && (
-                                        <td className="py-2 px-3 text-right">
-                                          {puedeEliminar ? (
-                                            <button
-                                              onClick={() => handleEliminarReembolso(r.id, r.fields.NumeroReembolso || 0)}
-                                              className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
-                                            >
-                                              Eliminar
-                                            </button>
-                                          ) : (
-                                            <span className="text-xs text-gray-400">Cerrado</span>
-                                          )}
-                                        </td>
-                                      )}
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                              <tfoot>
-                                <tr className="border-t-2 border-blue-300 bg-blue-50 font-bold">
-                                  <td colSpan={2} className="py-2 px-3 text-blue-700 uppercase text-xs">Total Mes</td>
-                                  <td className="py-2 px-3 text-right font-mono text-blue-700">+{formatCurrency(totalMes)}</td>
-                                  <td colSpan={isAdmin ? 2 : 1}></td>
-                                </tr>
-                              </tfoot>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             )}
           </>
