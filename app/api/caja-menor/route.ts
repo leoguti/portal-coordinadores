@@ -1,8 +1,35 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { createGastoCajaMenor } from "@/lib/airtable";
+import { createGastoCajaMenor, getGastosCajaMenorCoordinador, getAllGastosCajaMenor } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
+
+/**
+ * GET /api/caja-menor — Listar gastos de caja menor
+ * Admin: todos. Coordinador: los suyos.
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.coordinatorRecordId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const isAdmin = session.user?.rol === "Administrador";
+    let gastos;
+
+    if (isAdmin) {
+      gastos = await getAllGastosCajaMenor();
+    } else {
+      gastos = await getGastosCajaMenorCoordinador(session.user.coordinatorRecordId);
+    }
+
+    return NextResponse.json({ gastos });
+  } catch (error) {
+    console.error("Error fetching gastos:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}
 
 /**
  * POST /api/caja-menor — Crear nuevo gasto de caja menor
