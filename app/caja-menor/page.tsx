@@ -543,12 +543,102 @@ export default function CajaMenorPage() {
           </div>
         )}
 
-        {/* Mensaje seleccionar coordinador (admin sin filtro) */}
+        {/* Resumen de saldos por coordinador (admin sin filtro) */}
         {isAdmin && !filtroCoordinador && !loading && (
-          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-8 text-center">
-            <div className="text-5xl mb-4">👆</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona un coordinador</h3>
-            <p className="text-gray-600">Usa el filtro de arriba para ver los gastos de un coordinador específico.</p>
+          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+            <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
+              <h3 className="text-sm font-bold text-gray-700 uppercase">Resumen de Saldos por Coordinador</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-bold text-gray-600 uppercase text-xs">Coordinador</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Saldo Inicial</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Reembolsos</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Gastos Aprob.</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Saldo Actual</th>
+                    <th className="text-center py-3 px-4 font-bold text-gray-600 uppercase text-xs w-20">Pend.</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-20"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {coordinadoresConSaldo.map((coord, index) => {
+                    const gastosCoordResumen = gastos.filter((g) => g.fields.Coordinador?.includes(coord.id));
+                    const reembolsosCoordResumen = reembolsos.filter((r) => r.fields.Coordinador?.includes(coord.id));
+
+                    const totalReemb = reembolsosCoordResumen.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
+                    const totalAprob = gastosCoordResumen
+                      .filter((g) => g.fields.Estado === "Aprobado")
+                      .reduce((sum, g) => sum + calcValorNeto(g), 0);
+                    const cantPend = gastosCoordResumen.filter((g) => g.fields.Estado === "Pendiente").length;
+                    const saldoActualCoord = coord.saldoInicial + totalReemb - totalAprob;
+
+                    return (
+                      <tr
+                        key={coord.id}
+                        className={`border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
+                        onClick={() => setFiltroCoordinador(coord.id)}
+                      >
+                        <td className="py-3 px-4 font-medium text-gray-900">{coord.nombre}</td>
+                        <td className="py-3 px-4 text-right font-mono text-gray-600">{formatCurrency(coord.saldoInicial)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-blue-600">+{formatCurrency(totalReemb)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-orange-600">-{formatCurrency(totalAprob)}</td>
+                        <td className={`py-3 px-4 text-right font-mono font-bold ${saldoActualCoord >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatCurrency(saldoActualCoord)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {cantPend > 0 && (
+                            <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
+                              {cantPend}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFiltroCoordinador(coord.id);
+                            }}
+                            className="px-2 py-1 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                  <tr>
+                    <td className="py-3 px-4 font-bold text-gray-700 uppercase text-xs">TOTALES</td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-gray-700">
+                      {formatCurrency(coordinadoresConSaldo.reduce((sum, c) => sum + c.saldoInicial, 0))}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-blue-700">
+                      +{formatCurrency(reembolsos.reduce((sum, r) => sum + (r.fields.Monto || 0), 0))}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-orange-700">
+                      -{formatCurrency(gastos.filter((g) => g.fields.Estado === "Aprobado").reduce((sum, g) => sum + calcValorNeto(g), 0))}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-gray-900">
+                      {formatCurrency(
+                        coordinadoresConSaldo.reduce((sum, c) => sum + c.saldoInicial, 0) +
+                        reembolsos.reduce((sum, r) => sum + (r.fields.Monto || 0), 0) -
+                        gastos.filter((g) => g.fields.Estado === "Aprobado").reduce((sum, g) => sum + calcValorNeto(g), 0)
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-center font-bold text-yellow-700">
+                      {gastos.filter((g) => g.fields.Estado === "Pendiente").length}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+              Haz clic en un coordinador para ver su detalle
+            </div>
           </div>
         )}
 
