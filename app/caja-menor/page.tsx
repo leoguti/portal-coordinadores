@@ -274,14 +274,17 @@ export default function CajaMenorPage() {
 
     const mesesOrdenados = Array.from(mesesSet).sort();
     const saldosPorMes: Record<string, {
+      saldoAnterior: number;
       reembolsosMes: number;
       facturasAprobadasMes: number;
-      saldoAcumulado: number;
+      saldoFinal: number;
     }> = {};
 
     let saldoAcumulado = saldoInicialCoord;
 
     mesesOrdenados.forEach((mes) => {
+      const saldoAnterior = saldoAcumulado;
+
       const reembolsosMes = reembolsosCoord
         .filter((r) => (r.fields.Fecha || "").substring(0, 7) === mes)
         .reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
@@ -290,12 +293,13 @@ export default function CajaMenorPage() {
         .filter((g) => g.fields.Estado === "Aprobado" && (g.fields.Fecha || "").substring(0, 7) === mes)
         .reduce((sum, g) => sum + calcValorNeto(g), 0);
 
-      saldoAcumulado = saldoAcumulado + reembolsosMes - facturasAprobadasMes;
+      saldoAcumulado = saldoAnterior + reembolsosMes - facturasAprobadasMes;
 
       saldosPorMes[mes] = {
+        saldoAnterior,
         reembolsosMes,
         facturasAprobadasMes,
-        saldoAcumulado,
+        saldoFinal: saldoAcumulado,
       };
     });
 
@@ -665,13 +669,13 @@ export default function CajaMenorPage() {
                             </span>
                           )}
                           {resumen.cantAprob > 0 && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded font-medium font-mono">
+                            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded font-medium font-mono">
                               -{formatCurrency(resumen.aprobado)}
                             </span>
                           )}
                           {saldoMes && (
-                            <span className={`px-3 py-1 rounded font-bold font-mono ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                              Saldo: {formatCurrency(saldoMes.saldoAcumulado)}
+                            <span className={`px-3 py-1 rounded font-bold font-mono ${saldoMes.saldoFinal >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                              Saldo: {formatCurrency(saldoMes.saldoFinal)}
                             </span>
                           )}
                         </div>
@@ -691,11 +695,11 @@ export default function CajaMenorPage() {
                               <table className="w-full text-sm">
                                 <thead className="bg-blue-50/50">
                                   <tr>
-                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">#</th>
-                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Fecha</th>
-                                    <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Monto</th>
+                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase w-16">#</th>
+                                    <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase w-24">Fecha</th>
+                                    <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase w-36">Monto</th>
                                     <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Observaciones</th>
-                                    {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase"></th>}
+                                    {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase w-20"></th>}
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -704,18 +708,18 @@ export default function CajaMenorPage() {
                                     const puedeEliminar = isAdmin && puedeEliminarReembolso(fecha);
                                     return (
                                       <tr key={r.id} className={`border-t border-blue-100 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/30"}`}>
-                                        <td className="py-2 px-3 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
-                                        <td className="py-2 px-3 text-gray-700">
+                                        <td className="py-2 px-3 font-bold text-blue-600 w-16">#{r.fields.NumeroReembolso || "-"}</td>
+                                        <td className="py-2 px-3 text-gray-700 w-24">
                                           {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "-"}
                                         </td>
-                                        <td className="py-2 px-3 text-right font-mono font-bold text-blue-700">
+                                        <td className="py-2 px-3 text-right font-mono font-bold text-blue-700 w-36">
                                           +{formatCurrency(r.fields.Monto || 0)}
                                         </td>
-                                        <td className="py-2 px-3 text-gray-600 max-w-[200px] truncate">
+                                        <td className="py-2 px-3 text-gray-600 truncate">
                                           {r.fields.Observaciones || "-"}
                                         </td>
                                         {isAdmin && (
-                                          <td className="py-2 px-3 text-right">
+                                          <td className="py-2 px-3 text-right w-20">
                                             {puedeEliminar && (
                                               <button
                                                 onClick={() => handleEliminarReembolso(r.id, r.fields.NumeroReembolso || 0)}
@@ -758,16 +762,16 @@ export default function CajaMenorPage() {
                                 <table className="w-full text-sm">
                                   <thead className="bg-gray-50/50">
                                     <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
-                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase w-16">#</th>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase w-24">Fecha</th>
                                       {isAdmin && !filtroCoordinador && (
                                         <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coord.</th>
                                       )}
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
-                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Neto</th>
-                                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
-                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase"></th>
+                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase w-36">Neto</th>
+                                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase w-24">Estado</th>
+                                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase w-20"></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -786,10 +790,10 @@ export default function CajaMenorPage() {
                                           key={gasto.id}
                                           className={`border-t border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50 transition-colors`}
                                         >
-                                          <td className="px-3 py-2">
+                                          <td className="px-3 py-2 w-16">
                                             <span className="font-bold text-[#00d084]">#{numero}</span>
                                           </td>
-                                          <td className="px-3 py-2 text-gray-700">
+                                          <td className="px-3 py-2 text-gray-700 w-24">
                                             {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "-"}
                                           </td>
                                           {isAdmin && !filtroCoordinador && (
@@ -797,7 +801,7 @@ export default function CajaMenorPage() {
                                           )}
                                           <td className="px-3 py-2 text-gray-900 font-medium">{beneficiario}</td>
                                           <td className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{concepto}</td>
-                                          <td className="px-3 py-2 text-right">
+                                          <td className="px-3 py-2 text-right w-36">
                                             <span className="font-bold text-gray-900 font-mono">{formatCurrency(valorNeto)}</span>
                                           </td>
                                           <td className="px-3 py-2 text-center">
@@ -832,15 +836,44 @@ export default function CajaMenorPage() {
                             </div>
                           )}
 
-                          {/* Saldo del mes */}
+                          {/* Resumen de saldos del mes */}
                           {saldoMes && (
-                            <div className={`p-3 rounded-lg flex items-center justify-between ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-                              <span className={`text-sm font-bold ${saldoMes.saldoAcumulado >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                Saldo acumulado al cierre del mes:
-                              </span>
-                              <span className={`text-xl font-bold font-mono ${saldoMes.saldoAcumulado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
-                                {formatCurrency(saldoMes.saldoAcumulado)}
-                              </span>
+                            <div className="bg-gray-50 border border-gray-300 rounded-lg overflow-hidden">
+                              <div className="bg-gray-200 px-4 py-2 border-b border-gray-300">
+                                <h4 className="font-bold text-gray-700 text-sm uppercase">Resumen del Mes</h4>
+                              </div>
+                              <div className="p-4">
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <tr>
+                                      <td className="py-1 text-gray-600">Saldo anterior:</td>
+                                      <td className="py-1 text-right font-mono font-bold text-gray-700 w-36">
+                                        {formatCurrency(saldoMes.saldoAnterior)}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1 text-blue-600">+ Reembolsos del mes:</td>
+                                      <td className="py-1 text-right font-mono font-bold text-blue-700 w-36">
+                                        +{formatCurrency(saldoMes.reembolsosMes)}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1 text-orange-600">- Gastos aprobados:</td>
+                                      <td className="py-1 text-right font-mono font-bold text-orange-700 w-36">
+                                        -{formatCurrency(saldoMes.facturasAprobadasMes)}
+                                      </td>
+                                    </tr>
+                                    <tr className="border-t-2 border-gray-400">
+                                      <td className={`py-2 font-bold ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                        = SALDO FINAL:
+                                      </td>
+                                      <td className={`py-2 text-right font-mono font-bold text-lg w-36 ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                        {formatCurrency(saldoMes.saldoFinal)}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           )}
                         </div>
