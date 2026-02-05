@@ -2969,3 +2969,40 @@ export async function getReembolsoCajaMenorById(
     return null;
   }
 }
+
+/**
+ * Elimina un reembolso de caja menor
+ */
+export async function deleteReembolsoCajaMenor(
+  reembolsoId: string
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/ReembolsosCajaMenor/${reembolsoId}`;
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Error deleting reembolso ${reembolsoId}: ${response.status}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error deleting reembolso ${reembolsoId}:`, error);
+    return false;
+  }
+}

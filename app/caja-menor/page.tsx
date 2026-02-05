@@ -11,7 +11,7 @@ import {
   type GastoCajaMenor,
   type ReembolsoCajaMenor,
 } from "@/lib/airtable";
-import { puedeModificarFecha } from "@/lib/dateValidations";
+import { puedeModificarFecha, getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
 
 interface CoordinadorConSaldo {
   id: string;
@@ -41,11 +41,13 @@ export default function CajaMenorPage() {
   // Modal crear reembolso (admin)
   const [mostrarModalReembolso, setMostrarModalReembolso] = useState(false);
   const [nuevoReembolsoMonto, setNuevoReembolsoMonto] = useState("");
+  const [nuevoReembolsoFecha, setNuevoReembolsoFecha] = useState(getFechaMaximaPermitida());
   const [nuevoReembolsoObs, setNuevoReembolsoObs] = useState("");
   const [creandoReembolso, setCreandoReembolso] = useState(false);
 
-  // Meses expandidos en la vista agrupada
+  // Meses expandidos en la vista agrupada (gastos y reembolsos)
   const [mesesExpandidos, setMesesExpandidos] = useState<Set<string>>(new Set());
+  const [mesesReembolsosExpandidos, setMesesReembolsosExpandidos] = useState<Set<string>>(new Set());
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -236,6 +238,71 @@ export default function CajaMenorPage() {
     });
   };
 
+  const toggleMesReembolsos = (mes: string) => {
+    setMesesReembolsosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(mes)) next.delete(mes);
+      else next.add(mes);
+      return next;
+    });
+  };
+
+  // Agrupar reembolsos por mes
+  const reembolsosPorMes = (() => {
+    const grupos = new Map<string, ReembolsoCajaMenor[]>();
+    reembolsosFiltrados.forEach((reembolso) => {
+      const mes = (reembolso.fields.Fecha || "").substring(0, 7) || "sin-fecha";
+      if (!grupos.has(mes)) grupos.set(mes, []);
+      grupos.get(mes)!.push(reembolso);
+    });
+    return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
+
+  // Calcular saldo acumulado por mes (todos los meses ordenados cronologicamente)
+  const calcularSaldosMensuales = () => {
+    // Obtener todos los meses unicos de gastos y reembolsos del coordinador
+    const mesesSet = new Set<string>();
+    gastosCoord.forEach((g) => {
+      const mes = (g.fields.Fecha || "").substring(0, 7);
+      if (mes) mesesSet.add(mes);
+    });
+    reembolsosCoord.forEach((r) => {
+      const mes = (r.fields.Fecha || "").substring(0, 7);
+      if (mes) mesesSet.add(mes);
+    });
+
+    const mesesOrdenados = Array.from(mesesSet).sort();
+    const saldosPorMes: Record<string, {
+      reembolsosMes: number;
+      facturasAprobadasMes: number;
+      saldoAcumulado: number;
+    }> = {};
+
+    let saldoAcumulado = saldoInicialCoord;
+
+    mesesOrdenados.forEach((mes) => {
+      const reembolsosMes = reembolsosCoord
+        .filter((r) => (r.fields.Fecha || "").substring(0, 7) === mes)
+        .reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
+
+      const facturasAprobadasMes = gastosCoord
+        .filter((g) => g.fields.Estado === "Aprobado" && (g.fields.Fecha || "").substring(0, 7) === mes)
+        .reduce((sum, g) => sum + calcValorNeto(g), 0);
+
+      saldoAcumulado = saldoAcumulado + reembolsosMes - facturasAprobadasMes;
+
+      saldosPorMes[mes] = {
+        reembolsosMes,
+        facturasAprobadasMes,
+        saldoAcumulado,
+      };
+    });
+
+    return saldosPorMes;
+  };
+
+  const saldosMensuales = coordId ? calcularSaldosMensuales() : {};
+
   const calcResumenGrupo = (gastosGrupo: GastoCajaMenor[]) => {
     const pendiente = gastosGrupo.filter((g) => g.fields.Estado === "Pendiente").reduce((s, g) => s + calcValorNeto(g), 0);
     const aprobado = gastosGrupo.filter((g) => g.fields.Estado === "Aprobado").reduce((s, g) => s + calcValorNeto(g), 0);
@@ -269,7 +336,7 @@ export default function CajaMenorPage() {
   };
 
   const handleCrearReembolso = async () => {
-    if (!filtroCoordinador || !nuevoReembolsoMonto) return;
+    if (!filtroCoordinador || !nuevoReembolsoMonto || !nuevoReembolsoFecha) return;
     const monto = parseFloat(nuevoReembolsoMonto);
     if (isNaN(monto) || monto <= 0) {
       alert("Ingresa un monto valido");
@@ -284,6 +351,7 @@ export default function CajaMenorPage() {
         body: JSON.stringify({
           coordinadorId: filtroCoordinador,
           monto,
+          fecha: nuevoReembolsoFecha,
           observaciones: nuevoReembolsoObs.trim() || undefined,
         }),
       });
@@ -292,6 +360,7 @@ export default function CajaMenorPage() {
         setReembolsos((prev) => [reembolso, ...prev]);
         setMostrarModalReembolso(false);
         setNuevoReembolsoMonto("");
+        setNuevoReembolsoFecha(getFechaMaximaPermitida());
         setNuevoReembolsoObs("");
       } else {
         const data = await res.json();
@@ -305,6 +374,28 @@ export default function CajaMenorPage() {
   };
 
   const tieneSaldoInicial = saldoInicialCoord > 0 || totalReembolsos > 0 || totalFacturasAprobadas > 0;
+
+  const puedeEliminarReembolso = (fecha: string): boolean => {
+    if (!fecha) return false;
+    return puedeModificarFecha(fecha);
+  };
+
+  const handleEliminarReembolso = async (reembolsoId: string, numero: number) => {
+    if (!confirm(`Estas seguro de eliminar el reembolso #${numero}?\n\nEsta accion no se puede deshacer.`)) return;
+
+    try {
+      const response = await fetch(`/api/caja-menor/reembolsos/${reembolsoId}`, { method: "DELETE" });
+      if (response.ok) {
+        setReembolsos((prev) => prev.filter((r) => r.id !== reembolsoId));
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.error || "No se pudo eliminar el reembolso"}`);
+      }
+    } catch (err) {
+      console.error("Error eliminando reembolso:", err);
+      alert("Error al eliminar el reembolso");
+    }
+  };
 
   return (
     <AuthenticatedLayout>
@@ -643,37 +734,105 @@ export default function CajaMenorPage() {
               </div>
             )}
 
-            {/* Historial de Reembolsos */}
+            {/* Historial de Reembolsos agrupado por mes */}
             {(isAdmin ? filtroCoordinador : true) && reembolsosFiltrados.length > 0 && (
-              <div className="mt-8 bg-white rounded-lg shadow border border-gray-200 p-6">
+              <div className="mt-8">
                 <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Historial de Reembolsos</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-gray-300">
-                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">#</th>
-                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Fecha</th>
-                        <th className="text-right py-2 px-2 text-xs font-bold text-gray-600 uppercase">Monto</th>
-                        <th className="text-left py-2 px-2 text-xs font-bold text-gray-600 uppercase">Observaciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reembolsosFiltrados.map((r, index) => (
-                        <tr key={r.id} className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                          <td className="py-2 px-2 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
-                          <td className="py-2 px-2 text-gray-700">
-                            {r.fields.Fecha ? new Date(r.fields.Fecha + "T00:00:00").toLocaleDateString("es-CO") : "-"}
-                          </td>
-                          <td className="py-2 px-2 text-right font-mono font-bold text-blue-700">
-                            {formatCurrency(r.fields.Monto || 0)}
-                          </td>
-                          <td className="py-2 px-2 text-gray-600 max-w-[200px] truncate">
-                            {r.fields.Observaciones || "-"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-3">
+                  {reembolsosPorMes.map(([mes, reembolsosDelMes]) => {
+                    const expandido = mesesReembolsosExpandidos.has(mes);
+                    const totalMes = reembolsosDelMes.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
+                    const saldoMes = saldosMensuales[mes];
+
+                    return (
+                      <div key={mes} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                        <button
+                          onClick={() => toggleMesReembolsos(mes)}
+                          className="w-full px-4 py-3 flex items-center justify-between bg-blue-50 hover:bg-blue-100 transition-colors border-b border-blue-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg
+                              className={`w-5 h-5 text-blue-500 transition-transform ${expandido ? "rotate-90" : ""}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span className="font-bold text-blue-900 capitalize">{formatMesNombre(mes)}</span>
+                            <span className="text-sm text-blue-600">({reembolsosDelMes.length} reembolsos)</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium font-mono">
+                              +{formatCurrency(totalMes)}
+                            </span>
+                            {saldoMes && (
+                              <span className={`px-2 py-1 rounded font-medium font-mono ${saldoMes.saldoAcumulado >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                                Saldo: {formatCurrency(saldoMes.saldoAcumulado)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+
+                        {expandido && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead className="bg-blue-50 border-b border-blue-200">
+                                <tr>
+                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">#</th>
+                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Fecha</th>
+                                  <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Monto</th>
+                                  <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Observaciones</th>
+                                  {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase">Acciones</th>}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {reembolsosDelMes.map((r, index) => {
+                                  const fecha = r.fields.Fecha || "";
+                                  const puedeEliminar = isAdmin && puedeEliminarReembolso(fecha);
+                                  return (
+                                    <tr key={r.id} className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                                      <td className="py-2 px-3 font-bold text-blue-600">#{r.fields.NumeroReembolso || "-"}</td>
+                                      <td className="py-2 px-3 text-gray-700">
+                                        {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric" }) : "-"}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-mono font-bold text-blue-700">
+                                        +{formatCurrency(r.fields.Monto || 0)}
+                                      </td>
+                                      <td className="py-2 px-3 text-gray-600 max-w-[200px] truncate">
+                                        {r.fields.Observaciones || "-"}
+                                      </td>
+                                      {isAdmin && (
+                                        <td className="py-2 px-3 text-right">
+                                          {puedeEliminar ? (
+                                            <button
+                                              onClick={() => handleEliminarReembolso(r.id, r.fields.NumeroReembolso || 0)}
+                                              className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
+                                            >
+                                              Eliminar
+                                            </button>
+                                          ) : (
+                                            <span className="text-xs text-gray-400">Cerrado</span>
+                                          )}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t-2 border-blue-300 bg-blue-50 font-bold">
+                                  <td colSpan={2} className="py-2 px-3 text-blue-700 uppercase text-xs">Total Mes</td>
+                                  <td className="py-2 px-3 text-right font-mono text-blue-700">+{formatCurrency(totalMes)}</td>
+                                  <td colSpan={isAdmin ? 2 : 1}></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -689,6 +848,18 @@ export default function CajaMenorPage() {
             <p className="text-sm text-gray-600 mb-4">
               Coordinador: <strong>{coordNombre}</strong>
             </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+              <input
+                type="date"
+                value={nuevoReembolsoFecha}
+                onChange={(e) => setNuevoReembolsoFecha(e.target.value)}
+                min={getFechaMinimaPermitida()}
+                max={getFechaMaximaPermitida()}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Regla de 7 dias aplicada</p>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
               <input
@@ -717,7 +888,7 @@ export default function CajaMenorPage() {
               </button>
               <button
                 onClick={handleCrearReembolso}
-                disabled={creandoReembolso || !nuevoReembolsoMonto}
+                disabled={creandoReembolso || !nuevoReembolsoMonto || !nuevoReembolsoFecha}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {creandoReembolso ? "Creando..." : "Crear Reembolso"}
