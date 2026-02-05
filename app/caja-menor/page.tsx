@@ -563,7 +563,15 @@ export default function CajaMenorPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {coordinadoresConSaldo.map((coord, index) => {
+                  {coordinadoresConSaldo
+                    .filter((coord) => {
+                      // Filtrar solo coordinadores con movimientos
+                      const tieneGastos = gastos.some((g) => g.fields.Coordinador?.includes(coord.id));
+                      const tieneReembolsos = reembolsos.some((r) => r.fields.Coordinador?.includes(coord.id));
+                      const tieneSaldoInicial = coord.saldoInicial > 0;
+                      return tieneGastos || tieneReembolsos || tieneSaldoInicial;
+                    })
+                    .map((coord, index) => {
                     const gastosCoordResumen = gastos.filter((g) => g.fields.Coordinador?.includes(coord.id));
                     const reembolsosCoordResumen = reembolsos.filter((r) => r.fields.Coordinador?.includes(coord.id));
 
