@@ -16,6 +16,17 @@ interface Tercero {
   direccion?: string;
 }
 
+interface KardexVinculado {
+  id: string;
+  fields: {
+    idkardex?: number;
+    fechakardex?: string;
+    TipoMovimiento?: string;
+    "mundep (from MunicipioOrigen)"?: string[];
+    Total?: number;
+  };
+}
+
 export default function GastoDetallePage() {
   const params = useParams();
   const router = useRouter();
@@ -44,6 +55,9 @@ export default function GastoDetallePage() {
   const [editFactura, setEditFactura] = useState<File | null>(null);
   const editFacturaRef = useRef<HTMLInputElement>(null);
 
+  // Kardex vinculados
+  const [kardexVinculados, setKardexVinculados] = useState<KardexVinculado[]>([]);
+
   // Lightbox for factura
   const [showFactura, setShowFactura] = useState(false);
 
@@ -52,6 +66,27 @@ export default function GastoDetallePage() {
   useEffect(() => {
     loadGasto();
   }, [gastoId]);
+
+  // Cargar Kardex vinculados cuando el gasto se carga
+  useEffect(() => {
+    async function fetchKardexVinculados() {
+      if (!gasto?.fields.Kardex || gasto.fields.Kardex.length === 0) {
+        setKardexVinculados([]);
+        return;
+      }
+      try {
+        const ids = gasto.fields.Kardex.join(",");
+        const res = await fetch(`/api/kardex/por-ids?ids=${encodeURIComponent(ids)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setKardexVinculados(data.kardex || []);
+        }
+      } catch {
+        // Si falla, simplemente no mostrar la sección
+      }
+    }
+    fetchKardexVinculados();
+  }, [gasto]);
 
   async function loadGasto() {
     try {
@@ -684,6 +719,57 @@ export default function GastoDetallePage() {
           {!factura && (
             <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
               <p className="text-sm text-gray-500 italic">No se adjunto factura/soporte</p>
+            </div>
+          )}
+
+          {/* Kardex vinculados */}
+          {kardexVinculados.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">Kardex vinculados</h4>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-600">#</th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-600">Fecha</th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-600">Tipo</th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-600">Municipio</th>
+                      <th className="px-4 py-2 text-right text-xs font-bold text-gray-600">Kg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kardexVinculados.map((k) => (
+                      <tr key={k.id} className="border-t border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-2 font-mono font-bold text-gray-900">
+                          {k.fields.idkardex}
+                        </td>
+                        <td className="px-4 py-2 text-gray-700">
+                          {k.fields.fechakardex
+                            ? new Date(k.fields.fechakardex + "T00:00:00").toLocaleDateString("es-CO")
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${
+                              k.fields.TipoMovimiento === "SALIDA"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {k.fields.TipoMovimiento}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-gray-700">
+                          {k.fields["mundep (from MunicipioOrigen)"]?.[0] || "-"}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-gray-900">
+                          {(k.fields.Total || 0).toLocaleString("es-CO")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

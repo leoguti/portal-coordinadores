@@ -15,6 +15,17 @@ interface Tercero {
   direccion?: string;
 }
 
+interface KardexDisponible {
+  id: string;
+  fields: {
+    idkardex?: number;
+    fechakardex?: string;
+    TipoMovimiento?: string;
+    "mundep (from MunicipioOrigen)"?: string[];
+    Total?: number;
+  };
+}
+
 export default function NuevoGastoCajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -55,6 +66,41 @@ export default function NuevoGastoCajaMenorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const facturaInputRef = useRef<HTMLInputElement>(null);
+
+  // Kardex Caja Menor
+  const [kardexDisponibles, setKardexDisponibles] = useState<KardexDisponible[]>([]);
+  const [kardexSeleccionados, setKardexSeleccionados] = useState<string[]>([]);
+  const [loadingKardex, setLoadingKardex] = useState(true);
+
+  // Cargar Kardex "Caja Menor" disponibles
+  useEffect(() => {
+    async function fetchKardex() {
+      try {
+        const res = await fetch("/api/kardex/caja-menor");
+        if (res.ok) {
+          const data = await res.json();
+          setKardexDisponibles(data.kardex || []);
+        }
+      } catch {
+        // Si falla, simplemente no mostrar la sección
+      } finally {
+        setLoadingKardex(false);
+      }
+    }
+    if (session?.user?.coordinatorRecordId) {
+      fetchKardex();
+    } else {
+      setLoadingKardex(false);
+    }
+  }, [session?.user?.coordinatorRecordId]);
+
+  function toggleKardex(kardexId: string) {
+    setKardexSeleccionados((prev) =>
+      prev.includes(kardexId)
+        ? prev.filter((id) => id !== kardexId)
+        : [...prev, kardexId]
+    );
+  }
 
   if (status === "loading" || verificandoSaldo) {
     return (
@@ -124,6 +170,7 @@ export default function NuevoGastoCajaMenorPage() {
           concepto: concepto.trim(),
           valor: valorNum,
           porcentajeRetencion: retencionNum,
+          ...(kardexSeleccionados.length > 0 && { kardexIds: kardexSeleccionados }),
         }),
       });
 
@@ -205,6 +252,58 @@ export default function NuevoGastoCajaMenorPage() {
               Solo se permiten fechas dentro del periodo modificable (regla 7 dias)
             </p>
           </div>
+
+          {/* Kardex Caja Menor (opcional) */}
+          {!loadingKardex && kardexDisponibles.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kardex relacionados <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+                {kardexDisponibles.map((k) => {
+                  const checked = kardexSeleccionados.includes(k.id);
+                  const fechaStr = k.fields.fechakardex
+                    ? new Date(k.fields.fechakardex + "T00:00:00").toLocaleDateString("es-CO", {
+                        day: "2-digit",
+                        month: "short",
+                      })
+                    : "";
+                  const municipio = k.fields["mundep (from MunicipioOrigen)"]?.[0] || "";
+                  const total = k.fields.Total || 0;
+                  return (
+                    <label
+                      key={k.id}
+                      className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                        checked ? "bg-green-50" : ""
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleKardex(k.id)}
+                        className="accent-[#00d084] w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-800">
+                        <span className="font-mono font-bold">#{k.fields.idkardex}</span>
+                        {" - "}
+                        {fechaStr}
+                        {" - "}
+                        <span className="font-medium">{k.fields.TipoMovimiento}</span>
+                        {municipio && ` - ${municipio}`}
+                        {" "}
+                        <span className="text-gray-500">({total.toLocaleString("es-CO")} kg)</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {kardexSeleccionados.length > 0 && (
+                <p className="text-xs text-[#00d084] font-medium mt-1">
+                  {kardexSeleccionados.length} kardex seleccionado{kardexSeleccionados.length > 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Beneficiario */}
           <div className="mb-6">

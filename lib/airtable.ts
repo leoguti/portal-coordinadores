@@ -238,6 +238,7 @@ interface GastoCajaMenorFields {
   ObservacionesAdmin?: string;
   MesLegalizacion?: string;
   Reembolso?: string[]; // Linked to ReembolsosCajaMenor
+  Kardex?: string[]; // Linked to Kardex records (optional)
 }
 
 export interface GastoCajaMenor {
@@ -644,6 +645,60 @@ export async function getKardexPorPagar(
     return data.records || [];
   } catch (error) {
     console.error("Error fetching Kardex from Airtable:", error);
+    return [];
+  }
+}
+
+/**
+ * Get Kardex records with EstadoPago = "Caja Menor" that are NOT yet linked to any GastoCajaMenor
+ * Used to populate the optional Kardex selector when creating a new gasto de caja menor
+ *
+ * @param coordinatorRecordId - Airtable record ID of the coordinator
+ * @returns Array of available Kardex records
+ */
+export async function getKardexCajaMenorDisponibles(
+  coordinatorRecordId: string
+): Promise<Kardex[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const filterFormula = `AND(
+      {EstadoPago} = "Caja Menor",
+      FIND("${coordinatorRecordId}", ARRAYJOIN({idcoordinador})),
+      {GastosCajaMenor} = BLANK()
+    )`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/Kardex?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}&sort[0][field]=fechakardex&sort[0][direction]=desc`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Airtable API error fetching Kardex Caja Menor: ${response.status}`,
+        errorText
+      );
+      return [];
+    }
+
+    const data: AirtableResponse<KardexFields> = await response.json();
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching Kardex Caja Menor disponibles:", error);
     return [];
   }
 }
@@ -2548,6 +2603,7 @@ export async function createGastoCajaMenor(data: {
   valor: number;
   porcentajeRetencion: number;
   facturaUrl?: string;
+  kardexIds?: string[];
 }): Promise<GastoCajaMenor | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -2572,6 +2628,10 @@ export async function createGastoCajaMenor(data: {
 
     if (data.facturaUrl) {
       fields.Factura = [{ url: data.facturaUrl }];
+    }
+
+    if (data.kardexIds && data.kardexIds.length > 0) {
+      fields.Kardex = data.kardexIds;
     }
 
     const response = await fetch(url, {
