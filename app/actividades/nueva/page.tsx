@@ -395,7 +395,7 @@ export default function NuevaActividadPage() {
                 images={fotografias}
                 onChange={setFotografias}
                 maxFiles={10}
-                maxSizeMB={5}
+                maxSizeMB={3}
                 disabled={loading}
               />
             </div>

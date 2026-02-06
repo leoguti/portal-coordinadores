@@ -26,11 +26,12 @@ export default function ImageUpload({
   images,
   onChange,
   maxFiles = 10,
-  maxSizeMB = 5,
+  maxSizeMB = 3,
   disabled = false,
   acceptPdf = false,
 }: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ref para mantener siempre la versión más reciente de images (evita stale closure)
@@ -44,39 +45,42 @@ export default function ImageUpload({
   const processFiles = useCallback((files: FileList | null) => {
     if (!files || disabled) return;
 
-    // Usar ref para obtener la versión más reciente de images
+    setErrorMsg(null);
     const currentImages = imagesRef.current;
     const newImages: ImageFile[] = [];
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    const rechazados: string[] = [];
 
     Array.from(files).forEach((file) => {
-      // Validar tipo
       const isImage = file.type.startsWith("image/");
       const isPdf = file.type === "application/pdf";
 
       if (!isImage && !(acceptPdf && isPdf)) {
-        console.warn(`Archivo ignorado (tipo no permitido): ${file.name}`);
+        rechazados.push(`"${file.name}": tipo no permitido (solo ${acceptPdf ? "imagenes o PDF" : "imagenes"})`);
         return;
       }
 
-      // Validar tamaño
       if (file.size > maxSizeBytes) {
-        console.warn(`Archivo muy grande (max ${maxSizeMB}MB): ${file.name}`);
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        rechazados.push(`"${file.name}": pesa ${sizeMB} MB (maximo ${maxSizeMB} MB)`);
         return;
       }
 
-      // Validar cantidad máxima
       if (currentImages.length + newImages.length >= maxFiles) {
-        console.warn(`Máximo ${maxFiles} archivos permitidos`);
+        rechazados.push(`"${file.name}": ya tienes el maximo de ${maxFiles} archivos`);
         return;
       }
 
       newImages.push({
         id: generateId(),
         file,
-        preview: isImage ? URL.createObjectURL(file) : "", // PDFs no tienen preview de imagen
+        preview: isImage ? URL.createObjectURL(file) : "",
       });
     });
+
+    if (rechazados.length > 0) {
+      setErrorMsg(rechazados.join(". "));
+    }
 
     if (newImages.length > 0) {
       onChange([...currentImages, ...newImages]);
@@ -160,6 +164,13 @@ export default function ImageUpload({
           </p>
         </div>
       </div>
+
+      {/* Mensaje de error cuando se rechazan archivos */}
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+          <p className="text-sm text-red-700">{errorMsg}</p>
+        </div>
+      )}
 
       {/* Preview de archivos */}
       {images.length > 0 && (
