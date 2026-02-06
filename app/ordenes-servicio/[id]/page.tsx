@@ -26,6 +26,13 @@ export default function OrdenDetallePage() {
   const facturaInputRef = useRef<HTMLInputElement>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; filename: string; kardexId: number } | null>(null);
 
+  // Inline form states
+  const [showFacturaForm, setShowFacturaForm] = useState(false);
+  const [numeroFactura, setNumeroFactura] = useState("");
+  const [facturaFile, setFacturaFile] = useState<File | null>(null);
+  const [showPagoForm, setShowPagoForm] = useState(false);
+  const [fechaPagoInput, setFechaPagoInput] = useState("");
+
   const isAdmin = session?.user?.rol === "Administrador";
 
   useEffect(() => {
@@ -89,14 +96,17 @@ export default function OrdenDetallePage() {
   };
 
   // Admin actions
-  async function handleSubirFactura(file: File) {
+  async function handleSubirFactura() {
+    if (!facturaFile || !numeroFactura.trim()) return;
+
     setActionLoading(true);
     setActionMessage(null);
 
     try {
       const formData = new FormData();
       formData.append("action", "subir-factura");
-      formData.append("factura", file);
+      formData.append("factura", facturaFile);
+      formData.append("numeroFactura", numeroFactura.trim());
 
       const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
         method: "PATCH",
@@ -107,6 +117,9 @@ export default function OrdenDetallePage() {
 
       if (response.ok) {
         setActionMessage({ type: "success", text: "Factura subida correctamente. La orden ahora esta en estado Facturada." });
+        setShowFacturaForm(false);
+        setNumeroFactura("");
+        setFacturaFile(null);
         await loadOrden();
       } else {
         setActionMessage({ type: "error", text: data.error || "Error al subir la factura" });
@@ -120,26 +133,33 @@ export default function OrdenDetallePage() {
   }
 
   async function handleCambiarEstado(nuevoEstado: "Pagada" | "Rechazada") {
-    const confirmMsg = nuevoEstado === "Pagada"
-      ? "Marcar esta orden como Pagada?"
-      : "Rechazar esta orden? Esta accion no se puede deshacer.";
+    if (nuevoEstado === "Rechazada") {
+      if (!confirm("Rechazar esta orden? Esta accion no se puede deshacer.")) return;
+    }
 
-    if (!confirm(confirmMsg)) return;
+    if (nuevoEstado === "Pagada" && !fechaPagoInput) return;
 
     setActionLoading(true);
     setActionMessage(null);
 
     try {
+      const bodyData: Record<string, string> = { action: "cambiar-estado", estado: nuevoEstado };
+      if (nuevoEstado === "Pagada") {
+        bodyData.fechaPago = fechaPagoInput;
+      }
+
       const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cambiar-estado", estado: nuevoEstado }),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         setActionMessage({ type: "success", text: `Orden marcada como ${nuevoEstado}` });
+        setShowPagoForm(false);
+        setFechaPagoInput("");
         await loadOrden();
       } else {
         setActionMessage({ type: "error", text: data.error || "Error al cambiar el estado" });
@@ -273,38 +293,24 @@ export default function OrdenDetallePage() {
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Acciones de Administrador</h3>
             <div className="flex flex-wrap gap-3">
               {/* Subir Factura - solo si estado es "Enviada" */}
-              {estado === "Enviada" && (
-                <>
-                  <input
-                    ref={facturaInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleSubirFactura(file);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => facturaInputRef.current?.click()}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading ? "Subiendo..." : "Subir Factura (PDF)"}
-                  </button>
-                </>
+              {estado === "Enviada" && !showFacturaForm && (
+                <button
+                  onClick={() => setShowFacturaForm(true)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Subir Factura (PDF)
+                </button>
               )}
 
               {/* Marcar como Pagada - solo si estado es "Facturada" */}
-              {estado === "Facturada" && (
+              {estado === "Facturada" && !showPagoForm && (
                 <button
-                  onClick={() => handleCambiarEstado("Pagada")}
+                  onClick={() => setShowPagoForm(true)}
                   disabled={actionLoading}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {actionLoading ? "Procesando..." : "Marcar como Pagada"}
+                  Marcar como Pagada
                 </button>
               )}
 
@@ -326,6 +332,106 @@ export default function OrdenDetallePage() {
                 </p>
               )}
             </div>
+
+            {/* Inline Factura Form */}
+            {showFacturaForm && estado === "Enviada" && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 className="text-sm font-bold text-amber-800 mb-3">Subir Factura</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Numero de factura <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={numeroFactura}
+                      onChange={(e) => setNumeroFactura(e.target.value)}
+                      placeholder="Ej: FAC-001234"
+                      className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Archivo PDF <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      ref={facturaInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setFacturaFile(file);
+                      }}
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => facturaInputRef.current?.click()}
+                        className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                      >
+                        Seleccionar PDF
+                      </button>
+                      {facturaFile && (
+                        <span className="text-sm text-gray-600">{facturaFile.name}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleSubirFactura}
+                      disabled={actionLoading || !numeroFactura.trim() || !facturaFile}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading ? "Subiendo..." : "Subir Factura"}
+                    </button>
+                    <button
+                      onClick={() => { setShowFacturaForm(false); setNumeroFactura(""); setFacturaFile(null); }}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Inline Pago Form */}
+            {showPagoForm && estado === "Facturada" && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h4 className="text-sm font-bold text-green-800 mb-3">Confirmar Pago</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de pago <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={fechaPagoInput}
+                      onChange={(e) => setFechaPagoInput(e.target.value)}
+                      className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => handleCambiarEstado("Pagada")}
+                      disabled={actionLoading || !fechaPagoInput}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading ? "Procesando..." : "Confirmar Pago"}
+                    </button>
+                    <button
+                      onClick={() => { setShowPagoForm(false); setFechaPagoInput(""); }}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -376,6 +482,17 @@ export default function OrdenDetallePage() {
                 {itemsCount} {itemsCount === 1 ? "item" : "items"}
               </div>
             </div>
+
+            {estado === "Pagada" && orden.fields.FechaPago && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de pago
+                </label>
+                <div className="px-4 py-2 bg-green-50 border border-green-300 rounded-lg text-green-800 font-medium">
+                  {new Date(orden.fields.FechaPago + 'T00:00:00').toLocaleDateString("es-CO")}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Factura info */}
@@ -384,6 +501,11 @@ export default function OrdenDetallePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-amber-800">Factura del proveedor</h3>
+                  {orden.fields.NumeroFactura && (
+                    <p className="text-sm text-amber-800 mt-1">
+                      N.° Factura: <span className="font-semibold">{orden.fields.NumeroFactura}</span>
+                    </p>
+                  )}
                   <p className="text-xs text-amber-600 mt-1">
                     Archivo: {orden.fields.Factura?.[0]?.filename || "factura.pdf"}
                   </p>

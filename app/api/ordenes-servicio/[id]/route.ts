@@ -124,6 +124,14 @@ export async function PATCH(
         );
       }
 
+      const numeroFactura = (formData.get("numeroFactura") as string || "").trim();
+      if (!numeroFactura) {
+        return NextResponse.json(
+          { error: "El número de factura es obligatorio" },
+          { status: 400 }
+        );
+      }
+
       // Validate file type
       if (file.type !== "application/pdf") {
         return NextResponse.json(
@@ -152,7 +160,7 @@ export async function PATCH(
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      const success = await uploadFacturaOrden(ordenId, buffer, file.name);
+      const success = await uploadFacturaOrden(ordenId, buffer, file.name, numeroFactura);
 
       if (!success) {
         return NextResponse.json(
@@ -168,7 +176,7 @@ export async function PATCH(
     } else {
       // Handle JSON body (cambiar estado)
       const body = await request.json();
-      const { action, estado } = body;
+      const { action, estado, fechaPago } = body;
 
       if (action !== "cambiar-estado") {
         return NextResponse.json(
@@ -196,6 +204,12 @@ export async function PATCH(
             { status: 400 }
           );
         }
+        if (!fechaPago || typeof fechaPago !== "string" || !fechaPago.trim()) {
+          return NextResponse.json(
+            { error: "La fecha de pago es obligatoria" },
+            { status: 400 }
+          );
+        }
       } else if (estado === "Rechazada") {
         if (estadoActual !== "Enviada") {
           return NextResponse.json(
@@ -210,7 +224,8 @@ export async function PATCH(
         );
       }
 
-      const success = await updateEstadoOrden(ordenId, estado);
+      const extraFields = estado === "Pagada" ? { FechaPago: fechaPago } : undefined;
+      const success = await updateEstadoOrden(ordenId, estado, extraFields);
 
       if (!success) {
         return NextResponse.json(

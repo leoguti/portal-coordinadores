@@ -125,6 +125,8 @@ interface OrdenFields {
     size?: number;
     type?: string;
   }>;
+  NumeroFactura?: string;
+  FechaPago?: string;
 }
 
 interface TerceroFields {
@@ -2326,7 +2328,8 @@ export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
  */
 export async function updateEstadoOrden(
   ordenId: string,
-  nuevoEstado: string
+  nuevoEstado: string,
+  extraFields?: Record<string, unknown>
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -2348,6 +2351,7 @@ export async function updateEstadoOrden(
       body: JSON.stringify({
         fields: {
           Estado: nuevoEstado,
+          ...extraFields,
         },
       }),
     });
@@ -2377,7 +2381,8 @@ export async function updateEstadoOrden(
 export async function uploadFacturaOrden(
   ordenId: string,
   facturaBuffer: Buffer,
-  filename: string
+  filename: string,
+  numeroFactura: string
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -2410,6 +2415,7 @@ export async function uploadFacturaOrden(
         fields: {
           Factura: [{ url: blob.url }],
           Estado: "Facturada",
+          NumeroFactura: numeroFactura,
         },
       }),
     });
