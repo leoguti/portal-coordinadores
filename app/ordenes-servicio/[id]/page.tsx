@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getOrdenById, getItemsOrden, getKardexByIds, type Orden, type ItemOrden, type Kardex } from "@/lib/airtable";
+import { getOrdenById, getItemsOrden, getKardexByIds, getCatalogoByIds, type Orden, type ItemOrden, type Kardex, type CatalogoServicio } from "@/lib/airtable";
 
 export default function OrdenDetallePage() {
   const params = useParams();
@@ -16,6 +16,7 @@ export default function OrdenDetallePage() {
   const [orden, setOrden] = useState<Orden | null>(null);
   const [items, setItems] = useState<ItemOrden[]>([]);
   const [kardexMap, setKardexMap] = useState<Map<string, Kardex>>(new Map());
+  const [catalogoMap, setCatalogoMap] = useState<Map<string, CatalogoServicio>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +58,18 @@ export default function OrdenDetallePage() {
         const kardexMapTemp = new Map<string, Kardex>();
         kardexData.forEach(k => kardexMapTemp.set(k.id, k));
         setKardexMap(kardexMapTemp);
+      }
+
+      // Load catalogo names for SIN Kardex items
+      const catalogoIds = itemsData
+        .filter(item => item.fields.CatalogoServicio && item.fields.CatalogoServicio.length > 0)
+        .map(item => item.fields.CatalogoServicio![0]);
+
+      if (catalogoIds.length > 0) {
+        const catalogoData = await getCatalogoByIds(catalogoIds);
+        const catalogoMapTemp = new Map<string, CatalogoServicio>();
+        catalogoData.forEach(c => catalogoMapTemp.set(c.id, c));
+        setCatalogoMap(catalogoMapTemp);
       }
 
     } catch (err) {
@@ -424,10 +437,12 @@ export default function OrdenDetallePage() {
                       const fotoBascula = kardex?.fields.soportebascula?.[0];
 
                       // Para items de Kardex, mostrar el consecutivo (idkardex)
-                      // Para items de Catálogo, mostrar el nombre del item
+                      // Para items de Catálogo, mostrar el nombre del servicio
+                      const catalogoId = item.fields.CatalogoServicio?.[0];
+                      const catalogo = catalogoId ? catalogoMap.get(catalogoId) : undefined;
                       const displayName = tipoItem === "CON Kardex" && kardex
                         ? `Kardex #${kardex.fields.idkardex}`
-                        : nombre;
+                        : catalogo?.fields.Nombre || nombre;
 
                       return (
                         <tr

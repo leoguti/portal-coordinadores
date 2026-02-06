@@ -1214,6 +1214,46 @@ export async function getKardexByIds(kardexIds: string[]): Promise<Kardex[]> {
 }
 
 /**
+ * Get CatalogoServicio by IDs
+ */
+export async function getCatalogoByIds(catalogoIds: string[]): Promise<CatalogoServicio[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const TABLE_ID_CATALOGO = process.env.AIRTABLE_TABLE_ID_CATALOGOSERVICIOS || "tblIrrr5gmebTtMH8";
+
+  if (!apiKey || !baseId || catalogoIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const orConditions = catalogoIds.map(id => `RECORD_ID()="${id}"`).join(",");
+    const filterFormula = `OR(${orConditions})`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/${TABLE_ID_CATALOGO}?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data: AirtableResponse<CatalogoServicioFields> = await response.json();
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching CatalogoServicio by IDs:", error);
+    return [];
+  }
+}
+
+/**
  * Get Tercero by ID
  */
 export async function getTerceroById(terceroId: string): Promise<Tercero | null> {

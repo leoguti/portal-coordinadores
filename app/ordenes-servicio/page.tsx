@@ -128,12 +128,20 @@ export default function OrdenesServicioPage() {
               {isAdmin ? "Vista de administrador - Todas las ordenes" : "Gestiona las solicitudes de pago a Bogota"}
             </p>
           </div>
-          <Link
-            href="/ordenes-servicio/nueva"
-            className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
-          >
-            + Nueva Orden
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/ordenes-servicio/nueva"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors font-medium text-sm"
+            >
+              + Nueva Orden
+            </Link>
+            <Link
+              href="/ordenes-servicio-v2/nueva"
+              className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
+            >
+              + Nueva Orden (v2)
+            </Link>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -254,7 +262,7 @@ export default function OrdenesServicioPage() {
                 </p>
                 {ordenes.length === 0 && (
                   <Link
-                    href="/ordenes-servicio/nueva"
+                    href="/ordenes-servicio-v2/nueva"
                     className="inline-block px-6 py-3 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
                   >
                     Crear primera orden
