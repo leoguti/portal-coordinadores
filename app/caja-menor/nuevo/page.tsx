@@ -184,7 +184,7 @@ export default function NuevoGastoCajaMenorPage() {
 
       const { gasto: gastoCreado } = await response.json();
 
-      // 2. Si hay factura, subirla al registro creado
+      // 2. Subir factura obligatoria al registro creado
       if (factura && gastoCreado?.id) {
         const base64 = await fileToBase64(factura);
         const uploadRes = await fetch("/api/upload", {
@@ -200,8 +200,11 @@ export default function NuevoGastoCajaMenorPage() {
         });
 
         if (!uploadRes.ok) {
-          // El gasto se creo pero la factura fallo - no es critico
-          console.error("Error subiendo factura, pero el gasto fue creado");
+          // La factura es obligatoria: si falla la subida, eliminar el gasto creado
+          await fetch(`/api/caja-menor/${gastoCreado.id}`, { method: "DELETE" });
+          setError("Error al subir la factura/soporte. El gasto no fue creado. Intenta de nuevo.");
+          setSaving(false);
+          return;
         }
       }
 
