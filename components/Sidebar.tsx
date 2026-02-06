@@ -9,7 +9,6 @@ const navItems = [
   { name: "Actividades", href: "/actividades", icon: "📋", roles: ["Coordinador", "Administrador"] },
   { name: "Kardex", href: "/kardex", icon: "📦", roles: ["Coordinador", "Administrador"] },
   { name: "Órdenes de Servicio", href: "/ordenes-servicio", icon: "🔧", roles: ["Coordinador", "Administrador"] },
-  { name: "Nueva Orden (v2)", href: "/ordenes-servicio-v2/nueva", icon: "✨", roles: ["Coordinador", "Administrador"] },
   { name: "Reporte Facturas", href: "/reportes-facturas", icon: "📑", roles: ["Administrador"] },
   { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️", roles: ["Coordinador", "Administrador"] },
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador"] },
