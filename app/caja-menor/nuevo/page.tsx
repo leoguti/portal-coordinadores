@@ -71,6 +71,7 @@ export default function NuevoGastoCajaMenorPage() {
   const [kardexDisponibles, setKardexDisponibles] = useState<KardexDisponible[]>([]);
   const [kardexSeleccionados, setKardexSeleccionados] = useState<string[]>([]);
   const [loadingKardex, setLoadingKardex] = useState(true);
+  const [kardexAbierto, setKardexAbierto] = useState(false);
 
   // Cargar Kardex "Caja Menor" disponibles
   useEffect(() => {
@@ -253,54 +254,85 @@ export default function NuevoGastoCajaMenorPage() {
             </p>
           </div>
 
-          {/* Kardex Caja Menor (opcional) */}
+          {/* Kardex Caja Menor (opcional, colapsable) */}
           {!loadingKardex && kardexDisponibles.length > 0 && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kardex relacionados <span className="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
-                {kardexDisponibles.map((k) => {
-                  const checked = kardexSeleccionados.includes(k.id);
-                  const fechaStr = k.fields.fechakardex
-                    ? new Date(k.fields.fechakardex + "T00:00:00").toLocaleDateString("es-CO", {
-                        day: "2-digit",
-                        month: "short",
-                      })
-                    : "";
-                  const municipio = k.fields["mundep (from MunicipioOrigen)"]?.[0] || "";
-                  const total = k.fields.Total || 0;
-                  return (
-                    <label
-                      key={k.id}
-                      className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                        checked ? "bg-green-50" : ""
-                      }`}
+              {!kardexAbierto ? (
+                <button
+                  type="button"
+                  onClick={() => setKardexAbierto(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-[#00d084] hover:text-[#00d084] transition-colors"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  Vincular Kardex de caja menor
+                  <span className="text-xs font-normal">(opcional)</span>
+                </button>
+              ) : (
+                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-700">
+                      Vincular Kardex <span className="text-gray-400 font-normal">(opcional)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKardexAbierto(false);
+                        setKardexSeleccionados([]);
+                      }}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleKardex(k.id)}
-                        className="accent-[#00d084] w-4 h-4"
-                      />
-                      <span className="text-sm text-gray-800">
-                        <span className="font-mono font-bold">#{k.fields.idkardex}</span>
-                        {" - "}
-                        {fechaStr}
-                        {" - "}
-                        <span className="font-medium">{k.fields.TipoMovimiento}</span>
-                        {municipio && ` - ${municipio}`}
-                        {" "}
-                        <span className="text-gray-500">({total.toLocaleString("es-CO")} kg)</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              {kardexSeleccionados.length > 0 && (
-                <p className="text-xs text-[#00d084] font-medium mt-1">
-                  {kardexSeleccionados.length} kardex seleccionado{kardexSeleccionados.length > 1 ? "s" : ""}
-                </p>
+                      Cerrar
+                    </button>
+                  </div>
+                  <p className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+                    Si este gasto respalda fletes pagados con caja menor, selecciona los Kardex correspondientes.
+                  </p>
+                  <div className="max-h-48 overflow-y-auto">
+                    {kardexDisponibles.map((k) => {
+                      const checked = kardexSeleccionados.includes(k.id);
+                      const fechaStr = k.fields.fechakardex
+                        ? new Date(k.fields.fechakardex + "T00:00:00").toLocaleDateString("es-CO", {
+                            day: "2-digit",
+                            month: "short",
+                          })
+                        : "";
+                      const municipio = k.fields["mundep (from MunicipioOrigen)"]?.[0] || "";
+                      const total = k.fields.Total || 0;
+                      return (
+                        <label
+                          key={k.id}
+                          className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                            checked ? "bg-green-50" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleKardex(k.id)}
+                            className="accent-[#00d084] w-4 h-4"
+                          />
+                          <span className="text-sm text-gray-800">
+                            <span className="font-mono font-bold">#{k.fields.idkardex}</span>
+                            {" - "}
+                            {fechaStr}
+                            {" - "}
+                            <span className="font-medium">{k.fields.TipoMovimiento}</span>
+                            {municipio && ` - ${municipio}`}
+                            {" "}
+                            <span className="text-gray-500">({total.toLocaleString("es-CO")} kg)</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {kardexSeleccionados.length > 0 && (
+                    <div className="px-4 py-2 bg-green-50 border-t border-green-200">
+                      <p className="text-xs text-[#00d084] font-medium">
+                        {kardexSeleccionados.length} kardex seleccionado{kardexSeleccionados.length > 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
