@@ -36,6 +36,7 @@ interface TerceroSeleccionado {
 interface ItemCatalogo {
   catalogo: CatalogoServicio;
   cantidad: number;
+  precioUnitario: number;
 }
 
 export default function NuevaOrdenV2Page() {
@@ -134,7 +135,7 @@ export default function NuevaOrdenV2Page() {
         descripcion: item.catalogo.fields.Nombre || "Sin nombre",
         formaCobro: "Por Flete",
         cantidad: item.cantidad,
-        precioUnitario: 0,
+        precioUnitario: item.precioUnitario,
       });
     });
 

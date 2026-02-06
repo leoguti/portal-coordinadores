@@ -6,6 +6,7 @@ import { type Kardex, type CatalogoServicio } from "@/lib/airtable";
 interface ItemCatalogo {
   catalogo: CatalogoServicio;
   cantidad: number;
+  precioUnitario: number;
 }
 
 interface PasoCatalogoProps {
@@ -46,7 +47,7 @@ export default function PasoCatalogo({
 
   const agregarItem = (catalogo: CatalogoServicio) => {
     if (!itemsAgregadosIds.has(catalogo.id)) {
-      onItemsChange([...itemsCatalogo, { catalogo, cantidad: 1 }]);
+      onItemsChange([...itemsCatalogo, { catalogo, cantidad: 1, precioUnitario: 0 }]);
     }
   };
 
@@ -58,6 +59,14 @@ export default function PasoCatalogo({
     onItemsChange(
       itemsCatalogo.map((i) =>
         i.catalogo.id === catalogoId ? { ...i, cantidad: Math.max(1, cantidad) } : i
+      )
+    );
+  };
+
+  const actualizarPrecio = (catalogoId: string, precio: number) => {
+    onItemsChange(
+      itemsCatalogo.map((i) =>
+        i.catalogo.id === catalogoId ? { ...i, precioUnitario: precio } : i
       )
     );
   };
@@ -144,11 +153,25 @@ export default function PasoCatalogo({
                       step="1"
                     />
                   </div>
-                  <span className="text-xs text-gray-500 min-w-[80px] text-right">
-                    {formatCurrency(
-                      (item.catalogo.fields["Precio Unitario"] || 0) *
-                        item.cantidad
-                    )}
+                  <div className="flex items-center gap-1">
+                    <label className="text-xs text-gray-600">Valor:</label>
+                    <input
+                      type="number"
+                      value={item.precioUnitario || ""}
+                      onChange={(e) =>
+                        actualizarPrecio(
+                          item.catalogo.id,
+                          Number(e.target.value)
+                        )
+                      }
+                      placeholder="$0"
+                      className="w-28 px-2 py-1 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
+                      min="0"
+                      step="1000"
+                    />
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#00d084] min-w-[80px] text-right">
+                    {formatCurrency(item.precioUnitario * item.cantidad)}
                   </span>
                   <button
                     onClick={() => quitarItem(item.catalogo.id)}
