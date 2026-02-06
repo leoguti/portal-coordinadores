@@ -152,7 +152,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    
+
+    // 5. SALIDA: Foto de báscula obligatoria
+    if (isSalida && (!body.fotoBascula || body.fotoBascula.length === 0)) {
+      return NextResponse.json(
+        { error: "Para SALIDAS, la foto de báscula es obligatoria" },
+        { status: 400 }
+      );
+    }
+
     // Determinar tipo de origen (para conciliación)
     // Frontend envía "municipio" o "centro", necesitamos mapear a formato esperado
     let origenTipo: "Municipio" | "Centro de Acopio";
