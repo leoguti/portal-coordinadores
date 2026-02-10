@@ -31,7 +31,8 @@
 | `Tipo` | Select | Sensibilización/Capacitación/Taller |
 | `Coordinador` | Link | Coordinador responsable |
 | `Name (from Coordinador)` | Lookup | Nombre del coordinador |
-| `Documentos Actividad` | Attachment | Documentos PDF/archivos |
+| `Listado Asistencia` | Attachment | Listados de asistencia |
+| `Evaluaciones` | Attachment | Evaluaciones (solo Sensibilización) |
 | `Cantidad de Participantes` | Number | Número de asistentes |
 | `Modalidad` | Multiple Select | Presencial/Virtual/Híbrida |
 | `Consecutivo` | Number | Número consecutivo |

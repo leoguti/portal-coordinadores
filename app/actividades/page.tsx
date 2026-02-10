@@ -290,7 +290,7 @@ export default function ActividadesPage() {
       const csvCols = [
         "Consecutivo", "Fecha", "Nombre", "Tipo", "Municipio", "Participantes",
         "Descripcion", "Cultivo", "Modalidad", "Perfil Asistentes", "Coordinador",
-        "Estado", "Num Fotos", "Num Documentos",
+        "Estado", "Num Fotos", "Num Listados Asistencia", "Num Evaluaciones",
       ];
 
       const escapeCsv = (val: string | number | undefined | null) => {
@@ -319,7 +319,8 @@ export default function ActividadesPage() {
           f["Name (from Coordinador)"]?.[0],
           puedeModificar ? "Abierta" : "Cerrada",
           f.Fotografias?.length ?? 0,
-          f["Documentos Actividad"]?.length ?? 0,
+          f["Listado Asistencia"]?.length ?? 0,
+          f["Evaluaciones"]?.length ?? 0,
         ].map(escapeCsv).join(",");
       });
 
@@ -346,17 +347,36 @@ export default function ActividadesPage() {
         }
       }
 
-      // --- Descargar documentos ---
+      // --- Descargar listado de asistencia ---
       for (const a of actividadesDelMes) {
-        const docs = a.fields["Documentos Actividad"] as AirtableAttachment[] | undefined;
+        const docs = a.fields["Listado Asistencia"] as AirtableAttachment[] | undefined;
         if (docs && docs.length > 0) {
-          const carpeta = `documentos/${a.fields.Consecutivo || "sin-id"}_${a.fields.Fecha || "sin-fecha"}`;
+          const carpeta = `listado_asistencia/${a.fields.Consecutivo || "sin-id"}_${a.fields.Fecha || "sin-fecha"}`;
           for (const doc of docs) {
             try {
               const resp = await fetch(`/api/image-proxy?url=${encodeURIComponent(doc.url)}`);
               if (resp.ok) {
                 const blob = await resp.blob();
                 zip.file(`${carpeta}/${doc.filename}`, blob);
+              }
+            } catch {
+              // Skip failed downloads
+            }
+          }
+        }
+      }
+
+      // --- Descargar evaluaciones ---
+      for (const a of actividadesDelMes) {
+        const evals = a.fields["Evaluaciones"] as AirtableAttachment[] | undefined;
+        if (evals && evals.length > 0) {
+          const carpeta = `evaluaciones/${a.fields.Consecutivo || "sin-id"}_${a.fields.Fecha || "sin-fecha"}`;
+          for (const evalFile of evals) {
+            try {
+              const resp = await fetch(`/api/image-proxy?url=${encodeURIComponent(evalFile.url)}`);
+              if (resp.ok) {
+                const blob = await resp.blob();
+                zip.file(`${carpeta}/${evalFile.filename}`, blob);
               }
             } catch {
               // Skip failed downloads

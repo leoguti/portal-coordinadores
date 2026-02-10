@@ -36,7 +36,8 @@ interface Actividad {
     "Cantidad de Participantes"?: number;
     Observaciones?: string;
     Fotografias?: AirtableAttachment[];
-    "Documentos Actividad"?: AirtableAttachment[];
+    "Listado Asistencia"?: AirtableAttachment[];
+    "Evaluaciones"?: AirtableAttachment[];
   };
 }
 
@@ -56,6 +57,9 @@ export default function EditarActividadPage() {
   const [existingDocs, setExistingDocs] = useState<AirtableAttachment[]>([]);
   const [docsToRemove, setDocsToRemove] = useState<Set<string>>(new Set());
   const [newDocs, setNewDocs] = useState<ImageFile[]>([]);
+  const [existingEvals, setExistingEvals] = useState<AirtableAttachment[]>([]);
+  const [evalsToRemove, setEvalsToRemove] = useState<Set<string>>(new Set());
+  const [newEvals, setNewEvals] = useState<ImageFile[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,7 +84,8 @@ export default function EditarActividadPage() {
       const data = await response.json();
       setActividad(data.actividad);
       setExistingPhotos(data.actividad.fields?.Fotografias || []);
-      setExistingDocs(data.actividad.fields?.["Documentos Actividad"] || []);
+      setExistingDocs(data.actividad.fields?.["Listado Asistencia"] || []);
+      setExistingEvals(data.actividad.fields?.["Evaluaciones"] || []);
     } catch (err) {
       console.error("Error fetching activity:", err);
       setError(err instanceof Error ? err.message : "No se pudo cargar la actividad");
@@ -125,6 +130,18 @@ export default function EditarActividadPage() {
     });
   };
 
+  const toggleRemoveEval = (evalId: string) => {
+    setEvalsToRemove((prev) => {
+      const next = new Set(prev);
+      if (next.has(evalId)) {
+        next.delete(evalId);
+      } else {
+        next.add(evalId);
+      }
+      return next;
+    });
+  };
+
   async function handleSubmit(data: ActividadFormData, _fotografias: ImageFile[], _documentos: ImageFile[]) {
     setSaving(true);
     setError(null);
@@ -141,7 +158,12 @@ export default function EditarActividadPage() {
         .filter((d) => !docsToRemove.has(d.id))
         .map((d) => ({ id: d.id }));
 
-      // Step 1: Update activity fields + remaining photos + remaining docs
+      // Build the remaining existing evals (excluding removed ones)
+      const remainingEvals = existingEvals
+        .filter((e) => !evalsToRemove.has(e.id))
+        .map((e) => ({ id: e.id }));
+
+      // Step 1: Update activity fields + remaining photos + remaining docs + remaining evals
       setUploadProgress("Guardando cambios...");
       const response = await fetch(`/api/actividades/${actividadId}`, {
         method: "PUT",
@@ -159,6 +181,7 @@ export default function EditarActividadPage() {
           observaciones: data.observaciones || undefined,
           fotografias: remainingPhotos,
           documentos: remainingDocs,
+          evaluaciones: remainingEvals,
         }),
       });
 
@@ -220,7 +243,7 @@ export default function EditarActividadPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 recordId: actividadId,
-                fieldName: "Documentos Actividad",
+                fieldName: "Listado Asistencia",
                 file: base64,
                 filename: doc.file.name,
                 contentType: doc.file.type,
@@ -239,6 +262,44 @@ export default function EditarActividadPage() {
 
         if (failedDocs > 0) {
           setUploadProgress(`Cambios guardados. ${uploadedDocs} documentos subidos, ${failedDocs} fallaron.`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Step 4: Upload new evaluaciones (if any)
+      if (newEvals.length > 0) {
+        let uploadedEvals = 0;
+        let failedEvals = 0;
+
+        for (const evalFile of newEvals) {
+          setUploadProgress(`Subiendo evaluación ${uploadedEvals + failedEvals + 1} de ${newEvals.length}...`);
+
+          try {
+            const base64 = await fileToBase64(evalFile.file);
+            const uploadResponse = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recordId: actividadId,
+                fieldName: "Evaluaciones",
+                file: base64,
+                filename: evalFile.file.name,
+                contentType: evalFile.file.type,
+              }),
+            });
+
+            if (uploadResponse.ok) {
+              uploadedEvals++;
+            } else {
+              failedEvals++;
+            }
+          } catch {
+            failedEvals++;
+          }
+        }
+
+        if (failedEvals > 0) {
+          setUploadProgress(`Cambios guardados. ${uploadedEvals} evaluaciones subidas, ${failedEvals} fallaron.`);
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
@@ -443,7 +504,7 @@ export default function EditarActividadPage() {
           {/* Document Management Section */}
           <div className="mt-8 pt-8 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Documentos de Actividad
+              Listado de Asistencia
             </h3>
 
             {/* Existing Documents */}
@@ -522,6 +583,91 @@ export default function EditarActividadPage() {
               />
             </div>
           </div>
+
+          {/* Evaluaciones Management Section - Solo Sensibilización */}
+          {actividad.fields.Tipo === "Sensibilización" && (
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Evaluaciones
+              </h3>
+
+              {/* Existing Evaluaciones */}
+              {existingEvals.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-sm text-gray-600 mb-3">
+                    Evaluaciones actuales ({existingEvals.length - evalsToRemove.size} de {existingEvals.length} se conservan)
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {existingEvals.map((evalFile) => {
+                      const isMarkedForRemoval = evalsToRemove.has(evalFile.id);
+                      const isPdf = evalFile.type === "application/pdf";
+                      const thumbUrl = evalFile.thumbnails?.large?.url || evalFile.url;
+                      return (
+                        <div key={evalFile.id} className="relative group">
+                          <div className={`aspect-square rounded-lg overflow-hidden bg-gray-100 ${isMarkedForRemoval ? "opacity-40" : ""}`}>
+                            {isPdf ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                                <span className="text-4xl">📄</span>
+                                <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`}
+                                alt={evalFile.filename}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                          {isMarkedForRemoval && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
+                              <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded mb-2">
+                                Se eliminara
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleRemoveEval(evalFile.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                              >
+                                Deshacer
+                              </button>
+                            </div>
+                          )}
+                          {!isMarkedForRemoval && (
+                            <button
+                              type="button"
+                              onClick={() => toggleRemoveEval(evalFile.id)}
+                              disabled={saving}
+                              className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1 truncate" title={evalFile.filename}>
+                            {evalFile.filename}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* New Evaluaciones Upload */}
+              <div>
+                <p className="text-sm text-gray-600 mb-3">Agregar nuevas evaluaciones</p>
+                <ImageUpload
+                  images={newEvals}
+                  onChange={setNewEvals}
+                  maxFiles={Math.max(0, 5 - (existingEvals.length - evalsToRemove.size))}
+                  maxSizeMB={3}
+                  disabled={saving}
+                  acceptPdf
+                />
+              </div>
+            </div>
+          )}
 
           <div className="mt-6">
             <Link

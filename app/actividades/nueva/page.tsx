@@ -28,8 +28,10 @@ export default function NuevaActividadPage() {
   const [observaciones, setObservaciones] = useState("");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
+  const [evaluaciones, setEvaluaciones] = useState<ImageFile[]>([]);
 
   // Conditional logic based on "Tipo de Actividad"
+  const isSensibilizacion = tipo === "Sensibilización";
   const isVisitaAcopio = tipo === "Visita acopio";
   const showPerfil = tipo !== "" && !isVisitaAcopio; // Se muestra cuando tipo NO es "Visita acopio"
   const showCultivo = tipo === "Recoleccion"; // Solo cuando es Recolección
@@ -187,7 +189,7 @@ export default function NuevaActividadPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               recordId,
-              fieldName: "Documentos Actividad",
+              fieldName: "Listado Asistencia",
               file: base64,
               filename: doc.file.name,
               contentType: doc.file.type,
@@ -211,6 +213,52 @@ export default function NuevaActividadPage() {
 
         if (failedDocs > 0) {
           setUploadProgress(`Actividad creada. ${uploadedDocs} documentos subidos, ${failedDocs} fallaron.`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Paso 4: Subir evaluaciones (si hay)
+      if (evaluaciones.length > 0) {
+        let uploadedEvals = 0;
+        let failedEvals = 0;
+
+        for (const evalFile of evaluaciones) {
+          setUploadProgress(`Subiendo evaluación ${uploadedEvals + failedEvals + 1} de ${evaluaciones.length}...`);
+
+          setEvaluaciones(prev => prev.map(f =>
+            f.id === evalFile.id ? { ...f, uploading: true } : f
+          ));
+
+          const base64 = await fileToBase64(evalFile.file);
+          const evalResponse = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recordId,
+              fieldName: "Evaluaciones",
+              file: base64,
+              filename: evalFile.file.name,
+              contentType: evalFile.file.type,
+            }),
+          });
+
+          const success = evalResponse.ok;
+
+          setEvaluaciones(prev => prev.map(f =>
+            f.id === evalFile.id
+              ? { ...f, uploading: false, uploaded: success, error: success ? undefined : "Error al subir" }
+              : f
+          ));
+
+          if (success) {
+            uploadedEvals++;
+          } else {
+            failedEvals++;
+          }
+        }
+
+        if (failedEvals > 0) {
+          setUploadProgress(`Actividad creada. ${uploadedEvals} evaluaciones subidas, ${failedEvals} fallaron.`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
@@ -428,7 +476,7 @@ export default function NuevaActividadPage() {
             {isVisitaAcopio && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-amber-800 text-sm">
-                  <span className="font-semibold">📋 Nota:</span> Dentro de los <strong>Documentos de la Actividad</strong>, por favor adjuntar las <strong>listas de chequeo</strong>.
+                  <span className="font-semibold">📋 Nota:</span> Dentro del <strong>Listado de Asistencia</strong>, por favor adjuntar las <strong>listas de chequeo</strong>.
                 </p>
               </div>
             )}
@@ -447,10 +495,10 @@ export default function NuevaActividadPage() {
               />
             </div>
 
-            {/* Documentos de Actividad - Siempre visible */}
+            {/* Listado de Asistencia - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Documentos de Actividad
+                Listado de Asistencia
                 {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
               </label>
               <ImageUpload
@@ -462,6 +510,23 @@ export default function NuevaActividadPage() {
                 acceptPdf
               />
             </div>
+
+            {/* Evaluaciones - Solo para Sensibilización */}
+            {isSensibilizacion && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Evaluaciones
+                </label>
+                <ImageUpload
+                  images={evaluaciones}
+                  onChange={setEvaluaciones}
+                  maxFiles={5}
+                  maxSizeMB={3}
+                  disabled={loading}
+                  acceptPdf
+                />
+              </div>
+            )}
 
             {/* Municipio - Selector con búsqueda */}
             <div>

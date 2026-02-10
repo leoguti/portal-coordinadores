@@ -60,7 +60,12 @@ interface ActividadFields {
     url: string;
     filename: string;
   }>;
-  "Documentos Actividad"?: Array<{
+  "Listado Asistencia"?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+  }>;
+  "Evaluaciones"?: Array<{
     id: string;
     url: string;
     filename: string;
