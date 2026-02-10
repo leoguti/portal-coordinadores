@@ -140,17 +140,18 @@ export async function PUT(
 
     // Obtener datos del body
     const body = await request.json();
-    const { 
-      name, 
-      fecha, 
-      descripcion, 
-      tipo, 
-      cultivo, 
-      municipioId, 
-      modalidad, 
-      perfilAsistentes, 
-      cantidadParticipantes, 
-      observaciones 
+    const {
+      name,
+      fecha,
+      descripcion,
+      tipo,
+      cultivo,
+      municipioId,
+      modalidad,
+      perfilAsistentes,
+      cantidadParticipantes,
+      observaciones,
+      fotografias
     } = body;
 
     // Construir payload de actualización
@@ -166,6 +167,7 @@ export async function PUT(
     if (perfilAsistentes !== undefined) fields["Perfil de Asistentes"] = perfilAsistentes || null;
     if (cantidadParticipantes !== undefined) fields["Cantidad de Participantes"] = cantidadParticipantes || null;
     if (observaciones !== undefined) fields["Observaciones"] = observaciones || null;
+    if (fotografias !== undefined) fields["Fotografias"] = fotografias;
 
     // Actualizar en Airtable
     const updateUrl = `https://api.airtable.com/v0/${baseId}/Actividades/${id}`;

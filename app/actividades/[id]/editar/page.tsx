@@ -5,8 +5,21 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import ActividadForm, { ActividadFormData } from "@/components/ActividadForm";
+import ImageUpload, { ImageFile } from "@/components/ImageUpload";
 import Link from "next/link";
 import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
+
+interface AirtableAttachment {
+  id: string;
+  url: string;
+  filename: string;
+  size: number;
+  type: string;
+  thumbnails?: {
+    small?: { url: string; width: number; height: number };
+    large?: { url: string; width: number; height: number };
+  };
+}
 
 interface Actividad {
   id: string;
@@ -22,6 +35,7 @@ interface Actividad {
     "mundep (from Municipio)"?: string[];
     "Cantidad de Participantes"?: number;
     Observaciones?: string;
+    Fotografias?: AirtableAttachment[];
   };
 }
 
@@ -35,6 +49,10 @@ export default function EditarActividadPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingPhotos, setExistingPhotos] = useState<AirtableAttachment[]>([]);
+  const [photosToRemove, setPhotosToRemove] = useState<Set<string>>(new Set());
+  const [newPhotos, setNewPhotos] = useState<ImageFile[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -57,6 +75,7 @@ export default function EditarActividadPage() {
 
       const data = await response.json();
       setActividad(data.actividad);
+      setExistingPhotos(data.actividad.fields?.Fotografias || []);
     } catch (err) {
       console.error("Error fetching activity:", err);
       setError(err instanceof Error ? err.message : "No se pudo cargar la actividad");
@@ -65,11 +84,43 @@ export default function EditarActividadPage() {
     }
   }
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const toggleRemovePhoto = (photoId: string) => {
+    setPhotosToRemove((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  };
+
   async function handleSubmit(data: ActividadFormData) {
     setSaving(true);
     setError(null);
+    setUploadProgress(null);
 
     try {
+      // Build the remaining existing photos (excluding removed ones)
+      const remainingPhotos = existingPhotos
+        .filter((p) => !photosToRemove.has(p.id))
+        .map((p) => ({ id: p.id }));
+
+      // Step 1: Update activity fields + remaining photos
+      setUploadProgress("Guardando cambios...");
       const response = await fetch(`/api/actividades/${actividadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -84,6 +135,7 @@ export default function EditarActividadPage() {
           municipioId: data.municipio?.id,
           cantidadParticipantes: data.cantidadParticipantes ? parseInt(data.cantidadParticipantes) : undefined,
           observaciones: data.observaciones || undefined,
+          fotografias: remainingPhotos,
         }),
       });
 
@@ -92,13 +144,51 @@ export default function EditarActividadPage() {
         throw new Error(responseData.error || "Error al actualizar");
       }
 
-      // Redirigir al detalle de la actividad
+      // Step 2: Upload new photos (if any)
+      if (newPhotos.length > 0) {
+        let uploaded = 0;
+        let failed = 0;
+
+        for (const img of newPhotos) {
+          setUploadProgress(`Subiendo foto ${uploaded + failed + 1} de ${newPhotos.length}...`);
+
+          try {
+            const base64 = await fileToBase64(img.file);
+            const uploadResponse = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recordId: actividadId,
+                fieldName: "Fotografias",
+                file: base64,
+                filename: img.file.name,
+                contentType: img.file.type,
+              }),
+            });
+
+            if (uploadResponse.ok) {
+              uploaded++;
+            } else {
+              failed++;
+            }
+          } catch {
+            failed++;
+          }
+        }
+
+        if (failed > 0) {
+          setUploadProgress(`Cambios guardados. ${uploaded} fotos subidas, ${failed} fallaron.`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
       router.push(`/actividades/${actividadId}`);
     } catch (err) {
       console.error("Error updating activity:", err);
       setError(err instanceof Error ? err.message : "Error al actualizar la actividad");
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   }
 
@@ -198,6 +288,13 @@ export default function EditarActividadPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-8">
+          {uploadProgress && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              {uploadProgress}
+            </div>
+          )}
+
           <ActividadForm
             initialData={initialData}
             onSubmit={handleSubmit}
@@ -206,8 +303,82 @@ export default function EditarActividadPage() {
             error={error}
             showImageUpload={false}
           />
-          
-          <div className="mt-4">
+
+          {/* Photo Management Section */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Fotografias
+            </h3>
+
+            {/* Existing Photos */}
+            {existingPhotos.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-3">
+                  Fotos actuales ({existingPhotos.length - photosToRemove.size} de {existingPhotos.length} se conservan)
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {existingPhotos.map((photo) => {
+                    const isMarkedForRemoval = photosToRemove.has(photo.id);
+                    const thumbUrl = photo.thumbnails?.large?.url || photo.url;
+                    return (
+                      <div key={photo.id} className="relative group">
+                        <div className={`aspect-square rounded-lg overflow-hidden bg-gray-100 ${isMarkedForRemoval ? "opacity-40" : ""}`}>
+                          <img
+                            src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`}
+                            alt={photo.filename}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {isMarkedForRemoval && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
+                            <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded mb-2">
+                              Se eliminara
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleRemovePhoto(photo.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline"
+                            >
+                              Deshacer
+                            </button>
+                          </div>
+                        )}
+                        {!isMarkedForRemoval && (
+                          <button
+                            type="button"
+                            onClick={() => toggleRemovePhoto(photo.id)}
+                            disabled={saving}
+                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1 truncate" title={photo.filename}>
+                          {photo.filename}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* New Photos Upload */}
+            <div>
+              <p className="text-sm text-gray-600 mb-3">Agregar nuevas fotos</p>
+              <ImageUpload
+                images={newPhotos}
+                onChange={setNewPhotos}
+                maxFiles={Math.max(0, 10 - (existingPhotos.length - photosToRemove.size))}
+                maxSizeMB={3}
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6">
             <Link
               href={`/actividades/${actividadId}`}
               className="block w-full text-center px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
