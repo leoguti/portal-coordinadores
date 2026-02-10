@@ -462,10 +462,10 @@ export default function PasoRevision({
       {requiereDocumentos && (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="text-sm font-bold text-gray-700 mb-2 uppercase">
-            Soporte de Bascula <span className="text-red-500">*</span>
+            Soporte de Bascula (proporcionado por el gestor) <span className="text-red-500">*</span>
           </h3>
           <p className="text-xs text-gray-500 mb-3">
-            Adjunta las imagenes o PDFs del soporte de bascula. Este campo es obligatorio.
+            Adjunta las imagenes o PDFs del soporte de bascula proporcionado por el gestor. Este campo es obligatorio.
           </p>
           <ImageUpload
             images={soporteBascula}
