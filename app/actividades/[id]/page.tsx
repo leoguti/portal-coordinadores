@@ -35,6 +35,7 @@ interface Actividad {
     Municipio?: string[];
     "mundep (from Municipio)"?: string[];
     Fotografias?: AirtableAttachment[];
+    "Documentos Actividad"?: AirtableAttachment[];
     Modalidad?: string[];
     Cultivo?: string;
     "Perfil de Asistentes"?: string;
@@ -247,6 +248,53 @@ export default function ActividadDetailPage() {
                       </div>
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Documents Section */}
+            {actividad.fields["Documentos Actividad"] && actividad.fields["Documentos Actividad"].length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Documentos ({actividad.fields["Documentos Actividad"].length})
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {actividad.fields["Documentos Actividad"].map((doc) => {
+                    const isPdf = doc.type === "application/pdf";
+                    const thumbUrl = doc.thumbnails?.large?.url || doc.url;
+                    return isPdf ? (
+                      <a
+                        key={doc.id}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="text-3xl shrink-0">📄</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{doc.filename}</p>
+                          <p className="text-xs text-gray-500">{(doc.size / 1024).toFixed(0)} KB</p>
+                        </div>
+                      </a>
+                    ) : (
+                      <button
+                        key={doc.id}
+                        onClick={() => setSelectedPhoto(doc)}
+                        className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
+                      >
+                        <img
+                          src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`}
+                          alt={doc.filename}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                            🔍
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

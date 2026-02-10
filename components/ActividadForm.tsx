@@ -19,12 +19,13 @@ export interface ActividadFormData {
 
 interface ActividadFormProps {
   initialData?: Partial<ActividadFormData>;
-  onSubmit: (data: ActividadFormData, fotografias: ImageFile[]) => Promise<void>;
+  onSubmit: (data: ActividadFormData, fotografias: ImageFile[], documentos: ImageFile[]) => Promise<void>;
   submitLabel?: string;
   loading?: boolean;
   error?: string | null;
   uploadProgress?: string | null;
   showImageUpload?: boolean;
+  showDocumentUpload?: boolean;
 }
 
 export default function ActividadForm({
@@ -35,6 +36,7 @@ export default function ActividadForm({
   error = null,
   uploadProgress = null,
   showImageUpload = true,
+  showDocumentUpload = true,
 }: ActividadFormProps) {
   // Form state
   const [fecha, setFecha] = useState(initialData?.fecha || "");
@@ -48,6 +50,7 @@ export default function ActividadForm({
   const [cantidadParticipantes, setCantidadParticipantes] = useState(initialData?.cantidadParticipantes || "");
   const [observaciones, setObservaciones] = useState(initialData?.observaciones || "");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
+  const [documentos, setDocumentos] = useState<ImageFile[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Calcular fechas permitidas (regla de 7 días de gracia)
@@ -121,7 +124,7 @@ export default function ActividadForm({
       municipio,
       cantidadParticipantes: showCantidadParticipantes ? cantidadParticipantes : "",
       observaciones,
-    }, fotografias);
+    }, fotografias, documentos);
   };
 
   return (
@@ -335,16 +338,23 @@ export default function ActividadForm({
           </div>
         )}
 
-        {/* Documentos - Placeholder */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Documentos de Actividad
-            {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
-          </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-            <p className="text-gray-500 text-sm">📄 Subida de documentos próximamente</p>
+        {/* Documentos de Actividad - Solo en modo crear */}
+        {showDocumentUpload && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Documentos de Actividad
+              {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
+            </label>
+            <ImageUpload
+              images={documentos}
+              onChange={setDocumentos}
+              maxFiles={5}
+              maxSizeMB={3}
+              disabled={loading}
+              acceptPdf
+            />
           </div>
-        </div>
+        )}
 
         {/* Municipio */}
         <div>

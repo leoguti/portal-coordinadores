@@ -151,7 +151,8 @@ export async function PUT(
       perfilAsistentes,
       cantidadParticipantes,
       observaciones,
-      fotografias
+      fotografias,
+      documentos
     } = body;
 
     // Construir payload de actualización
@@ -168,6 +169,7 @@ export async function PUT(
     if (cantidadParticipantes !== undefined) fields["Cantidad de Participantes"] = cantidadParticipantes || null;
     if (observaciones !== undefined) fields["Observaciones"] = observaciones || null;
     if (fotografias !== undefined) fields["Fotografias"] = fotografias;
+    if (documentos !== undefined) fields["Documentos Actividad"] = documentos;
 
     // Actualizar en Airtable
     const updateUrl = `https://api.airtable.com/v0/${baseId}/Actividades/${id}`;

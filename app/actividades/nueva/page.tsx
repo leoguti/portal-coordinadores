@@ -27,6 +27,7 @@ export default function NuevaActividadPage() {
   const [cantidadParticipantes, setCantidadParticipantes] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
+  const [documentos, setDocumentos] = useState<ImageFile[]>([]);
 
   // Conditional logic based on "Tipo de Actividad"
   const isVisitaAcopio = tipo === "Visita acopio";
@@ -164,6 +165,52 @@ export default function NuevaActividadPage() {
         if (failed > 0) {
           setUploadProgress(`Actividad creada. ${uploaded} fotos subidas, ${failed} fallaron.`);
           // Esperar un momento para que el usuario vea el mensaje
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Paso 3: Subir documentos (si hay)
+      if (documentos.length > 0) {
+        let uploadedDocs = 0;
+        let failedDocs = 0;
+
+        for (const doc of documentos) {
+          setUploadProgress(`Subiendo documento ${uploadedDocs + failedDocs + 1} de ${documentos.length}...`);
+
+          setDocumentos(prev => prev.map(f =>
+            f.id === doc.id ? { ...f, uploading: true } : f
+          ));
+
+          const base64 = await fileToBase64(doc.file);
+          const docResponse = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recordId,
+              fieldName: "Documentos Actividad",
+              file: base64,
+              filename: doc.file.name,
+              contentType: doc.file.type,
+            }),
+          });
+
+          const success = docResponse.ok;
+
+          setDocumentos(prev => prev.map(f =>
+            f.id === doc.id
+              ? { ...f, uploading: false, uploaded: success, error: success ? undefined : "Error al subir" }
+              : f
+          ));
+
+          if (success) {
+            uploadedDocs++;
+          } else {
+            failedDocs++;
+          }
+        }
+
+        if (failedDocs > 0) {
+          setUploadProgress(`Actividad creada. ${uploadedDocs} documentos subidos, ${failedDocs} fallaron.`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
@@ -400,15 +447,20 @@ export default function NuevaActividadPage() {
               />
             </div>
 
-            {/* Documentos de Actividad - Siempre visible (placeholder - pendiente implementar) */}
+            {/* Documentos de Actividad - Siempre visible */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Documentos de Actividad
                 {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                <p className="text-gray-500 text-sm">📄 Subida de documentos próximamente</p>
-              </div>
+              <ImageUpload
+                images={documentos}
+                onChange={setDocumentos}
+                maxFiles={5}
+                maxSizeMB={3}
+                disabled={loading}
+                acceptPdf
+              />
             </div>
 
             {/* Municipio - Selector con búsqueda */}

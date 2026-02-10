@@ -36,6 +36,7 @@ interface Actividad {
     "Cantidad de Participantes"?: number;
     Observaciones?: string;
     Fotografias?: AirtableAttachment[];
+    "Documentos Actividad"?: AirtableAttachment[];
   };
 }
 
@@ -52,6 +53,9 @@ export default function EditarActividadPage() {
   const [existingPhotos, setExistingPhotos] = useState<AirtableAttachment[]>([]);
   const [photosToRemove, setPhotosToRemove] = useState<Set<string>>(new Set());
   const [newPhotos, setNewPhotos] = useState<ImageFile[]>([]);
+  const [existingDocs, setExistingDocs] = useState<AirtableAttachment[]>([]);
+  const [docsToRemove, setDocsToRemove] = useState<Set<string>>(new Set());
+  const [newDocs, setNewDocs] = useState<ImageFile[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,6 +80,7 @@ export default function EditarActividadPage() {
       const data = await response.json();
       setActividad(data.actividad);
       setExistingPhotos(data.actividad.fields?.Fotografias || []);
+      setExistingDocs(data.actividad.fields?.["Documentos Actividad"] || []);
     } catch (err) {
       console.error("Error fetching activity:", err);
       setError(err instanceof Error ? err.message : "No se pudo cargar la actividad");
@@ -108,7 +113,19 @@ export default function EditarActividadPage() {
     });
   };
 
-  async function handleSubmit(data: ActividadFormData) {
+  const toggleRemoveDoc = (docId: string) => {
+    setDocsToRemove((prev) => {
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
+      } else {
+        next.add(docId);
+      }
+      return next;
+    });
+  };
+
+  async function handleSubmit(data: ActividadFormData, _fotografias: ImageFile[], _documentos: ImageFile[]) {
     setSaving(true);
     setError(null);
     setUploadProgress(null);
@@ -119,7 +136,12 @@ export default function EditarActividadPage() {
         .filter((p) => !photosToRemove.has(p.id))
         .map((p) => ({ id: p.id }));
 
-      // Step 1: Update activity fields + remaining photos
+      // Build the remaining existing docs (excluding removed ones)
+      const remainingDocs = existingDocs
+        .filter((d) => !docsToRemove.has(d.id))
+        .map((d) => ({ id: d.id }));
+
+      // Step 1: Update activity fields + remaining photos + remaining docs
       setUploadProgress("Guardando cambios...");
       const response = await fetch(`/api/actividades/${actividadId}`, {
         method: "PUT",
@@ -136,6 +158,7 @@ export default function EditarActividadPage() {
           cantidadParticipantes: data.cantidadParticipantes ? parseInt(data.cantidadParticipantes) : undefined,
           observaciones: data.observaciones || undefined,
           fotografias: remainingPhotos,
+          documentos: remainingDocs,
         }),
       });
 
@@ -178,6 +201,44 @@ export default function EditarActividadPage() {
 
         if (failed > 0) {
           setUploadProgress(`Cambios guardados. ${uploaded} fotos subidas, ${failed} fallaron.`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Step 3: Upload new documents (if any)
+      if (newDocs.length > 0) {
+        let uploadedDocs = 0;
+        let failedDocs = 0;
+
+        for (const doc of newDocs) {
+          setUploadProgress(`Subiendo documento ${uploadedDocs + failedDocs + 1} de ${newDocs.length}...`);
+
+          try {
+            const base64 = await fileToBase64(doc.file);
+            const uploadResponse = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recordId: actividadId,
+                fieldName: "Documentos Actividad",
+                file: base64,
+                filename: doc.file.name,
+                contentType: doc.file.type,
+              }),
+            });
+
+            if (uploadResponse.ok) {
+              uploadedDocs++;
+            } else {
+              failedDocs++;
+            }
+          } catch {
+            failedDocs++;
+          }
+        }
+
+        if (failedDocs > 0) {
+          setUploadProgress(`Cambios guardados. ${uploadedDocs} documentos subidos, ${failedDocs} fallaron.`);
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
@@ -302,6 +363,7 @@ export default function EditarActividadPage() {
             loading={saving}
             error={error}
             showImageUpload={false}
+            showDocumentUpload={false}
           />
 
           {/* Photo Management Section */}
@@ -374,6 +436,89 @@ export default function EditarActividadPage() {
                 maxFiles={Math.max(0, 10 - (existingPhotos.length - photosToRemove.size))}
                 maxSizeMB={3}
                 disabled={saving}
+              />
+            </div>
+          </div>
+
+          {/* Document Management Section */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Documentos de Actividad
+            </h3>
+
+            {/* Existing Documents */}
+            {existingDocs.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-3">
+                  Documentos actuales ({existingDocs.length - docsToRemove.size} de {existingDocs.length} se conservan)
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {existingDocs.map((doc) => {
+                    const isMarkedForRemoval = docsToRemove.has(doc.id);
+                    const isPdf = doc.type === "application/pdf";
+                    const thumbUrl = doc.thumbnails?.large?.url || doc.url;
+                    return (
+                      <div key={doc.id} className="relative group">
+                        <div className={`aspect-square rounded-lg overflow-hidden bg-gray-100 ${isMarkedForRemoval ? "opacity-40" : ""}`}>
+                          {isPdf ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                              <span className="text-4xl">📄</span>
+                              <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`}
+                              alt={doc.filename}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                        {isMarkedForRemoval && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
+                            <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded mb-2">
+                              Se eliminara
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleRemoveDoc(doc.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline"
+                            >
+                              Deshacer
+                            </button>
+                          </div>
+                        )}
+                        {!isMarkedForRemoval && (
+                          <button
+                            type="button"
+                            onClick={() => toggleRemoveDoc(doc.id)}
+                            disabled={saving}
+                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1 truncate" title={doc.filename}>
+                          {doc.filename}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* New Documents Upload */}
+            <div>
+              <p className="text-sm text-gray-600 mb-3">Agregar nuevos documentos</p>
+              <ImageUpload
+                images={newDocs}
+                onChange={setNewDocs}
+                maxFiles={Math.max(0, 5 - (existingDocs.length - docsToRemove.size))}
+                maxSizeMB={3}
+                disabled={saving}
+                acceptPdf
               />
             </div>
           </div>
