@@ -258,11 +258,16 @@ export default function ActividadesPage() {
     return porTipo;
   };
 
-  // Calcular estadísticas generales
+  // Calcular estadísticas generales (solo año vigente)
+  const anoVigente = new Date().getFullYear();
   const estadisticasGenerales = React.useMemo(() => {
     const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
-    
+
     actividadesFiltradas.forEach(actividad => {
+      if (!actividad.fields.Fecha) return;
+      const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
+      if (anoActividad !== anoVigente) return;
+
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
         porTipo[tipo] = { count: 0, participantes: 0 };
@@ -274,7 +279,7 @@ export default function ActividadesPage() {
     });
 
     return porTipo;
-  }, [actividadesFiltradas]);
+  }, [actividadesFiltradas, anoVigente]);
 
   async function descargarMes(downloadKey: string, actividadesDelMes: Actividad[], coordName?: string) {
     setDescargandoMes(downloadKey);
@@ -649,10 +654,11 @@ export default function ActividadesPage() {
           <div className="space-y-4">
             {/* Cuadro de Resumen General */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-2xl">📊</span>
-                <h3 className="text-lg font-semibold text-gray-900">Resumen General</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Resumen General {anoVigente}</h3>
               </div>
+              <p className="text-xs text-gray-500 mb-4 ml-9">Desde el 1 de enero de {anoVigente}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Object.entries(estadisticasGenerales).map(([tipo, stats]) => (
                   <div key={tipo} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
