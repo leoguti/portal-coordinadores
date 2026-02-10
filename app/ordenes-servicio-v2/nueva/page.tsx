@@ -12,6 +12,7 @@ import PasoBeneficiario from "@/components/wizard-orden/PasoBeneficiario";
 import PasoRevision, {
   type ItemOrden,
 } from "@/components/wizard-orden/PasoRevision";
+import { type ImageFile } from "@/components/ImageUpload";
 import {
   getKardexPorPagar,
   getCatalogoServicios,
@@ -68,6 +69,7 @@ export default function NuevaOrdenV2Page() {
   );
   const [observaciones, setObservaciones] = useState("");
   const [itemsOrden, setItemsOrden] = useState<ItemOrden[]>([]);
+  const [soporteBascula, setSoporteBascula] = useState<ImageFile[]>([]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -297,7 +299,7 @@ export default function NuevaOrdenV2Page() {
         }
       });
 
-      await createOrdenServicio(
+      const ordenData = await createOrdenServicio(
         {
           coordinatorRecordId: session.user.coordinatorRecordId,
           beneficiarioRecordId: beneficiario.id,
@@ -316,6 +318,64 @@ export default function NuevaOrdenV2Page() {
           direccion: beneficiario.direccion || "N/A",
         }
       );
+
+      // Upload soporte de bascula files
+      if (soporteBascula.length > 0) {
+        const fileToBase64 = (file: File): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
+          });
+        };
+
+        for (let i = 0; i < soporteBascula.length; i++) {
+          const doc = soporteBascula[i];
+          setError(null);
+          setSoporteBascula((prev) =>
+            prev.map((f) =>
+              f.id === doc.id ? { ...f, uploading: true } : f
+            )
+          );
+
+          try {
+            const base64 = await fileToBase64(doc.file);
+            const response = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recordId: ordenData.id,
+                fieldName: "Soporte de Bascula",
+                file: base64,
+                filename: doc.file.name,
+                contentType: doc.file.type,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`Error subiendo archivo: ${response.statusText}`);
+            }
+
+            setSoporteBascula((prev) =>
+              prev.map((f) =>
+                f.id === doc.id
+                  ? { ...f, uploading: false, uploaded: true }
+                  : f
+              )
+            );
+          } catch (uploadErr) {
+            console.error("Error uploading soporte:", uploadErr);
+            setSoporteBascula((prev) =>
+              prev.map((f) =>
+                f.id === doc.id
+                  ? { ...f, uploading: false, error: "Error al subir" }
+                  : f
+              )
+            );
+          }
+        }
+      }
 
       router.push("/ordenes-servicio");
     } catch (err) {
@@ -433,6 +493,8 @@ export default function NuevaOrdenV2Page() {
               observaciones={observaciones}
               itemsOrden={itemsOrden}
               onItemsOrdenChange={setItemsOrden}
+              soporteBascula={soporteBascula}
+              onSoporteBasculaChange={setSoporteBascula}
               onSubmit={handleSubmit}
               onAtras={() => irAPaso(3)}
               submitting={submitting}

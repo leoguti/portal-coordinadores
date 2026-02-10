@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { type Kardex, type CatalogoServicio } from "@/lib/airtable";
+import ImageUpload, { type ImageFile } from "@/components/ImageUpload";
 
 interface TerceroSeleccionado {
   id: string;
@@ -48,6 +49,8 @@ interface PasoRevisionProps {
   observaciones: string;
   itemsOrden: ItemOrden[];
   onItemsOrdenChange: (items: ItemOrden[]) => void;
+  soporteBascula: ImageFile[];
+  onSoporteBasculaChange: (files: ImageFile[]) => void;
   onSubmit: () => void;
   onAtras: () => void;
   submitting: boolean;
@@ -62,6 +65,8 @@ export default function PasoRevision({
   observaciones,
   itemsOrden,
   onItemsOrdenChange,
+  soporteBascula,
+  onSoporteBasculaChange,
   onSubmit,
   onAtras,
   submitting,
@@ -88,6 +93,12 @@ export default function PasoRevision({
   const total = useMemo(() => {
     return itemsOrden.reduce((sum, item) => sum + calcularSubtotal(item), 0);
   }, [itemsOrden]);
+
+  const requiereDocumentos = useMemo(() => {
+    return itemsCatalogo.some(
+      (ic) => ic.catalogo.fields["Requiere Documentos"] === true
+    );
+  }, [itemsCatalogo]);
 
   const actualizarItem = (
     itemId: string,
@@ -162,9 +173,15 @@ export default function PasoRevision({
       label: "Todos los items Kardex con concepto",
       ok: kardexSinConcepto.length === 0,
     });
+    if (requiereDocumentos) {
+      checks.push({
+        label: "Soporte de Bascula adjunto",
+        ok: soporteBascula.length > 0,
+      });
+    }
 
     return checks;
-  }, [fechaPedido, beneficiario, itemsOrden]);
+  }, [fechaPedido, beneficiario, itemsOrden, soporteBascula, requiereDocumentos]);
 
   const todoOk = validaciones.every((v) => v.ok);
 
@@ -440,6 +457,25 @@ export default function PasoRevision({
           </table>
         </div>
       </div>
+
+      {/* Soporte de Bascula (solo cuando algun item de catalogo lo requiere) */}
+      {requiereDocumentos && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 className="text-sm font-bold text-gray-700 mb-2 uppercase">
+            Soporte de Bascula <span className="text-red-500">*</span>
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Adjunta las imagenes o PDFs del soporte de bascula. Este campo es obligatorio.
+          </p>
+          <ImageUpload
+            images={soporteBascula}
+            onChange={onSoporteBasculaChange}
+            acceptPdf
+            maxFiles={5}
+            disabled={submitting}
+          />
+        </div>
+      )}
 
       {/* Checklist de validaciones */}
       <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">

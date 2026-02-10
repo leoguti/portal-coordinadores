@@ -34,6 +34,7 @@ interface CatalogoServicioFields {
   UnidadMedida?: string;
   Activo?: boolean;
   "Precio Unitario"?: number;
+  "Requiere Documentos"?: boolean;
 }
 
 interface ActividadFields {
