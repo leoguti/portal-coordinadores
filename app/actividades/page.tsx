@@ -362,15 +362,12 @@ export default function ActividadesPage() {
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Todos ({actividades.length})</option>
-                    {coordinadores.map((coord) => {
-                      const countActividades = actividades.filter(a => a.fields.Coordinador?.[0] === coord.id).length;
-                      return (
+                    <option value="">Todos</option>
+                    {coordinadores.map((coord) => (
                         <option key={coord.id} value={coord.id}>
-                          {coord.name} ({countActividades})
+                          {coord.name}
                         </option>
-                      );
-                    })}
+                    ))}
                   </select>
                 </div>
               )}
@@ -387,14 +384,11 @@ export default function ActividadesPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
-                  {opcionesFiltros.meses.map((mes) => {
-                    const count = actividades.filter(a => String(a.fields.Mes) === mes).length;
-                    return (
+                  {opcionesFiltros.meses.map((mes) => (
                       <option key={mes} value={mes}>
-                        {mes} ({count})
+                        {mes}
                       </option>
-                    );
-                  })}
+                  ))}
                 </select>
               </div>
 
@@ -410,14 +404,11 @@ export default function ActividadesPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
-                  {opcionesFiltros.anos.map((ano) => {
-                    const count = actividades.filter(a => a.fields.Año === ano).length;
-                    return (
+                  {opcionesFiltros.anos.map((ano) => (
                       <option key={ano} value={ano}>
-                        {ano} ({count})
+                        {ano}
                       </option>
-                    );
-                  })}
+                  ))}
                 </select>
               </div>
 
@@ -433,16 +424,11 @@ export default function ActividadesPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
-                  {opcionesFiltros.municipios.map((municipio) => {
-                    const count = actividades.filter(a => 
-                      a.fields["mundep (from Municipio)"]?.[0] === municipio
-                    ).length;
-                    return (
+                  {opcionesFiltros.municipios.map((municipio) => (
                       <option key={municipio} value={municipio}>
-                        {municipio} ({count})
+                        {municipio}
                       </option>
-                    );
-                  })}
+                  ))}
                 </select>
               </div>
 
@@ -458,14 +444,11 @@ export default function ActividadesPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
-                  {opcionesFiltros.tipos.map((tipo) => {
-                    const count = actividades.filter(a => a.fields.Tipo === tipo).length;
-                    return (
+                  {opcionesFiltros.tipos.map((tipo) => (
                       <option key={tipo} value={tipo}>
-                        {tipo} ({count})
+                        {tipo}
                       </option>
-                    );
-                  })}
+                  ))}
                 </select>
               </div>
             </div>
