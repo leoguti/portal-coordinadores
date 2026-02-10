@@ -123,6 +123,7 @@ export default function NuevaOrdenV2Page() {
         precioUnitario: 0,
         kardexData: kardex,
         tipoMovimiento: tipo as "ENTRADA" | "SALIDA",
+        concepto: "",
       });
     });
 
@@ -153,7 +154,7 @@ export default function NuevaOrdenV2Page() {
       const itemsFinales = nuevosItems.map((nuevoItem) => {
         const existente = itemsExistentes.get(nuevoItem.id);
         if (existente) {
-          // Keep user edits (precioUnitario, formaCobro, cantidad for catalogo)
+          // Keep user edits (precioUnitario, formaCobro, cantidad, concepto)
           return {
             ...nuevoItem,
             precioUnitario: existente.precioUnitario,
@@ -164,6 +165,7 @@ export default function NuevaOrdenV2Page() {
                 : nuevoItem.formaCobro === existente.formaCobro
                 ? existente.cantidad
                 : nuevoItem.cantidad,
+            concepto: existente.concepto,
           };
         }
         return nuevoItem;
@@ -283,6 +285,7 @@ export default function NuevaOrdenV2Page() {
             formaCobro: item.formaCobro,
             cantidad: item.cantidad,
             precioUnitario: item.precioUnitario,
+            concepto: item.concepto || undefined,
           };
         } else {
           return {

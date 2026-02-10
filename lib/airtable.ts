@@ -280,6 +280,7 @@ export interface CreateItemOrdenParams {
   formaCobro: "Por Flete" | "Por Kilo";
   cantidad: number;
   precioUnitario: number;
+  concepto?: string; // Optional: for Kardex items (singleSelect in Airtable)
 }
 
 /**
@@ -884,6 +885,11 @@ export async function createOrdenServicio(
         itemPayload.fields.Kardex = [item.kardexRecordId];
       } else if (item.catalogoRecordId) {
         itemPayload.fields.CatalogoServicio = [item.catalogoRecordId];
+      }
+
+      // Add Concepto for Kardex items
+      if (item.concepto) {
+        itemPayload.fields.Concepto = item.concepto;
       }
 
       console.log("Creating ItemOrden:", itemPayload);

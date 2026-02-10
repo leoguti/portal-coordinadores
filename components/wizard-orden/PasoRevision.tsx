@@ -30,7 +30,15 @@ export interface ItemOrden {
   precioUnitario: number;
   kardexData?: Kardex;
   tipoMovimiento?: "ENTRADA" | "SALIDA";
+  concepto?: string;
 }
+
+const CONCEPTOS_KARDEX = [
+  "TRANSPORTE JR - CA",
+  "TRANSPORTE CA - DF",
+  "TRANSPORTE MUNICIPIO - DF",
+  "TRANSPORTE JR - DF",
+] as const;
 
 interface PasoRevisionProps {
   kardexSeleccionados: Kardex[];
@@ -147,6 +155,13 @@ export default function PasoRevision({
       label: "Todos los items con precio",
       ok: sinPrecio.length === 0,
     });
+    const kardexSinConcepto = itemsOrden.filter(
+      (i) => i.tipo === "KARDEX" && !i.concepto
+    );
+    checks.push({
+      label: "Todos los items Kardex con concepto",
+      ok: kardexSinConcepto.length === 0,
+    });
 
     return checks;
   }, [fechaPedido, beneficiario, itemsOrden]);
@@ -229,6 +244,7 @@ export default function PasoRevision({
           <table className="w-full table-fixed">
             <colgroup>
               <col style={{ width: "120px" }} />
+              <col style={{ width: "160px" }} />
               <col style={{ width: "auto" }} />
               <col style={{ width: "90px" }} />
               <col style={{ width: "130px" }} />
@@ -239,6 +255,9 @@ export default function PasoRevision({
               <tr>
                 <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Tipo
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase">
+                  Concepto
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Descripcion
@@ -289,6 +308,32 @@ export default function PasoRevision({
                         </span>
                       )}
                     </div>
+                  </td>
+
+                  {/* Concepto */}
+                  <td className="px-3 py-3">
+                    {item.tipo === "KARDEX" ? (
+                      <select
+                        value={item.concepto || ""}
+                        onChange={(e) =>
+                          actualizarItem(item.id, "concepto", e.target.value)
+                        }
+                        className={`w-full px-2 py-1.5 text-xs border-2 rounded font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 ${
+                          item.concepto
+                            ? "border-blue-400 bg-blue-50"
+                            : "border-red-400 bg-red-50"
+                        }`}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {CONCEPTOS_KARDEX.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
 
                   {/* Descripcion */}
@@ -380,7 +425,7 @@ export default function PasoRevision({
 
               {/* Total */}
               <tr className="bg-gray-100 border-t-2 border-gray-400">
-                <td colSpan={5} className="px-3 py-4 text-right">
+                <td colSpan={6} className="px-3 py-4 text-right">
                   <span className="text-xl font-bold text-gray-900">
                     TOTAL:
                   </span>
