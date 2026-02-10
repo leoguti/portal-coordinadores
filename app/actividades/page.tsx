@@ -55,6 +55,7 @@ export default function ActividadesPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [expandedCoordinadores, setExpandedCoordinadores] = useState<Set<string>>(new Set());
   const [paginaMes, setPaginaMes] = useState(0);
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
 
@@ -74,6 +75,16 @@ export default function ActividadesPage() {
       newExpanded.add(monthKey);
     }
     setExpandedMonths(newExpanded);
+  };
+
+  const toggleCoordinador = (key: string) => {
+    const newExpanded = new Set(expandedCoordinadores);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
+    }
+    setExpandedCoordinadores(newExpanded);
   };
 
   // Obtener opciones únicas basadas en los filtros aplicados (cascada inteligente)
@@ -265,8 +276,8 @@ export default function ActividadesPage() {
     return porTipo;
   }, [actividadesFiltradas]);
 
-  async function descargarMes(monthKey: string, actividadesDelMes: Actividad[]) {
-    setDescargandoMes(monthKey);
+  async function descargarMes(downloadKey: string, actividadesDelMes: Actividad[], coordName?: string) {
+    setDescargandoMes(downloadKey);
     try {
       const zip = new JSZip();
 
@@ -351,11 +362,14 @@ export default function ActividadesPage() {
 
       // --- Generar y descargar ZIP ---
       const blob = await zip.generateAsync({ type: "blob" });
-      const coordName = session?.user?.name?.replace(/\s+/g, "_") || "coordinador";
+      const nombreCoord = (coordName || session?.user?.name || "coordinador").replace(/\s+/g, "_");
+      const monthKeyPart = downloadKey.includes("::") ? downloadKey.split("::")[0] : downloadKey;
+      const [yy, mm] = monthKeyPart.split("-");
+      const mesNombre = new Date(parseInt(yy), parseInt(mm) - 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" }).replace(/\s+/g, "_");
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `actividades_${monthKey}_${coordName}.zip`;
+      link.download = `actividades_${mesNombre}_${nombreCoord}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -716,274 +730,324 @@ export default function ActividadesPage() {
                         <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
                           {totalActividades}
                         </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); descargarMes(monthKey, actividadesDelMes); }}
-                          disabled={descargandoMes === monthKey}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-xs font-medium transition-colors"
-                        >
-                          {descargandoMes === monthKey ? (
-                            <>
-                              <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                              Descargando...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              Descargar
-                            </>
-                          )}
-                        </button>
+                        {!isAdmin && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); descargarMes(monthKey, actividadesDelMes); }}
+                            disabled={descargandoMes === monthKey}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-xs font-medium transition-colors"
+                          >
+                            {descargandoMes === monthKey ? (
+                              <>
+                                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Descargando...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Descargar
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </button>
 
                   {/* Month Content */}
-                  {isMonthExpanded && (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="w-12 px-6 py-3"></th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha Actividad
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha Registro
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Municipio
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fotos
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {actividadesDelMes.map((actividad) => {
-                    const isExpanded = expandedRow === actividad.id;
-                    const photoCount = actividad.fields.Fotografias?.length || 0;
-                    const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
-                    const fechaCreacion = new Date(actividad.createdTime).toLocaleDateString('es-CO', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit'
-                    });
+                  {isMonthExpanded && (() => {
+                    const renderTablaActividades = (listaActividades: Actividad[]) => (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="w-12 px-6 py-3"></th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Fecha Actividad
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Fecha Registro
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Municipio
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tipo
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Fotos
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Estado
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Acciones
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {listaActividades.map((actividad) => {
+                              const isExpanded = expandedRow === actividad.id;
+                              const photoCount = actividad.fields.Fotografias?.length || 0;
+                              const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
+                              const fechaCreacion = new Date(actividad.createdTime).toLocaleDateString('es-CO', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit'
+                              });
 
-                    return (
-                      <React.Fragment key={actividad.id}>
-                        {/* Main Row */}
-                        <tr 
-                          className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50' : ''}`}
-                        >
-                          {/* Expand Button */}
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => toggleRow(actividad.id)}
-                              className="text-gray-400 hover:text-blue-600 transition-colors"
-                            >
-                              <svg 
-                                className={`w-5 h-5 transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </td>
-
-                          {/* Fecha Actividad */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <span className="text-sm font-medium text-gray-900">
-                                {actividad.fields.Fecha ? new Date(actividad.fields.Fecha + 'T00:00:00').toLocaleDateString('es-CO', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                }) : '-'}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Fecha Registro */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-500">{fechaCreacion}</span>
-                          </td>
-
-                          {/* Municipio */}
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-xs truncate">
-                              {actividad.fields["mundep (from Municipio)"]?.[0] || '-'}
-                            </div>
-                          </td>
-
-                          {/* Tipo */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {actividad.fields.Tipo && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {actividad.fields.Tipo}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Fotos */}
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            {photoCount > 0 ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                                📷 {photoCount}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">Sin fotos</span>
-                            )}
-                          </td>
-
-                          {/* Estado */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {puedeModificar ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                                🔓 Abierta
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
-                                🔒 Cerrada
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Acciones */}
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            <div className="flex items-center justify-center gap-2">
-                              <Link
-                                href={`/actividades/${actividad.id}`}
-                                className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
-                              >
-                                Ver
-                              </Link>
-                              {puedeModificar && (
-                                <Link
-                                  href={`/actividades/${actividad.id}/editar`}
-                                  className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors"
-                                >
-                                  Editar
-                                </Link>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-
-                        {/* Expanded Row */}
-                        {isExpanded && (
-                          <tr>
-                            <td colSpan={8} className="px-6 py-4 bg-gray-50">
-                              <div className="space-y-4">
-                                {/* Nombre y Descripción */}
-                                <div className="grid grid-cols-1 gap-4">
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-1">Nombre de la Actividad</h4>
-                                    <p className="text-sm text-gray-900">
-                                      {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
-                                    </p>
-                                  </div>
-                                  
-                                  {actividad.fields.Descripcion && (
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-gray-700 mb-1">Descripción</h4>
-                                      <p className="text-sm text-gray-600 whitespace-pre-line">
-                                        {actividad.fields.Descripcion}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Información adicional */}
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {actividad.fields["Cantidad de Participantes"] && (
-                                      <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Participantes</h4>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {actividad.fields["Cantidad de Participantes"]}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {actividad.fields.Cultivo && (
-                                      <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Cultivo</h4>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {actividad.fields.Cultivo}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {actividad.fields.Modalidad && actividad.fields.Modalidad.length > 0 && (
-                                      <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Modalidad</h4>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {actividad.fields.Modalidad.join(', ')}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {actividad.fields["Perfil de Asistentes"] && (
-                                      <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Perfil Asistentes</h4>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {actividad.fields["Perfil de Asistentes"]}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Fotografías */}
-                                {photoCount > 0 && (
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                                      Fotografías ({photoCount})
-                                    </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                      {actividad.fields.Fotografias?.map((foto, idx) => (
-                                        <button
-                                          key={foto.id}
-                                          onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
-                                          className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
+                              return (
+                                <React.Fragment key={actividad.id}>
+                                  <tr className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50' : ''}`}>
+                                    <td className="px-6 py-4">
+                                      <button
+                                        onClick={() => toggleRow(actividad.id)}
+                                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                                      >
+                                        <svg
+                                          className={`w-5 h-5 transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                         >
-                                          <img
-                                            src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
-                                            alt={`Foto ${idx + 1}`}
-                                            className="w-full h-48 object-cover"
-                                          />
-                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
-                                            <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                                              🔍
-                                            </span>
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                      </button>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {actividad.fields.Fecha ? new Date(actividad.fields.Fecha + 'T00:00:00').toLocaleDateString('es-CO', {
+                                          year: 'numeric', month: 'short', day: 'numeric'
+                                        }) : '-'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className="text-sm text-gray-500">{fechaCreacion}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                                        {actividad.fields["mundep (from Municipio)"]?.[0] || '-'}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {actividad.fields.Tipo && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                          {actividad.fields.Tipo}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                      {photoCount > 0 ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                          📷 {photoCount}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-gray-400">Sin fotos</span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {puedeModificar ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                          🔓 Abierta
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+                                          🔒 Cerrada
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                      <div className="flex items-center justify-center gap-2">
+                                        <Link
+                                          href={`/actividades/${actividad.id}`}
+                                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
+                                        >
+                                          Ver
+                                        </Link>
+                                        {puedeModificar && (
+                                          <Link
+                                            href={`/actividades/${actividad.id}/editar`}
+                                            className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors"
+                                          >
+                                            Editar
+                                          </Link>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+
+                                  {isExpanded && (
+                                    <tr>
+                                      <td colSpan={8} className="px-6 py-4 bg-gray-50">
+                                        <div className="space-y-4">
+                                          <div className="grid grid-cols-1 gap-4">
+                                            <div>
+                                              <h4 className="text-sm font-semibold text-gray-700 mb-1">Nombre de la Actividad</h4>
+                                              <p className="text-sm text-gray-900">
+                                                {actividad.fields["Nombre de la Actividad"] || "Sin nombre"}
+                                              </p>
+                                            </div>
+                                            {actividad.fields.Descripcion && (
+                                              <div>
+                                                <h4 className="text-sm font-semibold text-gray-700 mb-1">Descripción</h4>
+                                                <p className="text-sm text-gray-600 whitespace-pre-line">
+                                                  {actividad.fields.Descripcion}
+                                                </p>
+                                              </div>
+                                            )}
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                              {actividad.fields["Cantidad de Participantes"] && (
+                                                <div>
+                                                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Participantes</h4>
+                                                  <p className="text-sm font-medium text-gray-900">
+                                                    {actividad.fields["Cantidad de Participantes"]}
+                                                  </p>
+                                                </div>
+                                              )}
+                                              {actividad.fields.Cultivo && (
+                                                <div>
+                                                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Cultivo</h4>
+                                                  <p className="text-sm font-medium text-gray-900">
+                                                    {actividad.fields.Cultivo}
+                                                  </p>
+                                                </div>
+                                              )}
+                                              {actividad.fields.Modalidad && actividad.fields.Modalidad.length > 0 && (
+                                                <div>
+                                                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Modalidad</h4>
+                                                  <p className="text-sm font-medium text-gray-900">
+                                                    {actividad.fields.Modalidad.join(', ')}
+                                                  </p>
+                                                </div>
+                                              )}
+                                              {actividad.fields["Perfil de Asistentes"] && (
+                                                <div>
+                                                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Perfil Asistentes</h4>
+                                                  <p className="text-sm font-medium text-gray-900">
+                                                    {actividad.fields["Perfil de Asistentes"]}
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
+
+                                          {photoCount > 0 && (
+                                            <div>
+                                              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                                                Fotografías ({photoCount})
+                                              </h4>
+                                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                {actividad.fields.Fotografias?.map((foto, idx) => (
+                                                  <button
+                                                    key={foto.id}
+                                                    onClick={() => window.open(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`, '_blank')}
+                                                    className="relative group overflow-hidden rounded-lg hover:shadow-lg transition-shadow"
+                                                  >
+                                                    <img
+                                                      src={`/api/image-proxy?url=${encodeURIComponent(foto.url)}`}
+                                                      alt={`Foto ${idx + 1}`}
+                                                      className="w-full h-48 object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity flex items-center justify-center">
+                                                      <span className="text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        🔍
+                                                      </span>
+                                                    </div>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+
+                    if (isAdmin) {
+                      // Agrupar por coordinador
+                      const porCoordinador: { [coordId: string]: { nombre: string; actividades: Actividad[] } } = {};
+                      actividadesDelMes.forEach((a) => {
+                        const coordId = a.fields.Coordinador?.[0] || "sin-coordinador";
+                        const coordNombre = a.fields["Name (from Coordinador)"]?.[0] || "Sin coordinador";
+                        if (!porCoordinador[coordId]) {
+                          porCoordinador[coordId] = { nombre: coordNombre, actividades: [] };
+                        }
+                        porCoordinador[coordId].actividades.push(a);
+                      });
+
+                      const coordEntries = Object.entries(porCoordinador).sort((a, b) =>
+                        a[1].nombre.localeCompare(b[1].nombre)
+                      );
+
+                      return (
+                        <div className="divide-y divide-gray-200">
+                          {coordEntries.map(([coordId, { nombre, actividades: actividadesCoord }]) => {
+                            const coordKey = `${monthKey}::${coordId}`;
+                            const isCoordExpanded = expandedCoordinadores.has(coordKey);
+                            const downloadKey = coordKey;
+
+                            return (
+                              <div key={coordId}>
+                                <button
+                                  onClick={() => toggleCoordinador(coordKey)}
+                                  className="w-full px-6 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <svg
+                                      className={`w-4 h-4 text-gray-500 transform transition-transform flex-shrink-0 ${isCoordExpanded ? 'rotate-90' : ''}`}
+                                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    <span className="text-sm font-semibold text-gray-800">
+                                      👤 {nombre}
+                                    </span>
+                                    <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2.5 py-0.5 rounded-full">
+                                      {actividadesCoord.length}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); descargarMes(downloadKey, actividadesCoord, nombre); }}
+                                    disabled={descargandoMes === downloadKey}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-xs font-medium transition-colors"
+                                  >
+                                    {descargandoMes === downloadKey ? (
+                                      <>
+                                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Descargando...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Descargar
+                                      </>
+                                    )}
+                                  </button>
+                                </button>
+                                {isCoordExpanded && renderTablaActividades(actividadesCoord)}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    } else {
+                      return renderTablaActividades(actividadesDelMes);
+                    }
+                  })()}
         </div>
               );
             })}
