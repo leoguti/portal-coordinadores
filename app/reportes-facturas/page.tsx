@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getAllOrdenes, type Orden } from "@/lib/airtable";
+import { getAllOrdenes, getOrdenesCoordinador, type Orden } from "@/lib/airtable";
 
 export default function ReportesFacturasPage() {
   const { data: session, status } = useSession();
@@ -28,19 +28,20 @@ export default function ReportesFacturasPage() {
     if (status === "unauthenticated") {
       router.push("/login");
     }
-    if (status === "authenticated" && !isAdmin) {
-      router.push("/dashboard");
-    }
-  }, [status, isAdmin, router]);
+  }, [status, router]);
+
+  const coordinatorRecordId = session?.user?.coordinatorRecordId;
 
   useEffect(() => {
     async function loadOrdenes() {
-      if (!isAdmin) return;
+      if (status !== "authenticated") return;
 
       try {
         setLoading(true);
         setError(null);
-        const data = await getAllOrdenes();
+        const data = isAdmin
+          ? await getAllOrdenes()
+          : await getOrdenesCoordinador(coordinatorRecordId!);
         setOrdenes(data);
       } catch (err) {
         console.error("Error loading ordenes:", err);
@@ -50,10 +51,10 @@ export default function ReportesFacturasPage() {
       }
     }
 
-    if (isAdmin) {
+    if (status === "authenticated") {
       loadOrdenes();
     }
-  }, [isAdmin]);
+  }, [status, isAdmin, coordinatorRecordId]);
 
   if (status === "loading") {
     return (
@@ -66,7 +67,7 @@ export default function ReportesFacturasPage() {
     );
   }
 
-  if (!session || !isAdmin) {
+  if (!session) {
     return null;
   }
 
@@ -188,7 +189,7 @@ export default function ReportesFacturasPage() {
             Reporte de Facturas
           </h1>
           <p className="text-gray-600 mt-1">
-            Consulta y seguimiento de ordenes facturadas y pagadas
+            Consulta y seguimiento de {isAdmin ? "ordenes" : "tus ordenes"} facturadas y pagadas
           </p>
         </div>
 
