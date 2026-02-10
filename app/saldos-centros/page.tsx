@@ -205,10 +205,15 @@ export default function SaldosCentrosPage() {
       };
     });
 
-    // Ordenar por saldo descendente
-    saldosPorCentro.sort((a, b) => b.saldoAcumulado - a.saldoAcumulado);
+    // Filtrar centros sin movimientos (todos los valores en cero)
+    const centrosConMovimientos = saldosPorCentro.filter(
+      (s) => s.entradasMes !== 0 || s.salidasMes !== 0 || s.saldoAcumulado !== 0
+    );
 
-    setSaldos(saldosPorCentro);
+    // Ordenar por saldo descendente
+    centrosConMovimientos.sort((a, b) => b.saldoAcumulado - a.saldoAcumulado);
+
+    setSaldos(centrosConMovimientos);
   };
 
   // Función para verificar si el mes está cerrado (7 días después de fin de mes)
@@ -370,7 +375,7 @@ export default function SaldosCentrosPage() {
         {/* Resumen Global del Mes Seleccionado */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-            <div className="text-sm text-gray-600 mb-1">Total Centros</div>
+            <div className="text-sm text-gray-600 mb-1">Centros con Movimientos</div>
             <div className="text-2xl font-bold text-gray-900">{saldos.length}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
