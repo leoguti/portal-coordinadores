@@ -7,6 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
+import JSZip from "jszip";
 
 interface AirtableAttachment {
   id: string;
@@ -54,6 +55,10 @@ export default function ActividadesPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [paginaMes, setPaginaMes] = useState(0);
+  const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
+
+  const MESES_POR_PAGINA = 6;
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -218,6 +223,12 @@ export default function ActividadesPage() {
     return Object.entries(grupos).sort((a, b) => b[0].localeCompare(a[0]));
   }, [actividadesFiltradas]);
 
+  const totalPaginasMes = Math.ceil(actividadesPorMes.length / MESES_POR_PAGINA);
+  const mesesPaginados = actividadesPorMes.slice(
+    paginaMes * MESES_POR_PAGINA,
+    (paginaMes + 1) * MESES_POR_PAGINA
+  );
+
   // Calcular resumen de participantes por mes
   const getResumenMes = (actividadesDelMes: Actividad[]) => {
     const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
@@ -253,6 +264,109 @@ export default function ActividadesPage() {
 
     return porTipo;
   }, [actividadesFiltradas]);
+
+  async function descargarMes(monthKey: string, actividadesDelMes: Actividad[]) {
+    setDescargandoMes(monthKey);
+    try {
+      const zip = new JSZip();
+
+      // --- Generar CSV ---
+      const csvCols = [
+        "Consecutivo", "Fecha", "Nombre", "Tipo", "Municipio", "Participantes",
+        "Descripcion", "Cultivo", "Modalidad", "Perfil Asistentes", "Coordinador",
+        "Estado", "Num Fotos", "Num Documentos",
+      ];
+
+      const escapeCsv = (val: string | number | undefined | null) => {
+        if (val == null) return "";
+        const s = String(val);
+        if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const csvRows = actividadesDelMes.map((a) => {
+        const f = a.fields;
+        const puedeModificar = f.Fecha ? puedeModificarActividad(f.Fecha) : true;
+        return [
+          f.Consecutivo,
+          f.Fecha,
+          f["Nombre de la Actividad"],
+          f.Tipo,
+          f["mundep (from Municipio)"]?.[0],
+          f["Cantidad de Participantes"],
+          f.Descripcion,
+          f.Cultivo,
+          Array.isArray(f.Modalidad) ? f.Modalidad.join(", ") : f.Modalidad,
+          f["Perfil de Asistentes"],
+          f["Name (from Coordinador)"]?.[0],
+          puedeModificar ? "Abierta" : "Cerrada",
+          f.Fotografias?.length ?? 0,
+          f["Documentos Actividad"]?.length ?? 0,
+        ].map(escapeCsv).join(",");
+      });
+
+      const bom = "\uFEFF";
+      const csvContent = bom + csvCols.join(",") + "\n" + csvRows.join("\n");
+      zip.file("resumen.csv", csvContent);
+
+      // --- Descargar fotos ---
+      for (const a of actividadesDelMes) {
+        const fotos = a.fields.Fotografias;
+        if (fotos && fotos.length > 0) {
+          const carpeta = `fotos/${a.fields.Consecutivo || "sin-id"}_${a.fields.Fecha || "sin-fecha"}`;
+          for (const foto of fotos) {
+            try {
+              const resp = await fetch(`/api/image-proxy?url=${encodeURIComponent(foto.url)}`);
+              if (resp.ok) {
+                const blob = await resp.blob();
+                zip.file(`${carpeta}/${foto.filename}`, blob);
+              }
+            } catch {
+              // Skip failed downloads
+            }
+          }
+        }
+      }
+
+      // --- Descargar documentos ---
+      for (const a of actividadesDelMes) {
+        const docs = a.fields["Documentos Actividad"] as AirtableAttachment[] | undefined;
+        if (docs && docs.length > 0) {
+          const carpeta = `documentos/${a.fields.Consecutivo || "sin-id"}_${a.fields.Fecha || "sin-fecha"}`;
+          for (const doc of docs) {
+            try {
+              const resp = await fetch(`/api/image-proxy?url=${encodeURIComponent(doc.url)}`);
+              if (resp.ok) {
+                const blob = await resp.blob();
+                zip.file(`${carpeta}/${doc.filename}`, blob);
+              }
+            } catch {
+              // Skip failed downloads
+            }
+          }
+        }
+      }
+
+      // --- Generar y descargar ZIP ---
+      const blob = await zip.generateAsync({ type: "blob" });
+      const coordName = session?.user?.name?.replace(/\s+/g, "_") || "coordinador";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `actividades_${monthKey}_${coordName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error generando ZIP:", err);
+      alert("Error al generar la descarga. Intenta de nuevo.");
+    } finally {
+      setDescargandoMes(null);
+    }
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -359,6 +473,7 @@ export default function ActividadesPage() {
                       setSelectedAno("");
                       setSelectedMunicipio("");
                       setSelectedTipo("");
+                      setPaginaMes(0);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -380,7 +495,7 @@ export default function ActividadesPage() {
                 <select
                   id="mes-filter"
                   value={selectedMes}
-                  onChange={(e) => setSelectedMes(e.target.value)}
+                  onChange={(e) => { setSelectedMes(e.target.value); setPaginaMes(0); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
@@ -400,7 +515,7 @@ export default function ActividadesPage() {
                 <select
                   id="ano-filter"
                   value={selectedAno}
-                  onChange={(e) => setSelectedAno(e.target.value)}
+                  onChange={(e) => { setSelectedAno(e.target.value); setPaginaMes(0); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
@@ -420,7 +535,7 @@ export default function ActividadesPage() {
                 <select
                   id="municipio-filter"
                   value={selectedMunicipio}
-                  onChange={(e) => setSelectedMunicipio(e.target.value)}
+                  onChange={(e) => { setSelectedMunicipio(e.target.value); setPaginaMes(0); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
@@ -440,7 +555,7 @@ export default function ActividadesPage() {
                 <select
                   id="tipo-filter"
                   value={selectedTipo}
-                  onChange={(e) => setSelectedTipo(e.target.value)}
+                  onChange={(e) => { setSelectedTipo(e.target.value); setPaginaMes(0); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
@@ -462,6 +577,7 @@ export default function ActividadesPage() {
                   setSelectedAno("");
                   setSelectedMunicipio("");
                   setSelectedTipo("");
+                  setPaginaMes(0);
                 }}
                 className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
@@ -545,7 +661,7 @@ export default function ActividadesPage() {
             </div>
 
             {/* Actividades por Mes */}
-            {actividadesPorMes.map(([monthKey, actividadesDelMes]) => {
+            {mesesPaginados.map(([monthKey, actividadesDelMes]) => {
               const [year, month] = monthKey.split('-');
               const monthDate = new Date(parseInt(year), parseInt(month) - 1);
               const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
@@ -596,9 +712,33 @@ export default function ActividadesPage() {
                           </div>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full flex-shrink-0">
-                        {totalActividades}
-                      </span>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
+                          {totalActividades}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); descargarMes(monthKey, actividadesDelMes); }}
+                          disabled={descargandoMes === monthKey}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-xs font-medium transition-colors"
+                        >
+                          {descargandoMes === monthKey ? (
+                            <>
+                              <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Descargando...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Descargar
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </button>
 
@@ -847,6 +987,29 @@ export default function ActividadesPage() {
         </div>
               );
             })}
+
+            {/* Paginación de meses */}
+            {totalPaginasMes > 1 && (
+              <div className="flex items-center justify-center gap-4 py-4">
+                <button
+                  onClick={() => setPaginaMes(p => Math.max(0, p - 1))}
+                  disabled={paginaMes === 0}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-sm text-gray-600">
+                  Meses {paginaMes * MESES_POR_PAGINA + 1}-{Math.min((paginaMes + 1) * MESES_POR_PAGINA, actividadesPorMes.length)} de {actividadesPorMes.length}
+                </span>
+                <button
+                  onClick={() => setPaginaMes(p => Math.min(totalPaginasMes - 1, p + 1))}
+                  disabled={paginaMes >= totalPaginasMes - 1}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
