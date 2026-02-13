@@ -146,24 +146,13 @@ export default function DashboardPage() {
             </div>
 
             {/* SECCIÓN 2: KPIs del Año */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
               <KpiCard
                 title="Movimientos Kardex"
                 value={loading ? "..." : stats?.kpis.movimientosKardex ?? 0}
                 description={`Entradas y salidas en ${añoActual}`}
                 icon="📦"
                 color="purple"
-              />
-              <KpiCard
-                title="Kg Salidas"
-                value={
-                  loading
-                    ? "..."
-                    : stats?.kpis.totalKgSalidas.toLocaleString("es-CO") ?? "0"
-                }
-                description={`Total kg despachados en ${añoActual}`}
-                icon="🚚"
-                color="campolimpio"
               />
               <KpiCard
                 title="Eventos Sensibilización"
