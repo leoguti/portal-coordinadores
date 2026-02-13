@@ -14,14 +14,15 @@ export default function OrdenesServicioPage() {
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
 
   // Filtros
   const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
   const [filtroBeneficiario, setFiltroBeneficiario] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("");
+
+  // Grupos expandidos
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const isAdmin = session?.user?.rol === "Administrador";
 
@@ -115,6 +116,64 @@ export default function OrdenesServicioPage() {
     }).format(amount);
   };
 
+  // Agrupar ordenes filtradas por mes (YYYY-MM)
+  const MONTHS_PER_PAGE = 6;
+  const [monthPage, setMonthPage] = useState(0);
+
+  const gruposPorMes = (() => {
+    const map = new Map<string, { ordenes: Orden[]; total: number; estadoCounts: Record<string, number> }>();
+    ordenesFiltradas.forEach((orden) => {
+      const fecha = orden.fields["Fecha de pedido"] || "";
+      const mesKey = fecha.substring(0, 7) || "sin-fecha";
+      if (!map.has(mesKey)) {
+        map.set(mesKey, { ordenes: [], total: 0, estadoCounts: {} });
+      }
+      const grupo = map.get(mesKey)!;
+      grupo.ordenes.push(orden);
+      grupo.total += orden.fields.Total || 0;
+      const estado = orden.fields.Estado || "Sin estado";
+      grupo.estadoCounts[estado] = (grupo.estadoCounts[estado] || 0) + 1;
+    });
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0])); // Más reciente primero
+  })();
+
+  const totalPages = Math.ceil(gruposPorMes.length / MONTHS_PER_PAGE);
+  const mesesPaginados = gruposPorMes.slice(
+    monthPage * MONTHS_PER_PAGE,
+    (monthPage + 1) * MONTHS_PER_PAGE
+  );
+
+  const formatMesLabel = (mesKey: string) => {
+    if (mesKey === "sin-fecha") return "Sin fecha";
+    const [year, month] = mesKey.split("-");
+    const nombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    return `${nombres[parseInt(month) - 1]} ${year}`;
+  };
+
+  const estadoDotColors: Record<string, string> = {
+    Enviada: "bg-blue-500",
+    Facturada: "bg-amber-500",
+    Pagada: "bg-green-600",
+    Rechazada: "bg-red-500",
+  };
+
+  function toggleGroup(mesKey: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(mesKey)) next.delete(mesKey);
+      else next.add(mesKey);
+      return next;
+    });
+  }
+
+  function expandAll() {
+    setExpandedGroups(new Set(mesesPaginados.map(([k]) => k)));
+  }
+
+  function collapseAll() {
+    setExpandedGroups(new Set());
+  }
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -145,7 +204,7 @@ export default function OrdenesServicioPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
                 <select
                   value={filtroCoordinador}
-                  onChange={(e) => { setFiltroCoordinador(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => { setFiltroCoordinador(e.target.value); setMonthPage(0); }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
                 >
                   <option value="">Todos</option>
@@ -159,7 +218,7 @@ export default function OrdenesServicioPage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Beneficiario</label>
               <select
                 value={filtroBeneficiario}
-                onChange={(e) => { setFiltroBeneficiario(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => { setFiltroBeneficiario(e.target.value); setMonthPage(0); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
               >
                 <option value="">Todos</option>
@@ -172,7 +231,7 @@ export default function OrdenesServicioPage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
               <select
                 value={filtroEstado}
-                onChange={(e) => { setFiltroEstado(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => { setFiltroEstado(e.target.value); setMonthPage(0); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
               >
                 <option value="">Todos</option>
@@ -185,12 +244,12 @@ export default function OrdenesServicioPage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Mes</label>
               <select
                 value={filtroMes}
-                onChange={(e) => { setFiltroMes(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => { setFiltroMes(e.target.value); setMonthPage(0); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
               >
                 <option value="">Todos</option>
                 {mesesUnicos.map(m => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>{formatMesLabel(m)}</option>
                 ))}
               </select>
             </div>
@@ -198,7 +257,7 @@ export default function OrdenesServicioPage() {
           {(filtroCoordinador || filtroBeneficiario || filtroEstado || filtroMes) && (
             <div className="mt-3">
               <button
-                onClick={() => { setFiltroCoordinador(""); setFiltroBeneficiario(""); setFiltroEstado(""); setFiltroMes(""); setCurrentPage(1); }}
+                onClick={() => { setFiltroCoordinador(""); setFiltroBeneficiario(""); setFiltroEstado(""); setFiltroMes(""); setMonthPage(0); }}
                 className="text-sm text-red-600 hover:text-red-800 underline"
               >
                 Limpiar filtros
@@ -224,20 +283,18 @@ export default function OrdenesServicioPage() {
           </div>
         ) : (
           <>
-            {/* Contador y paginacion */}
-            <div className="mb-4 flex justify-between items-center">
+            {/* Resumen y controles */}
+            <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                Total: {ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? "orden" : "ordenes"}
-                {ordenesFiltradas.length !== ordenes.length && (
-                  <span className="ml-1 text-gray-400">(de {ordenes.length})</span>
-                )}
-                {ordenesFiltradas.length > ITEMS_PER_PAGE && (
-                  <span className="ml-2">
-                    (Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-
-                    {Math.min(currentPage * ITEMS_PER_PAGE, ordenesFiltradas.length)})
-                  </span>
-                )}
+                {ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? "orden" : "ordenes"} en {gruposPorMes.length} {gruposPorMes.length === 1 ? "mes" : "meses"}
               </p>
+              {mesesPaginados.length > 0 && (
+                <div className="flex gap-2">
+                  <button onClick={expandAll} className="text-xs text-gray-600 hover:text-gray-900 underline">Expandir todos</button>
+                  <span className="text-gray-300">|</span>
+                  <button onClick={collapseAll} className="text-xs text-gray-600 hover:text-gray-900 underline">Colapsar todos</button>
+                </div>
+              )}
             </div>
 
             {/* Empty State */}
@@ -262,199 +319,190 @@ export default function OrdenesServicioPage() {
                 )}
               </div>
             ) : (
-              /* Tabla de ordenes */
-              <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b-2 border-gray-300">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        # Orden
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Fecha
-                      </th>
-                      {isAdmin && (
-                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                          Coordinador
-                        </th>
-                      )}
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                        Beneficiario
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                        Estado
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                        Items
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
-                        Total
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                        PDF
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      // Calcular ordenes para la pagina actual
-                      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-                      const endIndex = startIndex + ITEMS_PER_PAGE;
-                      const ordenesPaginadas = ordenesFiltradas.slice(startIndex, endIndex);
+              <div className="space-y-3">
+                {mesesPaginados.map(([mesKey, grupo]) => {
+                  const isExpanded = expandedGroups.has(mesKey);
 
-                      return ordenesPaginadas.map((orden, index) => {
-                        const numeroOrden = orden.fields.NumeroOrden || "S/N";
-                        const estado = orden.fields.Estado || "Sin estado";
-                        const fechaPedido = orden.fields["Fecha de pedido"] || "";
-                        const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
-                        const coordinador = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
-                        const itemsCount = orden.fields.ItemsOrden?.length || 0;
-                        const total = orden.fields.Total || 0;
-                        const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
-                        const pdfUrl = orden.fields.PDF?.[0]?.url || null;
-
-                      return (
-                        <tr
-                          key={orden.id}
-                          className={`border-b border-gray-200 ${
-                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          } hover:bg-blue-50 transition-colors`}
-                        >
-                          {/* Numero de Orden */}
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-[#00d084]">#{numeroOrden}</span>
-                          </td>
-
-                          {/* Fecha */}
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {fechaPedido
-                              ? new Date(fechaPedido + 'T00:00:00').toLocaleDateString("es-CO")
-                              : "Sin fecha"}
-                          </td>
-
-                          {/* Coordinador (solo admin) */}
-                          {isAdmin && (
-                            <td className="px-4 py-3 text-sm text-gray-700">
-                              {coordinador}
-                            </td>
-                          )}
-
-                          {/* Beneficiario */}
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            {beneficiario}
-                          </td>
-
-                          {/* Estado */}
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-block px-2 py-1 text-xs font-bold rounded ${
-                                estadoColors[estado] || "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {estado}
-                            </span>
-                          </td>
-
-                          {/* Items Count */}
-                          <td className="px-4 py-3 text-center text-sm text-gray-600">
-                            {itemsCount} {itemsCount === 1 ? "item" : "items"}
-                          </td>
-
-                          {/* Total */}
-                          <td className="px-4 py-3 text-right">
-                            <span className="text-sm font-bold text-[#00d084] font-mono">
-                              {formatCurrency(total)}
-                            </span>
-                          </td>
-
-                          {/* PDF */}
-                          <td className="px-4 py-3 text-center">
-                            {pdfUrl ? (
-                              <a
-                                href={pdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:underline"
-                                title="Descargar PDF"
-                              >
-                                PDF
-                              </a>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
-                          </td>
-
-                          {/* Acciones */}
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* Boton Ver Detalle */}
-                              <Link
-                                href={`/ordenes-servicio/${orden.id}`}
-                                className="px-3 py-1.5 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors whitespace-nowrap"
-                              >
-                                Ver
-                              </Link>
-
-                              {/* Boton Eliminar - solo si cumple restriccion */}
-                              {puedeEliminar && (
-                                <button
-                                  onClick={async () => {
-                                    if (confirm(`Estas seguro de eliminar la orden #${numeroOrden}?\n\nEsta accion no se puede deshacer.`)) {
-                                      try {
-                                        const response = await fetch(`/api/ordenes-servicio/${orden.id}`, {
-                                          method: 'DELETE',
-                                        });
-
-                                        if (response.ok) {
-                                          alert(`Orden #${numeroOrden} eliminada correctamente`);
-                                          window.location.reload();
-                                        } else {
-                                          const data = await response.json();
-                                          alert(`Error: ${data.error || 'No se pudo eliminar la orden'}`);
-                                        }
-                                      } catch (error) {
-                                        console.error('Error eliminando orden:', error);
-                                        alert('Error al eliminar la orden');
-                                      }
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors whitespace-nowrap"
-                                  title="Eliminar orden"
-                                >
-                                  Eliminar
-                                </button>
-                              )}
+                  return (
+                    <div key={mesKey} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                      {/* Header del grupo mensual */}
+                      <button
+                        onClick={() => toggleGroup(mesKey)}
+                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <span className={`text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>
+                            &#9654;
+                          </span>
+                          <div className="text-left min-w-0">
+                            <h3 className="text-base font-bold text-gray-900">
+                              {formatMesLabel(mesKey)}
+                            </h3>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-gray-500">
+                                {grupo.ordenes.length} {grupo.ordenes.length === 1 ? "orden" : "ordenes"}
+                              </span>
+                              {Object.entries(grupo.estadoCounts).map(([estado, count]) => (
+                                <span key={estado} className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                  <span className={`inline-block w-2 h-2 rounded-full ${estadoDotColors[estado] || "bg-gray-400"}`}></span>
+                                  {count} {estado}
+                                </span>
+                              ))}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    });
-                    })()}
-                  </tbody>
-                </table>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-4">
+                          <span className="text-lg font-bold font-mono text-[#00d084]">
+                            {formatCurrency(grupo.total)}
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Tabla de ordenes del mes */}
+                      {isExpanded && (
+                        <div className="border-t border-gray-200">
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase"># Orden</th>
+                                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                                  {isAdmin && (
+                                    <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">Coordinador</th>
+                                  )}
+                                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
+                                  <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
+                                  <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-600 uppercase">Items</th>
+                                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-600 uppercase">Total</th>
+                                  <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-600 uppercase">PDF</th>
+                                  <th className="px-4 py-2.5 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {grupo.ordenes.map((orden, index) => {
+                                  const numeroOrden = orden.fields.NumeroOrden || "S/N";
+                                  const estado = orden.fields.Estado || "Sin estado";
+                                  const fechaPedido = orden.fields["Fecha de pedido"] || "";
+                                  const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
+                                  const coordinador = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
+                                  const itemsCount = orden.fields.ItemsOrden?.length || 0;
+                                  const total = orden.fields.Total || 0;
+                                  const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
+                                  const pdfUrl = orden.fields.PDF?.[0]?.url || null;
+
+                                  return (
+                                    <tr
+                                      key={orden.id}
+                                      className={`border-b border-gray-100 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/50 transition-colors`}
+                                    >
+                                      <td className="px-4 py-2.5">
+                                        <Link href={`/ordenes-servicio/${orden.id}`} className="font-bold text-[#00d084] hover:underline text-sm">
+                                          #{numeroOrden}
+                                        </Link>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-sm text-gray-700">
+                                        {fechaPedido ? new Date(fechaPedido + "T00:00:00").toLocaleDateString("es-CO") : "-"}
+                                      </td>
+                                      {isAdmin && (
+                                        <td className="px-4 py-2.5 text-sm text-gray-700">{coordinador}</td>
+                                      )}
+                                      <td className="px-4 py-2.5 text-sm text-gray-900 font-medium">{beneficiario}</td>
+                                      <td className="px-4 py-2.5 text-center">
+                                        <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
+                                          {estado}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-center text-sm text-gray-600">
+                                        {itemsCount}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right font-mono font-bold text-sm text-[#00d084]">
+                                        {formatCurrency(total)}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-center">
+                                        {pdfUrl ? (
+                                          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-2 py-0.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors">
+                                            PDF
+                                          </a>
+                                        ) : (
+                                          <span className="text-xs text-gray-300">-</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2.5">
+                                        <div className="flex items-center justify-end gap-2">
+                                          <Link
+                                            href={`/ordenes-servicio/${orden.id}`}
+                                            className="px-3 py-1.5 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors whitespace-nowrap"
+                                          >
+                                            Ver
+                                          </Link>
+                                          {puedeEliminar && (
+                                            <button
+                                              onClick={async () => {
+                                                if (confirm(`Estas seguro de eliminar la orden #${numeroOrden}?\n\nEsta accion no se puede deshacer.`)) {
+                                                  try {
+                                                    const response = await fetch(`/api/ordenes-servicio/${orden.id}`, { method: "DELETE" });
+                                                    if (response.ok) {
+                                                      alert(`Orden #${numeroOrden} eliminada correctamente`);
+                                                      window.location.reload();
+                                                    } else {
+                                                      const data = await response.json();
+                                                      alert(`Error: ${data.error || "No se pudo eliminar la orden"}`);
+                                                    }
+                                                  } catch (err) {
+                                                    console.error("Error eliminando orden:", err);
+                                                    alert("Error al eliminar la orden");
+                                                  }
+                                                }
+                                              }}
+                                              className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors whitespace-nowrap"
+                                            >
+                                              Eliminar
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                              <tfoot className="bg-gray-50 border-t border-gray-200">
+                                <tr>
+                                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2.5 text-sm font-bold text-gray-700 text-right">
+                                    Subtotal {formatMesLabel(mesKey)}:
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right font-mono font-bold text-sm text-[#00d084]">
+                                    {formatCurrency(grupo.total)}
+                                  </td>
+                                  <td colSpan={2}></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Controles de paginacion */}
-            {ordenesFiltradas.length > ITEMS_PER_PAGE && (
+            {/* Paginacion por meses */}
+            {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Pagina {currentPage} de {Math.ceil(ordenesFiltradas.length / ITEMS_PER_PAGE)}
+                  Mostrando meses {monthPage * MONTHS_PER_PAGE + 1}-{Math.min((monthPage + 1) * MONTHS_PER_PAGE, gruposPorMes.length)} de {gruposPorMes.length}
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    onClick={() => setMonthPage(monthPage - 1)}
+                    disabled={monthPage === 0}
                     className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Anterior
                   </button>
                   <button
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage >= Math.ceil(ordenesFiltradas.length / ITEMS_PER_PAGE)}
+                    onClick={() => setMonthPage(monthPage + 1)}
+                    disabled={monthPage >= totalPages - 1}
                     className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Siguiente
