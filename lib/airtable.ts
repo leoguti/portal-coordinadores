@@ -226,6 +226,21 @@ export interface CatalogoServicio {
   fields: CatalogoServicioFields;
 }
 
+// === Metas Interfaces ===
+
+interface MetaFields {
+  Coordinador?: string[];  // Linked record IDs
+  Año?: number;
+  MetaRecoleccion?: number;
+  MetaSensibilizacion?: number;
+}
+
+export interface Meta {
+  id: string;
+  createdTime: string;
+  fields: MetaFields;
+}
+
 // === Caja Menor Interfaces ===
 
 interface GastoCajaMenorFields {
@@ -709,6 +724,66 @@ export async function getKardexCajaMenorDisponibles(
   } catch (error) {
     console.error("Error fetching Kardex Caja Menor disponibles:", error);
     return [];
+  }
+}
+
+/**
+ * Get metas (goals) for a specific coordinator and year
+ * Returns the first matching record from the Metas table
+ *
+ * @param coordinatorRecordId - Airtable record ID of the coordinator
+ * @param año - Year to query (e.g., 2026)
+ * @returns Meta record or null if not found
+ */
+export async function getMetasCoordinador(
+  coordinatorRecordId: string,
+  año: number
+): Promise<Meta | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return null;
+  }
+
+  try {
+    const filterFormula = `AND(
+      FIND("${coordinatorRecordId}", ARRAYJOIN({Coordinador})),
+      {Año} = ${año}
+    )`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/Metas?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}&maxRecords=1`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Airtable API error fetching Metas: ${response.status}`,
+        errorText
+      );
+      return null;
+    }
+
+    const data: AirtableResponse<MetaFields> = await response.json();
+
+    if (data.records && data.records.length > 0) {
+      return data.records[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching Metas from Airtable:", error);
+    return null;
   }
 }
 

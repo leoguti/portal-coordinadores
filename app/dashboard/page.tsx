@@ -5,72 +5,78 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KpiCard from "@/components/KpiCard";
-import RecentList from "@/components/RecentList";
+import ProgressBar from "@/components/ProgressBar";
 import Link from "next/link";
-import { type GastoCajaMenor } from "@/lib/airtable";
 
-/**
- * Dashboard Page - Protected Route
- * 
- * Main overview page with KPIs, recent items, and quick actions
- */
+interface DashboardStats {
+  metas: {
+    recoleccion: { meta: number; actual: number };
+    sensibilizacion: { meta: number; actual: number };
+    configurada: boolean;
+  };
+  kpis: {
+    movimientosKardex: number;
+    totalKgSalidas: number;
+    eventosSensibilizacion: number;
+    personasCapacitadas: number;
+  };
+  alertas: {
+    diasParaCierre: number;
+    kardexPorPagar: number;
+    ordenesSinFacturar: number;
+    gastosPendientes: number;
+  };
+  notificaciones: Array<{
+    tipo: "gasto" | "orden";
+    id: string;
+    numero: number;
+    estado: string;
+    observacion: string;
+    fecha: string;
+    concepto?: string;
+  }>;
+}
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [gastosConNovedades, setGastosConNovedades] = useState<GastoCajaMenor[]>([]);
-  const [loadingNovedades, setLoadingNovedades] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const isAdmin = session?.user?.rol === "Administrador";
+  const añoActual = new Date().getFullYear();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
 
-  // Cargar gastos con novedades (observaciones o cambios de estado)
   useEffect(() => {
-    async function loadGastosConNovedades() {
+    async function loadStats() {
       if (!session?.user?.coordinatorRecordId || isAdmin) {
-        setLoadingNovedades(false);
+        setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch("/api/caja-menor");
+        const res = await fetch("/api/dashboard/stats");
         if (res.ok) {
           const data = await res.json();
-          const gastos = data.gastos || [];
-          // Filtrar gastos que tienen observaciones del admin o estado != Pendiente
-          const conNovedades = (gastos as GastoCajaMenor[]).filter((g) => {
-            const tieneObs = g.fields.ObservacionesAdmin && g.fields.ObservacionesAdmin.trim() !== "";
-            const estadoCambiado = g.fields.Estado && g.fields.Estado !== "Pendiente";
-            return tieneObs || estadoCambiado;
-          });
-          // Ordenar por fecha más reciente
-          conNovedades.sort((a, b) => {
-            const fechaA = a.fields.Fecha || "";
-            const fechaB = b.fields.Fecha || "";
-            return fechaB.localeCompare(fechaA);
-          });
-          // Tomar solo los últimos 5
-          setGastosConNovedades(conNovedades.slice(0, 5));
+          setStats(data);
         }
       } catch (err) {
-        console.error("Error loading gastos con novedades:", err);
+        console.error("Error loading dashboard stats:", err);
       } finally {
-        setLoadingNovedades(false);
+        setLoading(false);
       }
     }
 
     if (session?.user?.coordinatorRecordId) {
-      loadGastosConNovedades();
+      loadStats();
     }
   }, [session?.user?.coordinatorRecordId, isAdmin]);
 
-  // Show loading state
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -82,56 +88,13 @@ export default function DashboardPage() {
     );
   }
 
-  // Don't render anything if not authenticated (will redirect)
   if (!session) {
     return null;
   }
 
-  // Placeholder data for recent items
-  const recentItems = [
-    {
-      id: "1",
-      type: "actividad" as const,
-      title: "Capacitación en Manejo de Residuos",
-      date: "Hace 2 horas",
-      description: "Fusagasugá - 45 participantes",
-    },
-    {
-      id: "2",
-      type: "certificado" as const,
-      title: "Certificado #2024-123",
-      date: "Hace 5 horas",
-      description: "Emitido para Finca El Paraíso",
-    },
-    {
-      id: "3",
-      type: "kardex" as const,
-      title: "Movimiento de Inventario",
-      date: "Ayer",
-      description: "Recepción de 50 unidades",
-    },
-    {
-      id: "4",
-      type: "actividad" as const,
-      title: "Jornada de Recolección",
-      date: "Hace 2 días",
-      description: "Girardot - 30 participantes",
-    },
-    {
-      id: "5",
-      type: "certificado" as const,
-      title: "Certificado #2024-122",
-      date: "Hace 3 días",
-      description: "Emitido para Finca La Esperanza",
-    },
-    {
-      id: "6",
-      type: "kardex" as const,
-      title: "Salida de Inventario",
-      date: "Hace 4 días",
-      description: "Entrega de 25 unidades",
-    },
-  ];
+  const totalAlertas = stats
+    ? stats.alertas.kardexPorPagar + stats.alertas.ordenesSinFacturar + stats.alertas.gastosPendientes
+    : 0;
 
   return (
     <AuthenticatedLayout>
@@ -141,37 +104,147 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             ¡Bienvenido, {session.user?.name || "Coordinador"}!
           </h1>
-          <p className="text-gray-600">
-            {session.user?.email}
-          </p>
+          <p className="text-gray-600">{session.user?.email}</p>
         </div>
 
-        {/* KPI Cards Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <KpiCard
-            title="Total Actividades"
-            value="34"
-            description="Actividades registradas este mes"
-            icon="📋"
-            color="blue"
-          />
-          <KpiCard
-            title="Certificados Emitidos"
-            value="127"
-            description="Certificados generados este mes"
-            icon="📜"
-            color="green"
-          />
-          <KpiCard
-            title="Movimientos Kardex"
-            value="89"
-            description="Entradas y salidas registradas"
-            icon="📦"
-            color="purple"
-          />
-        </div>
+        {/* Sección solo para coordinadores */}
+        {!isAdmin && (
+          <>
+            {/* SECCIÓN 1: Barras de Metas Anuales */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Metas {añoActual}
+              </h2>
+              {loading ? (
+                <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+                  Cargando metas...
+                </div>
+              ) : stats && !stats.metas.configurada ? (
+                <div className="bg-amber-50 rounded-lg border border-amber-200 p-6 text-center">
+                  <p className="text-amber-700 font-medium">
+                    Meta no configurada — contacta al administrador
+                  </p>
+                </div>
+              ) : stats ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ProgressBar
+                    label={`Meta Recolección ${añoActual}`}
+                    actual={stats.metas.recoleccion.actual}
+                    meta={stats.metas.recoleccion.meta}
+                    unit="kg"
+                    color="#00d084"
+                  />
+                  <ProgressBar
+                    label={`Meta Sensibilización ${añoActual}`}
+                    actual={stats.metas.sensibilizacion.actual}
+                    meta={stats.metas.sensibilizacion.meta}
+                    unit="personas"
+                    color="#3B82F6"
+                  />
+                </div>
+              ) : null}
+            </div>
 
-        {/* Quick Actions Section */}
+            {/* SECCIÓN 2: KPIs del Año */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <KpiCard
+                title="Movimientos Kardex"
+                value={loading ? "..." : stats?.kpis.movimientosKardex ?? 0}
+                description={`Entradas y salidas en ${añoActual}`}
+                icon="📦"
+                color="purple"
+              />
+              <KpiCard
+                title="Kg Salidas"
+                value={
+                  loading
+                    ? "..."
+                    : stats?.kpis.totalKgSalidas.toLocaleString("es-CO") ?? "0"
+                }
+                description={`Total kg despachados en ${añoActual}`}
+                icon="🚚"
+                color="campolimpio"
+              />
+              <KpiCard
+                title="Eventos Sensibilización"
+                value={loading ? "..." : stats?.kpis.eventosSensibilizacion ?? 0}
+                description={`Actividades realizadas en ${añoActual}`}
+                icon="🎤"
+                color="blue"
+              />
+              <KpiCard
+                title="Personas Capacitadas"
+                value={
+                  loading
+                    ? "..."
+                    : stats?.kpis.personasCapacitadas.toLocaleString("es-CO") ?? "0"
+                }
+                description={`Participantes sensibilización ${añoActual}`}
+                icon="👥"
+                color="green"
+              />
+            </div>
+
+            {/* SECCIÓN 3: Alertas y Pendientes */}
+            {stats && totalAlertas > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Alertas y Pendientes
+                </h2>
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm divide-y divide-gray-100">
+                  <div className="flex items-center gap-3 p-4">
+                    <span className="text-xl">⏰</span>
+                    <span className="text-sm text-gray-700">
+                      Faltan <strong>{stats.alertas.diasParaCierre} días</strong> para el cierre de{" "}
+                      {new Date().toLocaleDateString("es-CO", { month: "long" })}
+                    </span>
+                  </div>
+                  {stats.alertas.kardexPorPagar > 0 && (
+                    <div className="flex items-center justify-between gap-3 p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">📦</span>
+                        <span className="text-sm text-gray-700">
+                          <strong>{stats.alertas.kardexPorPagar}</strong> kardex &quot;Por Pagar&quot; sin orden de servicio
+                        </span>
+                      </div>
+                      <Link href="/kardex" className="text-sm text-[#00d084] hover:text-[#00b872] font-medium">
+                        Ver →
+                      </Link>
+                    </div>
+                  )}
+                  {stats.alertas.ordenesSinFacturar > 0 && (
+                    <div className="flex items-center justify-between gap-3 p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">📑</span>
+                        <span className="text-sm text-gray-700">
+                          <strong>{stats.alertas.ordenesSinFacturar}</strong> órdenes pendientes por facturar
+                        </span>
+                      </div>
+                      <Link href="/ordenes-servicio" className="text-sm text-[#00d084] hover:text-[#00b872] font-medium">
+                        Ver →
+                      </Link>
+                    </div>
+                  )}
+                  {stats.alertas.gastosPendientes > 0 && (
+                    <div className="flex items-center justify-between gap-3 p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">💰</span>
+                        <span className="text-sm text-gray-700">
+                          <strong>{stats.alertas.gastosPendientes}</strong> gastos de caja menor pendientes de aprobación
+                        </span>
+                      </div>
+                      <Link href="/caja-menor" className="text-sm text-[#00d084] hover:text-[#00b872] font-medium">
+                        Ver →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* SECCIÓN 4: Accesos Rápidos (siempre visible) */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -218,63 +291,71 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Notificaciones de Caja Menor */}
+        {/* SECCIÓN 5: Notificaciones del Admin (solo coordinadores) */}
         {!isAdmin && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <span>🔔</span> Novedades en Caja Menor
+              <span>🔔</span> Notificaciones
+              {stats && stats.notificaciones.length > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                  {stats.notificaciones.length}
+                </span>
+              )}
             </h2>
-            {loadingNovedades ? (
+            {loading ? (
               <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
-                Cargando novedades...
+                Cargando notificaciones...
               </div>
-            ) : gastosConNovedades.length === 0 ? (
+            ) : !stats || stats.notificaciones.length === 0 ? (
               <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
-                <p className="text-gray-500">No hay novedades en tus gastos de caja menor</p>
+                <p className="text-gray-500">No hay notificaciones recientes</p>
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
                 <div className="divide-y divide-gray-200">
-                  {gastosConNovedades.map((gasto) => {
-                    const estado = gasto.fields.Estado || "Pendiente";
-                    const observaciones = gasto.fields.ObservacionesAdmin || "";
-                    const fecha = gasto.fields.Fecha || "";
-                    const numero = gasto.fields.NumeroGasto || 0;
-                    const concepto = gasto.fields.Concepto || "";
-                    const valorNeto = (gasto.fields.Valor || 0) - ((gasto.fields.Valor || 0) * (gasto.fields.PorcentajeRetencion || 0));
-
+                  {stats.notificaciones.map((notif) => {
+                    const esGasto = notif.tipo === "gasto";
                     const estadoColors: Record<string, string> = {
-                      Pendiente: "bg-yellow-100 text-yellow-800 border-yellow-300",
-                      Aprobado: "bg-green-100 text-green-800 border-green-300",
                       Rechazado: "bg-red-100 text-red-800 border-red-300",
+                      Rechazada: "bg-red-100 text-red-800 border-red-300",
+                      Aprobado: "bg-green-100 text-green-800 border-green-300",
+                      Enviada: "bg-blue-100 text-blue-800 border-blue-300",
+                      Pendiente: "bg-yellow-100 text-yellow-800 border-yellow-300",
                     };
 
                     return (
-                      <div key={gasto.id} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div key={`${notif.tipo}-${notif.id}`} className="p-4 hover:bg-gray-50 transition-colors">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-[#00d084]">Gasto #{numero}</span>
-                              <span className={`px-2 py-0.5 text-xs font-bold rounded border ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
-                                {estado}
+                              <span className="font-bold text-[#00d084]">
+                                {esGasto ? `Gasto #${notif.numero}` : `Orden #${notif.numero}`}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 text-xs font-bold rounded border ${
+                                  estadoColors[notif.estado] || "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {notif.estado}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-700 mb-1">{concepto}</p>
+                            {notif.concepto && (
+                              <p className="text-sm text-gray-700 mb-1">{notif.concepto}</p>
+                            )}
                             <p className="text-xs text-gray-500">
-                              {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO") : ""} •
-                              <span className="font-mono font-bold text-gray-700 ml-1">
-                                {new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(valorNeto)}
-                              </span>
+                              {notif.fecha
+                                ? new Date(notif.fecha + "T00:00:00").toLocaleDateString("es-CO")
+                                : ""}
                             </p>
-                            {observaciones && (
+                            {notif.observacion && (
                               <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm">
-                                <span className="font-bold text-amber-700">Observación del Admin:</span>
-                                <p className="text-amber-800 mt-1">{observaciones}</p>
+                                <span className="font-bold text-amber-700">Observación:</span>
+                                <p className="text-amber-800 mt-1">{notif.observacion}</p>
                               </div>
                             )}
                           </div>
                           <Link
-                            href={`/caja-menor/${gasto.id}`}
+                            href={esGasto ? `/caja-menor/${notif.id}` : `/ordenes-servicio`}
                             className="px-3 py-1.5 bg-[#00d084] text-white text-sm font-medium rounded hover:bg-[#00b872] transition-colors"
                           >
                             Ver
@@ -284,24 +365,24 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex gap-4">
                   <Link
                     href="/caja-menor"
                     className="text-sm text-[#00d084] hover:text-[#00b872] font-medium"
                   >
-                    Ver todos los gastos →
+                    Ver gastos →
+                  </Link>
+                  <Link
+                    href="/ordenes-servicio"
+                    className="text-sm text-[#00d084] hover:text-[#00b872] font-medium"
+                  >
+                    Ver órdenes →
                   </Link>
                 </div>
               </div>
             )}
           </div>
         )}
-
-        {/* Recent Items Section */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
-          <RecentList items={recentItems} />
-        </div>
       </div>
     </AuthenticatedLayout>
   );
