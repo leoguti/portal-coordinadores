@@ -181,6 +181,7 @@ interface ItemOrdenFields {
   Cantidad?: number;
   PrecioUnitario?: number;
   "Cálculo"?: number; // Formula field (Cantidad * PrecioUnitario)
+  Concepto?: string; // Single select: "TRANSPORTE JR - CA", etc.
 }
 
 export interface Coordinator {
@@ -1460,6 +1461,91 @@ export async function getCatalogoByIds(catalogoIds: string[]): Promise<CatalogoS
     console.error("Error fetching CatalogoServicio by IDs:", error);
     return [];
   }
+}
+
+/**
+ * Calcula etiquetas de concepto global para múltiples órdenes.
+ * - Items CON Kardex cuyo Concepto empieza con "TRANSPORTE" → etiqueta "Transporte"
+ * - Items SIN Kardex (de Catálogo) → etiqueta con el nombre del servicio
+ * Devuelve un mapa: ordenId → array de etiquetas únicas
+ */
+export async function computeConceptosOrdenes(
+  ordenIds: string[]
+): Promise<Record<string, string[]>> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId || ordenIds.length === 0) return {};
+
+  // 1. Fetch ALL ItemsOrden (paginated)
+  const allItems: ItemOrden[] = [];
+  let offset: string | undefined;
+
+  do {
+    const url = new URL(`https://api.airtable.com/v0/${baseId}/ItemsOrden`);
+    if (offset) url.searchParams.set("offset", offset);
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+
+    if (!response.ok) break;
+
+    const data: AirtableResponse<ItemOrdenFields> & { offset?: string } =
+      await response.json();
+    allItems.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+
+  // 2. Filter items belonging to requested orders
+  const ordenIdSet = new Set(ordenIds);
+  const relevantItems = allItems.filter((item) =>
+    (item.fields.OrdenServicio || []).some((id) => ordenIdSet.has(id))
+  );
+
+  // 3. Collect CatalogoServicio IDs for batch fetch
+  const catalogoIds = new Set<string>();
+  for (const item of relevantItems) {
+    for (const catId of item.fields.CatalogoServicio || []) {
+      catalogoIds.add(catId);
+    }
+  }
+
+  // 4. Fetch catalog names
+  const catalogoNameMap = new Map<string, string>();
+  if (catalogoIds.size > 0) {
+    const catalogos = await getCatalogoByIds([...catalogoIds]);
+    for (const cat of catalogos) {
+      catalogoNameMap.set(cat.id, cat.fields.Nombre || "Servicio");
+    }
+  }
+
+  // 5. Build concept tags per order
+  const result: Record<string, string[]> = {};
+
+  for (const item of relevantItems) {
+    const ordenId = (item.fields.OrdenServicio || [])[0];
+    if (!ordenId) continue;
+
+    if (!result[ordenId]) result[ordenId] = [];
+
+    const concepto = item.fields.Concepto || "";
+
+    if (concepto.toUpperCase().startsWith("TRANSPORTE")) {
+      if (!result[ordenId].includes("Transporte")) {
+        result[ordenId].push("Transporte");
+      }
+    } else if (item.fields.CatalogoServicio?.length) {
+      const catId = item.fields.CatalogoServicio[0];
+      const nombre = catalogoNameMap.get(catId) || "Servicio";
+      if (!result[ordenId].includes(nombre)) {
+        result[ordenId].push(nombre);
+      }
+    }
+  }
+
+  return result;
 }
 
 /**

@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getAllOrdenes, getOrdenesCoordinador, type Orden } from "@/lib/airtable";
+import { getAllOrdenes, getOrdenesCoordinador, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
 
 export default function ReportesFacturasPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [conceptos, setConceptos] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,11 @@ export default function ReportesFacturasPage() {
           ? await getAllOrdenes()
           : await getOrdenesCoordinador(coordinatorRecordId!);
         setOrdenes(data);
+
+        // Cargar conceptos (etiquetas) en paralelo para las órdenes
+        const ordenIds = data.map((o) => o.id);
+        const conceptosData = await computeConceptosOrdenes(ordenIds);
+        setConceptos(conceptosData);
       } catch (err) {
         console.error("Error loading ordenes:", err);
         setError("Error al cargar los datos. Por favor intenta de nuevo.");
@@ -151,6 +157,28 @@ export default function ReportesFacturasPage() {
     Facturada: "bg-amber-100 text-amber-800",
     Pagada: "bg-green-700 text-white",
     Rechazada: "bg-red-100 text-red-800",
+  };
+
+  // Paleta de colores estilo Airtable para etiquetas de concepto
+  const conceptoColorPalette = [
+    "bg-blue-100 text-blue-800",
+    "bg-emerald-100 text-emerald-800",
+    "bg-purple-100 text-purple-800",
+    "bg-orange-100 text-orange-800",
+    "bg-pink-100 text-pink-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-yellow-100 text-yellow-800",
+    "bg-rose-100 text-rose-800",
+  ];
+
+  const getConceptoColor = (concepto: string) => {
+    if (concepto === "Transporte") return "bg-blue-100 text-blue-800";
+    // Hash simple para asignar color consistente
+    let hash = 0;
+    for (let i = 0; i < concepto.length; i++) {
+      hash = concepto.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return conceptoColorPalette[Math.abs(hash) % conceptoColorPalette.length];
   };
 
   const estadoDotColors: Record<string, string> = {
@@ -406,6 +434,9 @@ export default function ReportesFacturasPage() {
                                   <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">
                                     N.° Factura
                                   </th>
+                                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">
+                                    Concepto
+                                  </th>
                                   <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-600 uppercase">
                                     Estado
                                   </th>
@@ -462,6 +493,21 @@ export default function ReportesFacturasPage() {
                                             -
                                           </span>
                                         )}
+                                      </td>
+                                      <td className="px-4 py-2.5">
+                                        <div className="flex flex-wrap gap-1">
+                                          {(conceptos[orden.id] || []).map((tag) => (
+                                            <span
+                                              key={tag}
+                                              className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${getConceptoColor(tag)}`}
+                                            >
+                                              {tag}
+                                            </span>
+                                          ))}
+                                          {(!conceptos[orden.id] || conceptos[orden.id].length === 0) && (
+                                            <span className="text-gray-400 text-sm">-</span>
+                                          )}
+                                        </div>
                                       </td>
                                       <td className="px-4 py-2.5 text-center">
                                         <span
@@ -530,7 +576,7 @@ export default function ReportesFacturasPage() {
                               <tfoot className="bg-gray-50 border-t border-gray-200">
                                 <tr>
                                   <td
-                                    colSpan={4}
+                                    colSpan={5}
                                     className="px-4 py-2.5 text-sm font-bold text-gray-700 text-right"
                                   >
                                     Subtotal {beneficiario}:
@@ -538,7 +584,7 @@ export default function ReportesFacturasPage() {
                                   <td className="px-4 py-2.5 text-right font-mono font-bold text-sm text-[#00d084]">
                                     {formatCurrency(grupo.total)}
                                   </td>
-                                  <td colSpan={2}></td>
+                                  <td colSpan={3}></td>
                                 </tr>
                               </tfoot>
                             </table>
