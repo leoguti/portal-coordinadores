@@ -2,11 +2,20 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
+// Permitir body de hasta 8MB para PDFs comprimidos en base64
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "8mb",
+    },
+  },
+};
+
 /**
  * POST /api/upload
- * 
+ *
  * Sube una imagen a Airtable usando el endpoint de upload directo
- * 
+ *
  * Body: { recordId, fieldName, file (base64), filename, contentType }
  */
 export async function POST(request: Request) {
