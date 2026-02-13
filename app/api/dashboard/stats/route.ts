@@ -38,9 +38,11 @@ export async function GET() {
     const kgEntradas = kardexAño
       .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
       .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
-    const kgSalidas = kardexAño
-      .filter((k) => k.fields.TipoMovimiento === "SALIDA")
-      .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
+    const kgSalidas = Math.abs(
+      kardexAño
+        .filter((k) => k.fields.TipoMovimiento === "SALIDA")
+        .reduce((sum, k) => sum + (k.fields.Total || 0), 0)
+    );
 
     const actividadesAño = actividades.filter((a) => a.fields.Año === añoStr);
     const participantesSensibilizacion = actividadesAño
