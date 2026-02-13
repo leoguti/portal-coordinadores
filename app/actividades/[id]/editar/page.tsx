@@ -94,16 +94,14 @@ export default function EditarActividadPage() {
     }
   }
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = (error) => reject(error);
-    });
+  // Subir archivo usando FormData (evita límite de 4.5MB de base64/JSON)
+  const uploadFile = async (recordId: string, file: File, fieldName: string): Promise<boolean> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("recordId", recordId);
+    formData.append("fieldName", fieldName);
+    const response = await fetch("/api/upload", { method: "POST", body: formData });
+    return response.ok;
   };
 
   const toggleRemovePhoto = (photoId: string) => {
@@ -199,20 +197,9 @@ export default function EditarActividadPage() {
           setUploadProgress(`Subiendo foto ${uploaded + failed + 1} de ${newPhotos.length}...`);
 
           try {
-            const base64 = await fileToBase64(img.file);
-            const uploadResponse = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                recordId: actividadId,
-                fieldName: "Fotografias",
-                file: base64,
-                filename: img.file.name,
-                contentType: img.file.type,
-              }),
-            });
+            const uploadOk = await uploadFile(actividadId, img.file, "Fotografias");
 
-            if (uploadResponse.ok) {
+            if (uploadOk) {
               uploaded++;
             } else {
               failed++;
@@ -237,20 +224,9 @@ export default function EditarActividadPage() {
           setUploadProgress(`Subiendo documento ${uploadedDocs + failedDocs + 1} de ${newDocs.length}...`);
 
           try {
-            const base64 = await fileToBase64(doc.file);
-            const uploadResponse = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                recordId: actividadId,
-                fieldName: "Listado Asistencia",
-                file: base64,
-                filename: doc.file.name,
-                contentType: doc.file.type,
-              }),
-            });
+            const uploadOk = await uploadFile(actividadId, doc.file, "Listado Asistencia");
 
-            if (uploadResponse.ok) {
+            if (uploadOk) {
               uploadedDocs++;
             } else {
               failedDocs++;
@@ -275,20 +251,9 @@ export default function EditarActividadPage() {
           setUploadProgress(`Subiendo evaluación ${uploadedEvals + failedEvals + 1} de ${newEvals.length}...`);
 
           try {
-            const base64 = await fileToBase64(evalFile.file);
-            const uploadResponse = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                recordId: actividadId,
-                fieldName: "Evaluaciones",
-                file: base64,
-                filename: evalFile.file.name,
-                contentType: evalFile.file.type,
-              }),
-            });
+            const uploadOk = await uploadFile(actividadId, evalFile.file, "Evaluaciones");
 
-            if (uploadResponse.ok) {
+            if (uploadOk) {
               uploadedEvals++;
             } else {
               failedEvals++;

@@ -321,15 +321,6 @@ export default function NuevaOrdenV2Page() {
 
       // Upload soporte de bascula files
       if (soporteBascula.length > 0) {
-        const fileToBase64 = (file: File): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = (error) => reject(error);
-          });
-        };
-
         for (let i = 0; i < soporteBascula.length; i++) {
           const doc = soporteBascula[i];
           setError(null);
@@ -340,18 +331,11 @@ export default function NuevaOrdenV2Page() {
           );
 
           try {
-            const base64 = await fileToBase64(doc.file);
-            const response = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                recordId: ordenData.id,
-                fieldName: "Soporte de Bascula",
-                file: base64,
-                filename: doc.file.name,
-                contentType: doc.file.type,
-              }),
-            });
+            const formData = new FormData();
+            formData.append("file", doc.file);
+            formData.append("recordId", ordenData.id);
+            formData.append("fieldName", "Soporte de Bascula");
+            const response = await fetch("/api/upload", { method: "POST", body: formData });
 
             if (!response.ok) {
               throw new Error(`Error subiendo archivo: ${response.statusText}`);

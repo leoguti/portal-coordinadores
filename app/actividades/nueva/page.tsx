@@ -53,40 +53,17 @@ export default function NuevaActividadPage() {
 
   if (!session) return null;
 
-  // Convertir archivo a base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        // Remover el prefijo "data:image/jpeg;base64,"
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  // Subir una imagen a Airtable
-  const uploadImage = async (recordId: string, imageFile: ImageFile): Promise<boolean> => {
+  // Subir un archivo a Airtable usando FormData (evita límite de 4.5MB de base64/JSON)
+  const uploadFile = async (recordId: string, file: File, fieldName: string): Promise<boolean> => {
     try {
-      const base64 = await fileToBase64(imageFile.file);
-      
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recordId,
-          fieldName: "Fotografias",
-          file: base64,
-          filename: imageFile.file.name,
-          contentType: imageFile.file.type,
-        }),
-      });
-
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("recordId", recordId);
+      formData.append("fieldName", fieldName);
+      const response = await fetch("/api/upload", { method: "POST", body: formData });
       return response.ok;
     } catch (error) {
-      console.error(`Error uploading ${imageFile.file.name}:`, error);
+      console.error(`Error uploading ${file.name}:`, error);
       return false;
     }
   };
@@ -148,7 +125,7 @@ export default function NuevaActividadPage() {
             f.id === img.id ? { ...f, uploading: true } : f
           ));
 
-          const success = await uploadImage(recordId, img);
+          const success = await uploadFile(recordId, img.file, "Fotografias");
 
           // Actualizar estado de la imagen
           setFotografias(prev => prev.map(f => 
@@ -183,20 +160,7 @@ export default function NuevaActividadPage() {
             f.id === doc.id ? { ...f, uploading: true } : f
           ));
 
-          const base64 = await fileToBase64(doc.file);
-          const docResponse = await fetch("/api/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recordId,
-              fieldName: "Listado Asistencia",
-              file: base64,
-              filename: doc.file.name,
-              contentType: doc.file.type,
-            }),
-          });
-
-          const success = docResponse.ok;
+          const success = await uploadFile(recordId, doc.file, "Listado Asistencia");
 
           setDocumentos(prev => prev.map(f =>
             f.id === doc.id
@@ -229,20 +193,7 @@ export default function NuevaActividadPage() {
             f.id === evalFile.id ? { ...f, uploading: true } : f
           ));
 
-          const base64 = await fileToBase64(evalFile.file);
-          const evalResponse = await fetch("/api/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recordId,
-              fieldName: "Evaluaciones",
-              file: base64,
-              filename: evalFile.file.name,
-              contentType: evalFile.file.type,
-            }),
-          });
-
-          const success = evalResponse.ok;
+          const success = await uploadFile(recordId, evalFile.file, "Evaluaciones");
 
           setEvaluaciones(prev => prev.map(f =>
             f.id === evalFile.id

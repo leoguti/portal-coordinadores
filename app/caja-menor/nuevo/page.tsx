@@ -124,18 +124,6 @@ export default function NuevoGastoCajaMenorPage() {
   const valorRetencion = valorNum * retencionNum / 100;
   const valorNeto = valorNum - valorRetencion;
 
-  // Convert file to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-    });
-  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -186,18 +174,11 @@ export default function NuevoGastoCajaMenorPage() {
 
       // 2. Subir factura obligatoria al registro creado
       if (factura && gastoCreado?.id) {
-        const base64 = await fileToBase64(factura);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recordId: gastoCreado.id,
-            fieldName: "Factura",
-            file: base64,
-            filename: factura.name,
-            contentType: factura.type,
-          }),
-        });
+        const formData = new FormData();
+        formData.append("file", factura);
+        formData.append("recordId", gastoCreado.id);
+        formData.append("fieldName", "Factura");
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
 
         if (!uploadRes.ok) {
           // La factura es obligatoria: si falla la subida, eliminar el gasto creado

@@ -109,18 +109,6 @@ export default function GastoDetallePage() {
     }
   }
 
-  // Convert file to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-    });
-  };
 
   function enterEditMode() {
     if (!gasto) return;
@@ -167,18 +155,11 @@ export default function GastoDetallePage() {
       if (response.ok) {
         // 2. Si hay nueva factura, subirla al registro existente
         if (editFactura) {
-          const base64 = await fileToBase64(editFactura);
-          await fetch("/api/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recordId: gastoId,
-              fieldName: "Factura",
-              file: base64,
-              filename: editFactura.name,
-              contentType: editFactura.type,
-            }),
-          });
+          const formData = new FormData();
+          formData.append("file", editFactura);
+          formData.append("recordId", gastoId);
+          formData.append("fieldName", "Factura");
+          await fetch("/api/upload", { method: "POST", body: formData });
         }
 
         setActionMessage({
