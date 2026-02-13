@@ -230,6 +230,7 @@ export interface CatalogoServicio {
 
 interface MetaFields {
   Coordinador?: string[];  // Linked record IDs
+  id_coordinador?: string[]; // Lookup field with coordinator record ID
   Año?: number;
   MetaRecoleccion?: number;
   MetaSensibilizacion?: number;
@@ -749,7 +750,7 @@ export async function getMetasCoordinador(
 
   try {
     const filterFormula = `AND(
-      FIND("${coordinatorRecordId}", ARRAYJOIN({Coordinador})),
+      FIND("${coordinatorRecordId}", ARRAYJOIN({id_coordinador})),
       {Año} = ${año}
     )`;
 
