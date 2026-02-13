@@ -156,9 +156,9 @@ export default function DashboardPage() {
                 color="purple"
               />
               <KpiCard
-                title="Certificados"
+                title="Certificados de Entrega"
                 value={loading ? "..." : stats?.kpis.certificados ?? 0}
-                description={`Certificados emitidos en ${añoActual}`}
+                description={`Certificados de entrega en ${añoActual}`}
                 icon="📜"
                 color="green"
               />
