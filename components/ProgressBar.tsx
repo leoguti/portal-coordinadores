@@ -57,7 +57,7 @@ export function DualProgressBar({
   unit,
 }: DualProgressBarProps) {
   const pctEntradas = meta > 0 ? Math.min((entradas / meta) * 100, 100) : 0;
-  const pctSalidas = meta > 0 ? Math.min((salidas / meta) * 100, 100) : 0;
+  const pctSalidasVsEntradas = entradas > 0 ? Math.min((salidas / entradas) * 100, 100) : 0;
   const diferencia = entradas - salidas;
 
   return (
@@ -69,7 +69,7 @@ export function DualProgressBar({
         </span>
       </div>
 
-      {/* Barra Entradas */}
+      {/* Barra Entradas vs Meta */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-green-700 flex items-center gap-1">
@@ -77,7 +77,7 @@ export function DualProgressBar({
             Entradas
           </span>
           <span className="text-xs font-bold text-green-700">
-            {entradas.toLocaleString("es-CO")} {unit} ({Math.round(pctEntradas)}%)
+            {entradas.toLocaleString("es-CO")} / {meta.toLocaleString("es-CO")} {unit} ({Math.round(pctEntradas)}%)
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3.5">
@@ -88,21 +88,21 @@ export function DualProgressBar({
         </div>
       </div>
 
-      {/* Barra Salidas */}
+      {/* Barra Salidas vs Entradas */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-blue-700 flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
-            Salidas
+            Salidas (de lo recogido)
           </span>
           <span className="text-xs font-bold text-blue-700">
-            {salidas.toLocaleString("es-CO")} {unit} ({Math.round(pctSalidas)}%)
+            {salidas.toLocaleString("es-CO")} / {entradas.toLocaleString("es-CO")} {unit} ({Math.round(pctSalidasVsEntradas)}%)
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3.5">
+        <div className="w-full bg-green-100 rounded-full h-3.5">
           <div
             className="h-3.5 rounded-full transition-all duration-500 bg-blue-500"
-            style={{ width: `${pctSalidas}%` }}
+            style={{ width: `${pctSalidasVsEntradas}%` }}
           />
         </div>
       </div>
@@ -111,7 +111,7 @@ export function DualProgressBar({
       {diferencia > 0 && (
         <div className="pt-2 border-t border-gray-100">
           <p className="text-xs text-amber-700 font-medium">
-            {diferencia.toLocaleString("es-CO")} {unit} pendientes de despachar
+            {diferencia.toLocaleString("es-CO")} {unit} en centros de acopio sin despachar
           </p>
         </div>
       )}
