@@ -694,7 +694,7 @@ export default function KardexFormModal({ onClose, onSubmit }: KardexFormModalPr
               images={fotoBascula}
               onChange={setFotoBascula}
               maxFiles={5}
-              maxSizeMB={3}
+              maxSizeMB={5}
               disabled={loading}
               acceptPdf={true}
             />

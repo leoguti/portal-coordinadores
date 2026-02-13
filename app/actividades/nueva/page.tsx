@@ -490,7 +490,7 @@ export default function NuevaActividadPage() {
                 images={fotografias}
                 onChange={setFotografias}
                 maxFiles={10}
-                maxSizeMB={3}
+                maxSizeMB={5}
                 disabled={loading}
               />
             </div>
@@ -505,7 +505,7 @@ export default function NuevaActividadPage() {
                 images={documentos}
                 onChange={setDocumentos}
                 maxFiles={5}
-                maxSizeMB={3}
+                maxSizeMB={5}
                 disabled={loading}
                 acceptPdf
               />
@@ -521,7 +521,7 @@ export default function NuevaActividadPage() {
                   images={evaluaciones}
                   onChange={setEvaluaciones}
                   maxFiles={5}
-                  maxSizeMB={3}
+                  maxSizeMB={5}
                   disabled={loading}
                   acceptPdf
                 />

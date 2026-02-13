@@ -495,7 +495,7 @@ export default function EditarActividadPage() {
                 images={newPhotos}
                 onChange={setNewPhotos}
                 maxFiles={Math.max(0, 10 - (existingPhotos.length - photosToRemove.size))}
-                maxSizeMB={3}
+                maxSizeMB={5}
                 disabled={saving}
               />
             </div>
@@ -577,7 +577,7 @@ export default function EditarActividadPage() {
                 images={newDocs}
                 onChange={setNewDocs}
                 maxFiles={Math.max(0, 5 - (existingDocs.length - docsToRemove.size))}
-                maxSizeMB={3}
+                maxSizeMB={5}
                 disabled={saving}
                 acceptPdf
               />
@@ -661,7 +661,7 @@ export default function EditarActividadPage() {
                   images={newEvals}
                   onChange={setNewEvals}
                   maxFiles={Math.max(0, 5 - (existingEvals.length - evalsToRemove.size))}
-                  maxSizeMB={3}
+                  maxSizeMB={5}
                   disabled={saving}
                   acceptPdf
                 />

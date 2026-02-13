@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { compressPdf, compressImage } from "@/lib/compressPdf";
 
 interface ImageFile {
   id: string;
@@ -26,7 +27,7 @@ export default function ImageUpload({
   images,
   onChange,
   maxFiles = 10,
-  maxSizeMB = 3,
+  maxSizeMB = 5,
   disabled = false,
   acceptPdf = false,
 }: ImageUploadProps) {
@@ -42,7 +43,9 @@ export default function ImageUpload({
 
   const generateId = () => Math.random().toString(36).substring(2, 9);
 
-  const processFiles = useCallback((files: FileList | null) => {
+  const [compressing, setCompressing] = useState(false);
+
+  const processFiles = useCallback(async (files: FileList | null) => {
     if (!files || disabled) return;
 
     setErrorMsg(null);
@@ -51,32 +54,63 @@ export default function ImageUpload({
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     const rechazados: string[] = [];
 
-    Array.from(files).forEach((file) => {
+    const fileArray = Array.from(files);
+
+    // Verificar tipos primero
+    const validFiles: { file: File; isImage: boolean; isPdf: boolean }[] = [];
+    for (const file of fileArray) {
       const isImage = file.type.startsWith("image/");
       const isPdf = file.type === "application/pdf";
 
       if (!isImage && !(acceptPdf && isPdf)) {
         rechazados.push(`"${file.name}": tipo no permitido (solo ${acceptPdf ? "imagenes o PDF" : "imagenes"})`);
-        return;
+        continue;
       }
+
+      if (currentImages.length + validFiles.length >= maxFiles) {
+        rechazados.push(`"${file.name}": ya tienes el maximo de ${maxFiles} archivos`);
+        continue;
+      }
+
+      validFiles.push({ file, isImage, isPdf });
+    }
+
+    // Comprimir archivos que excedan el límite
+    const needsCompression = validFiles.some((v) => v.file.size > maxSizeBytes);
+    if (needsCompression) {
+      setCompressing(true);
+    }
+
+    for (const { file, isImage, isPdf } of validFiles) {
+      let processedFile = file;
 
       if (file.size > maxSizeBytes) {
-        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-        rechazados.push(`"${file.name}": pesa ${sizeMB} MB (maximo ${maxSizeMB} MB)`);
-        return;
-      }
+        try {
+          if (isPdf) {
+            processedFile = await compressPdf(file, maxSizeMB);
+          } else if (isImage) {
+            processedFile = await compressImage(file, maxSizeMB);
+          }
+        } catch (err) {
+          console.error("Error comprimiendo archivo:", err);
+        }
 
-      if (currentImages.length + newImages.length >= maxFiles) {
-        rechazados.push(`"${file.name}": ya tienes el maximo de ${maxFiles} archivos`);
-        return;
+        // Si después de comprimir sigue siendo muy grande, rechazar
+        if (processedFile.size > maxSizeBytes) {
+          const sizeMB = (processedFile.size / 1024 / 1024).toFixed(1);
+          rechazados.push(`"${file.name}": pesa ${sizeMB} MB después de comprimir (máximo ${maxSizeMB} MB)`);
+          continue;
+        }
       }
 
       newImages.push({
         id: generateId(),
-        file,
-        preview: isImage ? URL.createObjectURL(file) : "",
+        file: processedFile,
+        preview: isImage ? URL.createObjectURL(processedFile) : "",
       });
-    });
+    }
+
+    setCompressing(false);
 
     if (rechazados.length > 0) {
       setErrorMsg(rechazados.join(". "));
@@ -152,15 +186,25 @@ export default function ImageUpload({
         />
 
         <div className="space-y-2">
-          <div className="text-4xl">{acceptPdf ? "📷📄" : "📷"}</div>
-          <p className="text-gray-600">
-            {dragActive
-              ? `Suelta ${acceptPdf ? "los archivos" : "las imágenes"} aquí`
-              : `Arrastra ${acceptPdf ? "imágenes o PDFs" : "imágenes"} o haz clic para seleccionar`
-            }
-          </p>
+          {compressing ? (
+            <>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00d084] mx-auto"></div>
+              <p className="text-gray-600 font-medium">Comprimiendo archivo...</p>
+              <p className="text-xs text-gray-500">Esto puede tomar unos segundos</p>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl">{acceptPdf ? "📷📄" : "📷"}</div>
+              <p className="text-gray-600">
+                {dragActive
+                  ? `Suelta ${acceptPdf ? "los archivos" : "las imágenes"} aquí`
+                  : `Arrastra ${acceptPdf ? "imágenes o PDFs" : "imágenes"} o haz clic para seleccionar`
+                }
+              </p>
+            </>
+          )}
           <p className="text-xs text-gray-500">
-            Máximo {maxFiles} {acceptPdf ? "archivos" : "imágenes"}, {maxSizeMB}MB cada uno
+            Máximo {maxFiles} {acceptPdf ? "archivos" : "imágenes"}, {maxSizeMB}MB cada uno (se comprimen automáticamente)
           </p>
         </div>
       </div>
