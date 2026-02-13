@@ -27,7 +27,7 @@ export default function ImageUpload({
   images,
   onChange,
   maxFiles = 10,
-  maxSizeMB = 5,
+  maxSizeMB = 4,
   disabled = false,
   acceptPdf = false,
 }: ImageUploadProps) {

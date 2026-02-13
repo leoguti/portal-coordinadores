@@ -332,7 +332,7 @@ export default function ActividadForm({
               images={fotografias}
               onChange={setFotografias}
               maxFiles={10}
-              maxSizeMB={5}
+              maxSizeMB={4}
               disabled={loading}
             />
           </div>
@@ -349,7 +349,7 @@ export default function ActividadForm({
               images={documentos}
               onChange={setDocumentos}
               maxFiles={5}
-              maxSizeMB={5}
+              maxSizeMB={4}
               disabled={loading}
               acceptPdf
             />
