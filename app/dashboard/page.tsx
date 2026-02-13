@@ -7,6 +7,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KpiCard from "@/components/KpiCard";
 import ProgressBar, { DualProgressBar } from "@/components/ProgressBar";
 import Link from "next/link";
+import { type GastoCajaMenor } from "@/lib/airtable";
 
 interface DashboardStats {
   metas: {
@@ -43,6 +44,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gastosNovedades, setGastosNovedades] = useState<GastoCajaMenor[]>([]);
+  const [loadingGastos, setLoadingGastos] = useState(true);
 
   const isAdmin = session?.user?.rol === "Administrador";
   const añoActual = new Date().getFullYear();
@@ -75,6 +78,37 @@ export default function DashboardPage() {
 
     if (session?.user?.coordinatorRecordId) {
       loadStats();
+    }
+  }, [session?.user?.coordinatorRecordId, isAdmin]);
+
+  // Cargar novedades de caja menor
+  useEffect(() => {
+    async function loadGastos() {
+      if (!session?.user?.coordinatorRecordId || isAdmin) {
+        setLoadingGastos(false);
+        return;
+      }
+      try {
+        const res = await fetch("/api/caja-menor");
+        if (res.ok) {
+          const data = await res.json();
+          const gastos = (data.gastos || []) as GastoCajaMenor[];
+          const conNovedades = gastos.filter((g) => {
+            const tieneObs = g.fields.ObservacionesAdmin && g.fields.ObservacionesAdmin.trim() !== "";
+            const estadoCambiado = g.fields.Estado && g.fields.Estado !== "Pendiente";
+            return tieneObs || estadoCambiado;
+          });
+          conNovedades.sort((a, b) => (b.fields.Fecha || "").localeCompare(a.fields.Fecha || ""));
+          setGastosNovedades(conNovedades.slice(0, 5));
+        }
+      } catch (err) {
+        console.error("Error loading gastos novedades:", err);
+      } finally {
+        setLoadingGastos(false);
+      }
+    }
+    if (session?.user?.coordinatorRecordId) {
+      loadGastos();
     }
   }, [session?.user?.coordinatorRecordId, isAdmin]);
 
@@ -382,6 +416,86 @@ export default function DashboardPage() {
                     className="text-sm text-[#00d084] hover:text-[#00b872] font-medium"
                   >
                     Ver órdenes →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SECCIÓN 6: Novedades Caja Menor (solo coordinadores) */}
+        {!isAdmin && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span>💰</span> Novedades Caja Menor
+            </h2>
+            {loadingGastos ? (
+              <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
+                Cargando novedades...
+              </div>
+            ) : gastosNovedades.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
+                <p className="text-gray-500">No hay novedades en tus gastos de caja menor</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <div className="divide-y divide-gray-200">
+                  {gastosNovedades.map((gasto) => {
+                    const estado = gasto.fields.Estado || "Pendiente";
+                    const observaciones = gasto.fields.ObservacionesAdmin || "";
+                    const fecha = gasto.fields.Fecha || "";
+                    const numero = gasto.fields.NumeroGasto || 0;
+                    const concepto = gasto.fields.Concepto || "";
+                    const valorNeto = (gasto.fields.Valor || 0) - ((gasto.fields.Valor || 0) * (gasto.fields.PorcentajeRetencion || 0));
+
+                    const estadoColors: Record<string, string> = {
+                      Pendiente: "bg-yellow-100 text-yellow-800 border-yellow-300",
+                      Aprobado: "bg-green-100 text-green-800 border-green-300",
+                      Rechazado: "bg-red-100 text-red-800 border-red-300",
+                      Reembolsado: "bg-blue-100 text-blue-800 border-blue-300",
+                    };
+
+                    return (
+                      <div key={gasto.id} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-[#00d084]">Gasto #{numero}</span>
+                              <span className={`px-2 py-0.5 text-xs font-bold rounded border ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
+                                {estado}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-1">{concepto}</p>
+                            <p className="text-xs text-gray-500">
+                              {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO") : ""} •
+                              <span className="font-mono font-bold text-gray-700 ml-1">
+                                {new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(valorNeto)}
+                              </span>
+                            </p>
+                            {observaciones && (
+                              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm">
+                                <span className="font-bold text-amber-700">Observación del Admin:</span>
+                                <p className="text-amber-800 mt-1">{observaciones}</p>
+                              </div>
+                            )}
+                          </div>
+                          <Link
+                            href={`/caja-menor/${gasto.id}`}
+                            className="px-3 py-1.5 bg-[#00d084] text-white text-sm font-medium rounded hover:bg-[#00b872] transition-colors"
+                          >
+                            Ver
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <Link
+                    href="/caja-menor"
+                    className="text-sm text-[#00d084] hover:text-[#00b872] font-medium"
+                  >
+                    Ver todos los gastos →
                   </Link>
                 </div>
               </div>
