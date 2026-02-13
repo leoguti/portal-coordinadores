@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -179,6 +179,42 @@ export default function OrdenDetallePage() {
     Rechazada: "bg-red-100 text-red-800 border-red-300",
   };
 
+  // Etiquetas globales de concepto (calculadas desde los items cargados)
+  const conceptoTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const item of items) {
+      const concepto = item.fields.Concepto || "";
+      if (concepto.toUpperCase().startsWith("TRANSPORTE")) {
+        tags.add("Transporte");
+      } else if (item.fields.CatalogoServicio?.length) {
+        const catId = item.fields.CatalogoServicio[0];
+        const cat = catalogoMap.get(catId);
+        if (cat?.fields.Nombre) tags.add(cat.fields.Nombre);
+      }
+    }
+    return [...tags];
+  }, [items, catalogoMap]);
+
+  const conceptoColorPalette = [
+    "bg-blue-100 text-blue-800",
+    "bg-emerald-100 text-emerald-800",
+    "bg-purple-100 text-purple-800",
+    "bg-orange-100 text-orange-800",
+    "bg-pink-100 text-pink-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-yellow-100 text-yellow-800",
+    "bg-rose-100 text-rose-800",
+  ];
+
+  const getConceptoColor = (concepto: string) => {
+    if (concepto === "Transporte") return "bg-blue-100 text-blue-800";
+    let hash = 0;
+    for (let i = 0; i < concepto.length; i++) {
+      hash = concepto.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return conceptoColorPalette[Math.abs(hash) % conceptoColorPalette.length];
+  };
+
   if (loading) {
     return (
       <AuthenticatedLayout>
@@ -237,7 +273,7 @@ export default function OrdenDetallePage() {
             <span>Orden #{numeroOrden}</span>
           </div>
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <h1 className="text-3xl font-bold text-gray-900">
                 Detalle de Orden #{numeroOrden}
               </h1>
@@ -248,6 +284,18 @@ export default function OrdenDetallePage() {
               >
                 {estado}
               </span>
+              {conceptoTags.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {conceptoTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-block px-2.5 py-0.5 text-xs font-medium rounded-full ${getConceptoColor(tag)}`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {/* Boton Ver PDF de la orden */}
@@ -537,6 +585,7 @@ export default function OrdenDetallePage() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripcion</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Concepto</th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Bascula</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
@@ -602,6 +651,19 @@ export default function OrdenDetallePage() {
                           {/* Descripcion/Nombre */}
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {displayName}
+                          </td>
+
+                          {/* Concepto */}
+                          <td className="px-4 py-3 text-sm">
+                            {tipoItem === "CON Kardex" ? (
+                              <span className="text-gray-700">{item.fields.Concepto || "—"}</span>
+                            ) : catalogo?.fields.Nombre ? (
+                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${getConceptoColor(catalogo.fields.Nombre)}`}>
+                                {catalogo.fields.Nombre}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </td>
 
                           {/* Foto Bascula */}
