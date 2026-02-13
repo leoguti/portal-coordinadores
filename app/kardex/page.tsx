@@ -6,6 +6,7 @@ import { useEffect, useState, Fragment } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KardexFormModal from "@/components/KardexFormModal";
 import { puedeModificarFecha, getFechaCorteMesesCerrados } from "@/lib/dateValidations";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 interface KardexRecord {
   id: string;
@@ -50,7 +51,8 @@ export default function KardexPage() {
   const pageSize = 50;
   
   // Admin features
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCoordinador, setSelectedCoordinador] = useState("");
   
@@ -79,12 +81,12 @@ export default function KardexPage() {
     if (status === "authenticated" && !datosYaCargados) {
       fetchKardex();
       // Solo cargar coordinadores si es admin
-      if (isAdmin) {
+      if (canViewAll) {
         fetchCoordinadores();
       }
       setDatosYaCargados(true);
     }
-  }, [status, isAdmin, datosYaCargados]);
+  }, [status, canViewAll, datosYaCargados]);
 
   // Fetch coordinadores (solo para admin)
   const fetchCoordinadores = async () => {
@@ -116,7 +118,7 @@ export default function KardexPage() {
           params.append("offset", offset);
         }
         
-        if (isAdmin && selectedCoordinador) {
+        if (canViewAll && selectedCoordinador) {
           params.append("coordinatorId", selectedCoordinador);
         }
         
@@ -146,7 +148,7 @@ export default function KardexPage() {
 
   // Recargar cuando cambia el filtro de coordinador
   useEffect(() => {
-    if (isAdmin && status === "authenticated") {
+    if (canViewAll && status === "authenticated") {
       fetchKardex();
     }
   }, [selectedCoordinador]);
@@ -540,13 +542,13 @@ export default function KardexPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Kardex
-              {isAdmin && <span className="ml-3 text-sm px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium">👑 Vista Admin</span>}
-              {!isAdmin && <span className="ml-3 text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">👤 Mi Kardex</span>}
+              {canViewAll && <span className="ml-3 text-sm px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium">👑 Vista Admin</span>}
+              {!canViewAll && <span className="ml-3 text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">👤 Mi Kardex</span>}
             </h1>
             <p className="text-gray-600">
               Registro de movimientos logísticos de envases vacíos
-              {isAdmin && <span className="ml-2 text-purple-600 font-medium">(Viendo todos los coordinadores)</span>}
-              {!isAdmin && <span className="ml-2 text-blue-600 font-medium">(Solo mis movimientos)</span>}
+              {canViewAll && <span className="ml-2 text-purple-600 font-medium">(Viendo todos los coordinadores)</span>}
+              {!canViewAll && <span className="ml-2 text-blue-600 font-medium">(Solo mis movimientos)</span>}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -765,7 +767,7 @@ export default function KardexPage() {
               No hay movimientos registrados
             </h2>
             <p className="text-gray-600">
-              {isAdmin 
+              {canViewAll 
                 ? "No hay movimientos de ningún coordinador en el sistema"
                 : "Aún no tienes entradas o salidas de inventario"}
             </p>
@@ -791,7 +793,7 @@ export default function KardexPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* ADMIN ONLY: Filtro de Coordinador */}
-                {isAdmin && (
+                {canViewAll && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       👤 Coordinador
@@ -987,7 +989,7 @@ export default function KardexPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fecha
                     </th>
-                    {isAdmin && (
+                    {canViewAll && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Coordinador
                       </th>
@@ -1023,7 +1025,7 @@ export default function KardexPage() {
                             {formatDate(record.fields.fechakardex)}
                           </div>
                         </td>
-                        {isAdmin && (
+                        {canViewAll && (
                           <td className="px-6 py-4 text-sm text-gray-900">
                             {record.fields["Name (from Coordinador)"]?.[0] || "-"}
                           </td>
@@ -1060,7 +1062,7 @@ export default function KardexPage() {
                       </tr>
                       {expandedRow === record.id && (
                         <tr className="bg-purple-50">
-                          <td colSpan={isAdmin ? 5 : 4} className="px-6 py-4">
+                          <td colSpan={canViewAll ? 5 : 4} className="px-6 py-4">
                             <div className="space-y-3">
                               {/* Información general */}
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-3 border-b border-purple-200">

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { listActividadesForCoordinator, listAllActividades, createActividad } from "@/lib/airtable";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 // Función auxiliar para validar fecha dentro del período de gracia
 function esFechaValida(fecha: string): boolean {
@@ -58,17 +59,17 @@ export async function GET() {
   }
 
   try {
-    // Si es admin, devolver TODAS las actividades
-    const isAdmin = session.user.rol === "Administrador";
-    
-    const actividades = isAdmin 
+    // Si es admin/supervisor, devolver TODAS las actividades
+    const canViewAll = isAdminOrSupervisor(session.user.rol);
+
+    const actividades = canViewAll
       ? await listAllActividades()
       : await listActividadesForCoordinator(session.user.coordinatorRecordId);
 
     return NextResponse.json({
       success: true,
       coordinatorRecordId: session.user.coordinatorRecordId,
-      isAdmin,
+      isAdmin: canViewAll,
       count: actividades.length,
       actividades,
     });

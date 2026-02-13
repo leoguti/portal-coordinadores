@@ -8,6 +8,7 @@ import {
   deleteGastoCajaMenor,
 } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/caja-menor/[id] — Obtener detalle de un gasto
@@ -30,8 +31,8 @@ export async function GET(
     }
 
     // Coordinador solo puede ver sus propios gastos
-    const isAdmin = session.user?.rol === "Administrador";
-    if (!isAdmin) {
+    const canViewAll = isAdminOrSupervisor(session.user?.rol);
+    if (!canViewAll) {
       const coordinadores = gasto.fields.Coordinador || [];
       if (!coordinadores.includes(session.user?.coordinatorRecordId || "")) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });

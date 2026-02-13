@@ -8,6 +8,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
 import { getGastoCajaMenorById, type GastoCajaMenor } from "@/lib/airtable";
 import { getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 interface Tercero {
   id: string;
@@ -61,7 +62,8 @@ export default function GastoDetallePage() {
   // Lightbox for factura
   const [showFactura, setShowFactura] = useState(false);
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {
     loadGasto();
@@ -285,7 +287,7 @@ export default function GastoDetallePage() {
   const isOwner = gasto.fields.Coordinador?.includes(
     session?.user?.coordinatorRecordId || ""
   );
-  const canCorrect = !isAdmin && isOwner && estado === "Rechazado";
+  const canCorrect = !canViewAll && isOwner && estado === "Rechazado";
 
   // Edit mode values for calculations
   const editValorNum = parseFloat(editValor) || 0;
@@ -351,7 +353,7 @@ export default function GastoDetallePage() {
         )}
 
         {/* Admin Actions Panel */}
-        {isAdmin && estado === "Pendiente" && (
+        {canWrite && estado === "Pendiente" && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
               Acciones de Administrador
@@ -388,7 +390,7 @@ export default function GastoDetallePage() {
         )}
 
         {/* Admin: gasto aprobado - reembolso se hace en lote */}
-        {isAdmin && estado === "Aprobado" && (
+        {canWrite && estado === "Aprobado" && (
           <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               Los reembolsos se realizan en lote desde la{" "}
@@ -420,7 +422,7 @@ export default function GastoDetallePage() {
         )}
 
         {/* Admin: no actions for Rechazado state */}
-        {isAdmin && estado === "Rechazado" && (
+        {canWrite && estado === "Rechazado" && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">
               Acciones de Administrador
@@ -625,7 +627,7 @@ export default function GastoDetallePage() {
               </div>
             </div>
 
-            {isAdmin && (
+            {canViewAll && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Coordinador

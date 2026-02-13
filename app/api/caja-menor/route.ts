@@ -3,10 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { createGastoCajaMenor, getGastosCajaMenorCoordinador, getAllGastosCajaMenor } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/caja-menor — Listar gastos de caja menor
- * Admin: todos. Coordinador: los suyos.
+ * Admin/Supervisor: todos. Coordinador: los suyos.
  */
 export async function GET() {
   try {
@@ -15,10 +16,10 @@ export async function GET() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const isAdmin = session.user?.rol === "Administrador";
+    const canViewAll = isAdminOrSupervisor(session.user?.rol);
     let gastos;
 
-    if (isAdmin) {
+    if (canViewAll) {
       gastos = await getAllGastosCajaMenor();
     } else {
       gastos = await getGastosCajaMenorCoordinador(session.user.coordinatorRecordId);

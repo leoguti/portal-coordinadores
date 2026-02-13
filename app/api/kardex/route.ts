@@ -9,17 +9,18 @@ import {
   getAllKardexPaginated
 } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/kardex
  * Get kardex records with pagination
  * - Coordinador: Solo sus propios kardex
- * - Administrador: Todos los kardex (opcionalmente filtrar por ?coordinatorId=xxx)
- * 
+ * - Administrador/Supervisor: Todos los kardex (opcionalmente filtrar por ?coordinatorId=xxx)
+ *
  * Query params:
  * - pageSize: Number of records per page (default 50, max 100)
  * - offset: Airtable offset for pagination
- * - coordinatorId: (Admin only) Filter by coordinator
+ * - coordinatorId: (Admin/Supervisor only) Filter by coordinator
  */
 export async function GET(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const isAdmin = session.user.rol === "Administrador";
+    const canViewAll = isAdminOrSupervisor(session.user.rol);
     const { searchParams } = new URL(request.url);
     const filterCoordinatorId = searchParams.get("coordinatorId");
     const pageSize = Math.min(parseInt(searchParams.get("pageSize") || "50"), 100);
@@ -41,8 +42,8 @@ export async function GET(request: Request) {
 
     let result;
 
-    if (isAdmin) {
-      // Administrador: ver todos o filtrar por coordinador específico
+    if (canViewAll) {
+      // Administrador/Supervisor: ver todos o filtrar por coordinador específico
       if (filterCoordinatorId) {
         result = await listKardexForCoordinatorPaginated(filterCoordinatorId, pageSize, offset);
       } else {
@@ -53,11 +54,11 @@ export async function GET(request: Request) {
       result = await listKardexForCoordinatorPaginated(session.user.coordinatorRecordId, pageSize, offset);
     }
 
-    return NextResponse.json({ 
-      kardex: result.records, 
+    return NextResponse.json({
+      kardex: result.records,
       offset: result.offset,
       hasMore: result.hasMore,
-      isAdmin 
+      isAdmin: canViewAll
     });
   } catch (error) {
     console.error("Error fetching kardex:", error);

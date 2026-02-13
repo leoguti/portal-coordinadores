@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenById, getItemsOrden, getKardexByIds, getCatalogoByIds, type Orden, type ItemOrden, type Kardex, type CatalogoServicio } from "@/lib/airtable";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 export default function OrdenDetallePage() {
   const params = useParams();
@@ -33,7 +34,8 @@ export default function OrdenDetallePage() {
   const [showPagoForm, setShowPagoForm] = useState(false);
   const [fechaPagoInput, setFechaPagoInput] = useState("");
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {
     loadOrden();
@@ -336,7 +338,7 @@ export default function OrdenDetallePage() {
         )}
 
         {/* Admin Actions Panel */}
-        {isAdmin && (
+        {canWrite && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Acciones de Administrador</h3>
             <div className="flex flex-wrap gap-3">
@@ -511,7 +513,7 @@ export default function OrdenDetallePage() {
               </div>
             </div>
 
-            {isAdmin && (
+            {canViewAll && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Coordinador

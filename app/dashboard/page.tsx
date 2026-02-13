@@ -3,11 +3,24 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KpiCard from "@/components/KpiCard";
 import ProgressBar, { DualProgressBar } from "@/components/ProgressBar";
 import Link from "next/link";
 import { type GastoCajaMenor } from "@/lib/airtable";
+import { isAdminOrSupervisor } from "@/lib/roles";
+
+const AdminDashboard = dynamic(() => import("@/components/AdminDashboard"), {
+  loading: () => (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d084] mx-auto"></div>
+        <p className="mt-4 text-gray-600">Cargando panel de control...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface DashboardStats {
   metas: {
@@ -47,7 +60,7 @@ export default function DashboardPage() {
   const [gastosNovedades, setGastosNovedades] = useState<GastoCajaMenor[]>([]);
   const [loadingGastos, setLoadingGastos] = useState(true);
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const añoActual = new Date().getFullYear();
 
   useEffect(() => {
@@ -58,7 +71,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadStats() {
-      if (!session?.user?.coordinatorRecordId || isAdmin) {
+      if (!session?.user?.coordinatorRecordId || canViewAll) {
         setLoading(false);
         return;
       }
@@ -79,12 +92,12 @@ export default function DashboardPage() {
     if (session?.user?.coordinatorRecordId) {
       loadStats();
     }
-  }, [session?.user?.coordinatorRecordId, isAdmin]);
+  }, [session?.user?.coordinatorRecordId, canViewAll]);
 
   // Cargar novedades de caja menor
   useEffect(() => {
     async function loadGastos() {
-      if (!session?.user?.coordinatorRecordId || isAdmin) {
+      if (!session?.user?.coordinatorRecordId || canViewAll) {
         setLoadingGastos(false);
         return;
       }
@@ -110,7 +123,7 @@ export default function DashboardPage() {
     if (session?.user?.coordinatorRecordId) {
       loadGastos();
     }
-  }, [session?.user?.coordinatorRecordId, isAdmin]);
+  }, [session?.user?.coordinatorRecordId, canViewAll]);
 
   if (status === "loading") {
     return (
@@ -131,6 +144,14 @@ export default function DashboardPage() {
     ? stats.alertas.kardexPorPagar + stats.alertas.ordenesSinFacturar + stats.alertas.gastosPendientes
     : 0;
 
+  if (canViewAll) {
+    return (
+      <AuthenticatedLayout>
+        <AdminDashboard userName={session.user?.name || undefined} />
+      </AuthenticatedLayout>
+    );
+  }
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -143,7 +164,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Sección solo para coordinadores */}
-        {!isAdmin && (
+        {!canViewAll && (
           <>
             {/* SECCIÓN 1: Barras de Metas Anuales */}
             <div className="mb-8">
@@ -331,7 +352,7 @@ export default function DashboardPage() {
         </div>
 
         {/* SECCIÓN 5: Notificaciones del Admin (solo coordinadores) */}
-        {!isAdmin && (
+        {!canViewAll && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <span>🔔</span> Notificaciones
@@ -424,7 +445,7 @@ export default function DashboardPage() {
         )}
 
         {/* SECCIÓN 6: Novedades Caja Menor (solo coordinadores) */}
-        {!isAdmin && (
+        {!canViewAll && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <span>💰</span> Novedades Caja Menor

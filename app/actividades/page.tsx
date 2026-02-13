@@ -7,6 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import JSZip from "jszip";
 
 interface AirtableAttachment {
@@ -61,7 +62,8 @@ export default function ActividadesPage() {
 
   const MESES_POR_PAGINA = 6;
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   const toggleRow = (id: string) => {
     setExpandedRow(expandedRow === id ? null : id);
@@ -94,12 +96,12 @@ export default function ActividadesPage() {
       let data = actividades;
       
       // Si es admin, aplicar filtro de coordinador
-      if (isAdmin && selectedCoordinador) {
+      if (canViewAll && selectedCoordinador) {
         data = data.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
       }
       
       // Si NO es admin, filtrar solo actividades del coordinador actual
-      if (!isAdmin && session?.user?.coordinatorRecordId) {
+      if (!canViewAll && session?.user?.coordinatorRecordId) {
         data = data.filter(a => a.fields.Coordinador?.[0] === session.user.coordinatorRecordId);
       }
       
@@ -173,19 +175,19 @@ export default function ActividadesPage() {
       municipios: Array.from(municipios).sort(),
       tipos: Array.from(tipos).sort(),
     };
-  }, [actividades, isAdmin, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo, session?.user?.coordinatorRecordId]);
+  }, [actividades, canViewAll, selectedCoordinador, selectedAno, selectedMes, selectedMunicipio, selectedTipo, session?.user?.coordinatorRecordId]);
 
   // Filtrar actividades por coordinador, mes, año, municipio y tipo
   const actividadesFiltradas = React.useMemo(() => {
     let filtered = actividades;
 
     // Si es admin, aplicar filtro de coordinador
-    if (isAdmin && selectedCoordinador) {
+    if (canViewAll && selectedCoordinador) {
       filtered = filtered.filter(a => a.fields.Coordinador?.[0] === selectedCoordinador);
     }
 
     // Si NO es admin, filtrar solo actividades del coordinador actual
-    if (!isAdmin && session?.user?.coordinatorRecordId) {
+    if (!canViewAll && session?.user?.coordinatorRecordId) {
       filtered = filtered.filter(a => a.fields.Coordinador?.[0] === session.user.coordinatorRecordId);
     }
 
@@ -212,7 +214,7 @@ export default function ActividadesPage() {
     }
 
     return filtered;
-  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, isAdmin, session?.user?.coordinatorRecordId]);
+  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, canViewAll, session?.user?.coordinatorRecordId]);
 
   // Agrupar actividades por mes
   const actividadesPorMes = React.useMemo(() => {
@@ -413,11 +415,11 @@ export default function ActividadesPage() {
     }
     if (status === "authenticated") {
       fetchActividades();
-      if (isAdmin) {
+      if (canViewAll) {
         fetchCoordinadores();
       }
     }
-  }, [status, isAdmin, router]);
+  }, [status, canViewAll, router]);
 
   async function fetchActividades() {
     try {
@@ -473,11 +475,11 @@ export default function ActividadesPage() {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold text-gray-900">Actividades</h1>
-              {isAdmin && <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-sm">👑 Vista Admin</span>}
-              {!isAdmin && <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm">👤 Mis Actividades</span>}
+              {canViewAll && <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-sm">👑 Vista Admin</span>}
+              {!canViewAll && <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm">👤 Mis Actividades</span>}
             </div>
             <p className="text-gray-600">
-              {isAdmin ? "Gestión de actividades de todos los coordinadores" : "Listado de actividades del coordinador"}
+              {canViewAll ? "Gestión de actividades de todos los coordinadores" : "Listado de actividades del coordinador"}
             </p>
           </div>
           <Link
@@ -495,9 +497,9 @@ export default function ActividadesPage() {
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               🔍 Filtros de Búsqueda
             </h3>
-            <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'md:grid-cols-2 lg:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
+            <div className={`grid grid-cols-1 gap-4 ${canViewAll ? 'md:grid-cols-2 lg:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
               {/* Filtro por Coordinador - Solo admin */}
-              {isAdmin && (
+              {canViewAll && (
                 <div>
                   <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
                     Coordinador
@@ -608,10 +610,10 @@ export default function ActividadesPage() {
             </div>
 
             {/* Botón para limpiar filtros */}
-            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || (isAdmin && selectedCoordinador)) && (
+            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador)) && (
               <button
                 onClick={() => {
-                  if (isAdmin) setSelectedCoordinador("");
+                  if (canViewAll) setSelectedCoordinador("");
                   setSelectedMes("");
                   setSelectedAno("");
                   setSelectedMunicipio("");
@@ -756,7 +758,7 @@ export default function ActividadesPage() {
                         <span className="text-sm font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
                           {totalActividades}
                         </span>
-                        {!isAdmin && (
+                        {!canViewAll && (
                           <button
                             onClick={(e) => { e.stopPropagation(); descargarMes(monthKey, actividadesDelMes); }}
                             disabled={descargandoMes === monthKey}
@@ -998,7 +1000,7 @@ export default function ActividadesPage() {
                       </div>
                     );
 
-                    if (isAdmin) {
+                    if (canViewAll) {
                       // Agrupar por coordinador
                       const porCoordinador: { [coordId: string]: { nombre: string; actividades: Actividad[] } } = {};
                       actividadesDelMes.forEach((a) => {

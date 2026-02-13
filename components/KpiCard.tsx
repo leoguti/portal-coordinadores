@@ -3,7 +3,7 @@ interface KpiCardProps {
   value: string | number;
   description: string;
   icon: string;
-  color?: "blue" | "green" | "purple" | "campolimpio";
+  color?: "blue" | "green" | "purple" | "campolimpio" | "amber" | "red";
 }
 
 export default function KpiCard({ title, value, description, icon, color = "blue" }: KpiCardProps) {
@@ -12,6 +12,8 @@ export default function KpiCard({ title, value, description, icon, color = "blue
     green: "bg-green-50 border-green-200 text-green-600",
     purple: "bg-purple-50 border-purple-200 text-purple-600",
     campolimpio: "bg-[#e6f9f3] border-[#7bdcb5] text-[#00d084]",
+    amber: "bg-amber-50 border-amber-200 text-amber-600",
+    red: "bg-red-50 border-red-200 text-red-600",
   };
 
   return (

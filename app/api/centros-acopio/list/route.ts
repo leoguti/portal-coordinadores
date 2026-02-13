@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 interface AirtableRecord {
   id: string;
@@ -28,7 +29,7 @@ export async function GET() {
       return NextResponse.json({ error: "Configuración de Airtable no disponible" }, { status: 500 });
     }
 
-    const isAdmin = session.user?.rol === "Administrador";
+    const canViewAll = isAdminOrSupervisor(session.user?.rol);
     const coordinatorRecordId = session.user?.coordinatorRecordId;
 
     // Traer todos los centros de acopio (FIND/ARRAYJOIN no funciona con linked records en Airtable)
@@ -51,18 +52,18 @@ export async function GET() {
     const data: { records: AirtableRecord[] } = await response.json();
 
     console.log("🔍 [CENTROS-ACOPIO] Total registros Airtable:", data.records.length);
-    console.log("🔍 [CENTROS-ACOPIO] isAdmin:", isAdmin);
+    console.log("🔍 [CENTROS-ACOPIO] canViewAll:", canViewAll);
     console.log("🔍 [CENTROS-ACOPIO] coordinatorRecordId:", coordinatorRecordId);
 
     // Filtrar por coordinador en el servidor (admin ve todos)
-    const registros = isAdmin
+    const registros = canViewAll
       ? data.records
       : data.records.filter((record) =>
           record.fields.Coordinador?.includes(coordinatorRecordId || "")
         );
 
     console.log("🔍 [CENTROS-ACOPIO] Registros después de filtro:", registros.length);
-    if (!isAdmin && registros.length > 0) {
+    if (!canViewAll && registros.length > 0) {
       console.log("🔍 [CENTROS-ACOPIO] Ejemplo de centro filtrado:", {
         nombre: registros[0].fields.Nombre,
         coordinadores: registros[0].fields.Coordinador

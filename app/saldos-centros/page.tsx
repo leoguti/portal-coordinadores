@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getCentrosAcopio, getCentrosCoordinador, getAllKardex, type CentroAcopio, type Kardex } from "@/lib/airtable";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 interface SaldoCentroPorMes {
   centroId: string;
@@ -45,7 +46,8 @@ export default function SaldosCentrosPage() {
     }
   }, [status, router]);
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
   const coordinatorRecordId = session?.user?.coordinatorRecordId;
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function SaldosCentrosPage() {
         setError(null);
 
         // Cargar centros según rol: admin ve todos, coordinador solo los suyos
-        const centrosPromise = isAdmin
+        const centrosPromise = canViewAll
           ? getCentrosAcopio()
           : coordinatorRecordId
             ? getCentrosCoordinador(coordinatorRecordId)
@@ -106,7 +108,7 @@ export default function SaldosCentrosPage() {
     if (session && !datosYaCargados) {
       cargarDatos();
     }
-  }, [session, datosYaCargados, mesSeleccionado, isAdmin, coordinatorRecordId]);
+  }, [session, datosYaCargados, mesSeleccionado, canViewAll, coordinatorRecordId]);
 
   // Recalcular saldos cuando cambia el mes seleccionado
   useEffect(() => {
@@ -273,7 +275,7 @@ export default function SaldosCentrosPage() {
   }
 
   // Si el coordinador no tiene centros asignados
-  if (!loading && !isAdmin && centros.length === 0) {
+  if (!loading && !canViewAll && centros.length === 0) {
     return (
       <AuthenticatedLayout>
         <div className="max-w-7xl mx-auto">
@@ -326,7 +328,7 @@ export default function SaldosCentrosPage() {
             ⚖️ Saldos por Centro de Acopio
           </h1>
           <p className="text-gray-600 mt-1">
-            {isAdmin
+            {canViewAll
               ? "Balance mensual de inventario por centro con saldo acumulado histórico"
               : "Balance mensual de inventario de tus centros asignados"}
           </p>

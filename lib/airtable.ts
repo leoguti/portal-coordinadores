@@ -22,7 +22,7 @@ interface CoordinadorFields {
   Name?: string;
   email?: string; // lowercase to match Airtable field name
   telefono?: string;
-  Rol?: "Coordinador" | "Administrador" | "Desactivado";
+  Rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
   Actividades?: string[];
   Certificados?: string[];
   Kardex?: string[];
@@ -188,7 +188,7 @@ export interface Coordinator {
   id: string;
   name?: string;
   email: string;
-  rol?: "Coordinador" | "Administrador" | "Desactivado";
+  rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
 }
 
 export interface Actividad {
@@ -3348,5 +3348,158 @@ export async function deleteReembolsoCajaMenor(
   } catch (error) {
     console.error(`Error deleting reembolso ${reembolsoId}:`, error);
     return false;
+  }
+}
+
+/**
+ * Get all metas (goals) for a given year
+ * Returns all records from the Metas table filtered by year
+ */
+export async function getAllMetas(año: number): Promise<Meta[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const filterFormula = `{Año} = ${año}`;
+    const allMetas: Meta[] = [];
+    let offset: string | undefined;
+
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+
+      const url = `https://api.airtable.com/v0/${baseId}/Metas?${params.toString()}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        console.error(`Error fetching all Metas: ${response.status}`);
+        return [];
+      }
+
+      const data: AirtableResponse<MetaFields> = await response.json();
+      allMetas.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
+    return allMetas;
+  } catch (error) {
+    console.error("Error fetching all Metas:", error);
+    return [];
+  }
+}
+
+/**
+ * Count all certificados for a given year (no coordinator filter)
+ */
+export async function countAllCertificados(año: number): Promise<number> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return 0;
+  }
+
+  try {
+    const filterFormula = `{ano} = ${año}`;
+    let total = 0;
+    let offset: string | undefined;
+
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        "fields[]": "coordinador",
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+
+      const url = `https://api.airtable.com/v0/${baseId}/Certificados?${params.toString()}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        console.error(`Error fetching Certificados: ${response.status}`);
+        return 0;
+      }
+
+      const data = await response.json();
+      total += data.records?.length || 0;
+      offset = data.offset;
+    } while (offset);
+
+    return total;
+  } catch (error) {
+    console.error("Error counting all Certificados:", error);
+    return 0;
+  }
+}
+
+/**
+ * Get all active coordinadores (excluding Desactivado)
+ * Returns id, name, email, rol
+ */
+export async function getAllCoordinadoresActivos(): Promise<
+  Array<{ id: string; name: string; email: string; rol: string }>
+> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const filterFormula = `{Rol}!="Desactivado"`;
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}&sort[0][field]=Name&sort[0][direction]=asc`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Error fetching coordinadores activos: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.records || []).map(
+      (record: { id: string; fields: { Name?: string; email?: string; Rol?: string } }) => ({
+        id: record.id,
+        name: record.fields.Name || "Sin nombre",
+        email: record.fields.email || "",
+        rol: record.fields.Rol || "Coordinador",
+      })
+    );
+  } catch (error) {
+    console.error("Error fetching coordinadores activos:", error);
+    return [];
   }
 }

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getAllOrdenes, getOrdenesCoordinador, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 export default function ReportesFacturasPage() {
   const { data: session, status } = useSession();
@@ -23,7 +24,8 @@ export default function ReportesFacturasPage() {
   // Grupos expandidos
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -40,7 +42,7 @@ export default function ReportesFacturasPage() {
       try {
         setLoading(true);
         setError(null);
-        const data = isAdmin
+        const data = canViewAll
           ? await getAllOrdenes()
           : await getOrdenesCoordinador(coordinatorRecordId!);
         setOrdenes(data);
@@ -60,7 +62,7 @@ export default function ReportesFacturasPage() {
     if (status === "authenticated") {
       loadOrdenes();
     }
-  }, [status, isAdmin, coordinatorRecordId]);
+  }, [status, canViewAll, coordinatorRecordId]);
 
   if (status === "loading") {
     return (
@@ -217,7 +219,7 @@ export default function ReportesFacturasPage() {
             Reporte de Facturas
           </h1>
           <p className="text-gray-600 mt-1">
-            Consulta y seguimiento de {isAdmin ? "ordenes" : "tus ordenes"} facturadas y pagadas
+            Consulta y seguimiento de {canViewAll ? "ordenes" : "tus ordenes"} facturadas y pagadas
           </p>
         </div>
 

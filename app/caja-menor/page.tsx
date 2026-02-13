@@ -12,6 +12,7 @@ import {
   type ReembolsoCajaMenor,
 } from "@/lib/airtable";
 import { puedeModificarFecha, getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 interface CoordinadorConSaldo {
   id: string;
@@ -52,7 +53,8 @@ export default function CajaMenorPage() {
   // Descarga de facturas
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -69,7 +71,7 @@ export default function CajaMenorPage() {
         setError(null);
 
         let data: GastoCajaMenor[];
-        if (isAdmin) {
+        if (canViewAll) {
           data = await getAllGastosCajaMenor();
         } else {
           data = await getGastosCajaMenorCoordinador(session.user.coordinatorRecordId);
@@ -78,7 +80,7 @@ export default function CajaMenorPage() {
 
         // Cargar saldos iniciales
         try {
-          if (isAdmin) {
+          if (canViewAll) {
             // Admin: cargar todos los coordinadores con saldo
             const res = await fetch("/api/caja-menor/asignaciones");
             if (res.ok) {
@@ -118,7 +120,7 @@ export default function CajaMenorPage() {
     if (session?.user?.coordinatorRecordId) {
       loadData();
     }
-  }, [session?.user?.coordinatorRecordId, isAdmin]);
+  }, [session?.user?.coordinatorRecordId, canViewAll]);
 
   if (status === "loading") {
     return (
@@ -177,11 +179,11 @@ export default function CajaMenorPage() {
   // Reembolsos filtrados
   const reembolsosFiltrados = filtroCoordinador
     ? reembolsos.filter((r) => r.fields.Coordinador?.includes(filtroCoordinador))
-    : isAdmin ? [] : reembolsos;
+    : canViewAll ? [] : reembolsos;
 
   // Calcular totales para coordinador actual o seleccionado
   const getCoordinadorId = () => {
-    if (isAdmin) return filtroCoordinador;
+    if (canViewAll) return filtroCoordinador;
     return session?.user?.coordinatorRecordId || "";
   };
 
@@ -201,7 +203,7 @@ export default function CajaMenorPage() {
   const totalReembolsos = reembolsosCoord.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
 
   // Saldo: Saldo Inicial + Reembolsos - Facturas Aprobadas
-  const saldoInicialCoord = isAdmin
+  const saldoInicialCoord = canViewAll
     ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.saldoInicial || 0)
     : saldoInicial;
   const saldoActual = saldoInicialCoord + totalReembolsos - totalFacturasAprobadas;
@@ -210,7 +212,7 @@ export default function CajaMenorPage() {
   const cantPendientes = gastosCoord.filter((g) => g.fields.Estado === "Pendiente").length;
   const cantRechazados = gastosCoord.filter((g) => g.fields.Estado === "Rechazado").length;
 
-  const coordNombre = isAdmin
+  const coordNombre = canViewAll
     ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.nombre || "")
     : (session?.user?.name || "");
 
@@ -455,10 +457,10 @@ export default function CajaMenorPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Caja Menor</h1>
             <p className="text-gray-600 mt-1">
-              {isAdmin ? "Vista de administrador - Todos los gastos" : "Registra y consulta tus gastos de caja menor"}
+              {canViewAll ? "Vista de administrador - Todos los gastos" : "Registra y consulta tus gastos de caja menor"}
             </p>
           </div>
-          {!isAdmin && (
+          {!canViewAll && (
             <Link
               href="/caja-menor/nuevo"
               className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -469,7 +471,7 @@ export default function CajaMenorPage() {
         </div>
 
         {/* Filtros Admin */}
-        {isAdmin && !loading && (
+        {canViewAll && !loading && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -516,13 +518,13 @@ export default function CajaMenorPage() {
         )}
 
         {/* Panel de Saldo - Coordinador o Admin con filtro */}
-        {!loading && (isAdmin ? filtroCoordinador : true) && (
+        {!loading && (canViewAll ? filtroCoordinador : true) && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                {isAdmin ? `Caja Menor - ${coordNombre}` : "Mi Caja Menor"}
+                {canViewAll ? `Caja Menor - ${coordNombre}` : "Mi Caja Menor"}
               </h2>
-              {isAdmin && filtroCoordinador && (
+              {canWrite && filtroCoordinador && (
                 <button
                   onClick={() => {
                     setNuevoReembolsoFecha(getFechaMaximaPermitida());
@@ -581,7 +583,7 @@ export default function CajaMenorPage() {
         )}
 
         {/* Resumen de saldos por coordinador (admin sin filtro) */}
-        {isAdmin && !filtroCoordinador && !loading && (
+        {canViewAll && !filtroCoordinador && !loading && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
             <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
               <h3 className="text-sm font-bold text-gray-700 uppercase">Resumen de Saldos por Coordinador</h3>
@@ -688,7 +690,7 @@ export default function CajaMenorPage() {
         )}
 
         {/* Filtros (solo coordinador) */}
-        {!isAdmin && !loading && (
+        {!canViewAll && !loading && (
           <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
             <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -754,7 +756,7 @@ export default function CajaMenorPage() {
                 <p className="text-gray-600 mb-6">
                   Aun no hay gastos ni reembolsos registrados.
                 </p>
-                {!isAdmin && (
+                {!canViewAll && (
                   <Link
                     href="/caja-menor/nuevo"
                     className="inline-block px-6 py-3 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
@@ -819,7 +821,7 @@ export default function CajaMenorPage() {
                       {expandido && (
                         <div className="p-4 space-y-4">
                           {/* Toolbar admin: descargar facturas */}
-                          {isAdmin && filtroCoordinador && resumen.cantAprob > 0 && (
+                          {canViewAll && filtroCoordinador && resumen.cantAprob > 0 && (
                             <div className="flex justify-end">
                               <button
                                 onClick={() => handleDescargarFacturas(mes)}
@@ -862,13 +864,13 @@ export default function CajaMenorPage() {
                                     <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase w-24">Fecha</th>
                                     <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase w-36">Monto</th>
                                     <th className="text-left py-2 px-3 text-xs font-bold text-blue-700 uppercase">Observaciones</th>
-                                    {isAdmin && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase w-20"></th>}
+                                    {canWrite && <th className="text-right py-2 px-3 text-xs font-bold text-blue-700 uppercase w-20"></th>}
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {reembolsosMes.map((r, index) => {
                                     const fecha = r.fields.Fecha || "";
-                                    const puedeEliminar = isAdmin && puedeEliminarReembolso(fecha);
+                                    const puedeEliminar = canWrite && puedeEliminarReembolso(fecha);
                                     return (
                                       <tr key={r.id} className={`border-t border-blue-100 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/30"}`}>
                                         <td className="py-2 px-3 font-bold text-blue-600 w-16">#{r.fields.NumeroReembolso || "-"}</td>
@@ -881,7 +883,7 @@ export default function CajaMenorPage() {
                                         <td className="py-2 px-3 text-gray-600 truncate">
                                           {r.fields.Observaciones || "-"}
                                         </td>
-                                        {isAdmin && (
+                                        {canWrite && (
                                           <td className="py-2 px-3 text-right w-20">
                                             {puedeEliminar && (
                                               <button
@@ -927,7 +929,7 @@ export default function CajaMenorPage() {
                                     <tr>
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase w-16">#</th>
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase w-24">Fecha</th>
-                                      {isAdmin && !filtroCoordinador && (
+                                      {canViewAll && !filtroCoordinador && (
                                         <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coord.</th>
                                       )}
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
@@ -959,7 +961,7 @@ export default function CajaMenorPage() {
                                           <td className="px-3 py-2 text-gray-700 w-24">
                                             {fecha ? new Date(fecha + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "-"}
                                           </td>
-                                          {isAdmin && !filtroCoordinador && (
+                                          {canViewAll && !filtroCoordinador && (
                                             <td className="px-3 py-2 text-gray-700 text-xs">{coordinador}</td>
                                           )}
                                           <td className="px-3 py-2 text-gray-900 font-medium">{beneficiario}</td>
@@ -980,7 +982,7 @@ export default function CajaMenorPage() {
                                               >
                                                 Ver
                                               </Link>
-                                              {puedeEliminar && !isAdmin && (
+                                              {puedeEliminar && !canViewAll && (
                                                 <button
                                                   onClick={() => handleEliminar(gasto.id, numero)}
                                                   className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"

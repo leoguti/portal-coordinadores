@@ -5,10 +5,11 @@ import {
   getReembolsosCajaMenor,
   createReembolsoCajaMenor,
 } from "@/lib/airtable";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/caja-menor/reembolsos — Listar reembolsos
- * Admin: todos. Coordinador: los suyos.
+ * Admin/Supervisor: todos. Coordinador: los suyos.
  */
 export async function GET() {
   try {
@@ -17,8 +18,8 @@ export async function GET() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const isAdmin = session.user?.rol === "Administrador";
-    const coordinadorId = isAdmin ? undefined : session.user?.coordinatorRecordId;
+    const canViewAll = isAdminOrSupervisor(session.user?.rol);
+    const coordinadorId = canViewAll ? undefined : session.user?.coordinatorRecordId;
 
     const reembolsos = await getReembolsosCajaMenor(coordinadorId || undefined);
 

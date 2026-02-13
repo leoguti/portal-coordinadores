@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/coordinadores
  * Get list of active coordinadores (excludes "Desactivado" role)
- * Admin only access
+ * Admin/Supervisor access
  */
 export async function GET() {
   try {
@@ -18,8 +19,8 @@ export async function GET() {
       );
     }
 
-    // Solo administradores pueden ver la lista completa
-    if (session.user.rol !== "Administrador") {
+    // Solo administradores y supervisores pueden ver la lista completa
+    if (!isAdminOrSupervisor(session.user.rol)) {
       return NextResponse.json(
         { error: "Acceso denegado" },
         { status: 403 }

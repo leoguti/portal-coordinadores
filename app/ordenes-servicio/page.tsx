@@ -7,6 +7,7 @@ import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenesCoordinador, getAllOrdenes, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
+import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 export default function OrdenesServicioPage() {
   const { data: session, status } = useSession();
@@ -29,7 +30,8 @@ export default function OrdenesServicioPage() {
   const [expandedMeses, setExpandedMeses] = useState<Set<string>>(new Set());
   const [expandedBeneficiarios, setExpandedBeneficiarios] = useState<Set<string>>(new Set());
 
-  const isAdmin = session?.user?.rol === "Administrador";
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -45,7 +47,7 @@ export default function OrdenesServicioPage() {
         setLoading(true);
         setError(null);
 
-        const data = isAdmin
+        const data = canViewAll
           ? await getAllOrdenes()
           : await getOrdenesCoordinador(session.user.coordinatorRecordId);
         setOrdenes(data);
@@ -65,7 +67,7 @@ export default function OrdenesServicioPage() {
     if (session?.user?.coordinatorRecordId) {
       loadOrdenes();
     }
-  }, [session?.user?.coordinatorRecordId, isAdmin]);
+  }, [session?.user?.coordinatorRecordId, canViewAll]);
 
   if (status === "loading") {
     return (
@@ -244,7 +246,7 @@ export default function OrdenesServicioPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Ordenes de Servicio</h1>
             <p className="text-gray-600 mt-1">
-              {isAdmin ? "Vista de administrador - Todas las ordenes" : "Gestiona las solicitudes de pago a Bogota"}
+              {canViewAll ? "Vista de administrador - Todas las ordenes" : "Gestiona las solicitudes de pago a Bogota"}
             </p>
           </div>
           <Link
@@ -258,8 +260,8 @@ export default function OrdenesServicioPage() {
         {/* Filtros */}
         <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
           <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase">Filtros</h3>
-          <div className={`grid grid-cols-1 gap-4 ${isAdmin ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-            {isAdmin && (
+          <div className={`grid grid-cols-1 gap-4 ${canViewAll ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+            {canViewAll && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Coordinador</label>
                 <select value={filtroCoordinador} onChange={(e) => { setFiltroCoordinador(e.target.value); setMonthPage(0); }} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00d084] focus:border-transparent">
