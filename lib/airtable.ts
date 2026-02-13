@@ -749,7 +749,7 @@ export async function countCertificadosCoordinador(
 
   try {
     const filterFormula = `AND(
-      FIND("${coordinatorRecordId}", ARRAYJOIN({coordinador})),
+      FIND("${coordinatorRecordId}", ARRAYJOIN({id_coordinador})),
       {ano} = ${año}
     )`;
 
