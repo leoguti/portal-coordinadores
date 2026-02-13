@@ -22,6 +22,9 @@ export default function OrdenesServicioPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("");
 
+  // Paginacion de meses
+  const [monthPage, setMonthPage] = useState(0);
+
   // Grupos expandidos (mes y beneficiario)
   const [expandedMeses, setExpandedMeses] = useState<Set<string>>(new Set());
   const [expandedBeneficiarios, setExpandedBeneficiarios] = useState<Set<string>>(new Set());
@@ -196,7 +199,6 @@ export default function OrdenesServicioPage() {
 
   // Paginacion de meses (6 por pagina)
   const MONTHS_PER_PAGE = 6;
-  const [monthPage, setMonthPage] = useState(0);
   const totalPages = Math.ceil(gruposPorMes.length / MONTHS_PER_PAGE);
   const mesesPaginados = gruposPorMes.slice(monthPage * MONTHS_PER_PAGE, (monthPage + 1) * MONTHS_PER_PAGE);
 
