@@ -729,6 +729,70 @@ export async function getKardexCajaMenorDisponibles(
 }
 
 /**
+ * Count certificados for a specific coordinator and year
+ *
+ * @param coordinatorRecordId - Airtable record ID of the coordinator
+ * @param año - Year to query (e.g., 2026)
+ * @returns Number of certificados
+ */
+export async function countCertificadosCoordinador(
+  coordinatorRecordId: string,
+  año: number
+): Promise<number> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return 0;
+  }
+
+  try {
+    const filterFormula = `AND(
+      FIND("${coordinatorRecordId}", ARRAYJOIN({coordinador})),
+      {ano} = ${año}
+    )`;
+
+    let total = 0;
+    let offset: string | undefined;
+
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        "fields[]": "coordinador",
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+
+      const url = `https://api.airtable.com/v0/${baseId}/Certificados?${params.toString()}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Airtable API error fetching Certificados: ${response.status}`, errorText);
+        return 0;
+      }
+
+      const data = await response.json();
+      total += data.records?.length || 0;
+      offset = data.offset;
+    } while (offset);
+
+    return total;
+  } catch (error) {
+    console.error("Error counting Certificados from Airtable:", error);
+    return 0;
+  }
+}
+
+/**
  * Get metas (goals) for a specific coordinator and year
  * Returns the first matching record from the Metas table
  *

@@ -7,6 +7,7 @@ import {
   listActividadesForCoordinator,
   getOrdenesCoordinador,
   getGastosCajaMenorCoordinador,
+  countCertificadosCoordinador,
 } from "@/lib/airtable";
 
 /**
@@ -25,12 +26,13 @@ export async function GET() {
     const añoStr = String(añoActual);
 
     // Ejecutar todas las consultas en paralelo
-    const [metas, kardexAll, actividades, ordenes, gastos] = await Promise.all([
+    const [metas, kardexAll, actividades, ordenes, gastos, certificadosCount] = await Promise.all([
       getMetasCoordinador(coordinatorId, añoActual),
       listKardexForCoordinator(coordinatorId),
       listActividadesForCoordinator(coordinatorId),
       getOrdenesCoordinador(coordinatorId),
       getGastosCajaMenorCoordinador(coordinatorId),
+      countCertificadosCoordinador(coordinatorId, añoActual),
     ]);
 
     // --- METAS ---
@@ -150,6 +152,7 @@ export async function GET() {
         totalKgSalidas: Math.round(totalKgSalidas * 100) / 100,
         eventosSensibilizacion,
         personasCapacitadas,
+        certificados: certificadosCount,
       },
       alertas: {
         diasParaCierre,
