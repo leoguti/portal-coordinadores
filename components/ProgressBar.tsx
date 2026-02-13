@@ -6,6 +6,14 @@ interface ProgressBarProps {
   color?: string;
 }
 
+interface DualProgressBarProps {
+  label: string;
+  entradas: number;
+  salidas: number;
+  meta: number;
+  unit: string;
+}
+
 export default function ProgressBar({
   label,
   actual,
@@ -37,6 +45,76 @@ export default function ProgressBar({
         {" / "}
         {meta.toLocaleString("es-CO")} {unit}
       </p>
+    </div>
+  );
+}
+
+export function DualProgressBar({
+  label,
+  entradas,
+  salidas,
+  meta,
+  unit,
+}: DualProgressBarProps) {
+  const pctEntradas = meta > 0 ? Math.min((entradas / meta) * 100, 100) : 0;
+  const pctSalidas = meta > 0 ? Math.min((salidas / meta) * 100, 100) : 0;
+  const diferencia = entradas - salidas;
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">{label}</h3>
+        <span className="text-xs font-bold text-gray-500">
+          Meta: {meta.toLocaleString("es-CO")} {unit}
+        </span>
+      </div>
+
+      {/* Barra Entradas */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-green-700 flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500"></span>
+            Entradas
+          </span>
+          <span className="text-xs font-bold text-green-700">
+            {entradas.toLocaleString("es-CO")} {unit} ({Math.round(pctEntradas)}%)
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3.5">
+          <div
+            className="h-3.5 rounded-full transition-all duration-500 bg-green-500"
+            style={{ width: `${pctEntradas}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Barra Salidas */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-blue-700 flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
+            Salidas
+          </span>
+          <span className="text-xs font-bold text-blue-700">
+            {salidas.toLocaleString("es-CO")} {unit} ({Math.round(pctSalidas)}%)
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3.5">
+          <div
+            className="h-3.5 rounded-full transition-all duration-500 bg-blue-500"
+            style={{ width: `${pctSalidas}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Indicador de diferencia */}
+      {diferencia > 0 && (
+        <div className="pt-2 border-t border-gray-100">
+          <p className="text-xs text-amber-700 font-medium">
+            {diferencia.toLocaleString("es-CO")} {unit} pendientes de despachar
+          </p>
+        </div>
+      )}
     </div>
   );
 }

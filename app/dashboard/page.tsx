@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KpiCard from "@/components/KpiCard";
-import ProgressBar from "@/components/ProgressBar";
+import ProgressBar, { DualProgressBar } from "@/components/ProgressBar";
 import Link from "next/link";
 
 interface DashboardStats {
   metas: {
-    recoleccion: { meta: number; actual: number };
+    recoleccion: { meta: number; entradas: number; salidas: number };
     sensibilizacion: { meta: number; actual: number };
     configurada: boolean;
   };
@@ -127,12 +127,12 @@ export default function DashboardPage() {
                 </div>
               ) : stats ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ProgressBar
+                  <DualProgressBar
                     label={`Meta Recolección ${añoActual}`}
-                    actual={stats.metas.recoleccion.actual}
+                    entradas={stats.metas.recoleccion.entradas}
+                    salidas={stats.metas.recoleccion.salidas}
                     meta={stats.metas.recoleccion.meta}
                     unit="kg"
-                    color="#00d084"
                   />
                   <ProgressBar
                     label={`Meta Sensibilización ${añoActual}`}

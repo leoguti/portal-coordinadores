@@ -34,13 +34,14 @@ export async function GET() {
     ]);
 
     // --- METAS ---
-    // Filtrar kardex del año actual tipo ENTRADA para meta de recolección
     const kardexAño = kardexAll.filter((k) => k.fields.AÑO === añoStr);
     const kgEntradas = kardexAño
       .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
       .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
+    const kgSalidas = kardexAño
+      .filter((k) => k.fields.TipoMovimiento === "SALIDA")
+      .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
 
-    // Filtrar actividades de sensibilización del año actual para meta
     const actividadesAño = actividades.filter((a) => a.fields.Año === añoStr);
     const participantesSensibilizacion = actividadesAño
       .filter((a) => a.fields.Tipo === "Sensibilización")
@@ -49,7 +50,8 @@ export async function GET() {
     const metasData = {
       recoleccion: {
         meta: metas?.fields.MetaRecoleccion || 0,
-        actual: Math.round(kgEntradas * 100) / 100,
+        entradas: Math.round(kgEntradas * 100) / 100,
+        salidas: Math.round(kgSalidas * 100) / 100,
       },
       sensibilizacion: {
         meta: metas?.fields.MetaSensibilizacion || 0,
