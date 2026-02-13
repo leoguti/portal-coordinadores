@@ -241,49 +241,57 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* SECCIÓN 4: Accesos Rápidos (siempre visible) */}
+        {/* SECCIÓN 4: Accesos Rápidos */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <Link
-              href="/actividades/nueva"
-              className="p-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
+              href="/ordenes-servicio-v2/nueva"
+              className="group p-5 bg-white border-2 border-gray-200 hover:border-[#00d084] rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-4"
             >
-              <div>
-                <h3 className="font-semibold mb-1">Nueva Actividad</h3>
-                <p className="text-sm text-blue-100">Registrar una nueva actividad</p>
+              <div className="w-12 h-12 rounded-lg bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                <span className="text-2xl">📋</span>
               </div>
-              <span className="text-3xl">➕</span>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Nueva Orden</h3>
+                <p className="text-xs text-gray-500">Orden de servicio</p>
+              </div>
             </Link>
             <Link
-              href="/mapa"
-              className="p-6 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
+              href="/caja-menor/nuevo"
+              className="group p-5 bg-white border-2 border-gray-200 hover:border-[#00d084] rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-4"
             >
-              <div>
-                <h3 className="font-semibold mb-1">Mapa de Actividades</h3>
-                <p className="text-sm text-amber-100">Ver cobertura geográfica</p>
+              <div className="w-12 h-12 rounded-lg bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center transition-colors">
+                <span className="text-2xl">💰</span>
               </div>
-              <span className="text-3xl">🗺️</span>
-            </Link>
-            <Link
-              href="/certificados"
-              className="p-6 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
-            >
               <div>
-                <h3 className="font-semibold mb-1">Ver Certificados</h3>
-                <p className="text-sm text-green-100">Consultar certificados emitidos</p>
+                <h3 className="font-semibold text-gray-900 text-sm">Nuevo Gasto</h3>
+                <p className="text-xs text-gray-500">Caja menor</p>
               </div>
-              <span className="text-3xl">📜</span>
             </Link>
             <Link
               href="/kardex"
-              className="p-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-between"
+              className="group p-5 bg-white border-2 border-gray-200 hover:border-[#00d084] rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-4"
             >
-              <div>
-                <h3 className="font-semibold mb-1">Ver Kardex</h3>
-                <p className="text-sm text-purple-100">Consultar movimientos logísticos</p>
+              <div className="w-12 h-12 rounded-lg bg-violet-50 group-hover:bg-violet-100 flex items-center justify-center transition-colors">
+                <span className="text-2xl">📦</span>
               </div>
-              <span className="text-3xl">📦</span>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Nuevo Kardex</h3>
+                <p className="text-xs text-gray-500">Registro de movimiento</p>
+              </div>
+            </Link>
+            <Link
+              href="/mapa"
+              className="group p-5 bg-white border-2 border-gray-200 hover:border-[#00d084] rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-lg bg-sky-50 group-hover:bg-sky-100 flex items-center justify-center transition-colors">
+                <span className="text-2xl">🗺️</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Mapa</h3>
+                <p className="text-xs text-gray-500">Cobertura geográfica</p>
+              </div>
             </Link>
           </div>
         </div>
