@@ -406,9 +406,6 @@ export default function ReportesFacturasPage() {
                                   <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">
                                     N.° Factura
                                   </th>
-                                  <th className="px-4 py-2.5 text-left text-xs font-bold text-gray-600 uppercase">
-                                    Concepto
-                                  </th>
                                   <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-600 uppercase">
                                     Estado
                                   </th>
@@ -434,8 +431,6 @@ export default function ReportesFacturasPage() {
                                     orden.fields.NumeroFactura || "";
                                   const fechaPago =
                                     orden.fields.FechaPago || "";
-                                  const observaciones =
-                                    orden.fields.Observaciones || "";
 
                                   return (
                                     <tr
@@ -463,13 +458,6 @@ export default function ReportesFacturasPage() {
                                       </td>
                                       <td className="px-4 py-2.5 text-sm text-gray-900 font-medium">
                                         {numFactura || (
-                                          <span className="text-gray-400">
-                                            -
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-2.5 text-sm text-gray-600 max-w-[200px] truncate" title={observaciones}>
-                                        {observaciones || (
                                           <span className="text-gray-400">
                                             -
                                           </span>
@@ -542,7 +530,7 @@ export default function ReportesFacturasPage() {
                               <tfoot className="bg-gray-50 border-t border-gray-200">
                                 <tr>
                                   <td
-                                    colSpan={5}
+                                    colSpan={4}
                                     className="px-4 py-2.5 text-sm font-bold text-gray-700 text-right"
                                   >
                                     Subtotal {beneficiario}:
