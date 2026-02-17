@@ -1521,6 +1521,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   const blob = await put(filename, pdfBuffer, {
     access: "public",
     contentType: "application/pdf",
+    addRandomSuffix: true,
   });
 
   console.log(`[regenerarPDF] PDF uploaded to Vercel Blob: ${blob.url}`);
