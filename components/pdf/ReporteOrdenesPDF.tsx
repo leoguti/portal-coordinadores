@@ -206,23 +206,6 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
               <View style={s.colFPago} />
             </View>
 
-            {/* Estado breakdown for month */}
-            <View style={s.estadoBreakdown}>
-              <View style={s.estadoTable}>
-                <View style={s.estadoTableHeader}>
-                  <Text style={[s.estadoTableHeaderText, s.estadoColEstado]}>Estado</Text>
-                  <Text style={[s.estadoTableHeaderText, s.estadoColCantidad]}>Cant.</Text>
-                  <Text style={[s.estadoTableHeaderText, s.estadoColMonto]}>Monto</Text>
-                </View>
-                {sortEstados(Object.entries(mesGrupo.estadoTotals)).map(([estado, monto], idx) => (
-                  <View key={estado} style={[s.estadoTableRow, idx % 2 === 1 ? s.estadoTableRowAlt : {}]}>
-                    <Text style={[s.estadoText, s.estadoColEstado]}>{estado}</Text>
-                    <Text style={[s.estadoText, s.estadoColCantidad]}>{mesGrupo.estadoCounts[estado]}</Text>
-                    <Text style={[s.estadoTextBold, s.estadoColMonto]}>{formatCurrency(monto)}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
           </View>
         ))}
 
