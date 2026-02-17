@@ -627,6 +627,53 @@ export default function OrdenDetallePage() {
             </div>
           )}
 
+          {/* Soportes de Bascula de la Orden */}
+          {orden.fields["Soporte de Bascula"] && orden.fields["Soporte de Bascula"].length > 0 && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-bold text-blue-800 mb-3">
+                Soportes de Bascula ({orden.fields["Soporte de Bascula"].length})
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {orden.fields["Soporte de Bascula"].map((soporte, index) => {
+                  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(soporte.filename);
+                  return (
+                    <div key={soporte.id || index} className="relative group">
+                      {isImage ? (
+                        <button
+                          onClick={() => setSelectedPhoto({
+                            url: soporte.url,
+                            filename: soporte.filename,
+                            kardexId: 0,
+                          })}
+                          className="block w-full"
+                        >
+                          <img
+                            src={`/api/image-proxy?url=${encodeURIComponent(soporte.url)}`}
+                            alt={soporte.filename}
+                            className="w-full h-28 object-cover rounded border border-blue-300 group-hover:border-blue-500 group-hover:shadow-md transition-all"
+                          />
+                        </button>
+                      ) : (
+                        <a
+                          href={soporte.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center w-full h-28 bg-white rounded border border-blue-300 hover:border-blue-500 hover:shadow-md transition-all"
+                        >
+                          <div className="text-center px-2">
+                            <span className="block text-2xl mb-1">&#128196;</span>
+                            <span className="text-xs text-blue-700 break-all">{soporte.filename}</span>
+                          </div>
+                        </a>
+                      )}
+                      <p className="text-xs text-blue-600 mt-1 truncate text-center">{soporte.filename}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Items */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Items de la Orden</h3>
