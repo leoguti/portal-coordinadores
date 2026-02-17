@@ -260,11 +260,20 @@ export default function ActividadesPage() {
     return porTipo;
   };
 
-  // Calcular estadísticas generales según filtros aplicados
+  // Calcular estadísticas generales: por defecto año vigente, o según filtros activos
+  const anoVigente = new Date().getFullYear();
+  const hayFiltrosActivos = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
   const estadisticasGenerales = React.useMemo(() => {
     const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
 
     actividadesFiltradas.forEach(actividad => {
+      // Sin filtros activos, mostrar solo año vigente (comportamiento por defecto)
+      if (!hayFiltrosActivos) {
+        if (!actividad.fields.Fecha) return;
+        const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
+        if (anoActividad !== anoVigente) return;
+      }
+
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
         porTipo[tipo] = { count: 0, participantes: 0 };
@@ -276,7 +285,7 @@ export default function ActividadesPage() {
     });
 
     return porTipo;
-  }, [actividadesFiltradas]);
+  }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
 
   async function descargarMes(downloadKey: string, actividadesDelMes: Actividad[], coordName?: string) {
     setDescargandoMes(downloadKey);
@@ -676,17 +685,20 @@ export default function ActividadesPage() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   {selectedAno && selectedMes
                     ? `Resumen General de ${selectedMes} ${selectedAno}`
-                    : selectedAno
-                      ? `Resumen General del Año ${selectedAno}`
-                      : `Resumen General`}
+                    : `Resumen General del Año ${selectedAno || anoVigente}`}
                 </h3>
               </div>
               <p className="text-xs text-gray-500 mb-4 ml-9">
-                {[
-                  selectedMunicipio && `Municipio: ${selectedMunicipio}`,
-                  selectedTipo && `Tipo: ${selectedTipo}`,
-                  canViewAll && selectedCoordinador && coordinadores.find(c => c.id === selectedCoordinador)?.name && `Coordinador: ${coordinadores.find(c => c.id === selectedCoordinador)!.name}`,
-                ].filter(Boolean).join(' · ') || `Todas las actividades${!selectedAno ? ` (${actividadesFiltradas.length})` : ''}`}
+                {(() => {
+                  const filtros = [
+                    selectedMunicipio && `Municipio: ${selectedMunicipio}`,
+                    selectedTipo && `Tipo: ${selectedTipo}`,
+                    canViewAll && selectedCoordinador && coordinadores.find(c => c.id === selectedCoordinador)?.name && `Coordinador: ${coordinadores.find(c => c.id === selectedCoordinador)!.name}`,
+                  ].filter(Boolean);
+                  if (filtros.length > 0) return filtros.join(' · ');
+                  if (!selectedMes) return `Desde el 1 de enero de ${selectedAno || anoVigente}`;
+                  return '';
+                })()}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Object.entries(estadisticasGenerales).map(([tipo, stats]) => (
