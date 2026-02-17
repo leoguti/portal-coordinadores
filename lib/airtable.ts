@@ -1526,23 +1526,19 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   console.log(`[regenerarPDF] PDF generated: ${(pdfBuffer.length / 1024).toFixed(1)} KB`);
 
-  // 10. Merge additional PDFs as annexes: soporte PDFs + factura
+  // 10. Assemble final PDF in order: Factura → Orden → Básculas (Kardex imgs + Orden soportes PDFs)
   let finalPdfBuffer = pdfBuffer;
-  const pdfAnnexes: Buffer[] = [];
-
-  // Add soporte de bascula PDFs (already downloaded above)
-  pdfAnnexes.push(...soportesPdfBuffers);
 
   // Download factura PDF if exists
+  let facturaBuffer: Buffer | null = null;
   const facturaAttachment = orden.fields.Factura?.[0];
   if (facturaAttachment?.url) {
     try {
       console.log(`[regenerarPDF] Downloading factura to merge...`);
       const facturaResp = await fetch(facturaAttachment.url);
       if (facturaResp.ok) {
-        const facturaBuffer = Buffer.from(await facturaResp.arrayBuffer());
+        facturaBuffer = Buffer.from(await facturaResp.arrayBuffer());
         console.log(`[regenerarPDF] Factura downloaded: ${(facturaBuffer.length / 1024).toFixed(1)} KB`);
-        pdfAnnexes.push(facturaBuffer);
       } else {
         console.warn(`[regenerarPDF] Could not download factura: ${facturaResp.status}`);
       }
@@ -1551,12 +1547,17 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     }
   }
 
-  // Merge all PDFs if there are annexes
-  if (pdfAnnexes.length > 0) {
+  // Build ordered list: 1) Factura  2) Orden  3) Soportes PDF de orden
+  const allPdfs: Buffer[] = [];
+  if (facturaBuffer) allPdfs.push(facturaBuffer);
+  allPdfs.push(pdfBuffer); // orden con anexos de fotos (kardex + orden imágenes)
+  allPdfs.push(...soportesPdfBuffers); // soportes de orden que son PDF
+
+  if (allPdfs.length > 1) {
     try {
       const { mergePDFs } = await import("@/lib/generatePDF");
-      finalPdfBuffer = await mergePDFs([pdfBuffer, ...pdfAnnexes]);
-      console.log(`[regenerarPDF] Final PDF with ${pdfAnnexes.length} annexed PDFs: ${(finalPdfBuffer.length / 1024).toFixed(1)} KB`);
+      finalPdfBuffer = await mergePDFs(allPdfs);
+      console.log(`[regenerarPDF] Final merged PDF (${allPdfs.length} docs): ${(finalPdfBuffer.length / 1024).toFixed(1)} KB`);
     } catch (e) {
       console.error(`[regenerarPDF] Error merging PDFs:`, e);
       // Continue with original PDF
