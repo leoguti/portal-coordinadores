@@ -242,7 +242,7 @@ export default function OrdenesServicioPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {!loading && ordenesFiltradas.length > 0 && (
+            {!loading && filtroBeneficiario && ordenesFiltradas.length > 0 && (
               <button
                 onClick={handleExportarPDF}
                 disabled={exportingPDF}
