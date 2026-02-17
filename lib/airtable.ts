@@ -1435,20 +1435,31 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     console.log(`[regenerarPDF] Downloaded ${basculaBase64Map.size}/${basculaUrlsToDownload.length} bascula photos`);
   }
 
-  // Pre-download soportes de orden as base64 (parallel)
+  // Pre-download soportes de orden: separate images (for @react-pdf) from PDFs (for pdf-lib merge)
   const soportesOrdenRaw = orden.fields["Soporte de Bascula"] || [];
-  const soportesOrden: Array<{ url: string; filename: string }> = [];
+  const soportesOrden: Array<{ url: string; filename: string }> = []; // images as base64
+  const soportesPdfBuffers: Buffer[] = []; // PDF files to merge later
   if (soportesOrdenRaw.length > 0) {
-    const results = await Promise.all(
+    await Promise.all(
       soportesOrdenRaw.map(async (s) => {
-        const base64 = await imageUrlToBase64(s.url);
-        return { base64, filename: s.filename };
+        const isPdf = /\.pdf$/i.test(s.filename);
+        if (isPdf) {
+          try {
+            const resp = await fetch(s.url);
+            if (resp.ok) {
+              soportesPdfBuffers.push(Buffer.from(await resp.arrayBuffer()));
+              console.log(`[regenerarPDF] Soporte PDF downloaded: ${s.filename}`);
+            }
+          } catch (e) {
+            console.warn(`[regenerarPDF] Could not download soporte PDF ${s.filename}:`, e);
+          }
+        } else {
+          const base64 = await imageUrlToBase64(s.url);
+          if (base64) soportesOrden.push({ url: base64, filename: s.filename });
+        }
       })
     );
-    results.forEach(({ base64, filename }) => {
-      if (base64) soportesOrden.push({ url: base64, filename });
-    });
-    console.log(`[regenerarPDF] Downloaded ${soportesOrden.length}/${soportesOrdenRaw.length} orden support photos`);
+    console.log(`[regenerarPDF] Soportes orden: ${soportesOrden.length} images, ${soportesPdfBuffers.length} PDFs`);
   }
 
   // 8. Prepare PDF items (with base64 photos instead of remote URLs)
@@ -1515,10 +1526,47 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   console.log(`[regenerarPDF] PDF generated: ${(pdfBuffer.length / 1024).toFixed(1)} KB`);
 
-  // 10. Upload to Vercel Blob
+  // 10. Merge additional PDFs as annexes: soporte PDFs + factura
+  let finalPdfBuffer = pdfBuffer;
+  const pdfAnnexes: Buffer[] = [];
+
+  // Add soporte de bascula PDFs (already downloaded above)
+  pdfAnnexes.push(...soportesPdfBuffers);
+
+  // Download factura PDF if exists
+  const facturaAttachment = orden.fields.Factura?.[0];
+  if (facturaAttachment?.url) {
+    try {
+      console.log(`[regenerarPDF] Downloading factura to merge...`);
+      const facturaResp = await fetch(facturaAttachment.url);
+      if (facturaResp.ok) {
+        const facturaBuffer = Buffer.from(await facturaResp.arrayBuffer());
+        console.log(`[regenerarPDF] Factura downloaded: ${(facturaBuffer.length / 1024).toFixed(1)} KB`);
+        pdfAnnexes.push(facturaBuffer);
+      } else {
+        console.warn(`[regenerarPDF] Could not download factura: ${facturaResp.status}`);
+      }
+    } catch (e) {
+      console.error(`[regenerarPDF] Error downloading factura:`, e);
+    }
+  }
+
+  // Merge all PDFs if there are annexes
+  if (pdfAnnexes.length > 0) {
+    try {
+      const { mergePDFs } = await import("@/lib/generatePDF");
+      finalPdfBuffer = await mergePDFs([pdfBuffer, ...pdfAnnexes]);
+      console.log(`[regenerarPDF] Final PDF with ${pdfAnnexes.length} annexed PDFs: ${(finalPdfBuffer.length / 1024).toFixed(1)} KB`);
+    } catch (e) {
+      console.error(`[regenerarPDF] Error merging PDFs:`, e);
+      // Continue with original PDF
+    }
+  }
+
+  // 11. Upload to Vercel Blob
   const { put, del } = await import("@vercel/blob");
   const filename = `Orden_${orden.fields.NumeroOrden}.pdf`;
-  const blob = await put(filename, pdfBuffer, {
+  const blob = await put(filename, finalPdfBuffer, {
     access: "public",
     contentType: "application/pdf",
     addRandomSuffix: true,

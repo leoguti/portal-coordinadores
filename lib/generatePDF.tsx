@@ -59,6 +59,31 @@ export async function generateOrdenServicioPDF(
 }
 
 /**
+ * Merge multiple PDF buffers into a single PDF using pdf-lib.
+ * Pages from each PDF are appended in order.
+ */
+export async function mergePDFs(
+  pdfBuffers: Buffer[],
+): Promise<Buffer> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PDFDocument } = require("pdf-lib");
+
+  const mergedPdf = await PDFDocument.create();
+
+  for (const buf of pdfBuffers) {
+    const doc = await PDFDocument.load(buf);
+    const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+    for (const page of pages) {
+      mergedPdf.addPage(page);
+    }
+  }
+
+  const mergedBytes = await mergedPdf.save();
+  console.log(`PDFs merged: ${pdfBuffers.length} documents, total ${mergedBytes.length} bytes`);
+  return Buffer.from(mergedBytes);
+}
+
+/**
  * Save PDF locally to public folder
  */
 export async function uploadPDFToAirtable(
