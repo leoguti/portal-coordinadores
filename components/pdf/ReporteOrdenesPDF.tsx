@@ -79,15 +79,16 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
         {/* Groups */}
         {gruposPorMes.map(([mesKey, mesGrupo]) => (
           <View key={mesKey}>
-            {/* Month header */}
+            {/* Month header - uses same column grid */}
             <View style={s.mesHeader}>
-              <Text style={s.mesHeaderText}>
+              <Text style={[s.mesHeaderText, s.colLabel]}>
                 {formatMesLabel(mesKey)} — {mesGrupo.count}{" "}
                 {mesGrupo.count === 1 ? "orden" : "ordenes"}
               </Text>
-              <Text style={s.mesHeaderTotal}>
+              <Text style={[s.mesHeaderTotal, s.colTotal]}>
                 {formatCurrency(mesGrupo.total)}
               </Text>
+              <View style={s.colFPago} />
             </View>
 
             {/* Beneficiarios */}
@@ -95,14 +96,19 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
               <View key={`${mesKey}|${beneficiario}`}>
                 {/* Beneficiario header + table header kept together */}
                 <View wrap={false}>
+                  {/* Beneficiario header - same grid */}
                   <View style={s.beneficiarioHeader}>
-                    <Text style={s.beneficiarioName}>{beneficiario}</Text>
-                    <Text style={s.beneficiarioTotal}>
-                      {benGrupo.ordenes.length}{" "}
-                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
+                    <Text style={[s.beneficiarioName, s.colLabel]}>
+                      {beneficiario} ({benGrupo.ordenes.length}{" "}
+                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"})
                     </Text>
+                    <Text style={[s.beneficiarioTotal, s.colTotal]}>
+                      {formatCurrency(benGrupo.total)}
+                    </Text>
+                    <View style={s.colFPago} />
                   </View>
 
+                  {/* Table header */}
                   <View style={s.tableHeader}>
                     <Text style={[s.tableHeaderText, s.colOrden]}># Orden</Text>
                     <Text style={[s.tableHeaderText, s.colFecha]}>Fecha</Text>
@@ -154,39 +160,42 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
                   );
                 })}
 
-                {/* Subtotal beneficiario */}
+                {/* Subtotal beneficiario - same grid */}
                 <View style={s.subtotalRow}>
-                  <Text style={s.subtotalLabel}>
+                  <Text style={[s.subtotalLabel, s.colLabel]}>
                     Subtotal {beneficiario}:
                   </Text>
-                  <Text style={s.subtotalValue}>
+                  <Text style={[s.subtotalValue, s.colTotal]}>
                     {formatCurrency(benGrupo.total)}
                   </Text>
+                  <View style={s.colFPago} />
                 </View>
               </View>
             ))}
 
-            {/* Subtotal mes */}
+            {/* Subtotal mes - same grid */}
             <View style={s.mesSubtotalRow}>
-              <Text style={s.mesSubtotalLabel}>
+              <Text style={[s.mesSubtotalLabel, s.colLabel]}>
                 Total {formatMesLabel(mesKey)}:
               </Text>
-              <Text style={s.mesSubtotalValue}>
+              <Text style={[s.mesSubtotalValue, s.colTotal]}>
                 {formatCurrency(mesGrupo.total)}
               </Text>
+              <View style={s.colFPago} />
             </View>
           </View>
         ))}
 
-        {/* Grand total */}
+        {/* Grand total - same grid */}
         <View style={s.grandTotalRow}>
-          <Text style={s.grandTotalLabel}>
-            Total General ({totalOrdenes}{" "}
+          <Text style={[s.grandTotalLabel, s.colLabel]}>
+            TOTAL GENERAL ({totalOrdenes}{" "}
             {totalOrdenes === 1 ? "orden" : "ordenes"})
           </Text>
-          <Text style={s.grandTotalValue}>
+          <Text style={[s.grandTotalValue, s.colTotal]}>
             {formatCurrency(grandTotal)}
           </Text>
+          <View style={s.colFPago} />
         </View>
 
         {/* Footer with page numbers */}
