@@ -69,45 +69,23 @@ export const reporteStyles = StyleSheet.create({
   // Label spanning left columns (used by subtotals, month totals, grand total)
   colLabel: { width: "65%", textAlign: "right", paddingRight: 8 },
 
-  // Month header
-  mesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#042726",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginTop: 10,
-    borderRadius: 3,
-    minHeight: 22,
-  },
-  mesHeaderText: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  mesHeaderTotal: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#00d084",
-  },
-
-  // Beneficiario header
-  beneficiarioHeader: {
+  // Group header (mes + beneficiario combined)
+  groupHeader: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f3f4f6",
     paddingVertical: 5,
     paddingHorizontal: 8,
-    marginTop: 4,
-    borderBottom: "1 solid #e5e7eb",
-    minHeight: 18,
+    marginTop: 10,
+    borderBottom: "1 solid #d1d5db",
+    minHeight: 20,
   },
-  beneficiarioName: {
+  groupHeaderText: {
     fontSize: 8,
     fontWeight: "bold",
     color: "#1f2937",
   },
-  beneficiarioTotal: {
+  groupHeaderTotal: {
     fontSize: 8,
     fontWeight: "bold",
     color: "#00d084",
@@ -176,27 +154,6 @@ export const reporteStyles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "bold",
     color: "#065f46",
-  },
-
-  // Subtotal mes
-  mesSubtotalRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    backgroundColor: "#d1fae5",
-    marginBottom: 2,
-    minHeight: 18,
-  },
-  mesSubtotalLabel: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: "#042726",
-  },
-  mesSubtotalValue: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#042726",
   },
 
   // Grand total

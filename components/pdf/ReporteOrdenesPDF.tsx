@@ -101,30 +101,16 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
         {/* Groups */}
         {gruposPorMes.map(([mesKey, mesGrupo]) => (
           <View key={mesKey}>
-            {/* Month header - uses same column grid */}
-            <View style={s.mesHeader}>
-              <Text style={[s.mesHeaderText, s.colLabel]}>
-                {formatMesLabel(mesKey)} — {mesGrupo.count}{" "}
-                {mesGrupo.count === 1 ? "orden" : "ordenes"}
-              </Text>
-              <Text style={[s.mesHeaderTotal, s.colTotal]}>
-                {formatCurrency(mesGrupo.total)}
-              </Text>
-              <View style={s.colFPago} />
-            </View>
-
-            {/* Beneficiarios */}
             {mesGrupo.beneficiarios.map(([beneficiario, benGrupo]) => (
               <View key={`${mesKey}|${beneficiario}`}>
-                {/* Beneficiario header + table header kept together */}
+                {/* Combined header (mes + beneficiario) + table header kept together */}
                 <View wrap={false}>
-                  {/* Beneficiario header - same grid */}
-                  <View style={s.beneficiarioHeader}>
-                    <Text style={[s.beneficiarioName, s.colLabel]}>
-                      {beneficiario} ({benGrupo.ordenes.length}{" "}
-                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"})
+                  <View style={s.groupHeader}>
+                    <Text style={[s.groupHeaderText, s.colLabel]}>
+                      {formatMesLabel(mesKey)} {"\u00B7"} {beneficiario} {"\u00B7"} {benGrupo.ordenes.length}{" "}
+                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
                     </Text>
-                    <Text style={[s.beneficiarioTotal, s.colTotal]}>
+                    <Text style={[s.groupHeaderTotal, s.colTotal]}>
                       {formatCurrency(benGrupo.total)}
                     </Text>
                     <View style={s.colFPago} />
@@ -182,10 +168,10 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
                   );
                 })}
 
-                {/* Subtotal beneficiario - same grid */}
+                {/* Subtotal row */}
                 <View style={s.subtotalRow}>
                   <Text style={[s.subtotalLabel, s.colLabel]}>
-                    Subtotal {beneficiario}:
+                    Subtotal {formatMesLabel(mesKey)}:
                   </Text>
                   <Text style={[s.subtotalValue, s.colTotal]}>
                     {formatCurrency(benGrupo.total)}
@@ -194,18 +180,6 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
                 </View>
               </View>
             ))}
-
-            {/* Subtotal mes - same grid */}
-            <View style={s.mesSubtotalRow}>
-              <Text style={[s.mesSubtotalLabel, s.colLabel]}>
-                Total {formatMesLabel(mesKey)}:
-              </Text>
-              <Text style={[s.mesSubtotalValue, s.colTotal]}>
-                {formatCurrency(mesGrupo.total)}
-              </Text>
-              <View style={s.colFPago} />
-            </View>
-
           </View>
         ))}
 
