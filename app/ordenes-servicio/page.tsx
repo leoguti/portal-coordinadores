@@ -8,6 +8,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenesCoordinador, getAllOrdenes, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
+import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 
 export default function OrdenesServicioPage() {
   const { data: session, status } = useSession();
@@ -22,6 +23,9 @@ export default function OrdenesServicioPage() {
   const [filtroBeneficiario, setFiltroBeneficiario] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("");
+
+  // Export PDF
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   // Paginacion de meses
   const [monthPage, setMonthPage] = useState(0);
@@ -152,52 +156,7 @@ export default function OrdenesServicioPage() {
   });
 
   // --- Agrupamiento doble: Mes → Beneficiario ---
-  type BeneficiarioGrupo = { ordenes: Orden[]; total: number };
-  type MesGrupo = {
-    beneficiarios: [string, BeneficiarioGrupo][];
-    total: number;
-    count: number;
-    estadoCounts: Record<string, number>;
-  };
-
-  const gruposPorMes: [string, MesGrupo][] = (() => {
-    const mesMap = new Map<string, { benMap: Map<string, BeneficiarioGrupo>; total: number; count: number; estadoCounts: Record<string, number> }>();
-
-    ordenesFiltradas.forEach((orden) => {
-      const fecha = orden.fields["Fecha de pedido"] || "";
-      const mesKey = fecha.substring(0, 7) || "sin-fecha";
-      const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
-      const estado = orden.fields.Estado || "Sin estado";
-      const total = orden.fields.Total || 0;
-
-      if (!mesMap.has(mesKey)) {
-        mesMap.set(mesKey, { benMap: new Map(), total: 0, count: 0, estadoCounts: {} });
-      }
-      const mes = mesMap.get(mesKey)!;
-      mes.total += total;
-      mes.count++;
-      mes.estadoCounts[estado] = (mes.estadoCounts[estado] || 0) + 1;
-
-      if (!mes.benMap.has(beneficiario)) {
-        mes.benMap.set(beneficiario, { ordenes: [], total: 0 });
-      }
-      const ben = mes.benMap.get(beneficiario)!;
-      ben.ordenes.push(orden);
-      ben.total += total;
-    });
-
-    return [...mesMap.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([mesKey, { benMap, total, count, estadoCounts }]) => [
-        mesKey,
-        {
-          beneficiarios: [...benMap.entries()].sort((a, b) => b[1].total - a[1].total),
-          total,
-          count,
-          estadoCounts,
-        },
-      ]);
-  })();
+  const gruposPorMes = groupOrdenesByMes(ordenesFiltradas);
 
   // Paginacion de meses (6 por pagina)
   const MONTHS_PER_PAGE = 6;
@@ -238,6 +197,39 @@ export default function OrdenesServicioPage() {
     setExpandedBeneficiarios(new Set());
   }
 
+  async function handleExportarPDF() {
+    setExportingPDF(true);
+    try {
+      const params = new URLSearchParams();
+      if (canViewAll) params.set("viewAll", "true");
+      if (filtroCoordinador) params.set("filtroCoordinador", filtroCoordinador);
+      if (filtroBeneficiario) params.set("filtroBeneficiario", filtroBeneficiario);
+      if (filtroEstado) params.set("filtroEstado", filtroEstado);
+      if (filtroMes) params.set("filtroMes", filtroMes);
+
+      const res = await fetch(`/api/ordenes-servicio/reporte-pdf?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Error desconocido" }));
+        throw new Error(data.error || "Error al generar el PDF");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte-ordenes-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exporting PDF:", err);
+      alert(err instanceof Error ? err.message : "Error al exportar el PDF");
+    } finally {
+      setExportingPDF(false);
+    }
+  }
+
   return (
     <AuthenticatedLayout>
       <div className="max-w-7xl mx-auto">
@@ -249,12 +241,29 @@ export default function OrdenesServicioPage() {
               {canViewAll ? "Vista de administrador - Todas las ordenes" : "Gestiona las solicitudes de pago a Bogota"}
             </p>
           </div>
-          <Link
-            href="/ordenes-servicio-v2/nueva"
-            className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
-          >
-            + Nueva Orden
-          </Link>
+          <div className="flex items-center gap-3">
+            {!loading && ordenesFiltradas.length > 0 && (
+              <button
+                onClick={handleExportarPDF}
+                disabled={exportingPDF}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                {exportingPDF && (
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {exportingPDF ? "Generando..." : "Exportar PDF"}
+              </button>
+            )}
+            <Link
+              href="/ordenes-servicio-v2/nueva"
+              className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
+            >
+              + Nueva Orden
+            </Link>
+          </div>
         </div>
 
         {/* Filtros */}
