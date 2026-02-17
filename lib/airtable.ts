@@ -1131,17 +1131,36 @@ export async function createOrdenServicio(
           catalogoData.push(...allCatalogo.filter(c => catalogoIds.includes(c.id)));
         }
         
+        // Helper: Download image URL and convert to base64 data URI
+        async function imgToBase64(imageUrl: string): Promise<string | undefined> {
+          try {
+            const resp = await fetch(imageUrl);
+            if (!resp.ok) return undefined;
+            const ct = resp.headers.get("content-type") || "image/jpeg";
+            const buf = await resp.arrayBuffer();
+            return `data:${ct};base64,${Buffer.from(buf).toString("base64")}`;
+          } catch { return undefined; }
+        }
+
+        // Pre-download bascula photos as base64 (parallel)
+        const basculaDownloads = await Promise.all(
+          kardexData.map(async (k) => {
+            const url = k.fields.soportebascula?.[0]?.url;
+            return { id: k.id, base64: url ? await imgToBase64(url) : undefined };
+          })
+        );
+        const basculaBase64Map = new Map(basculaDownloads.map(d => [d.id, d.base64]));
+
         // Prepare items data for PDF with detailed descriptions
         const pdfItems = params.items.map((item, index) => {
           if (item.kardexRecordId) {
             // Find Kardex data
             const kardex = kardexData.find(k => k.id === item.kardexRecordId);
             const idkardex = kardex?.fields.idkardex || "N/A";
-            const fecha = kardex?.fields.fechakardex || "";
             const municipio = kardex?.fields["mundep (from MunicipioOrigen)"]?.[0] || "N/A";
             const centro = kardex?.fields.NombreCentrodeAcopio?.[0] || "N/A";
             const total = kardex?.fields.Total || 0;
-            
+
             return {
               id: `item-${index}`,
               tipo: "KARDEX" as const,
@@ -1151,14 +1170,14 @@ export async function createOrdenServicio(
               cantidad: item.cantidad,
               precioUnitario: item.precioUnitario,
               subtotal: item.cantidad * item.precioUnitario,
-              fotoBasculaUrl: kardex?.fields.soportebascula?.[0]?.url,
+              fotoBasculaUrl: item.kardexRecordId ? basculaBase64Map.get(item.kardexRecordId) : undefined,
             };
           } else {
             // Find Catalog data
             const catalogo = catalogoData.find(c => c.id === item.catalogoRecordId);
             const nombre = catalogo?.fields.Nombre || "Servicio";
             const descripcion = catalogo?.fields.Descripcion || "";
-            
+
             return {
               id: `item-${index}`,
               tipo: "CATALOGO" as const,
@@ -1174,11 +1193,20 @@ export async function createOrdenServicio(
 
         const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-        // Prepare soportes de bascula from the orden itself
-        const soportesOrden = (ordenData.fields["Soporte de Bascula"] || []).map(s => ({
-          url: s.url,
-          filename: s.filename,
-        }));
+        // Pre-download soportes de bascula from the orden as base64
+        const soportesOrdenRaw = ordenData.fields["Soporte de Bascula"] || [];
+        const soportesOrden: Array<{ url: string; filename: string }> = [];
+        if (soportesOrdenRaw.length > 0) {
+          const results = await Promise.all(
+            soportesOrdenRaw.map(async (s) => {
+              const base64 = await imgToBase64(s.url);
+              return { base64, filename: s.filename };
+            })
+          );
+          results.forEach(({ base64, filename }) => {
+            if (base64) soportesOrden.push({ url: base64, filename });
+          });
+        }
 
         // Generate PDF buffer
         const pdfBuffer = await generateOrdenServicioPDF({
@@ -1289,7 +1317,7 @@ export async function createOrdenServicio(
 /**
  * Regenerate PDF for an existing Orden de Servicio
  * Re-fetches all data (items, kardex, catalogo, coordinator, beneficiary)
- * and generates a new PDF including bascula photos
+ * and generates a new PDF including bascula photos (pre-downloaded as base64)
  */
 export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -1299,19 +1327,24 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     throw new Error("Airtable credentials not configured");
   }
 
+  console.log(`[regenerarPDF] Starting for orden ${ordenId}`);
+
   // 1. Fetch orden
   const orden = await getOrdenById(ordenId);
   if (!orden) throw new Error("Orden no encontrada");
+  console.log(`[regenerarPDF] Orden #${orden.fields.NumeroOrden} loaded`);
 
   // 2. Fetch items
   const items = await getItemsOrden(ordenId);
   if (items.length === 0) throw new Error("La orden no tiene items");
+  console.log(`[regenerarPDF] ${items.length} items loaded`);
 
   // 3. Fetch Kardex data
   const kardexIds = items
     .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
     .map(item => item.fields.Kardex![0]);
   const kardexData = kardexIds.length > 0 ? await getKardexByIds(kardexIds) : [];
+  console.log(`[regenerarPDF] ${kardexData.length} kardex loaded`);
 
   // 4. Fetch Catalogo data
   const catalogoIds = items
@@ -1336,7 +1369,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
         coordinadorEmail = data.fields.email || "";
       }
     } catch (e) {
-      console.error("Error fetching coordinator for PDF regeneration:", e);
+      console.error("[regenerarPDF] Error fetching coordinator:", e);
     }
   }
 
@@ -1358,7 +1391,67 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     }
   }
 
-  // 7. Prepare PDF items
+  // Helper: Download image URL and convert to base64 data URI for @react-pdf/renderer
+  async function imageUrlToBase64(imageUrl: string): Promise<string | undefined> {
+    try {
+      const resp = await fetch(imageUrl);
+      if (!resp.ok) {
+        console.warn(`[regenerarPDF] Failed to download image: ${resp.status} ${imageUrl.substring(0, 80)}`);
+        return undefined;
+      }
+      const contentType = resp.headers.get("content-type") || "image/jpeg";
+      const arrayBuffer = await resp.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      console.log(`[regenerarPDF] Image downloaded: ${(arrayBuffer.byteLength / 1024).toFixed(1)} KB`);
+      return `data:${contentType};base64,${base64}`;
+    } catch (e) {
+      console.error(`[regenerarPDF] Error downloading image:`, e);
+      return undefined;
+    }
+  }
+
+  // 7. Pre-download bascula photos as base64 (parallel)
+  console.log(`[regenerarPDF] Pre-downloading bascula photos...`);
+  const basculaUrlsToDownload: Array<{ index: number; url: string }> = [];
+  kardexData.forEach((kardex) => {
+    const url = kardex.fields.soportebascula?.[0]?.url;
+    if (url) {
+      const itemIndex = items.findIndex(item => item.fields.Kardex?.[0] === kardex.id);
+      if (itemIndex >= 0) basculaUrlsToDownload.push({ index: itemIndex, url });
+    }
+  });
+
+  const basculaBase64Map = new Map<number, string>();
+  if (basculaUrlsToDownload.length > 0) {
+    const results = await Promise.all(
+      basculaUrlsToDownload.map(async ({ index, url }) => {
+        const base64 = await imageUrlToBase64(url);
+        return { index, base64 };
+      })
+    );
+    results.forEach(({ index, base64 }) => {
+      if (base64) basculaBase64Map.set(index, base64);
+    });
+    console.log(`[regenerarPDF] Downloaded ${basculaBase64Map.size}/${basculaUrlsToDownload.length} bascula photos`);
+  }
+
+  // Pre-download soportes de orden as base64 (parallel)
+  const soportesOrdenRaw = orden.fields["Soporte de Bascula"] || [];
+  const soportesOrden: Array<{ url: string; filename: string }> = [];
+  if (soportesOrdenRaw.length > 0) {
+    const results = await Promise.all(
+      soportesOrdenRaw.map(async (s) => {
+        const base64 = await imageUrlToBase64(s.url);
+        return { base64, filename: s.filename };
+      })
+    );
+    results.forEach(({ base64, filename }) => {
+      if (base64) soportesOrden.push({ url: base64, filename });
+    });
+    console.log(`[regenerarPDF] Downloaded ${soportesOrden.length}/${soportesOrdenRaw.length} orden support photos`);
+  }
+
+  // 8. Prepare PDF items (with base64 photos instead of remote URLs)
   const pdfItems = items.map((item, index) => {
     const kardexId = item.fields.Kardex?.[0];
     const kardex = kardexId ? kardexData.find(k => k.id === kardexId) : undefined;
@@ -1380,7 +1473,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
         cantidad: item.fields.Cantidad || 0,
         precioUnitario: item.fields.PrecioUnitario || 0,
         subtotal: item.fields["Cálculo"] || (item.fields.Cantidad || 0) * (item.fields.PrecioUnitario || 0),
-        fotoBasculaUrl: kardex.fields.soportebascula?.[0]?.url,
+        fotoBasculaUrl: basculaBase64Map.get(index),
       };
     } else {
       const nombre = catalogo?.fields.Nombre || "Servicio";
@@ -1401,13 +1494,8 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-  // 8. Prepare soportes de bascula from the orden
-  const soportesOrden = (orden.fields["Soporte de Bascula"] || []).map(s => ({
-    url: s.url,
-    filename: s.filename,
-  }));
-
-  // 9. Generate PDF
+  // 9. Generate PDF (images are already base64, no remote fetching needed)
+  console.log(`[regenerarPDF] Generating PDF with ${pdfItems.filter(i => i.tipo === "KARDEX").length} kardex items, ${basculaBase64Map.size} photos`);
   const { generateOrdenServicioPDF } = await import("@/lib/generatePDF");
 
   const pdfBuffer = await generateOrdenServicioPDF({
@@ -1425,6 +1513,8 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     soportesOrden: soportesOrden.length > 0 ? soportesOrden : undefined,
   });
 
+  console.log(`[regenerarPDF] PDF generated: ${(pdfBuffer.length / 1024).toFixed(1)} KB`);
+
   // 10. Upload to Vercel Blob
   const { put, del } = await import("@vercel/blob");
   const filename = `Orden_${orden.fields.NumeroOrden}.pdf`;
@@ -1433,7 +1523,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     contentType: "application/pdf",
   });
 
-  console.log(`Regenerated PDF uploaded to Vercel Blob: ${blob.url}`);
+  console.log(`[regenerarPDF] PDF uploaded to Vercel Blob: ${blob.url}`);
 
   // 11. Update Airtable with new PDF
   const ordenUrl = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
@@ -1452,16 +1542,23 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   if (!updateResponse.ok) {
     const errorText = await updateResponse.text();
+    console.error(`[regenerarPDF] Airtable update failed: ${errorText}`);
     await del(blob.url);
     throw new Error(`Error updating Airtable PDF: ${errorText}`);
   }
 
-  console.log(`PDF field updated in Airtable for Orden #${orden.fields.NumeroOrden}`);
+  console.log(`[regenerarPDF] Airtable PDF field updated for Orden #${orden.fields.NumeroOrden}`);
 
-  // 12. Cleanup blob after Airtable downloads it
-  await new Promise(resolve => setTimeout(resolve, 3000));
-  await del(blob.url);
-  console.log(`Temporary blob deleted: ${filename}`);
+  // 12. Cleanup blob after Airtable downloads it (fire-and-forget, don't block response)
+  setTimeout(async () => {
+    try {
+      const { del: delBlob } = await import("@vercel/blob");
+      await delBlob(blob.url);
+      console.log(`[regenerarPDF] Temporary blob deleted: ${filename}`);
+    } catch (e) {
+      console.warn(`[regenerarPDF] Could not delete temp blob: ${e}`);
+    }
+  }, 10000);
 
   return blob.url;
 }

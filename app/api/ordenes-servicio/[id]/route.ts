@@ -4,6 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
+// Allow up to 60 seconds for PDF regeneration (fetches images, generates PDF, uploads)
+export const maxDuration = 60;
+
 /**
  * DELETE /api/ordenes-servicio/[id]
  * Elimina una orden de servicio
