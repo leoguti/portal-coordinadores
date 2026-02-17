@@ -190,17 +190,8 @@ export default function OrdenDetallePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setActionMessage({ type: "success", text: "PDF regenerado correctamente con fotos de bascula. Puede verlo con el boton 'Ver PDF Orden'." });
-        // Update orden with the new blob URL directly (Airtable may take time to process)
-        if (data.pdfUrl && orden) {
-          setOrden({
-            ...orden,
-            fields: {
-              ...orden.fields,
-              PDF: [{ id: "regenerated", url: data.pdfUrl, filename: `Orden_${orden.fields.NumeroOrden}.pdf`, size: 0, type: "application/pdf" }],
-            },
-          });
-        }
+        setActionMessage({ type: "success", text: "PDF regenerado correctamente con fotos de bascula." });
+        await loadOrden();
       } else {
         setActionMessage({ type: "error", text: data.error || "Error al regenerar el PDF" });
       }

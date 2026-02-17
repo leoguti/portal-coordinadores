@@ -1549,9 +1549,19 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   console.log(`[regenerarPDF] Airtable PDF field updated for Orden #${orden.fields.NumeroOrden}`);
 
-  // Blob persists - Airtable will download it asynchronously.
-  // No deleting the blob to avoid race conditions where Airtable hasn't downloaded yet.
-  return blob.url;
+  // 12. Wait for Airtable to download the file from blob, then delete blob
+  console.log(`[regenerarPDF] Waiting for Airtable to download PDF...`);
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  await del(blob.url);
+  console.log(`[regenerarPDF] Temporary blob deleted: ${filename}`);
+
+  // 13. Re-fetch orden to get the Airtable-hosted PDF URL
+  const updatedOrden = await getOrdenById(ordenId);
+  const airtablePdfUrl = updatedOrden?.fields.PDF?.[0]?.url || blob.url;
+  console.log(`[regenerarPDF] Final PDF URL: ${airtablePdfUrl.substring(0, 80)}...`);
+
+  return airtablePdfUrl;
 }
 
 /**
