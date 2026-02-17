@@ -178,4 +178,64 @@ export const styles = StyleSheet.create({
     borderTop: "1 solid #e5e7eb",
     paddingTop: 10,
   },
+
+  // Annex styles
+  annexTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#042726",
+    marginBottom: 15,
+    textTransform: "uppercase" as const,
+    borderBottom: "2 solid #042726",
+    paddingBottom: 8,
+  },
+
+  annexSubtitle: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#374151",
+    marginBottom: 10,
+    marginTop: 5,
+  },
+
+  photoGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 10,
+  },
+
+  photoItem: {
+    width: "48%",
+    marginBottom: 12,
+  },
+
+  photoImage: {
+    width: "100%",
+    height: 200,
+    objectFit: "contain" as const,
+    borderRadius: 4,
+    border: "1 solid #e5e7eb",
+  },
+
+  photoCaption: {
+    fontSize: 8,
+    color: "#374151",
+    marginTop: 4,
+    textAlign: "center" as const,
+  },
+
+  noPhotoPlaceholder: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 4,
+    border: "1 solid #e5e7eb",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+
+  noPhotoText: {
+    fontSize: 9,
+    color: "#9ca3af",
+  },
 });

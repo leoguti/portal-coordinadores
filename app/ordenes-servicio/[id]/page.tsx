@@ -27,6 +27,8 @@ export default function OrdenDetallePage() {
   const facturaInputRef = useRef<HTMLInputElement>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; filename: string; kardexId: number } | null>(null);
 
+  const [regeneratingPDF, setRegeneratingPDF] = useState(false);
+
   // Inline form states
   const [showFacturaForm, setShowFacturaForm] = useState(false);
   const [numeroFactura, setNumeroFactura] = useState("");
@@ -174,6 +176,33 @@ export default function OrdenDetallePage() {
     }
   }
 
+  async function handleRegenerarPDF() {
+    setRegeneratingPDF(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "regenerar-pdf" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setActionMessage({ type: "success", text: "PDF regenerado correctamente con fotos de bascula." });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al regenerar el PDF" });
+      }
+    } catch (err) {
+      console.error("Error regenerando PDF:", err);
+      setActionMessage({ type: "error", text: "Error al regenerar el PDF" });
+    } finally {
+      setRegeneratingPDF(false);
+    }
+  }
+
   const estadoColors: Record<string, string> = {
     Enviada: "bg-blue-100 text-blue-800 border-blue-300",
     Facturada: "bg-amber-100 text-amber-800 border-amber-300",
@@ -310,6 +339,16 @@ export default function OrdenDetallePage() {
                 >
                   Ver PDF Orden
                 </a>
+              )}
+              {/* Boton Regenerar PDF - solo admins */}
+              {canWrite && (
+                <button
+                  onClick={handleRegenerarPDF}
+                  disabled={regeneratingPDF}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {regeneratingPDF ? "Regenerando..." : "Regenerar PDF"}
+                </button>
               )}
               {/* Boton Descargar Factura */}
               {facturaUrl && (

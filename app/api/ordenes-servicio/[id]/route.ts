@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
 /**
@@ -174,9 +174,23 @@ export async function PATCH(
         message: "Factura subida y orden marcada como Facturada",
       });
     } else {
-      // Handle JSON body (cambiar estado)
+      // Handle JSON body (cambiar estado or regenerar PDF)
       const body = await request.json();
       const { action, estado, fechaPago } = body;
+
+      // Handle regenerar-pdf action
+      if (action === "regenerar-pdf") {
+        try {
+          const pdfUrl = await regenerarPDFOrden(ordenId);
+          return NextResponse.json({ success: true, pdfUrl });
+        } catch (err) {
+          console.error("Error regenerating PDF:", err);
+          return NextResponse.json(
+            { error: err instanceof Error ? err.message : "Error al regenerar el PDF" },
+            { status: 500 }
+          );
+        }
+      }
 
       if (action !== "cambiar-estado") {
         return NextResponse.json(

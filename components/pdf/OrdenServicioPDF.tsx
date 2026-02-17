@@ -13,6 +13,7 @@ interface ItemOrden {
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
+  fotoBasculaUrl?: string;
 }
 
 interface OrdenServicioPDFProps {
@@ -31,6 +32,7 @@ interface OrdenServicioPDFProps {
   items: ItemOrden[];
   total: number;
   observaciones?: string;
+  soportesOrden?: Array<{ url: string; filename: string }>;
 }
 
 const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
@@ -42,6 +44,7 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
   items,
   total,
   observaciones,
+  soportesOrden,
 }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -170,6 +173,68 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
           Documento generado automáticamente el {new Date().toLocaleString("es-CO")}
         </Text>
       </Page>
+
+      {/* Anexo 1: Soportes de Báscula (Kardex) */}
+      {items.some(item => item.tipo === "KARDEX") && (
+        <Page size="LETTER" style={styles.page}>
+          <Text style={styles.annexTitle}>
+            Anexo 1 - Soportes de Báscula (Kardex)
+          </Text>
+          <Text style={styles.annexSubtitle}>
+            Orden de Servicio N° {numeroOrden}
+          </Text>
+
+          <View style={styles.photoGrid}>
+            {items
+              .filter(item => item.tipo === "KARDEX")
+              .map((item) => (
+                <View key={item.id} style={styles.photoItem}>
+                  {item.fotoBasculaUrl ? (
+                    <Image src={item.fotoBasculaUrl} style={styles.photoImage} />
+                  ) : (
+                    <View style={styles.noPhotoPlaceholder}>
+                      <Text style={styles.noPhotoText}>Sin soporte de báscula</Text>
+                    </View>
+                  )}
+                  <Text style={styles.photoCaption}>{item.descripcion}</Text>
+                </View>
+              ))}
+          </View>
+
+          <Text style={styles.footer}>
+            CampoLimpio - Programa de Manejo de Envases Vacíos
+            {"\n"}
+            Documento generado automáticamente el {new Date().toLocaleString("es-CO")}
+          </Text>
+        </Page>
+      )}
+
+      {/* Anexo 2: Soportes de Báscula (Orden) */}
+      {soportesOrden && soportesOrden.length > 0 && (
+        <Page size="LETTER" style={styles.page}>
+          <Text style={styles.annexTitle}>
+            Anexo 2 - Soportes de Báscula (Orden)
+          </Text>
+          <Text style={styles.annexSubtitle}>
+            Orden de Servicio N° {numeroOrden}
+          </Text>
+
+          <View style={styles.photoGrid}>
+            {soportesOrden.map((soporte, index) => (
+              <View key={`soporte-${index}`} style={styles.photoItem}>
+                <Image src={soporte.url} style={styles.photoImage} />
+                <Text style={styles.photoCaption}>{soporte.filename}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.footer}>
+            CampoLimpio - Programa de Manejo de Envases Vacíos
+            {"\n"}
+            Documento generado automáticamente el {new Date().toLocaleString("es-CO")}
+          </Text>
+        </Page>
+      )}
     </Document>
   );
 };

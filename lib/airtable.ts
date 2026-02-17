@@ -133,6 +133,11 @@ interface OrdenFields {
   }>;
   NumeroFactura?: string;
   FechaPago?: string;
+  "Soporte de Bascula"?: Array<{
+    id: string;
+    url: string;
+    filename: string;
+  }>;
 }
 
 interface TerceroFields {
@@ -1146,6 +1151,7 @@ export async function createOrdenServicio(
               cantidad: item.cantidad,
               precioUnitario: item.precioUnitario,
               subtotal: item.cantidad * item.precioUnitario,
+              fotoBasculaUrl: kardex?.fields.soportebascula?.[0]?.url,
             };
           } else {
             // Find Catalog data
@@ -1168,6 +1174,12 @@ export async function createOrdenServicio(
 
         const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
 
+        // Prepare soportes de bascula from the orden itself
+        const soportesOrden = (ordenData.fields["Soporte de Bascula"] || []).map(s => ({
+          url: s.url,
+          filename: s.filename,
+        }));
+
         // Generate PDF buffer
         const pdfBuffer = await generateOrdenServicioPDF({
           numeroOrden: ordenData.fields.NumeroOrden || 0,
@@ -1181,6 +1193,7 @@ export async function createOrdenServicio(
           items: pdfItems,
           total: totalCalculated,
           observaciones: params.observaciones,
+          soportesOrden: soportesOrden.length > 0 ? soportesOrden : undefined,
         });
 
         // Upload PDF to Vercel Blob
@@ -1271,6 +1284,186 @@ export async function createOrdenServicio(
     console.error("Error creating Orden de Servicio:", error);
     throw error;
   }
+}
+
+/**
+ * Regenerate PDF for an existing Orden de Servicio
+ * Re-fetches all data (items, kardex, catalogo, coordinator, beneficiary)
+ * and generates a new PDF including bascula photos
+ */
+export async function regenerarPDFOrden(ordenId: string): Promise<string> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    throw new Error("Airtable credentials not configured");
+  }
+
+  // 1. Fetch orden
+  const orden = await getOrdenById(ordenId);
+  if (!orden) throw new Error("Orden no encontrada");
+
+  // 2. Fetch items
+  const items = await getItemsOrden(ordenId);
+  if (items.length === 0) throw new Error("La orden no tiene items");
+
+  // 3. Fetch Kardex data
+  const kardexIds = items
+    .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
+    .map(item => item.fields.Kardex![0]);
+  const kardexData = kardexIds.length > 0 ? await getKardexByIds(kardexIds) : [];
+
+  // 4. Fetch Catalogo data
+  const catalogoIds = items
+    .filter(item => item.fields.CatalogoServicio && item.fields.CatalogoServicio.length > 0)
+    .map(item => item.fields.CatalogoServicio![0]);
+  const catalogoData = catalogoIds.length > 0 ? await getCatalogoByIds(catalogoIds) : [];
+
+  // 5. Fetch coordinator data
+  const coordinadorId = orden.fields.Coordinador?.[0];
+  let coordinadorNombre = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
+  let coordinadorEmail = "";
+  if (coordinadorId) {
+    try {
+      const url = `https://api.airtable.com/v0/${baseId}/Coordinadores/${coordinadorId}`;
+      const resp = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        coordinadorNombre = data.fields.Name || coordinadorNombre;
+        coordinadorEmail = data.fields.email || "";
+      }
+    } catch (e) {
+      console.error("Error fetching coordinator for PDF regeneration:", e);
+    }
+  }
+
+  // 6. Fetch beneficiary data
+  const beneficiarioId = orden.fields.Beneficiario?.[0];
+  let beneficiarioData = {
+    razonSocial: orden.fields.RazonSocial?.[0] || "Sin beneficiario",
+    nit: "",
+    direccion: "",
+  };
+  if (beneficiarioId) {
+    const tercero = await getTerceroById(beneficiarioId);
+    if (tercero) {
+      beneficiarioData = {
+        razonSocial: tercero.fields.RazonSocial || beneficiarioData.razonSocial,
+        nit: tercero.fields.NIT || "",
+        direccion: tercero.fields.Direccion || "",
+      };
+    }
+  }
+
+  // 7. Prepare PDF items
+  const pdfItems = items.map((item, index) => {
+    const kardexId = item.fields.Kardex?.[0];
+    const kardex = kardexId ? kardexData.find(k => k.id === kardexId) : undefined;
+    const catalogoId = item.fields.CatalogoServicio?.[0];
+    const catalogo = catalogoId ? catalogoData.find(c => c.id === catalogoId) : undefined;
+
+    if (kardex) {
+      const idkardex = kardex.fields.idkardex || "N/A";
+      const municipio = kardex.fields["mundep (from MunicipioOrigen)"]?.[0] || "N/A";
+      const centro = kardex.fields.NombreCentrodeAcopio?.[0] || "N/A";
+      const total = kardex.fields.Total || 0;
+
+      return {
+        id: `item-${index}`,
+        tipo: "KARDEX" as const,
+        descripcion: `Kardex #${idkardex} - ${municipio} - ${centro} - ${Math.abs(total)} kg`,
+        kardexId: kardexId,
+        formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
+        cantidad: item.fields.Cantidad || 0,
+        precioUnitario: item.fields.PrecioUnitario || 0,
+        subtotal: item.fields["Cálculo"] || (item.fields.Cantidad || 0) * (item.fields.PrecioUnitario || 0),
+        fotoBasculaUrl: kardex.fields.soportebascula?.[0]?.url,
+      };
+    } else {
+      const nombre = catalogo?.fields.Nombre || "Servicio";
+      const descripcion = catalogo?.fields.Descripcion || "";
+
+      return {
+        id: `item-${index}`,
+        tipo: "CATALOGO" as const,
+        descripcion: `${nombre}${descripcion ? ` - ${descripcion}` : ""}`,
+        catalogoId: catalogoId,
+        formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
+        cantidad: item.fields.Cantidad || 0,
+        precioUnitario: item.fields.PrecioUnitario || 0,
+        subtotal: item.fields["Cálculo"] || (item.fields.Cantidad || 0) * (item.fields.PrecioUnitario || 0),
+      };
+    }
+  });
+
+  const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+  // 8. Prepare soportes de bascula from the orden
+  const soportesOrden = (orden.fields["Soporte de Bascula"] || []).map(s => ({
+    url: s.url,
+    filename: s.filename,
+  }));
+
+  // 9. Generate PDF
+  const { generateOrdenServicioPDF } = await import("@/lib/generatePDF");
+
+  const pdfBuffer = await generateOrdenServicioPDF({
+    numeroOrden: orden.fields.NumeroOrden || 0,
+    coordinador: {
+      nombre: coordinadorNombre,
+      email: coordinadorEmail,
+    },
+    beneficiario: beneficiarioData,
+    fechaPedido: orden.fields["Fecha de pedido"] || "",
+    estado: orden.fields.Estado || "Enviada",
+    items: pdfItems,
+    total: totalCalculated,
+    observaciones: orden.fields.Observaciones,
+    soportesOrden: soportesOrden.length > 0 ? soportesOrden : undefined,
+  });
+
+  // 10. Upload to Vercel Blob
+  const { put, del } = await import("@vercel/blob");
+  const filename = `Orden_${orden.fields.NumeroOrden}.pdf`;
+  const blob = await put(filename, pdfBuffer, {
+    access: "public",
+    contentType: "application/pdf",
+  });
+
+  console.log(`Regenerated PDF uploaded to Vercel Blob: ${blob.url}`);
+
+  // 11. Update Airtable with new PDF
+  const ordenUrl = `https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`;
+  const updateResponse = await fetch(ordenUrl, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fields: {
+        PDF: [{ url: blob.url }],
+      },
+    }),
+  });
+
+  if (!updateResponse.ok) {
+    const errorText = await updateResponse.text();
+    await del(blob.url);
+    throw new Error(`Error updating Airtable PDF: ${errorText}`);
+  }
+
+  console.log(`PDF field updated in Airtable for Orden #${orden.fields.NumeroOrden}`);
+
+  // 12. Cleanup blob after Airtable downloads it
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  await del(blob.url);
+  console.log(`Temporary blob deleted: ${filename}`);
+
+  return blob.url;
 }
 
 /**

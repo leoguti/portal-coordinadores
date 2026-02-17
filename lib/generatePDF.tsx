@@ -13,6 +13,7 @@ interface ItemOrden {
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
+  fotoBasculaUrl?: string;
 }
 
 interface GeneratePDFParams {
@@ -31,6 +32,7 @@ interface GeneratePDFParams {
   items: ItemOrden[];
   total: number;
   observaciones?: string;
+  soportesOrden?: Array<{ url: string; filename: string }>;
 }
 
 /**
