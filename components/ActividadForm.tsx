@@ -14,6 +14,7 @@ export interface ActividadFormData {
   cultivo: string;
   municipio: { id: string; mundep: string } | null;
   cantidadParticipantes: string;
+  personasEvaluadas: string;
   observaciones: string;
 }
 
@@ -48,6 +49,7 @@ export default function ActividadForm({
   const [cultivo, setCultivo] = useState(initialData?.cultivo || "");
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(initialData?.municipio || null);
   const [cantidadParticipantes, setCantidadParticipantes] = useState(initialData?.cantidadParticipantes || "");
+  const [personasEvaluadas, setPersonasEvaluadas] = useState(initialData?.personasEvaluadas || "");
   const [observaciones, setObservaciones] = useState(initialData?.observaciones || "");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
@@ -112,7 +114,15 @@ export default function ActividadForm({
       setValidationError("Debes seleccionar un municipio");
       return;
     }
-    
+
+    // Validar personas evaluadas <= participantes
+    if (showCantidadParticipantes && personasEvaluadas && cantidadParticipantes) {
+      if (Number(personasEvaluadas) > Number(cantidadParticipantes)) {
+        setValidationError("Las personas evaluadas no pueden ser más que los participantes");
+        return;
+      }
+    }
+
     await onSubmit({
       name,
       fecha,
@@ -123,6 +133,7 @@ export default function ActividadForm({
       cultivo: showCultivo ? cultivo : "",
       municipio,
       cantidadParticipantes: showCantidadParticipantes ? cantidadParticipantes : "",
+      personasEvaluadas: showCantidadParticipantes ? personasEvaluadas : "",
       observaciones,
     }, fotografias, documentos);
   };
@@ -293,6 +304,25 @@ export default function ActividadForm({
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Número de participantes"
             />
+          </div>
+        )}
+
+        {/* Personas Evaluadas - Solo Sensibilización */}
+        {showCantidadParticipantes && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Personas Evaluadas
+            </label>
+            <input
+              type="number"
+              min="0"
+              max={cantidadParticipantes || undefined}
+              value={personasEvaluadas}
+              onChange={(e) => setPersonasEvaluadas(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Personas que presentaron evaluación"
+            />
+            <p className="text-xs text-gray-500 mt-1">Debe ser menor o igual a la cantidad de participantes</p>
           </div>
         )}
 

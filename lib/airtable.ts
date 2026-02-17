@@ -50,6 +50,7 @@ interface ActividadFields {
   "mundep (from Municipio)"?: string[];
   "CODIGOMUN Compilación (de Municipio)"?: number;
   "Cantidad de Participantes"?: number;
+  "Personas Evaluadas"?: number;
   Modalidad?: string[];
   Consecutivo?: number;
   Cultivo?: string;
@@ -511,6 +512,7 @@ export async function createActividad(params: {
   modalidad?: string[];
   perfilAsistentes?: string; // singleSelect en Airtable
   cantidadParticipantes?: number;
+  personasEvaluadas?: number;
   observaciones?: string;
 }): Promise<Actividad> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -534,6 +536,7 @@ export async function createActividad(params: {
         ...(params.modalidad && params.modalidad.length > 0 && { Modalidad: params.modalidad }),
         ...(params.perfilAsistentes && { "Perfil de Asistentes": params.perfilAsistentes }),
         ...(params.cantidadParticipantes && { "Cantidad de Participantes": params.cantidadParticipantes }),
+        ...(params.personasEvaluadas && { "Personas Evaluadas": params.personasEvaluadas }),
         ...(params.observaciones && { Observaciones: params.observaciones }),
         Coordinador: [params.coordinatorRecordId], // Linked record array
       },
