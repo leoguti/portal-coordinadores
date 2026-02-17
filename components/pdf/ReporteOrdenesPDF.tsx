@@ -39,6 +39,16 @@ const formatMesLabel = (mesKey: string) => {
   return `${nombres[parseInt(month) - 1]} ${year}`;
 };
 
+// Ordered estado list for consistent display
+const ESTADO_ORDER = ["Enviada", "Facturada", "Pagada", "Rechazada"];
+
+const sortEstados = (entries: [string, number][]) =>
+  entries.sort((a, b) => {
+    const ia = ESTADO_ORDER.indexOf(a[0]);
+    const ib = ESTADO_ORDER.indexOf(b[0]);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
 const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
   gruposPorMes,
   conceptos,
@@ -48,6 +58,18 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
 }) => {
   const hasFiltros =
     filtros.coordinador || filtros.beneficiario || filtros.estado || filtros.mes;
+
+  // Compute grand estado breakdown
+  const grandEstadoCounts: Record<string, number> = {};
+  const grandEstadoTotals: Record<string, number> = {};
+  gruposPorMes.forEach(([, mesGrupo]) => {
+    Object.entries(mesGrupo.estadoCounts).forEach(([estado, count]) => {
+      grandEstadoCounts[estado] = (grandEstadoCounts[estado] || 0) + count;
+    });
+    Object.entries(mesGrupo.estadoTotals).forEach(([estado, total]) => {
+      grandEstadoTotals[estado] = (grandEstadoTotals[estado] || 0) + total;
+    });
+  });
 
   return (
     <Document>
@@ -183,6 +205,24 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
               </Text>
               <View style={s.colFPago} />
             </View>
+
+            {/* Estado breakdown for month */}
+            <View style={s.estadoBreakdown}>
+              <View style={s.estadoTable}>
+                <View style={s.estadoTableHeader}>
+                  <Text style={[s.estadoTableHeaderText, s.estadoColEstado]}>Estado</Text>
+                  <Text style={[s.estadoTableHeaderText, s.estadoColCantidad]}>Cant.</Text>
+                  <Text style={[s.estadoTableHeaderText, s.estadoColMonto]}>Monto</Text>
+                </View>
+                {sortEstados(Object.entries(mesGrupo.estadoTotals)).map(([estado, monto], idx) => (
+                  <View key={estado} style={[s.estadoTableRow, idx % 2 === 1 ? s.estadoTableRowAlt : {}]}>
+                    <Text style={[s.estadoText, s.estadoColEstado]}>{estado}</Text>
+                    <Text style={[s.estadoText, s.estadoColCantidad]}>{mesGrupo.estadoCounts[estado]}</Text>
+                    <Text style={[s.estadoTextBold, s.estadoColMonto]}>{formatCurrency(monto)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
           </View>
         ))}
 
@@ -196,6 +236,24 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
             {formatCurrency(grandTotal)}
           </Text>
           <View style={s.colFPago} />
+        </View>
+
+        {/* Estado breakdown for grand total */}
+        <View style={s.estadoBreakdown}>
+          <View style={s.estadoTableDark}>
+            <View style={s.estadoTableHeaderDark}>
+              <Text style={[s.estadoTableHeaderTextDark, s.estadoColEstado]}>Estado</Text>
+              <Text style={[s.estadoTableHeaderTextDark, s.estadoColCantidad]}>Cant.</Text>
+              <Text style={[s.estadoTableHeaderTextDark, s.estadoColMonto]}>Monto</Text>
+            </View>
+            {sortEstados(Object.entries(grandEstadoTotals)).map(([estado, monto]) => (
+              <View key={estado} style={s.estadoTableRowDark}>
+                <Text style={[s.estadoTextDark, s.estadoColEstado]}>{estado}</Text>
+                <Text style={[s.estadoTextDark, s.estadoColCantidad]}>{grandEstadoCounts[estado]}</Text>
+                <Text style={[s.estadoTextBoldDark, s.estadoColMonto]}>{formatCurrency(monto)}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Footer with page numbers */}

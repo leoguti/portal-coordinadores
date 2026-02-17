@@ -10,6 +10,7 @@ export type MesGrupo = {
   total: number;
   count: number;
   estadoCounts: Record<string, number>;
+  estadoTotals: Record<string, number>;
 };
 
 /**
@@ -26,6 +27,7 @@ export function groupOrdenesByMes(
       total: number;
       count: number;
       estadoCounts: Record<string, number>;
+      estadoTotals: Record<string, number>;
     }
   >();
 
@@ -43,12 +45,14 @@ export function groupOrdenesByMes(
         total: 0,
         count: 0,
         estadoCounts: {},
+        estadoTotals: {},
       });
     }
     const mes = mesMap.get(mesKey)!;
     mes.total += total;
     mes.count++;
     mes.estadoCounts[estado] = (mes.estadoCounts[estado] || 0) + 1;
+    mes.estadoTotals[estado] = (mes.estadoTotals[estado] || 0) + total;
 
     if (!mes.benMap.has(beneficiario)) {
       mes.benMap.set(beneficiario, { ordenes: [], total: 0 });
@@ -60,7 +64,7 @@ export function groupOrdenesByMes(
 
   return [...mesMap.entries()]
     .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([mesKey, { benMap, total, count, estadoCounts }]) => [
+    .map(([mesKey, { benMap, total, count, estadoCounts, estadoTotals }]) => [
       mesKey,
       {
         beneficiarios: [...benMap.entries()].sort(
@@ -69,6 +73,7 @@ export function groupOrdenesByMes(
         total,
         count,
         estadoCounts,
+        estadoTotals,
       },
     ]);
 }
