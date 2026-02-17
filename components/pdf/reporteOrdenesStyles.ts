@@ -64,6 +64,7 @@ export const reporteStyles = StyleSheet.create({
     paddingHorizontal: 8,
     marginTop: 10,
     borderRadius: 3,
+    minHeight: 22,
   },
   mesHeaderText: {
     fontSize: 10,
@@ -86,6 +87,7 @@ export const reporteStyles = StyleSheet.create({
     paddingHorizontal: 8,
     marginTop: 4,
     borderBottom: "1 solid #e5e7eb",
+    minHeight: 18,
   },
   beneficiarioName: {
     fontSize: 8,
@@ -101,10 +103,12 @@ export const reporteStyles = StyleSheet.create({
   // Table
   tableHeader: {
     flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#e5e7eb",
     padding: 4,
     paddingHorizontal: 8,
     borderBottom: "1 solid #d1d5db",
+    minHeight: 16,
   },
   tableHeaderText: {
     fontSize: 7,
@@ -114,9 +118,11 @@ export const reporteStyles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
+    alignItems: "center",
     padding: 4,
     paddingHorizontal: 8,
     borderBottom: "0.5 solid #e5e7eb",
+    minHeight: 16,
   },
   tableRowAlt: {
     backgroundColor: "#f9fafb",
@@ -154,6 +160,7 @@ export const reporteStyles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: "#ecfdf5",
     borderBottom: "1 solid #d1fae5",
+    minHeight: 16,
   },
   subtotalLabel: {
     fontSize: 7.5,
@@ -178,6 +185,7 @@ export const reporteStyles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: "#d1fae5",
     marginBottom: 2,
+    minHeight: 18,
   },
   mesSubtotalLabel: {
     fontSize: 8,

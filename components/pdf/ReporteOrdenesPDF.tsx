@@ -78,7 +78,7 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
 
         {/* Groups */}
         {gruposPorMes.map(([mesKey, mesGrupo]) => (
-          <View key={mesKey} wrap={false}>
+          <View key={mesKey}>
             {/* Month header */}
             <View style={s.mesHeader}>
               <Text style={s.mesHeaderText}>
@@ -93,24 +93,25 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
             {/* Beneficiarios */}
             {mesGrupo.beneficiarios.map(([beneficiario, benGrupo]) => (
               <View key={`${mesKey}|${beneficiario}`}>
-                {/* Beneficiario header */}
-                <View style={s.beneficiarioHeader}>
-                  <Text style={s.beneficiarioName}>{beneficiario}</Text>
-                  <Text style={s.beneficiarioTotal}>
-                    {benGrupo.ordenes.length}{" "}
-                    {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
-                  </Text>
-                </View>
+                {/* Beneficiario header + table header kept together */}
+                <View wrap={false}>
+                  <View style={s.beneficiarioHeader}>
+                    <Text style={s.beneficiarioName}>{beneficiario}</Text>
+                    <Text style={s.beneficiarioTotal}>
+                      {benGrupo.ordenes.length}{" "}
+                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
+                    </Text>
+                  </View>
 
-                {/* Table header */}
-                <View style={s.tableHeader}>
-                  <Text style={[s.tableHeaderText, s.colOrden]}># Orden</Text>
-                  <Text style={[s.tableHeaderText, s.colFecha]}>Fecha</Text>
-                  <Text style={[s.tableHeaderText, s.colFactura]}>N. Factura</Text>
-                  <Text style={[s.tableHeaderText, s.colConcepto]}>Concepto</Text>
-                  <Text style={[s.tableHeaderText, s.colEstado]}>Estado</Text>
-                  <Text style={[s.tableHeaderText, s.colTotal]}>Total</Text>
-                  <Text style={[s.tableHeaderText, s.colFPago]}>F. Pago</Text>
+                  <View style={s.tableHeader}>
+                    <Text style={[s.tableHeaderText, s.colOrden]}># Orden</Text>
+                    <Text style={[s.tableHeaderText, s.colFecha]}>Fecha</Text>
+                    <Text style={[s.tableHeaderText, s.colFactura]}>N. Factura</Text>
+                    <Text style={[s.tableHeaderText, s.colConcepto]}>Concepto</Text>
+                    <Text style={[s.tableHeaderText, s.colEstado]}>Estado</Text>
+                    <Text style={[s.tableHeaderText, s.colTotal]}>Total</Text>
+                    <Text style={[s.tableHeaderText, s.colFPago]}>F. Pago</Text>
+                  </View>
                 </View>
 
                 {/* Rows */}
