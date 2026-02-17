@@ -190,8 +190,17 @@ export default function OrdenDetallePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setActionMessage({ type: "success", text: "PDF regenerado correctamente con fotos de bascula." });
-        await loadOrden();
+        setActionMessage({ type: "success", text: "PDF regenerado correctamente con fotos de bascula. Puede verlo con el boton 'Ver PDF Orden'." });
+        // Update orden with the new blob URL directly (Airtable may take time to process)
+        if (data.pdfUrl && orden) {
+          setOrden({
+            ...orden,
+            fields: {
+              ...orden.fields,
+              PDF: [{ id: "regenerated", url: data.pdfUrl, filename: `Orden_${orden.fields.NumeroOrden}.pdf`, size: 0, type: "application/pdf" }],
+            },
+          });
+        }
       } else {
         setActionMessage({ type: "error", text: data.error || "Error al regenerar el PDF" });
       }
@@ -347,7 +356,10 @@ export default function OrdenDetallePage() {
                   disabled={regeneratingPDF}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {regeneratingPDF ? "Regenerando..." : "Regenerar PDF"}
+                  {regeneratingPDF && (
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  )}
+                  {regeneratingPDF ? "Regenerando PDF..." : "Regenerar PDF"}
                 </button>
               )}
               {/* Boton Descargar Factura */}
@@ -364,6 +376,19 @@ export default function OrdenDetallePage() {
             </div>
           </div>
         </div>
+
+        {/* Regenerating PDF banner */}
+        {regeneratingPDF && (
+          <div className="mb-4 p-4 rounded-lg border bg-indigo-50 border-indigo-200 text-indigo-800">
+            <div className="flex items-center gap-3">
+              <span className="inline-block w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+              <div>
+                <p className="font-medium">Regenerando PDF con fotos de bascula...</p>
+                <p className="text-sm text-indigo-600">Este proceso puede tardar entre 10 y 30 segundos. No cierre esta pagina.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Action messages */}
         {actionMessage && (

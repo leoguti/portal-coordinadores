@@ -1549,17 +1549,8 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   console.log(`[regenerarPDF] Airtable PDF field updated for Orden #${orden.fields.NumeroOrden}`);
 
-  // 12. Cleanup blob after Airtable downloads it (fire-and-forget, don't block response)
-  setTimeout(async () => {
-    try {
-      const { del: delBlob } = await import("@vercel/blob");
-      await delBlob(blob.url);
-      console.log(`[regenerarPDF] Temporary blob deleted: ${filename}`);
-    } catch (e) {
-      console.warn(`[regenerarPDF] Could not delete temp blob: ${e}`);
-    }
-  }, 10000);
-
+  // Blob persists - Airtable will download it asynchronously.
+  // No deleting the blob to avoid race conditions where Airtable hasn't downloaded yet.
   return blob.url;
 }
 
