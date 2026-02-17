@@ -221,23 +221,18 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
           <View style={s.colFPago} />
         </View>
 
-        {/* Estado breakdown for grand total */}
-        <View style={s.estadoBreakdown}>
-          <View style={s.estadoTableDark}>
-            <View style={s.estadoTableHeaderDark}>
-              <Text style={[s.estadoTableHeaderTextDark, s.estadoColEstado]}>Estado</Text>
-              <Text style={[s.estadoTableHeaderTextDark, s.estadoColCantidad]}>Cant.</Text>
-              <Text style={[s.estadoTableHeaderTextDark, s.estadoColMonto]}>Monto</Text>
-            </View>
-            {sortEstados(Object.entries(grandEstadoTotals)).map(([estado, monto]) => (
-              <View key={estado} style={s.estadoTableRowDark}>
-                <Text style={[s.estadoTextDark, s.estadoColEstado]}>{estado}</Text>
-                <Text style={[s.estadoTextDark, s.estadoColCantidad]}>{grandEstadoCounts[estado]}</Text>
-                <Text style={[s.estadoTextBoldDark, s.estadoColMonto]}>{formatCurrency(monto)}</Text>
-              </View>
-            ))}
+        {/* Estado breakdown as subtotal rows in same grid */}
+        {sortEstados(Object.entries(grandEstadoTotals)).map(([estado, monto]) => (
+          <View key={estado} style={s.estadoSubtotalRow}>
+            <Text style={[s.estadoSubtotalLabel, s.colLabel]}>
+              {estado} ({grandEstadoCounts[estado]})
+            </Text>
+            <Text style={[s.estadoSubtotalValue, s.colTotal]}>
+              {formatCurrency(monto)}
+            </Text>
+            <View style={s.colFPago} />
           </View>
-        </View>
+        ))}
 
         {/* Footer with page numbers */}
         <View style={s.footer} fixed>

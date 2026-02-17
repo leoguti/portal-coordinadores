@@ -222,85 +222,22 @@ export const reporteStyles = StyleSheet.create({
     color: "#00d084",
   },
 
-  // Estado breakdown mini-table (used after mes subtotal and grand total)
-  estadoBreakdown: {
+  // Estado subtotal rows (same grid as data rows, below grand total)
+  estadoSubtotalRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 8,
+    alignItems: "center",
     paddingVertical: 4,
-    marginBottom: 2,
-  },
-  estadoTable: {
-    width: "50%",
-    border: "0.5 solid #d1d5db",
-    borderRadius: 2,
-  },
-  estadoTableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e5e7eb",
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderBottom: "0.5 solid #d1d5db",
-  },
-  estadoTableHeaderText: {
-    fontSize: 6.5,
-    fontWeight: "bold",
-    color: "#374151",
-    textTransform: "uppercase",
-  },
-  estadoTableRow: {
-    flexDirection: "row",
-    paddingVertical: 2.5,
-    paddingHorizontal: 6,
-    borderBottom: "0.5 solid #f3f4f6",
-  },
-  estadoTableRowAlt: {
-    backgroundColor: "#f9fafb",
-  },
-  estadoColEstado: { width: "35%" },
-  estadoColCantidad: { width: "25%", textAlign: "center" },
-  estadoColMonto: { width: "40%", textAlign: "right" },
-  estadoText: {
-    fontSize: 7,
-    color: "#1f2937",
-  },
-  estadoTextBold: {
-    fontSize: 7,
-    fontWeight: "bold",
-    color: "#1f2937",
-  },
-  // Grand total variant (white text on dark bg)
-  estadoTableDark: {
-    width: "50%",
-    border: "0.5 solid #374151",
-    borderRadius: 2,
-  },
-  estadoTableHeaderDark: {
-    flexDirection: "row",
+    paddingHorizontal: 8,
     backgroundColor: "#1f2937",
-    paddingVertical: 3,
-    paddingHorizontal: 6,
     borderBottom: "0.5 solid #374151",
+    minHeight: 16,
   },
-  estadoTableHeaderTextDark: {
-    fontSize: 6.5,
-    fontWeight: "bold",
+  estadoSubtotalLabel: {
+    fontSize: 8,
     color: "#d1d5db",
-    textTransform: "uppercase",
   },
-  estadoTableRowDark: {
-    flexDirection: "row",
-    paddingVertical: 2.5,
-    paddingHorizontal: 6,
-    borderBottom: "0.5 solid #374151",
-    backgroundColor: "#111827",
-  },
-  estadoTextDark: {
-    fontSize: 7,
-    color: "#e5e7eb",
-  },
-  estadoTextBoldDark: {
-    fontSize: 7,
+  estadoSubtotalValue: {
+    fontSize: 8,
     fontWeight: "bold",
     color: "#00d084",
   },
