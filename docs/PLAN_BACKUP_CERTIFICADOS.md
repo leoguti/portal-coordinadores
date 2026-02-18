@@ -47,7 +47,7 @@ Esta regla se ejecuta anualmente (cada enero se archiva el año que queda fuera 
 
 - **Servicio**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/products/r2/)
 - **Plan**: Free (10 GB almacenamiento, zero egress)
-- **Cuenta**: leogiga@gmail.com (temporal, se puede migrar)
+- **Cuenta**: info@rumbo.digital
 - **Ventajas**:
   - 10 GB gratis (suficiente para PDFs de certificados)
   - Sin costo de descarga (zero egress fees)
@@ -96,10 +96,12 @@ Ejemplo: en enero 2027 se archiva 2025, quedando solo 2026 + 2027 en Airtable.
 | Credencial | Servicio | Estado |
 |------------|----------|--------|
 | Connection string (NEON_DATABASE_URL) | Neon PostgreSQL | Pendiente guardar en 1Password |
-| Access Key ID | Cloudflare R2 | Pendiente guardar en 1Password |
-| Secret Access Key | Cloudflare R2 | Pendiente guardar en 1Password |
+| Access Key ID (solo lectura) | Cloudflare R2 | Pendiente guardar en 1Password |
+| Secret Access Key (solo lectura) | Cloudflare R2 | Pendiente guardar en 1Password |
+| Access Key ID (lectura/escritura - `campolimpio-rw`) | Cloudflare R2 | Pendiente guardar en 1Password |
+| Secret Access Key (lectura/escritura - `campolimpio-rw`) | Cloudflare R2 | Pendiente guardar en 1Password |
 | Login Neon (leogiga@gmail.com) | Neon | Pendiente guardar en 1Password |
-| Login Cloudflare (leogiga@gmail.com) | Cloudflare | Pendiente guardar en 1Password |
+| Login Cloudflare (info@rumbo.digital) | Cloudflare | Pendiente guardar en 1Password |
 
 > Nota: Actualmente hay un problema de acceso a 1Password. Resolver antes de la migración a producción.
 
@@ -107,7 +109,10 @@ Ejemplo: en enero 2027 se archiva 2025, quedando solo 2026 + 2027 en Airtable.
 
 - [x] Decisión aprobada por cliente
 - [x] Cuenta Neon creada (leogiga@gmail.com)
-- [ ] Cuenta Cloudflare R2 creada (leogiga@gmail.com)
+- [x] Cuenta Cloudflare R2 creada (info@rumbo.digital)
+- [x] Bucket `campolimpio-certificados` creado
+- [x] Token R2 solo lectura creado
+- [x] Token R2 lectura/escritura creado (`campolimpio-rw`)
 - [ ] Credenciales guardadas en 1Password
 - [ ] Script de migración implementado
 - [ ] Migración ejecutada
