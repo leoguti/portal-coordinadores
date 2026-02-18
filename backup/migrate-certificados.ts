@@ -248,8 +248,9 @@ async function uploadPdfToR2(
     })
   );
 
-  // URL pública (requiere configurar dominio público en R2, por ahora guardamos la key)
-  const r2Url = `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${key}`;
+  // URL pública via R2.dev subdomain
+  const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev";
+  const r2Url = `${R2_PUBLIC_URL}/${key}`;
 
   return { url: r2Url, filename: pdf.filename, size: pdf.size };
 }
