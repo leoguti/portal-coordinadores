@@ -54,29 +54,81 @@ Esta regla se ejecuta anualmente (cada enero se archiva el año que queda fuera 
   - Compatible con API S3
   - Cada PDF queda con URL directa accesible
 
-## Proceso de migración
+## Infraestructura configurada
+
+### Neon PostgreSQL
+- **Proyecto**: campolimpio-certificados
+- **Región**: AWS US East 1 (N. Virginia)
+- **Postgres**: v17
+- **Variable**: `NEON_DATABASE_URL` en `.env.local`
+
+### Cloudflare R2
+- **Bucket**: `campolimpio-certificados`
+- **URL pública**: `https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev`
+- **Tokens creados**:
+  - Solo lectura (para consultas)
+  - Lectura/escritura `campolimpio-rw` (para migración)
+- **Variables en `.env.local`**: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`
+
+## Script de migración
+
+**Ubicación**: `backup/migrate-certificados.ts`
+
+```bash
+# Prueba (10 registros)
+npx tsx backup/migrate-certificados.ts --test
+
+# Migración completa (24,353 registros)
+npx tsx backup/migrate-certificados.ts --full
+```
+
+El script:
+1. Lee certificados de Airtable (filtro: `YEAR(fechadevolucion) <= 2024`)
+2. Crea tabla `certificados` en Neon con esquema completo (31 campos + índices)
+3. Descarga cada PDF de Airtable y lo sube a R2 (organizado por carpeta de año)
+4. Inserta el registro en Neon con URL pública al PDF en R2
+5. Usa `ON CONFLICT` para evitar duplicados si se re-ejecuta
+
+## Prueba realizada (18 feb 2026)
+
+- **10 registros más antiguos** migrados exitosamente
+- **10 PDFs** subidos a R2 y accesibles por URL pública
+- **Datos verificados** en Neon SQL Editor
+- **PDFs verificados** abriendo URL directa en navegador
+- **0 errores**
+
+Ejemplo de URL pública de PDF:
+```
+https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev/2021/certificado_89915.pdf
+```
+
+## Proceso de migración completa
 
 ```
-1. Exportar registros de Certificados (2021-2024) desde Airtable
-2. Crear tabla en Neon PostgreSQL con el esquema equivalente
-3. Insertar datos en Neon
-4. Descargar PDFs adjuntos de Airtable
-5. Subir PDFs a Cloudflare R2
-6. Guardar URL de R2 en la tabla de Neon (referencia al PDF)
-7. Verificar integridad (conteo de registros + muestreo aleatorio)
-8. Eliminar registros archivados de Airtable
+1. Ejecutar: npx tsx backup/migrate-certificados.ts --full
+2. Verificar conteo en Neon: SELECT COUNT(*) FROM certificados → debe ser 24,353
+3. Verificar muestreo aleatorio de PDFs en R2
+4. Eliminar registros 2021-2024 de Airtable
+5. Verificar que Airtable quede en ~31,192 registros (bajo el límite de 50,000)
 ```
 
 ## Consulta de registros archivados
 
-**Opción A (inicial)**: Consulta directa desde el dashboard de Neon.
+**Opción A (inicial)**: Consulta directa desde el dashboard de Neon SQL Editor.
 
 ```sql
--- Ejemplo: buscar certificados de un coordinador en 2023
-SELECT * FROM certificados WHERE año = 2023 AND coordinador = 'Nombre';
+-- Buscar certificados de un coordinador en 2023
+SELECT * FROM certificados WHERE ano = 2023 AND nombrecoordinador ILIKE '%nombre%';
+
+-- Buscar por generador
+SELECT consecutivo, nombregenerador, fechadevolucion, total, certificadopdf_r2_url
+FROM certificados WHERE nombregenerador ILIKE '%empresa%';
+
+-- Resumen por año
+SELECT ano, COUNT(*), SUM(total) FROM certificados GROUP BY ano ORDER BY ano;
 ```
 
-Los resultados incluyen el link al PDF en Cloudflare R2, descargable con un clic.
+Los resultados incluyen el campo `certificadopdf_r2_url` — clic en la URL abre el PDF directo.
 
 **Opción B (futura, si se requiere)**: Crear endpoint en el portal que consulte Neon automáticamente para certificados de años archivados.
 
@@ -114,7 +166,9 @@ Ejemplo: en enero 2027 se archiva 2025, quedando solo 2026 + 2027 en Airtable.
 - [x] Token R2 solo lectura creado
 - [x] Token R2 lectura/escritura creado (`campolimpio-rw`)
 - [ ] Credenciales guardadas en 1Password
-- [ ] Script de migración implementado
-- [ ] Migración ejecutada
-- [ ] Verificación de integridad
-- [ ] Eliminación de registros en Airtable
+- [x] Script de migración implementado (`backup/migrate-certificados.ts`)
+- [x] Prueba con 10 registros exitosa (0 errores, 10 PDFs accesibles)
+- [x] URL pública de R2 habilitada y verificada
+- [ ] **SIGUIENTE**: Ejecutar migración completa (`--full`, ~24,353 registros)
+- [ ] Verificación de integridad (conteo + muestreo)
+- [ ] Eliminación de registros 2021-2024 en Airtable
