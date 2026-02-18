@@ -169,6 +169,7 @@ Ejemplo: en enero 2027 se archiva 2025, quedando solo 2026 + 2027 en Airtable.
 - [x] Script de migración implementado (`backup/migrate-certificados.ts`)
 - [x] Prueba con 10 registros exitosa (0 errores, 10 PDFs accesibles)
 - [x] URL pública de R2 habilitada y verificada
+- [ ] **REVISAR**: Hay certificados de un sistema anterior que deben revisarse antes de la migración completa
 - [ ] **SIGUIENTE**: Ejecutar migración completa (`--full`, ~24,353 registros)
 - [ ] Verificación de integridad (conteo + muestreo)
 - [ ] Eliminación de registros 2021-2024 en Airtable
