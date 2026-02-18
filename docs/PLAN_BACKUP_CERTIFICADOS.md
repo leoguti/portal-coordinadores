@@ -89,11 +89,26 @@ Cada **enero** se ejecuta el mismo proceso:
 
 Ejemplo: en enero 2027 se archiva 2025, quedando solo 2026 + 2027 en Airtable.
 
+## Seguridad — Credenciales en 1Password
+
+**PENDIENTE**: Todas las credenciales de los nuevos servicios deben guardarse en **1Password**:
+
+| Credencial | Servicio | Estado |
+|------------|----------|--------|
+| Connection string (NEON_DATABASE_URL) | Neon PostgreSQL | Pendiente guardar en 1Password |
+| Access Key ID | Cloudflare R2 | Pendiente guardar en 1Password |
+| Secret Access Key | Cloudflare R2 | Pendiente guardar en 1Password |
+| Login Neon (leogiga@gmail.com) | Neon | Pendiente guardar en 1Password |
+| Login Cloudflare (leogiga@gmail.com) | Cloudflare | Pendiente guardar en 1Password |
+
+> Nota: Actualmente hay un problema de acceso a 1Password. Resolver antes de la migración a producción.
+
 ## Estado
 
 - [x] Decisión aprobada por cliente
-- [ ] Cuenta Neon creada (leogiga@gmail.com)
+- [x] Cuenta Neon creada (leogiga@gmail.com)
 - [ ] Cuenta Cloudflare R2 creada (leogiga@gmail.com)
+- [ ] Credenciales guardadas en 1Password
 - [ ] Script de migración implementado
 - [ ] Migración ejecutada
 - [ ] Verificación de integridad
