@@ -420,10 +420,11 @@ export default function NuevaActividadPage() {
             {showCantidadParticipantes && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Personas Evaluadas
+                  Personas Evaluadas <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  required
                   min="0"
                   max={cantidadParticipantes || undefined}
                   value={personasEvaluadas}
