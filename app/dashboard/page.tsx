@@ -25,7 +25,7 @@ const AdminDashboard = dynamic(() => import("@/components/AdminDashboard"), {
 interface DashboardStats {
   metas: {
     recoleccion: { meta: number; entradas: number; salidas: number };
-    sensibilizacion: { meta: number; actual: number };
+    sensibilizacion: { meta: number; actual: number; evaluadas: number };
     configurada: boolean;
   };
   kpis: {
@@ -194,8 +194,11 @@ export default function DashboardPage() {
                     label={`Meta Sensibilización ${añoActual}`}
                     actual={stats.metas.sensibilizacion.actual}
                     meta={stats.metas.sensibilizacion.meta}
+                    evaluadas={stats.metas.sensibilizacion.evaluadas}
                     unit="personas"
                     color="#3B82F6"
+                    actualLabel="Personas Sensibilizadas"
+                    evaluadasLabel="Personas Evaluadas"
                   />
                 </div>
               ) : null}
@@ -225,7 +228,7 @@ export default function DashboardPage() {
                 color="blue"
               />
               <KpiCard
-                title="Personas Capacitadas"
+                title="Personas Sensibilizadas"
                 value={
                   loading
                     ? "..."

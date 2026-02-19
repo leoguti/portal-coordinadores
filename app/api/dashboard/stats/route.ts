@@ -47,9 +47,11 @@ export async function GET() {
     );
 
     const actividadesAño = actividades.filter((a) => a.fields.Año === añoStr);
-    const participantesSensibilizacion = actividadesAño
-      .filter((a) => a.fields.Tipo === "Sensibilización")
+    const actividadesSensibilizacion = actividadesAño.filter((a) => a.fields.Tipo === "Sensibilización");
+    const participantesSensibilizacion = actividadesSensibilizacion
       .reduce((sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0), 0);
+    const personasEvaluadas = actividadesSensibilizacion
+      .reduce((sum, a) => sum + (a.fields["Personas Evaluadas"] || 0), 0);
 
     const metasData = {
       recoleccion: {
@@ -60,6 +62,7 @@ export async function GET() {
       sensibilizacion: {
         meta: metas?.fields.MetaSensibilizacion || 0,
         actual: participantesSensibilizacion,
+        evaluadas: personasEvaluadas,
       },
       configurada: metas !== null,
     };

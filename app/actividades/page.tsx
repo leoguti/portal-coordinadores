@@ -244,19 +244,16 @@ export default function ActividadesPage() {
 
   // Calcular resumen de participantes por mes
   const getResumenMes = (actividadesDelMes: Actividad[]) => {
-    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number } } = {};
+    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
 
     actividadesDelMes.forEach(actividad => {
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
-        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0 };
+        porTipo[tipo] = { count: 0, participantes: 0 };
       }
       porTipo[tipo].count++;
       if (actividad.fields["Cantidad de Participantes"]) {
         porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
       }
     });
 
@@ -267,7 +264,7 @@ export default function ActividadesPage() {
   const anoVigente = new Date().getFullYear();
   const hayFiltrosActivos = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
   const estadisticasGenerales = React.useMemo(() => {
-    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number } } = {};
+    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
 
     actividadesFiltradas.forEach(actividad => {
       // Sin filtros activos, mostrar solo año vigente (comportamiento por defecto)
@@ -279,14 +276,11 @@ export default function ActividadesPage() {
 
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
-        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0 };
+        porTipo[tipo] = { count: 0, participantes: 0 };
       }
       porTipo[tipo].count++;
       if (actividad.fields["Cantidad de Participantes"]) {
         porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
       }
     });
 
@@ -707,63 +701,23 @@ export default function ActividadesPage() {
                 })()}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => {
-                  const pctEvaluadas = stats.participantes > 0 ? Math.round((stats.evaluadas / stats.participantes) * 100) : 0;
-                  return (
-                    <div key={tipo} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-600">{tipo}</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                          {stats.count}
-                        </span>
-                      </div>
-                      {stats.participantes > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-100">
-                          {/* Barra: participantes = 100%, evaluadas = porción verde */}
-                          <div className="relative w-full h-7 bg-blue-200 rounded-md overflow-hidden">
-                            {stats.evaluadas > 0 && (
-                              <div
-                                className="absolute inset-y-0 left-0 bg-green-500 rounded-l-md transition-all"
-                                style={{ width: `${pctEvaluadas}%` }}
-                              />
-                            )}
-                            {/* Label participantes (derecha) */}
-                            <span className="absolute inset-y-0 right-1.5 flex items-center text-[11px] font-bold text-blue-900">
-                              {stats.participantes.toLocaleString('es-CO')}
-                            </span>
-                            {/* Label evaluadas (izquierda, dentro de la barra verde) */}
-                            {stats.evaluadas > 0 && pctEvaluadas >= 20 && (
-                              <span className="absolute inset-y-0 left-1.5 flex items-center text-[11px] font-bold text-white">
-                                {stats.evaluadas.toLocaleString('es-CO')}
-                              </span>
-                            )}
-                            {stats.evaluadas > 0 && pctEvaluadas < 20 && (
-                              <span className="absolute inset-y-0 flex items-center text-[11px] font-bold text-green-800" style={{ left: `calc(${pctEvaluadas}% + 6px)` }}>
-                                {stats.evaluadas.toLocaleString('es-CO')}
-                              </span>
-                            )}
-                          </div>
-                          {/* Leyenda debajo */}
-                          <div className="flex items-center justify-between mt-1 text-[10px]">
-                            <div className="flex items-center gap-3">
-                              <span className="flex items-center gap-1">
-                                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500"></span>
-                                <span className="text-gray-500">Personas Evaluadas</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-200"></span>
-                                <span className="text-gray-500">Personas Participantes</span>
-                              </span>
-                            </div>
-                            {stats.evaluadas > 0 && (
-                              <span className="font-semibold text-green-600">{pctEvaluadas}%</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => (
+                  <div key={tipo} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-600">{tipo}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        {stats.count}
+                      </span>
                     </div>
-                  );
-                })}
+                    {stats.participantes > 0 && (
+                      <div className="flex items-center gap-1 text-sm text-gray-700 mt-2 pt-2 border-t border-gray-100">
+                        <span>👥</span>
+                        <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
+                        <span className="text-gray-500 text-xs">participantes</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -811,15 +765,6 @@ export default function ActividadesPage() {
                                         <span>👥</span>
                                         <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
                                       </span>
-                                      {stats.evaluadas > 0 && (
-                                        <>
-                                          <span className="text-gray-400">|</span>
-                                          <span className="text-green-600 flex items-center gap-1">
-                                            <span className="font-semibold">{stats.evaluadas.toLocaleString('es-CO')}</span>
-                                            <span className="text-green-500">eval.</span>
-                                          </span>
-                                        </>
-                                      )}
                                     </>
                                   )}
                                 </span>
@@ -1005,14 +950,6 @@ export default function ActividadesPage() {
                                                   <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Participantes</h4>
                                                   <p className="text-sm font-medium text-gray-900">
                                                     {actividad.fields["Cantidad de Participantes"]}
-                                                  </p>
-                                                </div>
-                                              )}
-                                              {actividad.fields["Personas Evaluadas"] != null && (
-                                                <div>
-                                                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Evaluadas</h4>
-                                                  <p className="text-sm font-medium text-green-700">
-                                                    {actividad.fields["Personas Evaluadas"]}
                                                   </p>
                                                 </div>
                                               )}
