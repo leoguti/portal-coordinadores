@@ -29,6 +29,7 @@ export default function NuevaActividadPage() {
   const [observaciones, setObservaciones] = useState("");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
+  const [evaluaciones, setEvaluaciones] = useState<ImageFile[]>([]);
 
   // Conditional logic based on "Tipo de Actividad"
   const isSensibilizacion = tipo === "Sensibilización";
@@ -186,6 +187,39 @@ export default function NuevaActividadPage() {
 
         if (failedDocs > 0) {
           setUploadProgress(`Actividad creada. ${uploadedDocs} documentos subidos, ${failedDocs} fallaron.`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Paso 4: Subir evaluaciones (si hay, solo Sensibilización)
+      if (evaluaciones.length > 0) {
+        let uploadedEvals = 0;
+        let failedEvals = 0;
+
+        for (const doc of evaluaciones) {
+          setUploadProgress(`Subiendo evaluación ${uploadedEvals + failedEvals + 1} de ${evaluaciones.length}...`);
+
+          setEvaluaciones(prev => prev.map(f =>
+            f.id === doc.id ? { ...f, uploading: true } : f
+          ));
+
+          const success = await uploadFile(recordId, doc.file, "Evaluaciones");
+
+          setEvaluaciones(prev => prev.map(f =>
+            f.id === doc.id
+              ? { ...f, uploading: false, uploaded: success, error: success ? undefined : "Error al subir" }
+              : f
+          ));
+
+          if (success) {
+            uploadedEvals++;
+          } else {
+            failedEvals++;
+          }
+        }
+
+        if (failedEvals > 0) {
+          setUploadProgress(`Actividad creada. ${uploadedEvals} evaluaciones subidas, ${failedEvals} fallaron.`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
@@ -457,6 +491,22 @@ export default function NuevaActividadPage() {
               />
             </div>
 
+            {/* Evaluaciones - Solo Sensibilización */}
+            {isSensibilizacion && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Evaluaciones
+                </label>
+                <ImageUpload
+                  images={evaluaciones}
+                  onChange={setEvaluaciones}
+                  maxFiles={5}
+                  maxSizeMB={3}
+                  disabled={loading}
+                  acceptPdf
+                />
+              </div>
+            )}
 
             {/* Municipio - Selector con búsqueda */}
             <div>

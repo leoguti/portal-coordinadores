@@ -140,7 +140,7 @@ export default function EditarActividadPage() {
     });
   };
 
-  async function handleSubmit(data: ActividadFormData, _fotografias: ImageFile[], _documentos: ImageFile[]) {
+  async function handleSubmit(data: ActividadFormData, _fotografias: ImageFile[], _documentos: ImageFile[], _evaluaciones: ImageFile[]) {
     setSaving(true);
     setError(null);
     setUploadProgress(null);

@@ -20,7 +20,7 @@ export interface ActividadFormData {
 
 interface ActividadFormProps {
   initialData?: Partial<ActividadFormData>;
-  onSubmit: (data: ActividadFormData, fotografias: ImageFile[], documentos: ImageFile[]) => Promise<void>;
+  onSubmit: (data: ActividadFormData, fotografias: ImageFile[], documentos: ImageFile[], evaluaciones: ImageFile[]) => Promise<void>;
   submitLabel?: string;
   loading?: boolean;
   error?: string | null;
@@ -53,6 +53,7 @@ export default function ActividadForm({
   const [observaciones, setObservaciones] = useState(initialData?.observaciones || "");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
+  const [evaluaciones, setEvaluaciones] = useState<ImageFile[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Calcular fechas permitidas (regla de 7 días de gracia)
@@ -92,10 +93,11 @@ export default function ActividadForm({
   }, []);
 
   // Conditional logic based on "Tipo de Actividad"
+  const isSensibilizacion = tipo === "Sensibilización";
   const isVisitaAcopio = tipo === "Visita acopio";
   const showPerfil = tipo !== "" && !isVisitaAcopio;
   const showCultivo = tipo === "Recoleccion";
-  const showCantidadParticipantes = tipo === "Sensibilización";
+  const showCantidadParticipantes = isSensibilizacion;
 
   const toggleModalidad = (value: string) => {
     setModalidad(prev => 
@@ -135,7 +137,7 @@ export default function ActividadForm({
       cantidadParticipantes: showCantidadParticipantes ? cantidadParticipantes : "",
       personasEvaluadas: showCantidadParticipantes ? personasEvaluadas : "",
       observaciones,
-    }, fotografias, documentos);
+    }, fotografias, documentos, evaluaciones);
   };
 
   return (
@@ -380,6 +382,23 @@ export default function ActividadForm({
               onChange={setDocumentos}
               maxFiles={5}
               maxSizeMB={4}
+              disabled={loading}
+              acceptPdf
+            />
+          </div>
+        )}
+
+        {/* Evaluaciones - Solo Sensibilización */}
+        {isSensibilizacion && showDocumentUpload && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Evaluaciones
+            </label>
+            <ImageUpload
+              images={evaluaciones}
+              onChange={setEvaluaciones}
+              maxFiles={5}
+              maxSizeMB={3}
               disabled={loading}
               acceptPdf
             />
