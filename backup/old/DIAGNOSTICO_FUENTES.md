@@ -1,86 +1,160 @@
 # Diagnóstico de fuentes de certificados
 
-Fecha: 18 feb 2026
+Fecha: 18-19 feb 2026 (actualizado)
 
 ## Fuentes identificadas
 
-| # | Fuente | Certificados | Rango consecutivo | Ubicación |
-|---|--------|-------------|-------------------|-----------|
-| 1 | **Servidor DigitalOcean** (PDFs) | 33,475 | 13,957 → 92,102 | `/var/www/campolimpio.rumbo.digital/public_html/` |
-| 2 | **Airtable** (datos + PDFs) | 33,255 | 58,714 → 92,102 | Base `appniHwKiUMS0imXD`, tabla `Certificados` |
-| 3 | **Google Drive** (PDFs) | 73,454 | 10,925 → 58,713 | Cuenta de servicio `subidor-certificados@certificados-campolimpio.iam.gserviceaccount.com` |
-| 4 | **Hojas de cálculo** | Por determinar | Por determinar | Pendiente de recopilar |
+| # | Fuente | Registros | Rango consecutivo | Tiene datos | Tiene PDF | Ubicación |
+|---|--------|-----------|-------------------|-------------|-----------|-----------|
+| 1 | **Airtable** | 33,255 | 58,714 → 92,102 | Sí | Sí | Base `appniHwKiUMS0imXD`, tabla `Certificados` |
+| 2 | **Hoja de cálculo (CSV)** | 16,842 | 36,142 → 53,991 | Sí | No | `backup/old/certificados_campolimpio.csv` |
+| 3 | **Google Drive** | 73,454 | 10,925 → 58,713 | No | Sí | Cuenta de servicio `subidor-certificados@certificados-campolimpio.iam.gserviceaccount.com` |
+| 4 | **Servidor DigitalOcean** | 33,475 | 13,957 → 92,102 | No | Sí | `/var/www/campolimpio.rumbo.digital/public_html/` |
+| 5 | **SQLite (sistema viejo)** | 2,268 | - | Datos generadores | No | `campolimpio.tar.gz` → `campolimpio.db` tabla `ubicaciones` |
 
-## Google Drive — Sistema viejo (NUEVA FUENTE)
+## Detalle por fuente
 
-- **73,454 PDFs** organizados por carpetas de año/mes (2018 → 2022)
+### 1. Airtable (sistema actual)
+
+- **33,255 registros** con datos completos + PDF adjunto
+- Rango: 58,714 → 92,102
+- Campos: consecutivo, generador, coordinador, cantidades (rígidos, flexibles, metálicos, embalaje), fecha, municipio, PDF
+- Distribución por año:
+  - 2022: 2,871
+  - 2023: 10,900
+  - 2024: 10,581
+  - 2025: 8,365
+  - 2026: 525
+
+### 2. Hoja de cálculo (Google Sheets → CSV)
+
+- **16,842 registros** del sistema viejo
+- Rango: 36,142 → 53,991
+- Archivo: `backup/old/certificados_campolimpio.csv`
+- Campos (24 columnas):
+  ```
+  consecutivo, tipocertificado, nombregenerador, cedulagenerador,
+  movilgenerador, direcciongenerador, cultivogenerador, emailgenerador,
+  municipiogenerador, rigidos, flexibles, metalicos, embalaje,
+  totalentregado, triplelavado, lugardevolucion, municipiodevolucion,
+  fechadevolucion, fechageneracion, observaciones, nombrecoordinador,
+  movilcoordinador, emailcoordinador, año
+  ```
+- Distribución por año:
+  - 2006: 1
+  - 2019: 4
+  - 2020: 1,630
+  - 2021: 10,878
+  - 2022: 4,329
+- **Esquema muy similar al de Airtable** — se puede mapear directamente
+
+### 3. Google Drive (PDFs del sistema viejo)
+
+- **73,454 PDFs** organizados por carpetas de año/mes
 - Rango: Certificado_10925 → Certificado_58713
-- Carpetas por año: 2003, 2018, 2019, 2020, 2021, 2022 (con subcarpetas de mes)
+- Carpetas por año: 2003, 2018, 2019, 2020, 2021, 2022
 - Carpeta especial: `Respaldo Certificados` (owner: certificados@campolimpio.org)
-- Listado completo en: `/home/leonardo/proyectos/backup_campolimpio/lista_drive.txt` (servidor DO)
-- Scripts de acceso al Drive en: `/home/leonardo/proyectos/backup_campolimpio/`
-- Credenciales: `/home/leonardo/proyectos/backup_campolimpio/clave-campolimpio.json`
+- Cuenta de servicio: `subidor-certificados@certificados-campolimpio.iam.gserviceaccount.com`
+- Credenciales: `/home/leonardo/proyectos/backup_campolimpio/clave-campolimpio.json` (servidor DO)
+- Listado completo: `/home/leonardo/proyectos/backup_campolimpio/lista_drive.txt` (servidor DO)
+- Scripts de acceso: `/home/leonardo/proyectos/backup_campolimpio/` (servidor DO)
 
-## Cruce de datos (por número de consecutivo)
+### 4. Servidor DigitalOcean (PDFs mixtos)
 
-### Servidor DigitalOcean vs Airtable
+- **33,475 PDFs** — mezcla de sistema viejo y nuevo
+- Rango: 13,957 → 92,102
+- Host: `campolimpio.rumbo.digital` (usuario: `leonardo`)
+- Ruta: `/var/www/campolimpio.rumbo.digital/public_html/`
+- Formato nombres: `Certificado_XXXXX.pdf` y `certificado_XXXXX.pdf`
+- Carpeta adicional: `certificados_2023/`
+- Tamaño total: **168 MB**
 
-| Categoría | Cantidad | Rango | Descripción |
-|-----------|----------|-------|-------------|
-| **En AMBOS** | 33,190 | 58,714 → 92,102 | Datos en Airtable + PDF en servidor |
-| **Solo en servidor** | 285 | 13,957 → 91,724 | PDFs del sistema viejo sin datos en Airtable |
-| **Solo en Airtable** | 65 | 66,414 → 91,721 | Registros sin PDF en servidor |
+### 5. SQLite del sistema viejo
 
-### Distribución por rangos de consecutivo
+- Encontrada dentro de `campolimpio.tar.gz` (5.5 MB, marzo 2021)
+- Ruta: `/var/www/campolimpio.rumbo.digital/campolimpio.tar.gz`
+- Base de datos: `campolimpio.db`
+- **Tabla `ubicaciones`**: 2,268 registros de generadores
+  ```
+  nombregenerador, direcciongenerador, cultivogenerador,
+  municipiogenerador, cedulagenerador, movilgenerador,
+  emailgenerador, tipo
+  ```
+- **Tabla `kardex`**: 31 registros (datos de prueba/minimal)
+- El sistema viejo era PHP + Google Sheets API + SQLite + Google Drive
 
-| Rango | Servidor DO | Airtable | Google Drive | Observación |
-|-------|-------------|----------|--------------|-------------|
-| 0 - 20,000 | 49 | 0 | ~9,000+ | Sistema viejo, solo Drive tiene PDFs |
-| 20,001 - 40,000 | 139 | 0 | ~20,000+ | Sistema viejo |
-| 40,001 - 60,000 | 1,287 | 1,267 | ~44,000+ | Zona de transición |
-| 60,001 - 80,000 | 19,985 | 19,934 | 0 | Sistema nuevo (Airtable) |
-| 80,001 - 100,000 | 12,015 | 12,054 | 0 | Sistema nuevo (Airtable) |
+## Cruce de datos por consecutivo
 
-## Mapa visual de fuentes
+### Mapa visual
 
 ```
-Consecutivo:  10,925 .............. 58,713 .. 58,714 .............. 92,102
-              |                          |    |                          |
-Google Drive: |████████████████████████████|    |                          |
-              | 73,454 PDFs (sistema viejo)|    |                          |
-              |                          |    |                          |
-Servidor DO:  |      |██████████████████████████████████████████████████████|
-              |      13,957              |    |                    33,475 PDFs
-              |                          |    |                          |
-Airtable:     |                          |    |██████████████████████████|
-              |                          |    | 33,255 registros + PDFs  |
-              |                          |    |                          |
-Hojas cálculo:|  ¿¿¿¿¿ POR DETERMINAR ¿¿¿¿¿ |                          |
+Consecutivo:  10,925 .... 36,142 .... 53,991 .. 58,713 .. 58,714 .............. 92,102
+              |           |                |     |         |                          |
+Google Drive: |████████████████████████████████████|         |                          |
+              | 73,454 PDFs                       |         |                          |
+              |           |                |     |         |                          |
+CSV (datos):  |           |████████████████|     |         |                          |
+              |           | 16,842 registros|     |         |                          |
+              |           |                |     |         |                          |
+Servidor DO:  |      |████████████████████████████████████████████████████████████████|
+              |      13,957                      |         |                  33,475  |
+              |           |                |     |         |                          |
+Airtable:     |           |                |     |         |██████████████████████████|
+              |           |                |     |         | 33,255 datos + PDFs      |
 ```
 
-## Otros hallazgos en el servidor
+### Zonas identificadas
 
-- **`/opt/reporte_campolimpio/`**: Proyecto de reportes con queries a Airtable (Python/FastAPI)
-- **`/var/www/campolimpio.rumbo.digital/campolimpio.tar.gz`**: Sistema viejo comprimido (5.5 MB, marzo 2021)
-- **`/home/leonardo/proyectos/backup_campolimpio/`**: Scripts de Google Drive + listado + credenciales
+| Zona | Rango | Datos | PDFs | Notas |
+|------|-------|-------|------|-------|
+| **A** | 10,925 → 36,141 | Sin datos | Google Drive + algunos en DO | Solo PDFs, sin datos estructurados |
+| **B** | 36,142 → 53,991 | CSV (16,842) | Google Drive + algunos en DO | Datos + PDFs disponibles |
+| **C** | 53,992 → 58,713 | Sin datos | Google Drive + algunos en DO | Solo PDFs, sin datos estructurados |
+| **D** | 58,714 → 92,102 | Airtable (33,255) | Airtable + DO | Todo completo |
 
-## Conclusiones
+### Servidor DO vs Airtable (cruce)
 
-1. **Google Drive es la fuente más grande**: 73,454 PDFs del sistema anterior (2018-2022), consecutivos 10,925 → 58,713.
+| Categoría | Cantidad | Rango |
+|-----------|----------|-------|
+| En AMBOS | 33,190 | 58,714 → 92,102 |
+| Solo en servidor | 285 | 13,957 → 91,724 |
+| Solo en Airtable | 65 | 66,414 → 91,721 |
 
-2. **El servidor DO tiene una copia parcial**: 33,475 PDFs (13,957 → 92,102), mezcla de sistema viejo y nuevo.
+## Arquitectura del sistema viejo
 
-3. **Airtable tiene los datos estructurados**: Solo del sistema nuevo (58,714 → 92,102), 33,255 registros con campos completos.
+```
+Google Sheets (datos de certificados)
+    ↓ API
+PHP App (campolimpio.tar.gz)
+    ↓ genera
+PDFs (certificado_XXXXX.pdf)
+    ↓ sube a
+Google Drive (cuenta de servicio)
+    ↓ copia a
+Servidor DO (/var/www/.../public_html/)
 
-4. **Los datos del sistema viejo (campos/datos)** no están en Airtable — probablemente están en las hojas de cálculo pendientes de recopilar o en el tar.gz del sistema viejo.
+SQLite (campolimpio.db)
+    → ubicaciones de generadores (tabla auxiliar)
+```
 
-5. **Total estimado de certificados únicos**: ~80,000+ (10,925 → 92,102)
+## Resumen de números
+
+| Concepto | Cantidad |
+|----------|----------|
+| Total certificados únicos (estimado) | ~80,000+ |
+| Con datos completos (Airtable) | 33,255 |
+| Con datos del CSV | 16,842 |
+| Sin datos (solo PDF) | ~30,000 |
+| PDFs en Google Drive | 73,454 |
+| PDFs en servidor DO | 33,475 |
+| Generadores en SQLite | 2,268 |
 
 ## Pendiente
 
-- [ ] Recopilar hojas de cálculo con datos del sistema viejo
-- [ ] Explorar `campolimpio.tar.gz` (posible DB del sistema anterior)
+- [x] Recopilar hojas de cálculo con datos del sistema viejo
+- [x] Explorar `campolimpio.tar.gz` (SQLite encontrada)
+- [ ] Cruzar CSV con Google Drive (verificar qué PDFs del CSV tienen match en Drive)
 - [ ] Verificar acceso al Google Drive con las credenciales del servidor
-- [ ] Definir qué datos se migran a Neon (solo Airtable, o también sistema viejo)
-- [ ] Revisar posible diferencia de esquema entre sistema viejo y nuevo
-- [ ] Definir estrategia para unificar todo en una sola DB (Neon)
+- [ ] Decidir qué hacer con Zona A y C (certificados sin datos, solo PDF)
+- [ ] Definir esquema unificado en Neon que cubra ambos sistemas
+- [ ] Definir estrategia de migración por zonas
