@@ -359,6 +359,12 @@ export default function ActividadDetailPage() {
                     <dd className="text-gray-900">{actividad.fields["Cantidad de Participantes"]}</dd>
                   </div>
                 )}
+                {actividad.fields["Personas Evaluadas"] != null && (
+                  <div>
+                    <dt className="font-medium text-gray-500">Personas Evaluadas</dt>
+                    <dd className="text-gray-900">{actividad.fields["Personas Evaluadas"]}</dd>
+                  </div>
+                )}
                 {actividad.fields.Modalidad && actividad.fields.Modalidad.length > 0 && (
                   <div>
                     <dt className="font-medium text-gray-500">Modalidad</dt>
