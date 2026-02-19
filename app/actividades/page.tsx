@@ -719,25 +719,46 @@ export default function ActividadesPage() {
                       </div>
                       {stats.participantes > 0 && (
                         <div className="mt-2 pt-2 border-t border-gray-100">
-                          <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-                            <span>👥 Participantes</span>
-                            <span className="font-semibold text-gray-700">{stats.participantes.toLocaleString('es-CO')}</span>
+                          {/* Barra: participantes = 100%, evaluadas = porción verde */}
+                          <div className="relative w-full h-7 bg-blue-200 rounded-md overflow-hidden">
+                            {stats.evaluadas > 0 && (
+                              <div
+                                className="absolute inset-y-0 left-0 bg-green-500 rounded-l-md transition-all"
+                                style={{ width: `${pctEvaluadas}%` }}
+                              />
+                            )}
+                            {/* Label participantes (derecha) */}
+                            <span className="absolute inset-y-0 right-1.5 flex items-center text-[11px] font-bold text-blue-900">
+                              {stats.participantes.toLocaleString('es-CO')}
+                            </span>
+                            {/* Label evaluadas (izquierda, dentro de la barra verde) */}
+                            {stats.evaluadas > 0 && pctEvaluadas >= 20 && (
+                              <span className="absolute inset-y-0 left-1.5 flex items-center text-[11px] font-bold text-white">
+                                {stats.evaluadas.toLocaleString('es-CO')}
+                              </span>
+                            )}
+                            {stats.evaluadas > 0 && pctEvaluadas < 20 && (
+                              <span className="absolute inset-y-0 flex items-center text-[11px] font-bold text-green-800" style={{ left: `calc(${pctEvaluadas}% + 6px)` }}>
+                                {stats.evaluadas.toLocaleString('es-CO')}
+                              </span>
+                            )}
                           </div>
-                          {stats.evaluadas > 0 && (
-                            <>
-                              <div className="relative w-full h-5 bg-blue-100 rounded-full overflow-hidden">
-                                <div
-                                  className="absolute inset-y-0 left-0 bg-green-500 rounded-full flex items-center justify-end pr-1.5 transition-all"
-                                  style={{ width: `${Math.max(pctEvaluadas, 12)}%` }}
-                                >
-                                  <span className="text-[10px] font-bold text-white">{stats.evaluadas.toLocaleString('es-CO')}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between text-[10px] text-gray-400 mt-1">
-                                <span>Evaluadas ({pctEvaluadas}%)</span>
-                              </div>
-                            </>
-                          )}
+                          {/* Leyenda debajo */}
+                          <div className="flex items-center justify-between mt-1 text-[10px]">
+                            <div className="flex items-center gap-3">
+                              <span className="flex items-center gap-1">
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500"></span>
+                                <span className="text-gray-500">Personas Evaluadas</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-200"></span>
+                                <span className="text-gray-500">Personas Participantes</span>
+                              </span>
+                            </div>
+                            {stats.evaluadas > 0 && (
+                              <span className="font-semibold text-green-600">{pctEvaluadas}%</span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
