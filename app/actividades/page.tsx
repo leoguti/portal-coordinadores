@@ -244,16 +244,19 @@ export default function ActividadesPage() {
 
   // Calcular resumen de participantes por mes
   const getResumenMes = (actividadesDelMes: Actividad[]) => {
-    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
+    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number } } = {};
 
     actividadesDelMes.forEach(actividad => {
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
-        porTipo[tipo] = { count: 0, participantes: 0 };
+        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0 };
       }
       porTipo[tipo].count++;
       if (actividad.fields["Cantidad de Participantes"]) {
         porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
+      }
+      if (actividad.fields["Personas Evaluadas"]) {
+        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
       }
     });
 
@@ -765,6 +768,15 @@ export default function ActividadesPage() {
                                         <span>👥</span>
                                         <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
                                       </span>
+                                      {stats.evaluadas > 0 && (
+                                        <>
+                                          <span className="text-gray-400">|</span>
+                                          <span className="text-green-600 flex items-center gap-1">
+                                            <span className="font-semibold">{stats.evaluadas.toLocaleString('es-CO')}</span>
+                                            <span className="text-green-500">eval.</span>
+                                          </span>
+                                        </>
+                                      )}
                                     </>
                                   )}
                                 </span>
