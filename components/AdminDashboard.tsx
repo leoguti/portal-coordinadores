@@ -53,6 +53,7 @@ interface AdminDashboardStats {
       nombre: string;
       meta: number;
       actual: number;
+      evaluadas: number;
       porcentaje: number;
       semaforo: string;
     }>;
