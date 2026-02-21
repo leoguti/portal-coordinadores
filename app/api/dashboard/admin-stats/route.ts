@@ -142,8 +142,9 @@ export async function GET(request: Request) {
     });
 
     // --- Metas Sensibilizacion ---
-    // Accumulate personas per coordinator
+    // Accumulate personas per coordinator (participantes y evaluadas)
     const personasPorCoord = new Map<string, number>();
+    const evaluadasPorCoord = new Map<string, number>();
     for (const a of actSensibilizacion) {
       const coordId = a.fields.Coordinador?.[0];
       if (!coordId) continue;
@@ -152,18 +153,25 @@ export async function GET(request: Request) {
         (personasPorCoord.get(coordId) || 0) +
           (a.fields["Cantidad de Participantes"] || 0)
       );
+      evaluadasPorCoord.set(
+        coordId,
+        (evaluadasPorCoord.get(coordId) || 0) +
+          (a.fields["Personas Evaluadas"] || 0)
+      );
     }
 
     const metasSensibilizacionPorCoord = allMetas.map((m) => {
       const coordId = m.fields.id_coordinador?.[0] || m.fields.Coordinador?.[0] || "";
       const meta = m.fields.MetaSensibilizacion || 0;
       const actual = personasPorCoord.get(coordId) || 0;
+      const evaluadas = evaluadasPorCoord.get(coordId) || 0;
       const porcentaje = meta > 0 ? Math.round((actual / meta) * 100) : 0;
       return {
         id: coordId,
         nombre: coordMap.get(coordId) || "Sin nombre",
         meta,
         actual,
+        evaluadas,
         porcentaje,
         semaforo: semaforo(porcentaje),
       };

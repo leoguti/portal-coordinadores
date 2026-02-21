@@ -325,6 +325,7 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                   <th className="text-left p-3 font-semibold text-gray-700">Coordinador</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Meta</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Actual</th>
+                  <th className="text-right p-3 font-semibold text-gray-700">Evaluadas</th>
                   <th className="text-right p-3 font-semibold text-gray-700">%</th>
                   <th className="text-center p-3 font-semibold text-gray-700">Estado</th>
                 </tr>
@@ -335,6 +336,7 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                     <td className="p-3 font-medium">{c.nombre}</td>
                     <td className="p-3 text-right">{c.meta.toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right">{c.actual.toLocaleString("es-CO")}</td>
+                    <td className="p-3 text-right">{(c.evaluadas || 0).toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right font-bold">{c.porcentaje}%</td>
                     <td className="p-3 text-center">
                       <span className={`inline-block w-3 h-3 rounded-full ${semaforoColor[c.semaforo]}`} title={c.semaforo}></span>
