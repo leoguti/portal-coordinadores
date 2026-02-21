@@ -165,7 +165,7 @@ export default function PasoRevision({
       (i) => i.tipo === "KARDEX" && !i.concepto
     );
     checks.push({
-      label: "Todos los items Kardex con concepto",
+      label: "Todos los items Kardex con rubro",
       ok: kardexSinConcepto.length === 0,
     });
     if (requiereDocumentos) {
@@ -269,7 +269,7 @@ export default function PasoRevision({
                   Tipo
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                  Concepto
+                  Rubro
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Descripcion
@@ -322,7 +322,7 @@ export default function PasoRevision({
                     </div>
                   </td>
 
-                  {/* Concepto / Rubro Transporte */}
+                  {/* Rubro */}
                   <td className="px-3 py-3">
                     {item.tipo === "KARDEX" ? (
                       <select
