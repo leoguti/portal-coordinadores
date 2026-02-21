@@ -90,7 +90,7 @@ export default function GastoDetallePage() {
             (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string } }) => ({
               id: r.id,
               nombre: r.fields.Nombre || "",
-              tipo: r.fields.Tipo || "Servicio",
+              tipo: r.fields.Tipo?.[0] || "Servicio",
             }))
           );
         }
@@ -525,28 +525,17 @@ export default function GastoDetallePage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
               >
                 <option value="">Seleccionar rubro...</option>
-                {rubros.filter((r) => r.tipo === "Transporte").length > 0 && (
-                  <optgroup label="Transporte">
+                {[...new Set(rubros.map((r) => r.tipo))].sort().map((tipo) => (
+                  <optgroup key={tipo} label={tipo}>
                     {rubros
-                      .filter((r) => r.tipo === "Transporte")
+                      .filter((r) => r.tipo === tipo)
                       .map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.nombre}
                         </option>
                       ))}
                   </optgroup>
-                )}
-                {rubros.filter((r) => r.tipo === "Servicio").length > 0 && (
-                  <optgroup label="Servicios">
-                    {rubros
-                      .filter((r) => r.tipo === "Servicio")
-                      .map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.nombre}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
+                ))}
               </select>
             </div>
 

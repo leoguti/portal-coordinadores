@@ -443,7 +443,7 @@ export default function NuevaOrdenV2Page() {
 
           {pasoActual === 2 && (
             <PasoCatalogo
-              rubrosServicio={rubrosDisponibles.filter((r) => r.fields.Tipo === "Servicio")}
+              rubrosServicio={rubrosDisponibles.filter((r) => r.fields.Tipo?.[0] !== "Transporte")}
               kardexSeleccionados={kardexSeleccionados}
               itemsCatalogo={itemsCatalogo}
               onItemsChange={setItemsCatalogo}
@@ -475,7 +475,7 @@ export default function NuevaOrdenV2Page() {
               observaciones={observaciones}
               itemsOrden={itemsOrden}
               onItemsOrdenChange={setItemsOrden}
-              rubrosTransporte={rubrosDisponibles.filter((r) => r.fields.Tipo === "Transporte")}
+              rubrosTransporte={rubrosDisponibles.filter((r) => r.fields.Tipo?.[0] === "Transporte")}
               soporteBascula={soporteBascula}
               onSoporteBasculaChange={setSoporteBascula}
               onSubmit={handleSubmit}

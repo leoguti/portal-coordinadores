@@ -30,7 +30,7 @@ interface CoordinadorFields {
 
 interface RubroFields {
   Nombre?: string;
-  Tipo?: "Transporte" | "Servicio";
+  Tipo?: string[];
   RequiereDocumentos?: boolean;
   Activo?: boolean;
 }
