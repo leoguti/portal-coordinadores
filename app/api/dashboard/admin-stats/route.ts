@@ -82,6 +82,10 @@ export async function GET(request: Request) {
       (sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0),
       0
     );
+    const personasEvaluadas = actSensibilizacion.reduce(
+      (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      0
+    );
 
     const ordenesTotal = {
       monto: allOrdenes.reduce((sum, o) => sum + (o.fields.Total || 0), 0),
@@ -378,6 +382,7 @@ export async function GET(request: Request) {
         certificados: certificadosCount,
         eventosSensibilizacion,
         personasCapacitadas,
+        personasEvaluadas,
         ordenesTotal,
       },
       metasRecoleccion: {
@@ -392,6 +397,7 @@ export async function GET(request: Request) {
         global: {
           meta: metaGlobalSensibilizacion,
           actual: personasCapacitadas,
+          evaluadas: personasEvaluadas,
         },
         porCoordinador: metasSensibilizacionPorCoord,
       },

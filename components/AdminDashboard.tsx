@@ -32,6 +32,7 @@ interface AdminDashboardStats {
     certificados: number;
     eventosSensibilizacion: number;
     personasCapacitadas: number;
+    personasEvaluadas: number;
     ordenesTotal: { monto: number; count: number };
   };
   metasRecoleccion: {
@@ -47,7 +48,7 @@ interface AdminDashboardStats {
     }>;
   };
   metasSensibilizacion: {
-    global: { meta: number; actual: number };
+    global: { meta: number; actual: number; evaluadas: number };
     porCoordinador: Array<{
       id: string;
       nombre: string;
@@ -231,11 +232,18 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
           color="campolimpio"
         />
         <KpiCard
-          title="Capacitados"
+          title="Sensibilizados"
           value={stats.kpis.personasCapacitadas.toLocaleString("es-CO")}
           description="personas"
           icon="👥"
           color="amber"
+        />
+        <KpiCard
+          title="Evaluados"
+          value={stats.kpis.personasEvaluadas.toLocaleString("es-CO")}
+          description="personas evaluadas"
+          icon="📝"
+          color="blue"
         />
         <KpiCard
           title="Órdenes"
@@ -318,6 +326,10 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
           unit="personas"
           color="#3B82F6"
         />
+        <div className="mt-2 flex gap-6 text-sm text-gray-600">
+          <span>Sensibilizadas: <strong>{stats.metasSensibilizacion.global.actual.toLocaleString("es-CO")}</strong></span>
+          <span>Evaluadas: <strong>{stats.metasSensibilizacion.global.evaluadas.toLocaleString("es-CO")}</strong></span>
+        </div>
         {expandedSensibilizacion && (
           <div className="mt-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
@@ -345,6 +357,28 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                  <td className="p-3">TOTAL</td>
+                  <td className="p-3 text-right">
+                    {stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.meta, 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right">
+                    {stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.actual, 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right">
+                    {stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + (c.evaluadas || 0), 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right">
+                    {(() => {
+                      const totalMeta = stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.meta, 0);
+                      const totalActual = stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.actual, 0);
+                      return totalMeta > 0 ? Math.round((totalActual / totalMeta) * 100) : 0;
+                    })()}%
+                  </td>
+                  <td className="p-3"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
