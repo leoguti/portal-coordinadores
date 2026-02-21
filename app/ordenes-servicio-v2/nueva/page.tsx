@@ -290,6 +290,7 @@ export default function NuevaOrdenV2Page() {
         } else {
           return {
             rubroRecordId: item.catalogoId!,
+            descripcion: item.descripcionLibre?.trim() || undefined,
             formaCobro: item.formaCobro,
             cantidad: item.cantidad,
             precioUnitario: item.precioUnitario,

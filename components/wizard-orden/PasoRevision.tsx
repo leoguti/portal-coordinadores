@@ -26,6 +26,7 @@ export interface ItemOrden {
   kardexId?: string;
   catalogoId?: string;
   descripcion: string;
+  descripcionLibre?: string; // Free text for CATALOGO items
   formaCobro: "Por Flete" | "Por Kilo";
   cantidad: number;
   precioUnitario: number;
@@ -357,7 +358,15 @@ export default function PasoRevision({
                         {item.descripcion}
                       </p>
                     ) : (
-                      <span className="text-xs text-gray-400">—</span>
+                      <input
+                        type="text"
+                        value={item.descripcionLibre || ""}
+                        onChange={(e) =>
+                          actualizarItem(item.id, "descripcionLibre", e.target.value)
+                        }
+                        placeholder="Ej: Arriendo bodega febrero"
+                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white text-gray-900 focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                      />
                     )}
                   </td>
 

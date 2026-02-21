@@ -748,6 +748,9 @@ export default function OrdenDetallePage() {
                           {/* Descripcion/Nombre */}
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {displayName}
+                            {item.fields.Descripcion && (
+                              <p className="text-xs text-gray-500 mt-0.5">{item.fields.Descripcion}</p>
+                            )}
                           </td>
 
                           {/* Rubro */}

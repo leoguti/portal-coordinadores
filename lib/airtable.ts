@@ -181,6 +181,7 @@ interface ItemOrdenFields {
   OrdenServicio?: string[]; // Linked to Ordenes
   Kardex?: string[]; // Linked to Kardex
   Rubro?: string[]; // Linked to Rubros
+  Descripcion?: string; // Free text description (for CATALOGO items)
   FormaCobro?: string; // "Por Flete" | "Por Kilo"
   Cantidad?: number;
   PrecioUnitario?: number;
@@ -304,6 +305,7 @@ export interface CreateOrdenParams {
 export interface CreateItemOrdenParams {
   kardexRecordId?: string; // Optional: for Kardex items
   rubroRecordId: string; // Linked to Rubros table
+  descripcion?: string; // Free text (for CATALOGO items)
   formaCobro: "Por Flete" | "Por Kilo";
   cantidad: number;
   precioUnitario: number;
@@ -1040,6 +1042,11 @@ export async function createOrdenServicio(
       // Add Rubro linked record
       itemPayload.fields.Rubro = [item.rubroRecordId];
 
+      // Add description for CATALOGO items
+      if (item.descripcion) {
+        itemPayload.fields.Descripcion = item.descripcion;
+      }
+
       console.log("Creating ItemOrden:", itemPayload);
 
       const itemResponse = await fetch(itemsUrl, {
@@ -1169,11 +1176,12 @@ export async function createOrdenServicio(
             };
           } else {
             const nombre = rubroNameMapForPdf.get(item.rubroRecordId) || "Servicio";
+            const desc = item.descripcion ? `${nombre} - ${item.descripcion}` : nombre;
 
             return {
               id: `item-${index}`,
               tipo: "CATALOGO" as const,
-              descripcion: nombre,
+              descripcion: desc,
               catalogoId: item.rubroRecordId,
               formaCobro: item.formaCobro,
               cantidad: item.cantidad,
@@ -1481,11 +1489,12 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
       const rubroId = item.fields.Rubro?.[0];
       const rubro = rubroId ? rubroMapRegen.get(rubroId) : undefined;
       const nombre = rubro?.fields.Nombre || "Servicio";
+      const desc = item.fields.Descripcion ? `${nombre} - ${item.fields.Descripcion}` : nombre;
 
       return {
         id: `item-${index}`,
         tipo: "CATALOGO" as const,
-        descripcion: nombre,
+        descripcion: desc,
         catalogoId: rubroId,
         formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
         cantidad: item.fields.Cantidad || 0,
