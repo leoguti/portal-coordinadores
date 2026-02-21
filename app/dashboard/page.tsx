@@ -58,6 +58,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [gastosNovedades, setGastosNovedades] = useState<GastoCajaMenor[]>([]);
+  const [rubroNames, setRubroNames] = useState<Map<string, string>>(new Map());
   const [loadingGastos, setLoadingGastos] = useState(true);
 
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
@@ -113,6 +114,19 @@ export default function DashboardPage() {
           });
           conNovedades.sort((a, b) => (b.fields.Fecha || "").localeCompare(a.fields.Fecha || ""));
           setGastosNovedades(conNovedades.slice(0, 5));
+
+          // Load rubro names
+          try {
+            const resRubros = await fetch("/api/rubros");
+            if (resRubros.ok) {
+              const rubrosData = await resRubros.json();
+              const map = new Map<string, string>();
+              for (const r of rubrosData.rubros || []) {
+                map.set(r.id, r.fields.Nombre || "Rubro");
+              }
+              setRubroNames(map);
+            }
+          } catch { /* not critical */ }
         }
       } catch (err) {
         console.error("Error loading gastos novedades:", err);
@@ -469,7 +483,8 @@ export default function DashboardPage() {
                     const observaciones = gasto.fields.ObservacionesAdmin || "";
                     const fecha = gasto.fields.Fecha || "";
                     const numero = gasto.fields.NumeroGasto || 0;
-                    const concepto = gasto.fields.Concepto || "";
+                    const rubroId = gasto.fields.Rubro?.[0];
+                    const concepto = rubroId ? rubroNames.get(rubroId) || "" : "";
                     const valorNeto = (gasto.fields.Valor || 0) - ((gasto.fields.Valor || 0) * (gasto.fields.PorcentajeRetencion || 0));
 
                     const estadoColors: Record<string, string> = {

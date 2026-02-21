@@ -34,7 +34,7 @@ export async function GET() {
 
 /**
  * POST /api/caja-menor — Crear nuevo gasto de caja menor
- * Body: { fecha, beneficiarioId, concepto, valor, porcentajeRetencion, facturaUrl? }
+ * Body: { fecha, beneficiarioId, rubroRecordId, valor, porcentajeRetencion, observaciones?, facturaUrl? }
  */
 export async function POST(request: Request) {
   try {
@@ -44,11 +44,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { fecha, beneficiarioId, concepto, valor, porcentajeRetencion, facturaUrl, kardexIds } = body;
+    const { fecha, beneficiarioId, rubroRecordId, observaciones, valor, porcentajeRetencion, facturaUrl, kardexIds } = body;
 
     // Validaciones
-    if (!fecha || !beneficiarioId || !concepto || valor === undefined) {
-      return NextResponse.json({ error: "Faltan campos requeridos (fecha, beneficiarioId, concepto, valor)" }, { status: 400 });
+    if (!fecha || !beneficiarioId || !rubroRecordId || valor === undefined) {
+      return NextResponse.json({ error: "Faltan campos requeridos (fecha, beneficiarioId, rubroRecordId, valor)" }, { status: 400 });
     }
 
     // Validar regla de 7 dias
@@ -64,7 +64,8 @@ export async function POST(request: Request) {
       coordinatorRecordId: session.user.coordinatorRecordId,
       fecha,
       beneficiarioId,
-      concepto,
+      rubroRecordId,
+      observaciones: observaciones || undefined,
       valor,
       porcentajeRetencion: porcentajeRetencion || 0,
       facturaUrl,

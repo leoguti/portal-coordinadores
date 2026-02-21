@@ -24,6 +24,7 @@ export default function CajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [gastos, setGastos] = useState<GastoCajaMenor[]>([]);
+  const [rubroNames, setRubroNames] = useState<Map<string, string>>(new Map());
   const [saldoInicial, setSaldoInicial] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +78,21 @@ export default function CajaMenorPage() {
           data = await getGastosCajaMenorCoordinador(session.user.coordinatorRecordId);
         }
         setGastos(data);
+
+        // Cargar rubros para nombres
+        try {
+          const resRubros = await fetch("/api/rubros");
+          if (resRubros.ok) {
+            const { rubros } = await resRubros.json();
+            const map = new Map<string, string>();
+            for (const r of rubros || []) {
+              map.set(r.id, r.fields.Nombre || "Rubro");
+            }
+            setRubroNames(map);
+          }
+        } catch {
+          // Not critical
+        }
 
         // Cargar saldos iniciales
         try {
@@ -945,7 +961,8 @@ export default function CajaMenorPage() {
                                       const fecha = gasto.fields.Fecha || "";
                                       const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
                                       const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
-                                      const concepto = gasto.fields.Concepto || "";
+                                      const rubroId = gasto.fields.Rubro?.[0];
+                                      const concepto = rubroId ? rubroNames.get(rubroId) || "" : "";
                                       const valorNeto = calcValorNeto(gasto);
                                       const estado = gasto.fields.Estado || "Pendiente";
                                       const puedeEliminar = puedeEliminarGasto(fecha, estado);

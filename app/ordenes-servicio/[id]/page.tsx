@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { getOrdenById, getItemsOrden, getKardexByIds, getCatalogoByIds, type Orden, type ItemOrden, type Kardex, type CatalogoServicio } from "@/lib/airtable";
+import { getOrdenById, getItemsOrden, getKardexByIds, getRubrosByIds, type Orden, type ItemOrden, type Kardex, type Rubro } from "@/lib/airtable";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
 export default function OrdenDetallePage() {
@@ -17,7 +17,7 @@ export default function OrdenDetallePage() {
   const [orden, setOrden] = useState<Orden | null>(null);
   const [items, setItems] = useState<ItemOrden[]>([]);
   const [kardexMap, setKardexMap] = useState<Map<string, Kardex>>(new Map());
-  const [catalogoMap, setCatalogoMap] = useState<Map<string, CatalogoServicio>>(new Map());
+  const [rubroMap, setRubroMap] = useState<Map<string, Rubro>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,16 +71,16 @@ export default function OrdenDetallePage() {
         setKardexMap(kardexMapTemp);
       }
 
-      // Load catalogo names for SIN Kardex items
-      const catalogoIds = itemsData
-        .filter(item => item.fields.CatalogoServicio && item.fields.CatalogoServicio.length > 0)
-        .map(item => item.fields.CatalogoServicio![0]);
+      // Load Rubro names
+      const rubroIds = itemsData
+        .filter(item => item.fields.Rubro && item.fields.Rubro.length > 0)
+        .map(item => item.fields.Rubro![0]);
 
-      if (catalogoIds.length > 0) {
-        const catalogoData = await getCatalogoByIds(catalogoIds);
-        const catalogoMapTemp = new Map<string, CatalogoServicio>();
-        catalogoData.forEach(c => catalogoMapTemp.set(c.id, c));
-        setCatalogoMap(catalogoMapTemp);
+      if (rubroIds.length > 0) {
+        const rubroData = await getRubrosByIds(rubroIds);
+        const rubroMapTemp = new Map<string, Rubro>();
+        rubroData.forEach(r => rubroMapTemp.set(r.id, r));
+        setRubroMap(rubroMapTemp);
       }
 
     } catch (err) {
@@ -214,17 +214,14 @@ export default function OrdenDetallePage() {
   const conceptoTags = useMemo(() => {
     const tags = new Set<string>();
     for (const item of items) {
-      const concepto = item.fields.Concepto || "";
-      if (concepto.toUpperCase().startsWith("TRANSPORTE")) {
-        tags.add("Transporte");
-      } else if (item.fields.CatalogoServicio?.length) {
-        const catId = item.fields.CatalogoServicio[0];
-        const cat = catalogoMap.get(catId);
-        if (cat?.fields.Nombre) tags.add(cat.fields.Nombre);
+      const rubroId = item.fields.Rubro?.[0];
+      if (rubroId) {
+        const rubro = rubroMap.get(rubroId);
+        if (rubro?.fields.Nombre) tags.add(rubro.fields.Nombre);
       }
     }
     return [...tags];
-  }, [items, catalogoMap]);
+  }, [items, rubroMap]);
 
   const conceptoColorPalette = [
     "bg-blue-100 text-blue-800",
@@ -689,7 +686,7 @@ export default function OrdenDetallePage() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tipo</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descripcion</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Concepto</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Rubro</th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Bascula</th>
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Cantidad</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Forma Cobro</th>
@@ -711,13 +708,9 @@ export default function OrdenDetallePage() {
                       const tipoMovimiento = kardex?.fields.TipoMovimiento;
                       const fotoBascula = kardex?.fields.soportebascula?.[0];
 
-                      // Para items de Kardex, mostrar el consecutivo (idkardex)
-                      // Para items de Catálogo, mostrar el nombre del servicio
-                      const catalogoId = item.fields.CatalogoServicio?.[0];
-                      const catalogo = catalogoId ? catalogoMap.get(catalogoId) : undefined;
                       const displayName = tipoItem === "CON Kardex" && kardex
                         ? `Kardex #${kardex.fields.idkardex}`
-                        : catalogo?.fields.Nombre || nombre;
+                        : nombre;
 
                       return (
                         <tr
@@ -757,17 +750,21 @@ export default function OrdenDetallePage() {
                             {displayName}
                           </td>
 
-                          {/* Concepto */}
+                          {/* Rubro */}
                           <td className="px-4 py-3 text-sm">
-                            {tipoItem === "CON Kardex" ? (
-                              <span className="text-gray-700">{item.fields.Concepto || "—"}</span>
-                            ) : catalogo?.fields.Nombre ? (
-                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${getConceptoColor(catalogo.fields.Nombre)}`}>
-                                {catalogo.fields.Nombre}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
+                            {(() => {
+                              const rubroId = item.fields.Rubro?.[0];
+                              if (rubroId) {
+                                const rubro = rubroMap.get(rubroId);
+                                const rubroNombre = rubro?.fields.Nombre || "Rubro";
+                                return (
+                                  <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${getConceptoColor(rubroNombre)}`}>
+                                    {rubroNombre}
+                                  </span>
+                                );
+                              }
+                              return <span className="text-gray-400">—</span>;
+                            })()}
                           </td>
 
                           {/* Foto Bascula */}

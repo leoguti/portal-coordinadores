@@ -28,13 +28,11 @@ interface CoordinadorFields {
   Kardex?: string[];
 }
 
-interface CatalogoServicioFields {
+interface RubroFields {
   Nombre?: string;
-  Descripcion?: string;
-  UnidadMedida?: string;
+  Tipo?: "Transporte" | "Servicio";
+  RequiereDocumentos?: boolean;
   Activo?: boolean;
-  "Precio Unitario"?: number;
-  "Requiere Documentos"?: boolean;
 }
 
 interface ActividadFields {
@@ -182,12 +180,11 @@ interface ItemOrdenFields {
   TipoItem?: string; // "CON Kardex" | "SIN Kardex"
   OrdenServicio?: string[]; // Linked to Ordenes
   Kardex?: string[]; // Linked to Kardex
-  CatalogoServicio?: string[]; // Linked to CatalogoServicios
+  Rubro?: string[]; // Linked to Rubros
   FormaCobro?: string; // "Por Flete" | "Por Kilo"
   Cantidad?: number;
   PrecioUnitario?: number;
   "Cálculo"?: number; // Formula field (Cantidad * PrecioUnitario)
-  Concepto?: string; // Single select: "TRANSPORTE JR - CA", etc.
 }
 
 export interface Coordinator {
@@ -227,10 +224,10 @@ export interface ItemOrden {
   fields: ItemOrdenFields;
 }
 
-export interface CatalogoServicio {
+export interface Rubro {
   id: string;
   createdTime: string;
-  fields: CatalogoServicioFields;
+  fields: RubroFields;
 }
 
 // === Metas Interfaces ===
@@ -259,7 +256,8 @@ interface GastoCajaMenorFields {
   Beneficiario?: string[];
   RazonSocial?: string[];
   NIT?: string[];
-  Concepto?: string;
+  Observaciones?: string;
+  Rubro?: string[]; // Linked to Rubros
   Valor?: number;
   PorcentajeRetencion?: number;
   ValorRetencion?: number;
@@ -305,11 +303,10 @@ export interface CreateOrdenParams {
 
 export interface CreateItemOrdenParams {
   kardexRecordId?: string; // Optional: for Kardex items
-  catalogoRecordId?: string; // Optional: for Catalog items
+  rubroRecordId: string; // Linked to Rubros table
   formaCobro: "Por Flete" | "Por Kilo";
   cantidad: number;
   precioUnitario: number;
-  concepto?: string; // Optional: for Kardex items (singleSelect in Airtable)
 }
 
 /**
@@ -1035,17 +1032,13 @@ export async function createOrdenServicio(
         },
       };
 
-      // Add Kardex or Servicio link based on type
+      // Add Kardex link
       if (item.kardexRecordId) {
         itemPayload.fields.Kardex = [item.kardexRecordId];
-      } else if (item.catalogoRecordId) {
-        itemPayload.fields.CatalogoServicio = [item.catalogoRecordId];
       }
 
-      // Add Concepto for Kardex items
-      if (item.concepto) {
-        itemPayload.fields.Concepto = item.concepto;
-      }
+      // Add Rubro linked record
+      itemPayload.fields.Rubro = [item.rubroRecordId];
 
       console.log("Creating ItemOrden:", itemPayload);
 
@@ -1063,7 +1056,7 @@ export async function createOrdenServicio(
         console.error(`Error creating ItemOrden: ${itemResponse.status}`, errorText);
         // Continue with other items even if one fails
       } else {
-        const itemType = item.kardexRecordId ? `Kardex ${item.kardexRecordId}` : `Servicio ${item.catalogoRecordId}`;
+        const itemType = item.kardexRecordId ? `Kardex ${item.kardexRecordId}` : `Servicio ${item.rubroRecordId}`;
         console.log(`ItemOrden created for ${itemType}`);
       }
     }
@@ -1123,16 +1116,15 @@ export async function createOrdenServicio(
           ? await getKardexByIds(kardexIds)
           : [];
         
-        // Fetch detailed data for Catalog items
-        const catalogoIds = params.items
-          .filter(item => item.catalogoRecordId)
-          .map(item => item.catalogoRecordId!);
-        
-        const catalogoData: CatalogoServicio[] = [];
-        if (catalogoIds.length > 0) {
-          const allCatalogo = await getCatalogoServicios();
-          catalogoData.push(...allCatalogo.filter(c => catalogoIds.includes(c.id)));
-        }
+        // Fetch Rubro names for items
+        const rubroIdsForPdf = params.items
+          .filter(item => item.rubroRecordId)
+          .map(item => item.rubroRecordId!);
+
+        const rubroDataForPdf = rubroIdsForPdf.length > 0
+          ? await getRubrosByIds(rubroIdsForPdf)
+          : [];
+        const rubroNameMapForPdf = new Map(rubroDataForPdf.map(r => [r.id, r.fields.Nombre || "Rubro"]));
         
         // Helper: Download image URL and convert to base64 data URI
         async function imgToBase64(imageUrl: string): Promise<string | undefined> {
@@ -1176,16 +1168,13 @@ export async function createOrdenServicio(
               fotoBasculaUrl: item.kardexRecordId ? basculaBase64Map.get(item.kardexRecordId) : undefined,
             };
           } else {
-            // Find Catalog data
-            const catalogo = catalogoData.find(c => c.id === item.catalogoRecordId);
-            const nombre = catalogo?.fields.Nombre || "Servicio";
-            const descripcion = catalogo?.fields.Descripcion || "";
+            const nombre = rubroNameMapForPdf.get(item.rubroRecordId) || "Servicio";
 
             return {
               id: `item-${index}`,
               tipo: "CATALOGO" as const,
-              descripcion: `${nombre}${descripcion ? ` - ${descripcion}` : ""}`,
-              catalogoId: item.catalogoRecordId,
+              descripcion: nombre,
+              catalogoId: item.rubroRecordId,
               formaCobro: item.formaCobro,
               cantidad: item.cantidad,
               precioUnitario: item.precioUnitario,
@@ -1349,11 +1338,12 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   const kardexData = kardexIds.length > 0 ? await getKardexByIds(kardexIds) : [];
   console.log(`[regenerarPDF] ${kardexData.length} kardex loaded`);
 
-  // 4. Fetch Catalogo data
-  const catalogoIds = items
-    .filter(item => item.fields.CatalogoServicio && item.fields.CatalogoServicio.length > 0)
-    .map(item => item.fields.CatalogoServicio![0]);
-  const catalogoData = catalogoIds.length > 0 ? await getCatalogoByIds(catalogoIds) : [];
+  // 4. Fetch Rubro data
+  const rubroIdsRegen = items
+    .filter(item => item.fields.Rubro && item.fields.Rubro.length > 0)
+    .map(item => item.fields.Rubro![0]);
+  const rubroDataRegen = rubroIdsRegen.length > 0 ? await getRubrosByIds(rubroIdsRegen) : [];
+  const rubroMapRegen = new Map(rubroDataRegen.map(r => [r.id, r]));
 
   // 5. Fetch coordinator data
   const coordinadorId = orden.fields.Coordinador?.[0];
@@ -1469,8 +1459,6 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   const pdfItems = items.map((item, index) => {
     const kardexId = item.fields.Kardex?.[0];
     const kardex = kardexId ? kardexData.find(k => k.id === kardexId) : undefined;
-    const catalogoId = item.fields.CatalogoServicio?.[0];
-    const catalogo = catalogoId ? catalogoData.find(c => c.id === catalogoId) : undefined;
 
     if (kardex) {
       const idkardex = kardex.fields.idkardex || "N/A";
@@ -1490,14 +1478,15 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
         fotoBasculaUrl: basculaBase64Map.get(index),
       };
     } else {
-      const nombre = catalogo?.fields.Nombre || "Servicio";
-      const descripcion = catalogo?.fields.Descripcion || "";
+      const rubroId = item.fields.Rubro?.[0];
+      const rubro = rubroId ? rubroMapRegen.get(rubroId) : undefined;
+      const nombre = rubro?.fields.Nombre || "Servicio";
 
       return {
         id: `item-${index}`,
         tipo: "CATALOGO" as const,
-        descripcion: `${nombre}${descripcion ? ` - ${descripcion}` : ""}`,
-        catalogoId: catalogoId,
+        descripcion: nombre,
+        catalogoId: rubroId,
         formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
         cantidad: item.fields.Cantidad || 0,
         precioUnitario: item.fields.PrecioUnitario || 0,
@@ -1768,50 +1757,8 @@ export async function getKardexByIds(kardexIds: string[]): Promise<Kardex[]> {
 }
 
 /**
- * Get CatalogoServicio by IDs
- */
-export async function getCatalogoByIds(catalogoIds: string[]): Promise<CatalogoServicio[]> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const TABLE_ID_CATALOGO = process.env.AIRTABLE_TABLE_ID_CATALOGOSERVICIOS || "tblIrrr5gmebTtMH8";
-
-  if (!apiKey || !baseId || catalogoIds.length === 0) {
-    return [];
-  }
-
-  try {
-    const orConditions = catalogoIds.map(id => `RECORD_ID()="${id}"`).join(",");
-    const filterFormula = `OR(${orConditions})`;
-
-    const url = `https://api.airtable.com/v0/${baseId}/${TABLE_ID_CATALOGO}?filterByFormula=${encodeURIComponent(
-      filterFormula
-    )}`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data: AirtableResponse<CatalogoServicioFields> = await response.json();
-    return data.records || [];
-  } catch (error) {
-    console.error("Error fetching CatalogoServicio by IDs:", error);
-    return [];
-  }
-}
-
-/**
- * Calcula etiquetas de concepto global para múltiples órdenes.
- * - Items CON Kardex cuyo Concepto empieza con "TRANSPORTE" → etiqueta "Transporte"
- * - Items SIN Kardex (de Catálogo) → etiqueta con el nombre del servicio
- * Devuelve un mapa: ordenId → array de etiquetas únicas
+ * Calcula etiquetas de rubro para múltiples órdenes.
+ * Devuelve un mapa: ordenId → array de nombres de rubro únicos
  */
 export async function computeConceptosOrdenes(
   ordenIds: string[]
@@ -1848,20 +1795,20 @@ export async function computeConceptosOrdenes(
     (item.fields.OrdenServicio || []).some((id) => ordenIdSet.has(id))
   );
 
-  // 3. Collect CatalogoServicio IDs for batch fetch
-  const catalogoIds = new Set<string>();
+  // 3. Collect Rubro IDs for batch fetch
+  const rubroIds = new Set<string>();
   for (const item of relevantItems) {
-    for (const catId of item.fields.CatalogoServicio || []) {
-      catalogoIds.add(catId);
+    for (const rubroId of item.fields.Rubro || []) {
+      rubroIds.add(rubroId);
     }
   }
 
-  // 4. Fetch catalog names
-  const catalogoNameMap = new Map<string, string>();
-  if (catalogoIds.size > 0) {
-    const catalogos = await getCatalogoByIds([...catalogoIds]);
-    for (const cat of catalogos) {
-      catalogoNameMap.set(cat.id, cat.fields.Nombre || "Servicio");
+  // 4. Fetch rubro names
+  const rubroNameMap = new Map<string, string>();
+  if (rubroIds.size > 0) {
+    const rubros = await getRubrosByIds([...rubroIds]);
+    for (const rubro of rubros) {
+      rubroNameMap.set(rubro.id, rubro.fields.Nombre || "Rubro");
     }
   }
 
@@ -1874,15 +1821,9 @@ export async function computeConceptosOrdenes(
 
     if (!result[ordenId]) result[ordenId] = [];
 
-    const concepto = item.fields.Concepto || "";
-
-    if (concepto.toUpperCase().startsWith("TRANSPORTE")) {
-      if (!result[ordenId].includes("Transporte")) {
-        result[ordenId].push("Transporte");
-      }
-    } else if (item.fields.CatalogoServicio?.length) {
-      const catId = item.fields.CatalogoServicio[0];
-      const nombre = catalogoNameMap.get(catId) || "Servicio";
+    const rubroId = item.fields.Rubro?.[0];
+    if (rubroId) {
+      const nombre = rubroNameMap.get(rubroId) || "Rubro";
       if (!result[ordenId].includes(nombre)) {
         result[ordenId].push(nombre);
       }
@@ -1981,21 +1922,20 @@ export async function updateTercero(
 }
 
 /**
- * Get active services from CatalogoServicios
+ * Get active Rubros from Rubros table
  */
-export async function getCatalogoServicios(): Promise<CatalogoServicio[]> {
+export async function getRubros(): Promise<Rubro[]> {
   const AIRTABLE_TOKEN = process.env.AIRTABLE_API_KEY;
   const BASE_ID = process.env.AIRTABLE_BASE_ID;
-  const TABLE_ID_CATALOGO = process.env.AIRTABLE_TABLE_ID_CATALOGOSERVICIOS || "tblIrrr5gmebTtMH8";
+  const TABLE_ID = process.env.AIRTABLE_TABLE_ID_RUBROS;
 
-  if (!AIRTABLE_TOKEN || !BASE_ID) {
-    throw new Error("Missing Airtable credentials");
+  if (!AIRTABLE_TOKEN || !BASE_ID || !TABLE_ID) {
+    throw new Error("Missing Airtable credentials or AIRTABLE_TABLE_ID_RUBROS");
   }
 
   try {
-    // Filter for active services only
     const filterFormula = "AND({Activo} = 1)";
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID_CATALOGO}?filterByFormula=${encodeURIComponent(filterFormula)}&sort%5B0%5D%5Bfield%5D=Nombre&sort%5B0%5D%5Bdirection%5D=asc`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}?filterByFormula=${encodeURIComponent(filterFormula)}&sort%5B0%5D%5Bfield%5D=Nombre&sort%5B0%5D%5Bdirection%5D=asc`;
 
     const response = await fetch(url, {
       headers: {
@@ -2006,18 +1946,58 @@ export async function getCatalogoServicios(): Promise<CatalogoServicio[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch CatalogoServicios: ${response.statusText}`);
+      throw new Error(`Failed to fetch Rubros: ${response.statusText}`);
     }
 
-    const data: AirtableResponse<CatalogoServicioFields> = await response.json();
+    const data: AirtableResponse<RubroFields> = await response.json();
     return data.records.map((record) => ({
       id: record.id,
       createdTime: record.createdTime,
       fields: record.fields,
     }));
   } catch (error) {
-    console.error("Error fetching CatalogoServicios:", error);
+    console.error("Error fetching Rubros:", error);
     throw error;
+  }
+}
+
+/**
+ * Get Rubros by IDs (batch fetch)
+ */
+export async function getRubrosByIds(rubroIds: string[]): Promise<Rubro[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  const TABLE_ID = process.env.AIRTABLE_TABLE_ID_RUBROS;
+
+  if (!apiKey || !baseId || !TABLE_ID || rubroIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const orConditions = rubroIds.map(id => `RECORD_ID()="${id}"`).join(",");
+    const filterFormula = `OR(${orConditions})`;
+
+    const url = `https://api.airtable.com/v0/${baseId}/${TABLE_ID}?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data: AirtableResponse<RubroFields> = await response.json();
+    return data.records || [];
+  } catch (error) {
+    console.error("Error fetching Rubros by IDs:", error);
+    return [];
   }
 }
 
@@ -3187,7 +3167,8 @@ export async function createGastoCajaMenor(data: {
   coordinatorRecordId: string;
   fecha: string;
   beneficiarioId: string;
-  concepto: string;
+  rubroRecordId: string;
+  observaciones?: string;
   valor: number;
   porcentajeRetencion: number;
   facturaUrl?: string;
@@ -3208,11 +3189,15 @@ export async function createGastoCajaMenor(data: {
       Coordinador: [data.coordinatorRecordId],
       Fecha: data.fecha,
       Beneficiario: [data.beneficiarioId],
-      Concepto: data.concepto,
+      Rubro: [data.rubroRecordId],
       Valor: data.valor,
       PorcentajeRetencion: data.porcentajeRetencion / 100,
       Estado: "Pendiente",
     };
+
+    if (data.observaciones) {
+      fields.Observaciones = data.observaciones;
+    }
 
     if (data.facturaUrl) {
       fields.Factura = [{ url: data.facturaUrl }];
@@ -3301,7 +3286,8 @@ export async function updateGastoCajaMenor(
   data: {
     fecha?: string;
     beneficiarioId?: string;
-    concepto?: string;
+    rubroRecordId?: string;
+    observaciones?: string;
     valor?: number;
     porcentajeRetencion?: number;
     facturaUrl?: string;
@@ -3324,7 +3310,8 @@ export async function updateGastoCajaMenor(
 
     if (data.fecha) fields.Fecha = data.fecha;
     if (data.beneficiarioId) fields.Beneficiario = [data.beneficiarioId];
-    if (data.concepto) fields.Concepto = data.concepto;
+    if (data.rubroRecordId) fields.Rubro = [data.rubroRecordId];
+    if (data.observaciones !== undefined) fields.Observaciones = data.observaciones;
     if (data.valor !== undefined) fields.Valor = data.valor;
     if (data.porcentajeRetencion !== undefined) fields.PorcentajeRetencion = data.porcentajeRetencion / 100;
     if (data.facturaUrl) fields.Factura = [{ url: data.facturaUrl }];

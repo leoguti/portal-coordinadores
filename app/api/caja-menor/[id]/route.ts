@@ -50,7 +50,7 @@ export async function GET(
  * PATCH /api/caja-menor/[id] — Cambiar estado (admin) o corregir gasto rechazado (coordinador)
  *
  * Body para admin: { action: "aprobar" | "rechazar" | "reembolsar", observaciones?: string }
- * Body para coordinador: { action: "corregir", fecha?, beneficiarioId?, concepto?, valor?, porcentajeRetencion?, facturaUrl? }
+ * Body para coordinador: { action: "corregir", fecha?, beneficiarioId?, rubroRecordId?, observaciones?, valor?, porcentajeRetencion?, facturaUrl? }
  */
 export async function PATCH(
   request: Request,
@@ -107,7 +107,8 @@ export async function PATCH(
       const success = await updateGastoCajaMenor(id, {
         fecha: body.fecha,
         beneficiarioId: body.beneficiarioId,
-        concepto: body.concepto,
+        rubroRecordId: body.rubroRecordId || undefined,
+        observaciones: body.observaciones,
         valor: body.valor,
         porcentajeRetencion: body.porcentajeRetencion,
         facturaUrl: body.facturaUrl,

@@ -15,6 +15,12 @@ interface Tercero {
   direccion?: string;
 }
 
+interface RubroOption {
+  id: string;
+  nombre: string;
+  tipo: "Transporte" | "Servicio";
+}
+
 interface KardexDisponible {
   id: string;
   fields: {
@@ -59,7 +65,10 @@ export default function NuevoGastoCajaMenorPage() {
 
   const [fecha, setFecha] = useState(getFechaMaximaPermitida());
   const [beneficiario, setBeneficiario] = useState<Tercero | null>(null);
-  const [concepto, setConcepto] = useState("");
+  const [rubroId, setRubroId] = useState("");
+  const [rubros, setRubros] = useState<RubroOption[]>([]);
+  const [loadingRubros, setLoadingRubros] = useState(true);
+  const [observaciones, setObservaciones] = useState("");
   const [valor, setValor] = useState("");
   const [porcentajeRetencion, setPorcentajeRetencion] = useState("0");
   const [factura, setFactura] = useState<File | null>(null);
@@ -72,6 +81,30 @@ export default function NuevoGastoCajaMenorPage() {
   const [kardexSeleccionados, setKardexSeleccionados] = useState<string[]>([]);
   const [loadingKardex, setLoadingKardex] = useState(true);
   const [kardexAbierto, setKardexAbierto] = useState(false);
+
+  // Cargar Rubros
+  useEffect(() => {
+    async function fetchRubros() {
+      try {
+        const res = await fetch("/api/rubros");
+        if (res.ok) {
+          const data = await res.json();
+          setRubros(
+            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string } }) => ({
+              id: r.id,
+              nombre: r.fields.Nombre || "",
+              tipo: r.fields.Tipo || "Servicio",
+            }))
+          );
+        }
+      } catch {
+        // Fallback: sin rubros
+      } finally {
+        setLoadingRubros(false);
+      }
+    }
+    fetchRubros();
+  }, []);
 
   // Cargar Kardex "Caja Menor" disponibles
   useEffect(() => {
@@ -133,8 +166,8 @@ export default function NuevoGastoCajaMenorPage() {
       setError("Debes seleccionar un beneficiario");
       return;
     }
-    if (!concepto.trim()) {
-      setError("Debes ingresar un concepto");
+    if (!rubroId) {
+      setError("Debes seleccionar un rubro");
       return;
     }
     if (valorNum <= 0) {
@@ -156,7 +189,8 @@ export default function NuevoGastoCajaMenorPage() {
         body: JSON.stringify({
           fecha,
           beneficiarioId: beneficiario.id,
-          concepto: concepto.trim(),
+          rubroRecordId: rubroId,
+          observaciones: observaciones.trim() || undefined,
           valor: valorNum,
           porcentajeRetencion: retencionNum,
           ...(kardexSeleccionados.length > 0 && { kardexIds: kardexSeleccionados }),
@@ -340,18 +374,60 @@ export default function NuevoGastoCajaMenorPage() {
             )}
           </div>
 
-          {/* Concepto */}
+          {/* Rubro */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Concepto <span className="text-red-500">*</span>
+              Rubro <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              value={concepto}
-              onChange={(e) => setConcepto(e.target.value)}
-              placeholder="Descripcion del gasto..."
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+            {loadingRubros ? (
+              <div className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-400">
+                Cargando rubros...
+              </div>
+            ) : (
+              <select
+                value={rubroId}
+                onChange={(e) => setRubroId(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Seleccionar rubro...</option>
+                {rubros.filter((r) => r.tipo === "Transporte").length > 0 && (
+                  <optgroup label="Transporte">
+                    {rubros
+                      .filter((r) => r.tipo === "Transporte")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.nombre}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {rubros.filter((r) => r.tipo === "Servicio").length > 0 && (
+                  <optgroup label="Servicios">
+                    {rubros
+                      .filter((r) => r.tipo === "Servicio")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.nombre}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            )}
+          </div>
+
+          {/* Observaciones (opcional) */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Observaciones <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Notas adicionales sobre el gasto..."
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent text-sm"
             />
           </div>
 

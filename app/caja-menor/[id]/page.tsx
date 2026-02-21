@@ -17,6 +17,12 @@ interface Tercero {
   direccion?: string;
 }
 
+interface RubroOption {
+  id: string;
+  nombre: string;
+  tipo: "Transporte" | "Servicio";
+}
+
 interface KardexVinculado {
   id: string;
   fields: {
@@ -46,11 +52,15 @@ export default function GastoDetallePage() {
   } | null>(null);
   const [observaciones, setObservaciones] = useState("");
 
+  // Rubros
+  const [rubros, setRubros] = useState<RubroOption[]>([]);
+
   // Coordinator correction states (for rejected gastos)
   const [editMode, setEditMode] = useState(false);
   const [editFecha, setEditFecha] = useState("");
   const [editBeneficiario, setEditBeneficiario] = useState<Tercero | null>(null);
-  const [editConcepto, setEditConcepto] = useState("");
+  const [editRubroId, setEditRubroId] = useState("");
+  const [editObservaciones, setEditObservaciones] = useState("");
   const [editValor, setEditValor] = useState("");
   const [editPorcentajeRetencion, setEditPorcentajeRetencion] = useState("");
   const [editFactura, setEditFactura] = useState<File | null>(null);
@@ -68,6 +78,28 @@ export default function GastoDetallePage() {
   useEffect(() => {
     loadGasto();
   }, [gastoId]);
+
+  // Cargar rubros para el dropdown de edicion
+  useEffect(() => {
+    async function fetchRubros() {
+      try {
+        const res = await fetch("/api/rubros");
+        if (res.ok) {
+          const data = await res.json();
+          setRubros(
+            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string } }) => ({
+              id: r.id,
+              nombre: r.fields.Nombre || "",
+              tipo: r.fields.Tipo || "Servicio",
+            }))
+          );
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    fetchRubros();
+  }, []);
 
   // Cargar Kardex vinculados cuando el gasto se carga
   useEffect(() => {
@@ -124,7 +156,9 @@ export default function GastoDetallePage() {
           }
         : null
     );
-    setEditConcepto(gasto.fields.Concepto || "");
+    // Pre-select rubro from linked field
+    setEditRubroId(gasto.fields.Rubro?.[0] || "");
+    setEditObservaciones(gasto.fields.Observaciones || "");
     setEditValor(String(gasto.fields.Valor || ""));
     setEditPorcentajeRetencion(String((gasto.fields.PorcentajeRetencion || 0) * 100));
     setEditFactura(null);
@@ -148,7 +182,8 @@ export default function GastoDetallePage() {
           action: "corregir",
           fecha: editFecha,
           beneficiarioId: editBeneficiario?.id,
-          concepto: editConcepto.trim(),
+          rubroRecordId: editRubroId || undefined,
+          observaciones: editObservaciones.trim() || undefined,
           valor: parseFloat(editValor) || 0,
           porcentajeRetencion: parseFloat(editPorcentajeRetencion) || 0,
         }),
@@ -275,7 +310,7 @@ export default function GastoDetallePage() {
   const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
   const nit = gasto.fields.NIT?.[0] || "";
   const coordinador = gasto.fields.NombreCoordinador?.[0] || "Sin coordinador";
-  const concepto = gasto.fields.Concepto || "";
+  const observacionesGasto = gasto.fields.Observaciones || "";
   const valor = gasto.fields.Valor || 0;
   const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
   const valorRetencion = valor * porcentajeRetencion;
@@ -482,13 +517,49 @@ export default function GastoDetallePage() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
-              <input
-                type="text"
-                value={editConcepto}
-                onChange={(e) => setEditConcepto(e.target.value)}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rubro</label>
+              <select
+                value={editRubroId}
+                onChange={(e) => setEditRubroId(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Seleccionar rubro...</option>
+                {rubros.filter((r) => r.tipo === "Transporte").length > 0 && (
+                  <optgroup label="Transporte">
+                    {rubros
+                      .filter((r) => r.tipo === "Transporte")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.nombre}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {rubros.filter((r) => r.tipo === "Servicio").length > 0 && (
+                  <optgroup label="Servicios">
+                    {rubros
+                      .filter((r) => r.tipo === "Servicio")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.nombre}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observaciones <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <textarea
+                value={editObservaciones}
+                onChange={(e) => setEditObservaciones(e.target.value)}
+                placeholder="Notas adicionales sobre el gasto..."
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent text-sm"
               />
             </div>
 
@@ -639,12 +710,26 @@ export default function GastoDetallePage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rubro</label>
               <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900">
-                {concepto}
+                {(() => {
+                  const rubroId = gasto.fields.Rubro?.[0];
+                  const rubro = rubroId ? rubros.find((r) => r.id === rubroId) : null;
+                  return rubro?.nombre || "—";
+                })()}
               </div>
             </div>
           </div>
+
+          {/* Observaciones */}
+          {observacionesGasto && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+              <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm whitespace-pre-wrap">
+                {observacionesGasto}
+              </div>
+            </div>
+          )}
 
           {/* Valores */}
           <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">

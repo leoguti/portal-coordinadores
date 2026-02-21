@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { type Kardex, type CatalogoServicio } from "@/lib/airtable";
+import { type Kardex, type Rubro } from "@/lib/airtable";
 import ImageUpload, { type ImageFile } from "@/components/ImageUpload";
 
 interface TerceroSeleccionado {
@@ -16,7 +16,7 @@ interface TerceroSeleccionado {
 }
 
 interface ItemCatalogo {
-  catalogo: CatalogoServicio;
+  catalogo: Rubro;
   cantidad: number;
 }
 
@@ -34,13 +34,6 @@ export interface ItemOrden {
   concepto?: string;
 }
 
-const CONCEPTOS_KARDEX = [
-  "TRANSPORTE JR - CA",
-  "TRANSPORTE CA - DF",
-  "TRANSPORTE MUNICIPIO - DF",
-  "TRANSPORTE JR - DF",
-] as const;
-
 interface PasoRevisionProps {
   kardexSeleccionados: Kardex[];
   itemsCatalogo: ItemCatalogo[];
@@ -49,6 +42,7 @@ interface PasoRevisionProps {
   observaciones: string;
   itemsOrden: ItemOrden[];
   onItemsOrdenChange: (items: ItemOrden[]) => void;
+  rubrosTransporte: Rubro[];
   soporteBascula: ImageFile[];
   onSoporteBasculaChange: (files: ImageFile[]) => void;
   onSubmit: () => void;
@@ -65,6 +59,7 @@ export default function PasoRevision({
   observaciones,
   itemsOrden,
   onItemsOrdenChange,
+  rubrosTransporte,
   soporteBascula,
   onSoporteBasculaChange,
   onSubmit,
@@ -96,7 +91,7 @@ export default function PasoRevision({
 
   const requiereDocumentos = useMemo(() => {
     return itemsCatalogo.some(
-      (ic) => ic.catalogo.fields["Requiere Documentos"] === true
+      (ic) => ic.catalogo.fields.RequiereDocumentos === true
     );
   }, [itemsCatalogo]);
 
@@ -327,7 +322,7 @@ export default function PasoRevision({
                     </div>
                   </td>
 
-                  {/* Concepto */}
+                  {/* Concepto / Rubro Transporte */}
                   <td className="px-3 py-3">
                     {item.tipo === "KARDEX" ? (
                       <select
@@ -342,9 +337,9 @@ export default function PasoRevision({
                         }`}
                       >
                         <option value="">Seleccionar...</option>
-                        {CONCEPTOS_KARDEX.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
+                        {rubrosTransporte.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.fields.Nombre}
                           </option>
                         ))}
                       </select>

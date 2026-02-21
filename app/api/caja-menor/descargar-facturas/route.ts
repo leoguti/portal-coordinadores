@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getAllGastosCajaMenor } from "@/lib/airtable";
+import { getAllGastosCajaMenor, getRubros } from "@/lib/airtable";
 import JSZip from "jszip";
 
 /**
@@ -50,7 +50,11 @@ export async function GET(request: Request) {
 
     // Preparar datos para CSV
     const csvRows: string[] = [];
-    csvRows.push("Numero,Fecha,Beneficiario,Concepto,Valor,Retencion,ValorNeto,Estado,Archivo");
+    csvRows.push("Numero,Fecha,Beneficiario,Rubro,Valor,Retencion,ValorNeto,Estado,Archivo");
+
+    // Load rubro names for display
+    const rubros = await getRubros();
+    const rubroNameMap = new Map(rubros.map(r => [r.id, r.fields.Nombre || "Rubro"]));
 
     // Descargar cada factura y agregar al ZIP
     for (const gasto of gastosFiltrados) {
@@ -62,7 +66,8 @@ export async function GET(request: Request) {
       const beneficiario = (gasto.fields.RazonSocial?.[0] || "sin-beneficiario")
         .replace(/[^a-zA-Z0-9]/g, "-")
         .substring(0, 30);
-      const concepto = gasto.fields.Concepto || "";
+      const rubroId = gasto.fields.Rubro?.[0];
+      const concepto = rubroId ? rubroNameMap.get(rubroId) || "" : "";
       const valor = gasto.fields.Valor || 0;
       const retencion = gasto.fields.PorcentajeRetencion || 0;
       const valorNeto = valor - (valor * retencion);

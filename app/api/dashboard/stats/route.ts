@@ -8,6 +8,7 @@ import {
   getOrdenesCoordinador,
   getGastosCajaMenorCoordinador,
   countCertificadosCoordinador,
+  getRubros,
 } from "@/lib/airtable";
 
 /**
@@ -26,14 +27,17 @@ export async function GET() {
     const añoStr = String(añoActual);
 
     // Ejecutar todas las consultas en paralelo
-    const [metas, kardexAll, actividades, ordenes, gastos, certificadosCount] = await Promise.all([
+    const [metas, kardexAll, actividades, ordenes, gastos, certificadosCount, rubros] = await Promise.all([
       getMetasCoordinador(coordinatorId, añoActual),
       listKardexForCoordinator(coordinatorId),
       listActividadesForCoordinator(coordinatorId),
       getOrdenesCoordinador(coordinatorId),
       getGastosCajaMenorCoordinador(coordinatorId),
       countCertificadosCoordinador(coordinatorId, añoActual),
+      getRubros(),
     ]);
+
+    const rubroNameMap = new Map(rubros.map(r => [r.id, r.fields.Nombre || "Rubro"]));
 
     // --- METAS ---
     const kardexAño = kardexAll.filter((k) => k.fields.AÑO === añoStr);
@@ -122,7 +126,7 @@ export async function GET() {
           estado: g.fields.Estado || "Pendiente",
           observacion: g.fields.ObservacionesAdmin || "",
           fecha: g.fields.Fecha || "",
-          concepto: g.fields.Concepto || "",
+          concepto: g.fields.Rubro?.[0] ? rubroNameMap.get(g.fields.Rubro[0]) || "" : "",
         });
       });
 

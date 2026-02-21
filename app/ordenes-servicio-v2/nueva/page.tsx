@@ -15,11 +15,11 @@ import PasoRevision, {
 import { type ImageFile } from "@/components/ImageUpload";
 import {
   getKardexPorPagar,
-  getCatalogoServicios,
+  getRubros,
   createOrdenServicio,
   updateTercero,
   type Kardex,
-  type CatalogoServicio,
+  type Rubro,
   type CreateItemOrdenParams,
 } from "@/lib/airtable";
 
@@ -35,7 +35,7 @@ interface TerceroSeleccionado {
 }
 
 interface ItemCatalogo {
-  catalogo: CatalogoServicio;
+  catalogo: Rubro;
   cantidad: number;
   precioUnitario: number;
 }
@@ -52,9 +52,7 @@ export default function NuevaOrdenV2Page() {
 
   // Data
   const [kardexDisponibles, setKardexDisponibles] = useState<Kardex[]>([]);
-  const [catalogoDisponibles, setCatalogoDisponibles] = useState<
-    CatalogoServicio[]
-  >([]);
+  const [rubrosDisponibles, setRubrosDisponibles] = useState<Rubro[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -85,12 +83,12 @@ export default function NuevaOrdenV2Page() {
       try {
         setLoading(true);
         setError(null);
-        const [kardexData, catalogoData] = await Promise.all([
+        const [kardexData, rubrosData] = await Promise.all([
           getKardexPorPagar(session.user.coordinatorRecordId),
-          getCatalogoServicios(),
+          getRubros(),
         ]);
         setKardexDisponibles(kardexData);
-        setCatalogoDisponibles(catalogoData);
+        setRubrosDisponibles(rubrosData);
       } catch (err) {
         console.error("Error loading data:", err);
         setError("Error al cargar los datos");
@@ -129,7 +127,7 @@ export default function NuevaOrdenV2Page() {
       });
     });
 
-    // Catalogo items
+    // Catalogo/Rubro items (servicios)
     itemsCatalogo.forEach((item) => {
       items.push({
         id: `catalogo-${item.catalogo.id}`,
@@ -284,14 +282,14 @@ export default function NuevaOrdenV2Page() {
         if (item.tipo === "KARDEX") {
           return {
             kardexRecordId: item.kardexId!,
+            rubroRecordId: item.concepto || "", // concepto holds the rubro record ID
             formaCobro: item.formaCobro,
             cantidad: item.cantidad,
             precioUnitario: item.precioUnitario,
-            concepto: item.concepto || undefined,
           };
         } else {
           return {
-            catalogoRecordId: item.catalogoId!,
+            rubroRecordId: item.catalogoId!,
             formaCobro: item.formaCobro,
             cantidad: item.cantidad,
             precioUnitario: item.precioUnitario,
@@ -445,7 +443,7 @@ export default function NuevaOrdenV2Page() {
 
           {pasoActual === 2 && (
             <PasoCatalogo
-              catalogoDisponibles={catalogoDisponibles}
+              rubrosServicio={rubrosDisponibles.filter((r) => r.fields.Tipo === "Servicio")}
               kardexSeleccionados={kardexSeleccionados}
               itemsCatalogo={itemsCatalogo}
               onItemsChange={setItemsCatalogo}
@@ -477,6 +475,7 @@ export default function NuevaOrdenV2Page() {
               observaciones={observaciones}
               itemsOrden={itemsOrden}
               onItemsOrdenChange={setItemsOrden}
+              rubrosTransporte={rubrosDisponibles.filter((r) => r.fields.Tipo === "Transporte")}
               soporteBascula={soporteBascula}
               onSoporteBasculaChange={setSoporteBascula}
               onSubmit={handleSubmit}
