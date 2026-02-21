@@ -7,6 +7,7 @@ interface ItemOrden {
   id: string;
   tipo: "KARDEX" | "CATALOGO";
   descripcion: string;
+  rubroNombre?: string;
   kardexId?: string;
   catalogoId?: string;
   formaCobro: "Por Flete" | "Por Kilo";

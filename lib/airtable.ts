@@ -1163,10 +1163,13 @@ export async function createOrdenServicio(
             const centro = kardex?.fields.NombreCentrodeAcopio?.[0] || "N/A";
             const total = kardex?.fields.Total || 0;
 
+            const rubroNombreKardex = rubroNameMapForPdf.get(item.rubroRecordId) || undefined;
+
             return {
               id: `item-${index}`,
               tipo: "KARDEX" as const,
               descripcion: `Kardex #${idkardex} - ${municipio} - ${centro} - ${Math.abs(total)} kg`,
+              rubroNombre: rubroNombreKardex,
               kardexId: item.kardexRecordId,
               formaCobro: item.formaCobro,
               cantidad: item.cantidad,
@@ -1176,12 +1179,12 @@ export async function createOrdenServicio(
             };
           } else {
             const nombre = rubroNameMapForPdf.get(item.rubroRecordId) || "Servicio";
-            const desc = item.descripcion ? `${nombre} - ${item.descripcion}` : nombre;
 
             return {
               id: `item-${index}`,
               tipo: "CATALOGO" as const,
-              descripcion: desc,
+              descripcion: item.descripcion || nombre,
+              rubroNombre: nombre,
               catalogoId: item.rubroRecordId,
               formaCobro: item.formaCobro,
               cantidad: item.cantidad,
@@ -1474,10 +1477,15 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
       const centro = kardex.fields.NombreCentrodeAcopio?.[0] || "N/A";
       const total = kardex.fields.Total || 0;
 
+      // Get rubro name for KARDEX items
+      const rubroIdK = item.fields.Rubro?.[0];
+      const rubroK = rubroIdK ? rubroMapRegen.get(rubroIdK) : undefined;
+
       return {
         id: `item-${index}`,
         tipo: "KARDEX" as const,
         descripcion: `Kardex #${idkardex} - ${municipio} - ${centro} - ${Math.abs(total)} kg`,
+        rubroNombre: rubroK?.fields.Nombre || undefined,
         kardexId: kardexId,
         formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
         cantidad: item.fields.Cantidad || 0,
@@ -1489,12 +1497,12 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
       const rubroId = item.fields.Rubro?.[0];
       const rubro = rubroId ? rubroMapRegen.get(rubroId) : undefined;
       const nombre = rubro?.fields.Nombre || "Servicio";
-      const desc = item.fields.Descripcion ? `${nombre} - ${item.fields.Descripcion}` : nombre;
 
       return {
         id: `item-${index}`,
         tipo: "CATALOGO" as const,
-        descripcion: desc,
+        descripcion: item.fields.Descripcion || nombre,
+        rubroNombre: nombre,
         catalogoId: rubroId,
         formaCobro: (item.fields.FormaCobro || "Por Flete") as "Por Flete" | "Por Kilo",
         cantidad: item.fields.Cantidad || 0,

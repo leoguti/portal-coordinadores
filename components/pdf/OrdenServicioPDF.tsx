@@ -7,6 +7,7 @@ interface ItemOrden {
   id: string;
   tipo: "KARDEX" | "CATALOGO";
   descripcion: string;
+  rubroNombre?: string;
   kardexId?: string;
   catalogoId?: string;
   formaCobro: "Por Flete" | "Por Kilo";
@@ -139,6 +140,11 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
               <Text style={styles.col2}>
                 {item.descripcion}
                 {"\n"}
+                {item.rubroNombre && (
+                  <Text style={{ fontSize: 7, color: "#9ca3af" }}>
+                    Rubro: {item.rubroNombre}{"  "}
+                  </Text>
+                )}
                 <Text style={{ fontSize: 8, color: "#6b7280" }}>
                   ({item.formaCobro})
                 </Text>

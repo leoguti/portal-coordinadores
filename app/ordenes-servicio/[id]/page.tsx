@@ -708,9 +708,12 @@ export default function OrdenDetallePage() {
                       const tipoMovimiento = kardex?.fields.TipoMovimiento;
                       const fotoBascula = kardex?.fields.soportebascula?.[0];
 
+                      // For CATALOGO items, use the rubro name instead of auto-number Name field
+                      const rubroId = item.fields.Rubro?.[0];
+                      const rubroForName = rubroId ? rubroMap.get(rubroId) : undefined;
                       const displayName = tipoItem === "CON Kardex" && kardex
                         ? `Kardex #${kardex.fields.idkardex}`
-                        : nombre;
+                        : rubroForName?.fields.Nombre || nombre;
 
                       return (
                         <tr
