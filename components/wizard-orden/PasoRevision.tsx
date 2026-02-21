@@ -344,15 +344,21 @@ export default function PasoRevision({
                         ))}
                       </select>
                     ) : (
-                      <span className="text-xs text-gray-400">—</span>
+                      <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-purple-100 text-purple-700 border border-purple-300">
+                        {item.descripcion}
+                      </span>
                     )}
                   </td>
 
                   {/* Descripcion */}
                   <td className="px-3 py-3">
-                    <p className="text-sm text-gray-900 font-medium truncate">
-                      {item.descripcion}
-                    </p>
+                    {item.tipo === "KARDEX" ? (
+                      <p className="text-sm text-gray-900 font-medium truncate">
+                        {item.descripcion}
+                      </p>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
 
                   {/* Cantidad */}
