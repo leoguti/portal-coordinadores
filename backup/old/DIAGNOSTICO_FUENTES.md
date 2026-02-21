@@ -137,24 +137,117 @@ SQLite (campolimpio.db)
     → ubicaciones de generadores (tabla auxiliar)
 ```
 
-## Resumen de números
+## Resumen de números (actualizado 20 feb 2026)
 
 | Concepto | Cantidad |
 |----------|----------|
-| Total certificados únicos (estimado) | ~80,000+ |
-| Con datos completos (Airtable) | 33,255 |
+| Total certificados únicos | 80,127 |
+| Con datos de Airtable | 33,280 |
 | Con datos del CSV | 16,842 |
-| Sin datos (solo PDF) | ~30,000 |
-| PDFs en Google Drive | 73,454 |
-| PDFs en servidor DO | 33,475 |
-| Generadores en SQLite | 2,268 |
+| Con datos de TextIt | 30,005 |
+| Sin cédula | 52 |
+| Sin municipio devolución | 82 |
+| Sin fecha devolución | 0 |
+| PDFs en R2 | 69,834 |
+| Registros con URL de PDF | 80,048 |
+| Registros sin PDF (perdidos de Drive) | 79 |
+
+## Accesos verificados (19 feb 2026)
+
+| Recurso | Acceso | Cómo |
+|---------|--------|------|
+| Servidor DO (SSH) | OK | `ssh leonardo@campolimpio.rumbo.digital` |
+| PDFs en DO | OK | `/var/www/campolimpio.rumbo.digital/public_html/` (33,475 PDFs confirmados) |
+| campolimpio.tar.gz | OK | `/var/www/campolimpio.rumbo.digital/campolimpio.tar.gz` (SQLite dentro) |
+| Scripts Google Drive | OK | `/home/leonardo/proyectos/backup_campolimpio/` (clave-campolimpio.json, scripts Python, lista_drive.txt) |
+| Google Drive (API) | OK | Verificado 19 feb — cuenta de servicio funciona |
+| Airtable | OK | API key en 1Password (item "Portal CampoLimpio", vault Private) |
+| Neon PostgreSQL | OK | Connection string en 1Password |
+| Cloudflare R2 | OK | Tokens en 1Password. URL pública: `https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev` |
+| CSV sistema viejo | OK | `backup/old/certificados_campolimpio.csv` (16,842 registros, local) |
+
+## Credenciales en 1Password
+
+Todas las credenciales del proyecto se guardaron en 1Password el 19 feb 2026:
+- **Item**: "Portal CampoLimpio" en vault "Private"
+- **Incluye**: AIRTABLE_API_KEY, NEON_DATABASE_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, VERCEL_TOKEN, etc.
+- **Archivo de referencia**: `.env.1password` (usa `op://` URIs, no contiene secretos)
+- **Regenerar .env.local**: `op inject -i .env.1password -o .env.local`
+
+Credenciales NO incluidas en 1Password (pendiente):
+- Clave de cuenta de servicio Google Drive (`clave-campolimpio.json` en servidor DO)
+- SSH key del servidor DO
+
+## Migración completada (19-20 feb 2026)
+
+### Scripts de migración
+
+| Script | Fuente | Registros | Estado |
+|--------|--------|-----------|--------|
+| `backup/migrate-certificados.ts` | Airtable → Neon | 33,280 | Completado (0 errores) |
+| `backup/migrate-csv.ts` | CSV → Neon | 16,842 | Completado (0 errores) |
+| `backup/migrate-certificados-recientes.ts` | Airtable 2025-2026 → Neon | incluidos en Airtable | Completado (backup seguridad) |
+| `drive_to_r2.py` (en DO server) | Google Drive → R2 | 36,326 ok / 10,364 err | Completado |
+| `backup/fill-from-textit.ts` | TextIt archives → Neon | 30,005 | Completado (0 errores) |
+
+### PDFs en R2
+
+| Origen | PDFs | Método |
+|--------|------|--------|
+| Servidor DO → R2 | 33,507 | rclone copy directo (12 min) |
+| Google Drive → R2 | 36,326 | Script Python + rclone en DO server |
+| **Total en R2** | **69,834** | Bucket: `campolimpio-certificados/pdfs/` |
+
+- **10,364 PDFs perdidos**: archivos listados en Google Drive pero devuelven 404 (borrados permanentemente)
+- Nombres: lowercase `certificado_XXXXX.pdf` (normalizado) + 139 uppercase originales del DO
+- URL pública: `https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev/pdfs/certificado_XXXXX.pdf`
+
+### Base de datos Neon (estado final — 20 feb 2026)
+
+| Fuente | Registros | Rango | Datos | PDF en R2 |
+|--------|-----------|-------|-------|-----------|
+| `airtable` | 33,280 | 58,714 → 92,102 | Completos | Sí |
+| `csv` | 16,842 | 36,142 → 53,991 | Completos | Parcial (via Drive/DO) |
+| `textit` | 30,005 | 10,925 → 58,713 | Rellenados desde TextIt | ~36,326 (10,364 perdidos) |
+| **Total** | **80,127** | 10,925 → 92,131 | **Todos con datos** | 80,048 con PDF |
+
+- Se deduplicaron 16,819 registros (csv + drive-solo-pdf con mismo consecutivo)
+- Se rellenaron 30,005 registros desde TextIt archives API (100% match)
+- Solo 52 sin cédula, 82 sin municipio, 79 sin PDF en R2
+
+### Relleno desde TextIt (20 feb 2026)
+
+- **API**: `https://textit.com/api/v2/archives.json?archive_type=run`
+- **Token**: almacenado en el script `backup/fill-from-textit.ts`
+- **Archivos descargados**: 112 (95 mensuales + 17 diarios), rango dic 2017 → nov 2025
+- **Total runs**: 405,154 (100,707 de certificados → 79,559 consecutivos únicos)
+- **Flujo principal**: "08-Copy of certificado" (sistema viejo, llamaba a `campolimpio.rumbo.digital/newrow.php`)
+- **Campos extraídos**: cedulagenerador, rigidos, flexibles, metalicos, embalaje, triplelavado, fechadevolucion, lugardevolucion, municipiodevolucion, tipocertificado, observaciones
+- **Campos NO disponibles en TextIt** (venían de child flows/contact): nombregenerador, movilgenerador, direcciongenerador, cultivogenerador, emailgenerador, municipiogenerador, nombrecoordinador, movilcoordinador, emailcoordinador
+
+### Herramientas instaladas en servidor DO
+
+- **rclone**: `~/rclone` — para copiar archivos a R2
+- **drive_to_r2.py**: `~/proyectos/backup_campolimpio/drive_to_r2.py`
+- **Temp files**: `/tmp/drive_pdfs/`, `/tmp/do_ids.txt`, `/tmp/drive_ids.txt`, `/tmp/missing_ids.txt`
 
 ## Pendiente
 
 - [x] Recopilar hojas de cálculo con datos del sistema viejo
 - [x] Explorar `campolimpio.tar.gz` (SQLite encontrada)
-- [ ] Cruzar CSV con Google Drive (verificar qué PDFs del CSV tienen match en Drive)
-- [ ] Verificar acceso al Google Drive con las credenciales del servidor
-- [ ] Decidir qué hacer con Zona A y C (certificados sin datos, solo PDF)
-- [ ] Definir esquema unificado en Neon que cubra ambos sistemas
-- [ ] Definir estrategia de migración por zonas
+- [x] Credenciales guardadas en 1Password (19 feb 2026)
+- [x] Verificar acceso SSH al servidor DO (19 feb 2026)
+- [x] Verificar acceso al Google Drive con las credenciales del servidor
+- [x] Ejecutar migración Airtable → Neon (33,280 registros, 0 errores)
+- [x] Ejecutar migración CSV → Neon (16,842 registros, 0 errores)
+- [x] Backup certificados recientes 2025-2026 → Neon (seguridad)
+- [x] PDFs DO → R2 via rclone (33,507 PDFs)
+- [x] PDFs Google Drive → R2 (36,326 ok, 10,364 perdidos)
+- [x] Registros minimales drive-solo-pdf en Neon (46,824)
+- [x] Deduplicar registros (16,819 csv+drive-solo-pdf duplicados eliminados → 80,127 únicos)
+- [x] Rellenar datos desde TextIt archives (30,005 registros, 100% match, 0 errores)
+- [ ] Limpiar archivos temporales en servidor DO (`~/rclone`, `/tmp/drive_pdfs/`, etc.)
+- [ ] Guardar credenciales faltantes en 1Password (clave Google Drive, SSH key, TextIt token)
+- [ ] **Verificar URLs de PDFs**: cruzar registros Neon con archivos reales en R2
+- [ ] **Completar campos faltantes**: nombregenerador, movilgenerador, etc. (no disponibles en TextIt, posible extracción desde PDFs)
+- [ ] **Borrar certificados viejos de Airtable**: una vez verificado el backup completo

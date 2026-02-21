@@ -240,6 +240,43 @@ Use `/api/upload` endpoint which returns Airtable attachment objects. See `Image
 - **`docs/IMPLEMENTACION_PARTE1_AIRTABLE_SIMPLE.md`**: Implementation guides
 - **`AUTH_SETUP.md`**: Authentication setup instructions
 
+## Deployment
+
+- **Platform**: Vercel (NOT local). All changes go through `git push` → Vercel auto-deploys from `main`.
+- **Production URL**: `portal.campolimpio.org`
+- **Project**: `portal-coordinadores` (Team: `leonardo-gutierrezs-projects-7db680b2`)
+- **Blob Storage**: Vercel Blob for temporary/permanent file hosting (PDFs, attachments)
+- **Linked locally**: `.vercel/` directory links to the Vercel project (via `vercel link`)
+
+### Vercel Logs
+
+Access runtime function logs for debugging production issues:
+
+```bash
+# Link project (one-time)
+npx vercel link --yes --token "$VERCEL_TOKEN" --project portal-coordinadores --scope leonardo-gutierrezs-projects-7db680b2
+
+# View recent logs
+npx vercel logs --token "$VERCEL_TOKEN"
+
+# Follow logs in real-time
+npx vercel logs --token "$VERCEL_TOKEN" --follow
+
+# Via API (no CLI needed)
+curl -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?projectId=prj_ygdKw0hz3nnVOv2EBWoNonXtkgcQ&teamId=team_7kXHm92yfa9OMwjDXMSbA2nP&limit=3"
+```
+
+Token must be created at https://vercel.com/account/tokens (short-lived, 1-day expiration recommended).
+
+### Important: Function Timeouts
+
+- API routes that do heavy work (PDF generation, image downloads) must export `maxDuration`:
+  ```ts
+  export const maxDuration = 60; // seconds
+  ```
+- Default Vercel timeout is 10s (Hobby) / configurable on Pro.
+- Example: `app/api/ordenes-servicio/[id]/route.ts` uses `maxDuration = 60`.
+
 ## Node.js Version
 
 Requires Node.js >= 20.9.0 (Next.js 16 requirement)

@@ -2,7 +2,7 @@
 
 **Documento unificado de todos los pendientes del proyecto.**
 **Prioridad:** Lo que el cliente pidió primero, soporte técnico como habilitador.
-**Última actualización:** 5 de febrero de 2026
+**Última actualización:** 17 de febrero de 2026
 
 > **Fuentes consolidadas:**
 > - `REUNION_19_ENERO.md` — Reunión con cliente
@@ -16,10 +16,10 @@
 | Categoría | Pendientes | En Proceso | Completados | Descartados |
 |-----------|-----------|------------|-------------|-------------|
 | Compromisos cliente (P1) | 4 | 0 | 1 | 0 |
-| Requests coordinadores (P2) | 2 | 0 | 4 | 1 |
-| Features nuevas (P3) | 2 | 1 | 2 | 1 |
+| Requests coordinadores (P2) | 1 | 0 | 5 | 1 |
+| Features nuevas (P3) | 1 | 1 | 3 | 1 |
 | Mejoras técnicas (P4) | 27 | 0 | 0 | 0 |
-| **Total** | **35** | **1** | **7** | **2** |
+| **Total** | **33** | **1** | **9** | **2** |
 
 ---
 
@@ -98,15 +98,15 @@ Problemas y necesidades reportados directamente por los usuarios en la reunión 
   - [x] Filtro por coordinador en vista admin
   - [x] Vista filtrada por coordinador actual si el usuario es Coordinador
 
-### P2-02: Visibilidad de estados post-pago para coordinadores
+### ~~P2-02: Visibilidad de estados post-pago para coordinadores~~ COMPLETADO
 - **Origen:** Reunión coordinadores 26 ene
 - **Reporta:** Coordinadores
-- **Estado:** No implementado
+- **Estado:** Completado
 - **Detalle:**
-  - [ ] Los estados "Rechazada" y "Pagada" deben ser visibles para coordinadores
-  - [ ] Verificar que la tabla de Órdenes en Airtable tenga estos estados
-  - [ ] Mostrarlos con badge de color en la lista de órdenes
-  - [ ] Posible: notificación al coordinador cuando cambia el estado
+  - [x] Los estados "Rechazada" y "Pagada" son visibles para coordinadores en la lista de órdenes
+  - [x] Tabla de Órdenes en Airtable tiene estos estados
+  - [x] Badges de color en la lista: Pagada (verde), Rechazada (rojo), Facturada (ámbar), Enviada (azul)
+  - [ ] Pendiente opcional: notificación al coordinador cuando cambia el estado
 
 ### ~~P2-03: Proveedor ATICA con múltiples sucursales~~ DESCARTADO
 - **Estado:** Descartado — no se implementará
@@ -190,7 +190,21 @@ Features solicitadas por el cliente pero sin fecha de entrega comprometida.
   - [ ] El .zip debe incluir los PDFs de las órdenes y las facturas asociadas
   - [ ] Respetar los filtros activos (coordinador, beneficiario, estado, mes)
   - [ ] Útil para auditoría fiscal: entregar paquete completo de soportes
-- **Nota:** Evaluar si incluir también fotos de báscula de los kardex vinculados
+- **Nota:** Los PDFs de órdenes ya incluyen fotos de báscula, factura y soportes (P3-08 completado). El .zip solo necesita recopilar los PDFs existentes.
+
+### ~~P3-08: Incluir imágenes de básculas en PDF de órdenes de servicio~~ COMPLETADO
+- **Origen:** Solicitud del cliente (feb 2026)
+- **Prioridad:** Media
+- **Estado:** Completado
+- **Detalle:**
+  - [x] PDF incluye Anexo 1: fotos de báscula de kardex vinculados (con placeholder si no tiene foto)
+  - [x] PDF incluye Anexo 2: soportes generales de la orden (imágenes)
+  - [x] Soportes PDF se fusionan al final del documento con pdf-lib
+  - [x] Si hay factura, se incluye como primera sección del PDF final
+  - [x] Orden del PDF: Factura → Orden de servicio → Básculas Kardex → Soportes orden
+  - [x] Botón "Regenerar PDF" en detalle de orden (solo admins) para órdenes existentes
+  - [x] Imágenes pre-descargadas como base64 para compatibilidad con @react-pdf/renderer
+  - [x] maxDuration=60s en API route para operaciones largas
 
 ### P3-06: Interfaz de certificados
 - **Origen:** Reunión 19 ene + TODO_PORTAL.md
@@ -282,7 +296,7 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 1. ~~**P1-01** — Foto de báscula obligatoria~~ COMPLETADO
 2. ~~**P3-01** — Filtro centros por coordinador~~ COMPLETADO
 3. ~~**P2-01** — Vista admin para todas las órdenes~~ COMPLETADO
-4. **P2-02** — Estados post-pago visibles
+4. ~~**P2-02** — Estados post-pago visibles~~ COMPLETADO
 5. **M-01** — Responsive sidebar (coordinadores usan celular)
 6. **M-04** — Fix SSRF image-proxy (vulnerabilidad activa)
 
@@ -330,6 +344,15 @@ P4-M07 (Componentes UI) ────► P4-M08 (Toasts)
 ---
 
 ## Completado Recientemente (referencia)
+
+### 17 febrero 2026
+- [x] **P3-08** — PDF de órdenes incluye fotos de báscula, factura y soportes en un solo documento
+- [x] Botón "Regenerar PDF" para órdenes existentes (solo admins)
+- [x] Fusión de PDFs (factura + orden + soportes) con pdf-lib
+- [x] Visualización de soportes de báscula en detalle de orden (galería con lightbox)
+- [x] Eliminación de "Reporte de Facturas" (consolidado en Órdenes de Servicio)
+- [x] Dashboard administrativo con rol Supervisor y gráficas Recharts
+- [x] Resumen general dinámico según filtros activos en actividades
 
 ### 30 enero 2026
 - [x] Fix webhook kardex en TextIt: campo EstadoPago no se enviaba en el body principal (siempre quedaba "Por Pagar"). Corregido con tres expresiones @(if()) separadas comparando estadopago_num como string.

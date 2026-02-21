@@ -1,5 +1,6 @@
 /**
- * Script de migración: Certificados Airtable → Neon PostgreSQL + Cloudflare R2
+ * Script de migración: Certificados Airtable → Neon PostgreSQL
+ * PDFs se suben por separado vía rclone (DO → R2)
  *
  * Uso:
  *   npx tsx backup/migrate-certificados.ts --test     # Solo 10 registros (prueba)
@@ -8,16 +9,10 @@
  * Requisitos en .env.local:
  *   AIRTABLE_API_KEY, AIRTABLE_BASE_ID
  *   NEON_DATABASE_URL
- *   R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT, R2_BUCKET_NAME, R2_ACCOUNT_ID
  */
 
 import { config } from "dotenv";
 import { Client } from "pg";
-import {
-  S3Client,
-  PutObjectCommand,
-  HeadBucketCommand,
-} from "@aws-sdk/client-s3";
 
 config({ path: ".env.local" });
 
@@ -25,14 +20,14 @@ config({ path: ".env.local" });
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
 const NEON_DATABASE_URL = process.env.NEON_DATABASE_URL!;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
-const R2_ENDPOINT = process.env.R2_ENDPOINT!;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!;
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
+
+const R2_PUBLIC_URL =
+  process.env.R2_PUBLIC_URL ||
+  "https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev";
 
 const isTest = process.argv.includes("--test");
 const MAX_YEAR = 2024; // Archivar hasta este año inclusive
+const CONCURRENCY = 20; // Inserts paralelos a Neon
 
 // --- Airtable ---
 interface AirtableRecord {
@@ -64,7 +59,9 @@ async function fetchCertificados(
     });
 
     if (!response.ok) {
-      throw new Error(`Airtable error: ${response.status} ${await response.text()}`);
+      throw new Error(
+        `Airtable error: ${response.status} ${await response.text()}`
+      );
     }
 
     const data = await response.json();
@@ -124,7 +121,11 @@ async function createTable(client: Client) {
       certificadopdf_size INTEGER,
       -- Metadata
       airtable_created_time TIMESTAMPTZ,
-      migrated_at TIMESTAMPTZ DEFAULT NOW()
+      migrated_at TIMESTAMPTZ DEFAULT NOW(),
+      -- Columnas extra para CSV
+      fechageneracion TIMESTAMPTZ,
+      observaciones TEXT,
+      fuente TEXT DEFAULT 'airtable'
     );
   `);
 
@@ -135,21 +136,33 @@ async function createTable(client: Client) {
     CREATE INDEX IF NOT EXISTS idx_certificados_fechadevolucion ON certificados(fechadevolucion);
     CREATE INDEX IF NOT EXISTS idx_certificados_coordinador ON certificados(nombrecoordinador);
     CREATE INDEX IF NOT EXISTS idx_certificados_generador ON certificados(nombregenerador);
+    CREATE INDEX IF NOT EXISTS idx_certificados_fuente ON certificados(fuente);
   `);
 
-  console.log("✓ Tabla e índices creados en Neon");
+  console.log("✓ Tabla e índices creados/verificados en Neon");
 }
 
 async function insertCertificado(
   client: Client,
-  record: AirtableRecord,
-  r2Url: string | null,
-  pdfFilename: string | null,
-  pdfSize: number | null
+  record: AirtableRecord
 ) {
   const f = record.fields;
-  const first = (val: unknown) =>
-    Array.isArray(val) ? val[0] : val;
+  const first = (val: unknown) => (Array.isArray(val) ? val[0] : val);
+
+  // Build PDF URL from R2 (PDFs uploaded separately via rclone)
+  const pdfField = f.certificadopdf as
+    | Array<{ filename: string; size: number }>
+    | undefined;
+  let pdfFilename: string | null = null;
+  let r2Url: string | null = null;
+  let pdfSize: number | null = null;
+
+  if (pdfField && pdfField.length > 0) {
+    pdfFilename = pdfField[0].filename;
+    pdfSize = pdfField[0].size;
+    // PDFs are in R2 at /pdfs/<filename> (uploaded via rclone from DO)
+    r2Url = `${R2_PUBLIC_URL}/pdfs/${pdfFilename}`;
+  }
 
   await client.query(
     `INSERT INTO certificados (
@@ -161,9 +174,9 @@ async function insertCertificado(
       rigidos, flexibles, metalicos, embalaje, total,
       triplelavado, departamento, ano,
       certificadopdf_filename, certificadopdf_r2_url, certificadopdf_size,
-      airtable_created_time
+      airtable_created_time, fuente
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
     ) ON CONFLICT (airtable_id) DO NOTHING`,
     [
       record.id,
@@ -197,67 +210,44 @@ async function insertCertificado(
       r2Url,
       pdfSize,
       record.createdTime,
+      "airtable",
     ]
   );
 }
 
-// --- Cloudflare R2 ---
-function createR2Client() {
-  return new S3Client({
-    region: "auto",
-    endpoint: R2_ENDPOINT,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-    },
+// --- Batch processing with concurrency ---
+async function processBatch(
+  client: Client,
+  records: AirtableRecord[],
+  startIdx: number,
+  total: number
+): Promise<{ success: number; errors: number }> {
+  let success = 0;
+  let errors = 0;
+
+  const promises = records.map(async (record, i) => {
+    const consecutivo = record.fields.consecutivo ?? "?";
+    try {
+      await insertCertificado(client, record);
+      success++;
+    } catch (err) {
+      errors++;
+      console.error(
+        `   [${startIdx + i + 1}/${total}] ✗ Error #${consecutivo}: ${err}`
+      );
+    }
   });
-}
 
-async function uploadPdfToR2(
-  s3: S3Client,
-  record: AirtableRecord
-): Promise<{ url: string; filename: string; size: number } | null> {
-  const pdfField = record.fields.certificadopdf as
-    | Array<{ url: string; filename: string; size: number }>
-    | undefined;
-
-  if (!pdfField || pdfField.length === 0) {
-    return null;
-  }
-
-  const pdf = pdfField[0];
-  const ano = record.fields.ano ?? "sin-ano";
-  const key = `${ano}/${pdf.filename}`;
-
-  // Descargar PDF de Airtable
-  const response = await fetch(pdf.url);
-  if (!response.ok) {
-    console.error(`  ✗ Error descargando PDF ${pdf.filename}: ${response.status}`);
-    return null;
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-
-  // Subir a R2
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: "application/pdf",
-    })
-  );
-
-  // URL pública via R2.dev subdomain
-  const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev";
-  const r2Url = `${R2_PUBLIC_URL}/${key}`;
-
-  return { url: r2Url, filename: pdf.filename, size: pdf.size };
+  await Promise.all(promises);
+  return { success, errors };
 }
 
 // --- Main ---
 async function main() {
-  console.log(`\n=== Migración de Certificados ${isTest ? "(PRUEBA - 10 registros)" : "(COMPLETA)"} ===\n`);
+  console.log(
+    `\n=== Migración Certificados (solo datos) ${isTest ? "(PRUEBA - 10)" : "(COMPLETA)"} ===\n`
+  );
+  console.log("   PDFs se suben por separado vía rclone (DO → R2)\n");
 
   // 1. Fetch from Airtable
   console.log("1. Descargando certificados de Airtable...");
@@ -271,71 +261,57 @@ async function main() {
   console.log("   ✓ Conectado\n");
 
   // 3. Create table
-  console.log("3. Creando tabla en Neon...");
+  console.log("3. Verificando tabla en Neon...");
   await createTable(pgClient);
   console.log("");
 
-  // 4. Connect to R2
-  console.log("4. Conectando a Cloudflare R2...");
-  const s3 = createR2Client();
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: R2_BUCKET_NAME }));
-    console.log(`   ✓ Bucket '${R2_BUCKET_NAME}' accesible\n`);
-  } catch (err) {
-    console.error(`   ✗ Error accediendo al bucket: ${err}`);
-    await pgClient.end();
-    process.exit(1);
+  // 4. Migrate in batches
+  console.log(`4. Insertando registros (concurrencia: ${CONCURRENCY})...\n`);
+  let totalSuccess = 0;
+  let totalErrors = 0;
+  let totalSkipped = 0;
+
+  for (let i = 0; i < records.length; i += CONCURRENCY) {
+    const batch = records.slice(i, i + CONCURRENCY);
+    const beforeCount = totalSuccess + totalErrors;
+
+    const { success, errors } = await processBatch(
+      pgClient,
+      batch,
+      i,
+      records.length
+    );
+    totalSuccess += success;
+    totalErrors += errors;
+
+    // Log progress every batch
+    const pct = Math.round(((i + batch.length) / records.length) * 100);
+    console.log(
+      `   [${i + batch.length}/${records.length}] ${pct}% — batch: ${success} ok, ${errors} err`
+    );
   }
 
-  // 5. Migrate each record
-  console.log("5. Migrando registros...\n");
-  let success = 0;
-  let errors = 0;
-  let pdfsUploaded = 0;
-
-  for (let i = 0; i < records.length; i++) {
-    const record = records[i];
-    const consecutivo = record.fields.consecutivo ?? "?";
-    const fecha = record.fields.fechadevolucion ?? "?";
-
-    try {
-      // Upload PDF to R2
-      const pdfResult = await uploadPdfToR2(s3, record);
-      if (pdfResult) pdfsUploaded++;
-
-      // Insert into Neon
-      await insertCertificado(
-        pgClient,
-        record,
-        pdfResult?.url ?? null,
-        pdfResult?.filename ?? null,
-        pdfResult?.size ?? null
-      );
-
-      success++;
-      console.log(
-        `   [${i + 1}/${records.length}] ✓ Certificado #${consecutivo} (${fecha})${pdfResult ? " + PDF" : ""}`
-      );
-    } catch (err) {
-      errors++;
-      console.error(
-        `   [${i + 1}/${records.length}] ✗ Error certificado #${consecutivo}: ${err}`
-      );
-    }
-  }
-
-  // 6. Summary
+  // 5. Summary
   console.log(`\n=== Resumen ===`);
-  console.log(`   Registros migrados: ${success}`);
-  console.log(`   PDFs subidos a R2:  ${pdfsUploaded}`);
-  console.log(`   Errores:            ${errors}`);
+  console.log(`   Registros insertados: ${totalSuccess}`);
+  console.log(`   Errores:              ${totalErrors}`);
 
-  // 7. Verify
-  const countResult = await pgClient.query("SELECT COUNT(*) FROM certificados");
-  console.log(`   Total en Neon:      ${countResult.rows[0].count}`);
+  // 6. Verify
+  const countResult = await pgClient.query(
+    "SELECT fuente, COUNT(*) FROM certificados GROUP BY fuente ORDER BY fuente"
+  );
+  console.log(`   Conteo por fuente en Neon:`);
+  countResult.rows.forEach((r: { fuente: string; count: string }) =>
+    console.log(`     ${r.fuente}: ${r.count}`)
+  );
+
+  const totalInDb = await pgClient.query(
+    "SELECT COUNT(*) FROM certificados"
+  );
+  console.log(`   Total en Neon: ${totalInDb.rows[0].count}`);
 
   await pgClient.end();
-  console.log("\n✓ Migración completada\n");
+  console.log("\n✓ Migración datos completada\n");
 }
 
 main().catch((err) => {
