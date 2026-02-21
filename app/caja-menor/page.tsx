@@ -949,7 +949,7 @@ export default function CajaMenorPage() {
                                         <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Coord.</th>
                                       )}
                                       <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Beneficiario</th>
-                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
+                                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Rubro</th>
                                       <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase w-36">Neto</th>
                                       <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase w-24">Estado</th>
                                       <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase w-20"></th>
@@ -962,7 +962,7 @@ export default function CajaMenorPage() {
                                       const beneficiario = gasto.fields.RazonSocial?.[0] || "Sin beneficiario";
                                       const coordinador = gasto.fields.NombreCoordinador?.[0] || "";
                                       const rubroId = gasto.fields.Rubro?.[0];
-                                      const concepto = rubroId ? rubroNames.get(rubroId) || "" : "";
+                                      const rubro = rubroId ? rubroNames.get(rubroId) || "" : "";
                                       const valorNeto = calcValorNeto(gasto);
                                       const estado = gasto.fields.Estado || "Pendiente";
                                       const puedeEliminar = puedeEliminarGasto(fecha, estado);
@@ -982,7 +982,7 @@ export default function CajaMenorPage() {
                                             <td className="px-3 py-2 text-gray-700 text-xs">{coordinador}</td>
                                           )}
                                           <td className="px-3 py-2 text-gray-900 font-medium">{beneficiario}</td>
-                                          <td className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{concepto}</td>
+                                          <td className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{rubro}</td>
                                           <td className="px-3 py-2 text-right w-36">
                                             <span className="font-bold text-gray-900 font-mono">{formatCurrency(valorNeto)}</span>
                                           </td>
