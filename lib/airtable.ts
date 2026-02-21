@@ -1734,6 +1734,52 @@ export async function getItemsOrden(ordenId: string): Promise<ItemOrden[]> {
 }
 
 /**
+ * Get ALL ItemsOrden (paginated). Useful for cross-order aggregations.
+ */
+export async function getAllItemsOrden(): Promise<ItemOrden[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const allItems: ItemOrden[] = [];
+    let offset: string | undefined;
+
+    do {
+      const url = `https://api.airtable.com/v0/${baseId}/ItemsOrden${offset ? `?offset=${offset}` : ""}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Airtable API error fetching all ItemsOrden: ${response.status}`, errorText);
+        break;
+      }
+
+      const data: AirtableResponse<ItemOrdenFields> & { offset?: string } = await response.json();
+      allItems.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
+    console.log(`Total ItemsOrden fetched: ${allItems.length}`);
+    return allItems;
+  } catch (error) {
+    console.error("Error fetching all ItemsOrden:", error);
+    return [];
+  }
+}
+
+/**
  * Get Kardex by IDs
  */
 export async function getKardexByIds(kardexIds: string[]): Promise<Kardex[]> {
