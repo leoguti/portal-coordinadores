@@ -26,6 +26,7 @@ interface GastoUnificado {
   beneficiarioNombre: string;
   rubroId: string;
   rubroNombre: string;
+  rubroTipo: string;
   valor: number;
   estado: string;
   refId?: string;
@@ -51,10 +52,12 @@ export async function GET() {
       canViewAll ? getCoordinadoresConSaldoInicial() : Promise.resolve([]),
     ]);
 
-    // Build rubro name map
+    // Build rubro maps (name + tipo)
     const rubroMap = new Map<string, string>();
+    const rubroTipoMap = new Map<string, string>();
     for (const r of rubros) {
       rubroMap.set(r.id, r.fields.Nombre || "Rubro");
+      rubroTipoMap.set(r.id, (r.fields.Tipo || [])[0] || "Sin tipo");
     }
 
     // Build orden map (id → Orden)
@@ -88,6 +91,7 @@ export async function GET() {
         beneficiarioNombre: (g.fields.RazonSocial || [])[0] || "Sin beneficiario",
         rubroId,
         rubroNombre: rubroMap.get(rubroId) || "Sin rubro",
+        rubroTipo: rubroTipoMap.get(rubroId) || "Sin tipo",
         valor: g.fields.Valor || 0,
         estado: g.fields.Estado || "Pendiente",
         refId: g.fields.NumeroGasto ? `CM-${g.fields.NumeroGasto}` : undefined,
@@ -116,6 +120,7 @@ export async function GET() {
         beneficiarioNombre: (orden.fields.RazonSocial || [])[0] || "Sin beneficiario",
         rubroId,
         rubroNombre: rubroMap.get(rubroId) || "Sin rubro",
+        rubroTipo: rubroTipoMap.get(rubroId) || "Sin tipo",
         valor: item.fields["Cálculo"] || (item.fields.Cantidad || 0) * (item.fields.PrecioUnitario || 0),
         estado: orden.fields.Estado || "Borrador",
         refId: orden.fields.NumeroOrden ? `OS-${orden.fields.NumeroOrden}` : undefined,
