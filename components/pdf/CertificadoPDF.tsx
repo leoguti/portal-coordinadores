@@ -117,12 +117,6 @@ const GESTORES = [
   },
 ];
 
-const TEXTO_LEGAL =
-  "En cumplimiento de la Resolución 1675 de Diciembre de 2013 la Corporación Campo Limpio ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.";
-
-const TEXTO_DATOS_PERSONALES =
-  'AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES POR PARTE DE CORPORACIÓN CAMPO LIMPIO, sus filiales, subordinadas y quien represente sus derechos. Con el propósito de dar un adecuado tratamiento a sus datos personales de acuerdo al Régimen General de Protección de Datos Personales reglamentado por la Constitución Política Nacional, la Ley 1581 de 2012 y el Decreto 1377 de 2013, que desarrolla los derechos constitucionales que tienen las personas de conocer, actualizar y rectificar todo tipo de información que de ellas sea objeto de tratamiento en bases de datos de entidades públicas y/o privadas, y siendo primordial para CORPORACIÓN CAMPO LIMPIO contar con su consentimiento previo, expreso y escrito, para el mencionado tratamiento, le informamos que CORPORACIÓN CAMPO LIMPIO pone a su disposición una Política de Tratamiento de Datos, por medio de la cual se establecen los parámetros para tratar la información contenida en los Bancos y Bases de Datos de la Compañía, que usted podrá consultar en la página web: www.campolimpio.org a) El tratamiento que se dará a sus datos personales consistirá en la recolección, el almacenamiento y el uso de los mismos, entre otros contenidos en el Artículo 1) de nuestra Política de Tratamiento de Datos. b) La finalidad con la que serán tratados sus datos se encuentran contenidas en el artículo 3) de nuestra Política. c) Usted, como titular de sus datos personales, tiene todo el derecho de conocer, corregir, actualizar, rectificar o suprimir los datos personales que suministra a CORPORACIÓN CAMPO LIMPIO, entre otros más contenidos en el artículo 5) de la Política de Tratamiento de Datos. d) Usted podrá ejercer sus derechos, de conformidad con el Artículo 10) de nuestra Política, enviando su petición, queja o reclamo, al área administrativa al correo electrónico administrativa@campolimpio.org, o a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. e) Usted se encuentra facultado para no dar información respecto de datos sensibles o aquellos de los niños, niñas y adolescentes. CORPORACIÓN CAMPO LIMPIO de acuerdo a lo reglamentado por el artículo 10 del Decreto 1377 de 2013, queda autorizada de manera inequívoca y expresa para tratar sus datos personales. Sin embargo, usted podrá revocar la presente autorización manifestándolo al correo electrónico administrativa@campolimpio.org o enviando comunicación a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. Para CORPORACIÓN CAMPO LIMPIO es muy grato contar con su colaboración.';
-
 // ---------- Styles ----------
 const s = StyleSheet.create({
   page: {
@@ -179,10 +173,12 @@ const s = StyleSheet.create({
   headerCertLabel: {
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
+    color: "#cc0000",
   },
   headerCertNumber: {
     fontSize: 14,
     fontFamily: "Helvetica-Bold",
+    color: "#cc0000",
     marginTop: 2,
   },
 
@@ -200,8 +196,15 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ---- Generic table row ----
-  tableRow: {
+  // ---- Generator table row (no interior borders) ----
+  genRow: {
+    flexDirection: "row",
+    borderLeft: "1 solid #000",
+    borderRight: "1 solid #000",
+    borderBottom: "0.5 solid #ccc",
+    minHeight: 16,
+  },
+  genRowLast: {
     flexDirection: "row",
     borderLeft: "1 solid #000",
     borderRight: "1 solid #000",
@@ -218,6 +221,7 @@ const s = StyleSheet.create({
   labelText: {
     fontSize: 7,
     fontFamily: "Helvetica-Oblique",
+    color: "#666666",
   },
   valueText: {
     fontSize: 8,
@@ -225,6 +229,15 @@ const s = StyleSheet.create({
   valueBold: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
+  },
+
+  // ---- Generic table row (with borders, for other tables) ----
+  tableRow: {
+    flexDirection: "row",
+    borderLeft: "1 solid #000",
+    borderRight: "1 solid #000",
+    borderBottom: "1 solid #000",
+    minHeight: 16,
   },
 
   // ---- Materials table ----
@@ -279,15 +292,16 @@ const s = StyleSheet.create({
   },
 
   // ---- Legal text ----
-  legalText: {
-    fontSize: 5.5,
-    lineHeight: 1.4,
+  legalBlock: {
     marginTop: 4,
+    lineHeight: 1.4,
   },
-  legalTextBold: {
+  legalNormal: {
+    fontSize: 5.5,
+  },
+  legalBold: {
     fontSize: 5.5,
     fontFamily: "Helvetica-Bold",
-    lineHeight: 1.4,
   },
 
   // ---- Devolution section ----
@@ -400,14 +414,14 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         </View>
 
         {/* Row 1: Nombre + Tipo */}
-        <View style={s.tableRow}>
-          <View style={[s.cell, s.cellBorderRight, { width: "16%" }]}>
+        <View style={s.genRow}>
+          <View style={[s.cell, { width: "16%" }]}>
             <Text style={s.labelText}>Nombre/Razón Social</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "42%" }]}>
+          <View style={[s.cell, { width: "42%" }]}>
             <Text style={s.valueBold}>{nombregenerador}</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "12%" }]}>
+          <View style={[s.cell, { width: "12%" }]}>
             <Text style={s.labelText}>Tipo:</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
@@ -416,14 +430,14 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         </View>
 
         {/* Row 2: Cedula + Telefono */}
-        <View style={s.tableRow}>
-          <View style={[s.cell, s.cellBorderRight, { width: "16%" }]}>
+        <View style={s.genRow}>
+          <View style={[s.cell, { width: "16%" }]}>
             <Text style={s.labelText}>Cédula/NIT</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "42%" }]}>
+          <View style={[s.cell, { width: "42%" }]}>
             <Text style={s.valueText}>{cedulagenerador}</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "12%" }]}>
+          <View style={[s.cell, { width: "12%" }]}>
             <Text style={s.labelText}>Teléfono Móvil:</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
@@ -432,14 +446,14 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         </View>
 
         {/* Row 3: Direccion + Cultivo */}
-        <View style={s.tableRow}>
-          <View style={[s.cell, s.cellBorderRight, { width: "16%" }]}>
+        <View style={s.genRow}>
+          <View style={[s.cell, { width: "16%" }]}>
             <Text style={s.labelText}>Dirección/Finca</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "42%" }]}>
+          <View style={[s.cell, { width: "42%" }]}>
             <Text style={s.valueText}>{direcciongenerador}</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "12%" }]}>
+          <View style={[s.cell, { width: "12%" }]}>
             <Text style={s.labelText}>Cultivo:</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
@@ -447,15 +461,15 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           </View>
         </View>
 
-        {/* Row 4: Email + Municipio */}
-        <View style={s.tableRow}>
-          <View style={[s.cell, s.cellBorderRight, { width: "16%" }]}>
+        {/* Row 4: Email + Municipio (last row, full border bottom) */}
+        <View style={s.genRowLast}>
+          <View style={[s.cell, { width: "16%" }]}>
             <Text style={s.labelText}>Correo Electrónico</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "42%" }]}>
+          <View style={[s.cell, { width: "42%" }]}>
             <Text style={s.valueText}>{emailgenerador}</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "12%" }]}>
+          <View style={[s.cell, { width: "12%" }]}>
             <Text style={s.labelText}>Municipio/Depto</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
@@ -611,9 +625,45 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           </View>
         ))}
 
-        {/* ============ LEGAL TEXT ============ */}
-        <Text style={s.legalText}>{TEXTO_LEGAL}</Text>
-        <Text style={s.legalText}>{TEXTO_DATOS_PERSONALES}</Text>
+        {/* ============ LEGAL TEXT (with bold fragments) ============ */}
+        <View style={s.legalBlock}>
+          <Text>
+            <Text style={s.legalNormal}>En cumplimiento de la Resolución 1675 de Diciembre de 2013 la </Text>
+            <Text style={s.legalBold}>Corporación Campo Limpio</Text>
+            <Text style={s.legalNormal}> ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.</Text>
+          </Text>
+        </View>
+
+        <View style={s.legalBlock}>
+          <Text>
+            <Text style={s.legalBold}>AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES POR PARTE DE CORPORACIÓN CAMPO LIMPIO, </Text>
+            <Text style={s.legalNormal}>sus filiales, subordinadas y quien represente sus derechos. Con el propósito de dar un adecuado tratamiento a sus datos personales de acuerdo al Régimen General de Protección de Datos Personales reglamentado por la Constitución Política Nacional, la Ley 1581 de 2012 y el Decreto 1377 de 2013, que desarrolla los derechos constitucionales que tienen las personas de </Text>
+            <Text style={s.legalBold}>conocer, actualizar y rectificar </Text>
+            <Text style={s.legalNormal}>todo tipo de información que de ellas sea objeto de tratamiento en bases de datos de entidades públicas y/o privadas, y siendo primordial para </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalNormal}>contar con su consentimiento previo, expreso y escrito, para el mencionado tratamiento, le informamos que </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalNormal}>pone a su disposición una </Text>
+            <Text style={s.legalBold}>Política de Tratamiento de Datos</Text>
+            <Text style={s.legalNormal}>, por medio de la cual se establecen los parámetros para tratar la información contenida en los Bancos y Bases de Datos de la Compañía, que usted podrá consultar en la página web: www.campolimpio.org </Text>
+            <Text style={s.legalBold}>a) </Text>
+            <Text style={s.legalNormal}>El tratamiento que se dará a sus datos personales consistirá en la recolección, el almacenamiento y el uso de los mismos, entre otros contenidos en el Artículo 1) de nuestra Política de Tratamiento de Datos. </Text>
+            <Text style={s.legalBold}>b) </Text>
+            <Text style={s.legalNormal}>La finalidad con la que serán tratados sus datos se encuentran contenidas en el artículo 3) de nuestra Política. </Text>
+            <Text style={s.legalBold}>c) </Text>
+            <Text style={s.legalNormal}>Usted, como titular de sus datos personales, tiene todo el derecho de conocer, corregir, actualizar, rectificar o suprimir los datos personales que suministra a </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO</Text>
+            <Text style={s.legalNormal}>, entre otros más contenidos en el artículo 5) de la Política de Tratamiento de Datos. </Text>
+            <Text style={s.legalBold}>d) </Text>
+            <Text style={s.legalNormal}>Usted podrá ejercer sus derechos, de conformidad con el Artículo 10) de nuestra Política, enviando su petición, queja o reclamo, al área administrativa al correo electrónico administrativa@campolimpio.org, o a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. </Text>
+            <Text style={s.legalBold}>e) </Text>
+            <Text style={s.legalNormal}>Usted se encuentra facultado para no dar información respecto de datos sensibles o aquellos de los niños, niñas y adolescentes. </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalNormal}>de acuerdo a lo reglamentado por el artículo 10 del Decreto 1377 de 2013, queda autorizada de manera inequívoca y expresa para tratar sus datos personales. Sin embargo, usted podrá revocar la presente autorización manifestándolo al correo electrónico administrativa@campolimpio.org o enviando comunicación a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. Para </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalNormal}>es muy grato contar con su colaboración.</Text>
+          </Text>
+        </View>
 
         {/* Authorization line */}
         <View style={s.authLine}>
