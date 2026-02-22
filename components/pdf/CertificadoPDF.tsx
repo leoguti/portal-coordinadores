@@ -293,8 +293,7 @@ const s = StyleSheet.create({
 
   // ---- Legal text ----
   legalBlock: {
-    marginTop: 4,
-    lineHeight: 1.4,
+    marginTop: 3,
   },
   legalNormal: {
     fontSize: 5.5,
