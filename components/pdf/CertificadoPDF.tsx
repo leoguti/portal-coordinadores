@@ -671,7 +671,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
               Autoriza a la CORPORACIÓN CAMPO LIMPIO para el tratamiento de datos
               de acuerdo a la política (
             </Text>
-            <Text style={[s.authLineBold, { color: "#006400" }]}> SI </Text>
+            <Text style={[s.authLineBold, { color: "#008000", fontSize: 9 }]}> SI </Text>
             <Text style={s.authLineBold}> )</Text>
           </Text>
         </View>
