@@ -627,15 +627,14 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         {/* ============ LEGAL TEXT (with bold fragments) ============ */}
         <View style={s.legalBlock}>
           <Text>
-            <Text style={s.legalNormal}>En cumplimiento de la Resolución 1675 de Diciembre de 2013 la </Text>
-            <Text style={s.legalBold}>Corporación Campo Limpio</Text>
-            <Text style={s.legalNormal}> ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.</Text>
+            <Text style={s.legalBold}>En cumplimiento de la Resolución 1675 de Diciembre de 2013 la Corporación Campo Limpio ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.</Text>
           </Text>
         </View>
 
         <View style={s.legalBlock}>
           <Text>
-            <Text style={s.legalBold}>AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES POR PARTE DE CORPORACIÓN CAMPO LIMPIO, </Text>
+            <Text style={s.legalNormal}>AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES POR PARTE DE </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO, </Text>
             <Text style={s.legalNormal}>sus filiales, subordinadas y quien represente sus derechos. Con el propósito de dar un adecuado tratamiento a sus datos personales de acuerdo al Régimen General de Protección de Datos Personales reglamentado por la Constitución Política Nacional, la Ley 1581 de 2012 y el Decreto 1377 de 2013, que desarrolla los derechos constitucionales que tienen las personas de </Text>
             <Text style={s.legalBold}>conocer, actualizar y rectificar </Text>
             <Text style={s.legalNormal}>todo tipo de información que de ellas sea objeto de tratamiento en bases de datos de entidades públicas y/o privadas, y siendo primordial para </Text>
