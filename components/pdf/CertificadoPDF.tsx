@@ -393,13 +393,13 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         <View style={s.headerRow}>
           <View style={s.headerLogoCell}>
             <Image src={LOGO_BASE64} style={s.headerLogo} />
+            <Text style={s.headerNit}>NIT 900.235.428-2</Text>
           </View>
           <View style={s.headerTitleCell}>
             <Text style={s.headerTitle}>CERTIFICADO DEVOLUCIÓN DE ENVASES</Text>
             <Text style={s.headerSubtitle}>
               EMPAQUES Y EMBALAJES DE PLAGUICIDAS
             </Text>
-            <Text style={s.headerNit}>NIT .900.235.428-2</Text>
           </View>
           <View style={s.headerCertCell}>
             <Text style={s.headerCertLabel}>CERTIFICADO</Text>
@@ -627,20 +627,20 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         {/* ============ LEGAL TEXT (with bold fragments) ============ */}
         <View style={s.legalBlock}>
           <Text>
-            <Text style={s.legalBold}>En cumplimiento de la Resolución 1675 de Diciembre de 2013 la Corporación Campo Limpio ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.</Text>
+            <Text style={s.legalBold}>En cumplimiento de la Resolución 1675 de Diciembre de 2013 la Corporación CampoLimpio ejecuta el Plan de Devolución de Productos Postconsumo de plaguicidas en representación de las empresas.</Text>
           </Text>
         </View>
 
         <View style={s.legalBlock}>
           <Text>
             <Text style={s.legalNormal}>AUTORIZACIÓN PARA EL TRATAMIENTO DE DATOS PERSONALES POR PARTE DE </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO, </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO, </Text>
             <Text style={s.legalNormal}>sus filiales, subordinadas y quien represente sus derechos. Con el propósito de dar un adecuado tratamiento a sus datos personales de acuerdo al Régimen General de Protección de Datos Personales reglamentado por la Constitución Política Nacional, la Ley 1581 de 2012 y el Decreto 1377 de 2013, que desarrolla los derechos constitucionales que tienen las personas de </Text>
             <Text style={s.legalBold}>conocer, actualizar y rectificar </Text>
             <Text style={s.legalNormal}>todo tipo de información que de ellas sea objeto de tratamiento en bases de datos de entidades públicas y/o privadas, y siendo primordial para </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO </Text>
             <Text style={s.legalNormal}>contar con su consentimiento previo, expreso y escrito, para el mencionado tratamiento, le informamos que </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO </Text>
             <Text style={s.legalNormal}>pone a su disposición una </Text>
             <Text style={s.legalBold}>Política de Tratamiento de Datos</Text>
             <Text style={s.legalNormal}>, por medio de la cual se establecen los parámetros para tratar la información contenida en los Bancos y Bases de Datos de la Compañía, que usted podrá consultar en la página web: www.campolimpio.org </Text>
@@ -650,15 +650,15 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.legalNormal}>La finalidad con la que serán tratados sus datos se encuentran contenidas en el artículo 3) de nuestra Política. </Text>
             <Text style={s.legalBold}>c) </Text>
             <Text style={s.legalNormal}>Usted, como titular de sus datos personales, tiene todo el derecho de conocer, corregir, actualizar, rectificar o suprimir los datos personales que suministra a </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO</Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO</Text>
             <Text style={s.legalNormal}>, entre otros más contenidos en el artículo 5) de la Política de Tratamiento de Datos. </Text>
             <Text style={s.legalBold}>d) </Text>
-            <Text style={s.legalNormal}>Usted podrá ejercer sus derechos, de conformidad con el Artículo 10) de nuestra Política, enviando su petición, queja o reclamo, al área administrativa al correo electrónico administrativa@campolimpio.org, o a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. </Text>
+            <Text style={s.legalNormal}>Usted podrá ejercer sus derechos, de conformidad con el Artículo 10) de nuestra Política, enviando su petición, queja o reclamo, al área administrativa al correo electrónico administrativa@campolimpio.org, o a la dirección Calle 98a# 51 - 37 oficina 202 Bogotá, Colombia. </Text>
             <Text style={s.legalBold}>e) </Text>
             <Text style={s.legalNormal}>Usted se encuentra facultado para no dar información respecto de datos sensibles o aquellos de los niños, niñas y adolescentes. </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
-            <Text style={s.legalNormal}>de acuerdo a lo reglamentado por el artículo 10 del Decreto 1377 de 2013, queda autorizada de manera inequívoca y expresa para tratar sus datos personales. Sin embargo, usted podrá revocar la presente autorización manifestándolo al correo electrónico administrativa@campolimpio.org o enviando comunicación a la dirección Av. Cra 9 # 113 – 52 of 607 en la Ciudad de Bogotá, Colombia. Para </Text>
-            <Text style={s.legalBold}>CORPORACIÓN CAMPO LIMPIO </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO </Text>
+            <Text style={s.legalNormal}>de acuerdo a lo reglamentado por el artículo 10 del Decreto 1377 de 2013, queda autorizada de manera inequívoca y expresa para tratar sus datos personales. Sin embargo, usted podrá revocar la presente autorización manifestándolo al correo electrónico administrativa@campolimpio.org o enviando comunicación a la dirección Calle 98a# 51 - 37 oficina 202 Bogotá, Colombia. Para </Text>
+            <Text style={s.legalBold}>CORPORACIÓN CAMPOLIMPIO </Text>
             <Text style={s.legalNormal}>es muy grato contar con su colaboración.</Text>
           </Text>
         </View>
@@ -667,7 +667,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         <View style={s.authLine}>
           <Text>
             <Text style={s.authLineBold}>
-              Autoriza a la CORPORACIÓN CAMPO LIMPIO para el tratamiento de datos
+              Autoriza a la CORPORACIÓN CAMPOLIMPIO para el tratamiento de datos
               de acuerdo a la política (
             </Text>
             <Text style={[s.authLineBold, { color: "#008000", fontSize: 9 }]}> SI </Text>
