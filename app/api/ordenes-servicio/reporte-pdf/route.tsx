@@ -48,8 +48,13 @@ export async function GET(request: NextRequest) {
     // Group
     const gruposPorMes = groupOrdenesByMes(ordenesFiltradas);
 
-    // Totals
-    const grandTotal = ordenesFiltradas.reduce((sum, o) => sum + (o.fields.Total || 0), 0);
+    // Totals (include taxes: subtotal + IVA - retenciones)
+    const grandTotal = ordenesFiltradas.reduce((sum, o) => {
+      const st = o.fields.Total || 0;
+      return sum + (o.fields.MontoIVA !== undefined
+        ? st + (o.fields.MontoIVA || 0) - (o.fields.MontoReteFuente || 0) - (o.fields.MontoReteICA || 0) - (o.fields.MontoReteIVA || 0)
+        : st);
+    }, 0);
     const totalOrdenes = ordenesFiltradas.length;
 
     // Build filtros summary

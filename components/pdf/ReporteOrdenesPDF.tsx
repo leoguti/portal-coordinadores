@@ -39,6 +39,14 @@ const formatMesLabel = (mesKey: string) => {
   return `${nombres[parseInt(month) - 1]} ${year}`;
 };
 
+// Calculate total with taxes for a single order
+const calcTotalOrden = (orden: { fields: { Total?: number; MontoIVA?: number; MontoReteFuente?: number; MontoReteICA?: number; MontoReteIVA?: number } }) => {
+  const st = orden.fields.Total || 0;
+  return orden.fields.MontoIVA !== undefined
+    ? st + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0)
+    : st;
+};
+
 // Ordered estado list for consistent display
 const ESTADO_ORDER = ["Enviada", "Facturada", "Pagada", "Rechazada"];
 
@@ -157,7 +165,7 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
                         {orden.fields.Estado || "-"}
                       </Text>
                       <Text style={[s.tableCellGreen, s.colTotal]}>
-                        {formatCurrency(orden.fields.Total || 0)}
+                        {formatCurrency(calcTotalOrden(orden))}
                       </Text>
                       <Text style={[s.tableCell, s.colFPago]}>
                         {orden.fields.FechaPago
@@ -168,16 +176,69 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
                   );
                 })}
 
-                {/* Subtotal row */}
-                <View style={s.subtotalRow}>
-                  <Text style={[s.subtotalLabel, s.colLabel]}>
-                    Subtotal {formatMesLabel(mesKey)}:
-                  </Text>
-                  <Text style={[s.subtotalValue, s.colTotal]}>
-                    {formatCurrency(benGrupo.total)}
-                  </Text>
-                  <View style={s.colFPago} />
-                </View>
+                {/* Tax breakdown + subtotal */}
+                {(() => {
+                  const tax = benGrupo.ordenes.reduce((acc, o) => {
+                    acc.subtotal += o.fields.Total || 0;
+                    acc.iva += o.fields.MontoIVA || 0;
+                    acc.reteFuente += o.fields.MontoReteFuente || 0;
+                    acc.reteICA += o.fields.MontoReteICA || 0;
+                    acc.reteIVA += o.fields.MontoReteIVA || 0;
+                    return acc;
+                  }, { subtotal: 0, iva: 0, reteFuente: 0, reteICA: 0, reteIVA: 0 });
+                  const hasTax = tax.iva > 0 || tax.reteFuente > 0 || tax.reteICA > 0 || tax.reteIVA > 0;
+
+                  return (
+                    <>
+                      {hasTax && (
+                        <>
+                          <View style={s.taxBreakdownRow}>
+                            <Text style={[s.taxBreakdownLabel, s.colLabel]}>Subtotal ítems:</Text>
+                            <Text style={[s.taxBreakdownValue, s.colTotal]}>{formatCurrency(tax.subtotal)}</Text>
+                            <View style={s.colFPago} />
+                          </View>
+                          {tax.iva > 0 && (
+                            <View style={s.taxBreakdownRow}>
+                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>+ IVA:</Text>
+                              <Text style={[s.taxBreakdownValueGreen, s.colTotal]}>+{formatCurrency(tax.iva)}</Text>
+                              <View style={s.colFPago} />
+                            </View>
+                          )}
+                          {tax.reteFuente > 0 && (
+                            <View style={s.taxBreakdownRow}>
+                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteFuente:</Text>
+                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteFuente)}</Text>
+                              <View style={s.colFPago} />
+                            </View>
+                          )}
+                          {tax.reteICA > 0 && (
+                            <View style={s.taxBreakdownRow}>
+                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteICA:</Text>
+                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteICA)}</Text>
+                              <View style={s.colFPago} />
+                            </View>
+                          )}
+                          {tax.reteIVA > 0 && (
+                            <View style={s.taxBreakdownRow}>
+                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteIVA:</Text>
+                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteIVA)}</Text>
+                              <View style={s.colFPago} />
+                            </View>
+                          )}
+                        </>
+                      )}
+                      <View style={s.subtotalRow}>
+                        <Text style={[s.subtotalLabel, s.colLabel]}>
+                          {hasTax ? "Total a Pagar" : "Subtotal"} {formatMesLabel(mesKey)}:
+                        </Text>
+                        <Text style={[s.subtotalValue, s.colTotal]}>
+                          {formatCurrency(benGrupo.total)}
+                        </Text>
+                        <View style={s.colFPago} />
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             ))}
           </View>

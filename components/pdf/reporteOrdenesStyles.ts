@@ -156,6 +156,34 @@ export const reporteStyles = StyleSheet.create({
     color: "#065f46",
   },
 
+  // Tax breakdown rows (above subtotal)
+  taxBreakdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    backgroundColor: "#f9fafb",
+    minHeight: 13,
+  },
+  taxBreakdownLabel: {
+    fontSize: 7,
+    color: "#6b7280",
+  },
+  taxBreakdownValue: {
+    fontSize: 7,
+    color: "#374151",
+  },
+  taxBreakdownValueGreen: {
+    fontSize: 7,
+    fontWeight: "bold",
+    color: "#059669",
+  },
+  taxBreakdownValueRed: {
+    fontSize: 7,
+    fontWeight: "bold",
+    color: "#dc2626",
+  },
+
   // Grand total
   grandTotalRow: {
     flexDirection: "row",
