@@ -29,11 +29,38 @@ interface GenerarRequest {
   observaciones?: string;
 }
 
-// Async backup: INSERT into Neon PostgreSQL + upload PDF to R2
-async function backupCertificado(
+// Upload PDF to R2 (permanent storage) - called before response
+async function uploadToR2(
+  pdfBuffer: Buffer,
+  filename: string
+): Promise<string> {
+  const s3 = new S3Client({
+    region: "auto",
+    endpoint: process.env.R2_ENDPOINT!,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  });
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: `pdfs/${filename}`,
+      Body: pdfBuffer,
+      ContentType: "application/pdf",
+    })
+  );
+  const url = `${R2_PUBLIC_URL}/pdfs/${filename}`;
+  console.log(`[certificados/r2] PDF uploaded: ${url}`);
+  return url;
+}
+
+// Async backup: INSERT into Neon PostgreSQL (runs after response)
+async function backupToNeon(
   airtableId: string,
   pdfProps: CertificadoPDFProps,
   pdfBuffer: Buffer,
+  r2Url: string | null,
   coordinadorAirtableId: string,
   municipioDevolucionAirtableId: string,
   airtableCreatedTime: string
@@ -41,40 +68,6 @@ async function backupCertificado(
   const tag = "[certificados/backup]";
   try {
     const filename = `certificado_${pdfProps.consecutivo}.pdf`;
-
-    // Upload PDF to R2 and INSERT into Neon in parallel
-    const [r2Result] = await Promise.allSettled([
-      // R2 upload
-      (async () => {
-        const s3 = new S3Client({
-          region: "auto",
-          endpoint: process.env.R2_ENDPOINT!,
-          credentials: {
-            accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-          },
-        });
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME!,
-            Key: `pdfs/${filename}`,
-            Body: pdfBuffer,
-            ContentType: "application/pdf",
-          })
-        );
-        const url = `${R2_PUBLIC_URL}/pdfs/${filename}`;
-        console.log(`${tag} PDF uploaded to R2: ${url}`);
-        return url;
-      })(),
-    ]);
-
-    const r2Url =
-      r2Result.status === "fulfilled" ? r2Result.value : null;
-    if (r2Result.status === "rejected") {
-      console.error(`${tag} R2 upload failed:`, r2Result.reason);
-    }
-
-    // INSERT into Neon
     const pg = new PgClient({
       connectionString: process.env.NEON_DATABASE_URL!,
     });
@@ -136,11 +129,9 @@ async function backupCertificado(
     );
 
     await pg.end();
-    console.log(
-      `${tag} Certificate #${p.consecutivo} backed up to Neon + R2`
-    );
+    console.log(`${tag} Certificate #${p.consecutivo} backed up to Neon`);
   } catch (err) {
-    console.error(`${tag} Backup failed (non-blocking):`, err);
+    console.error(`${tag} Neon backup failed (non-blocking):`, err);
   }
 }
 
@@ -314,23 +305,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Wait for Airtable to download, then delete blob
-    console.log("[certificados/generar] Waiting for Airtable to download PDF...");
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    await del(blob.url);
-    console.log("[certificados/generar] Temporary blob deleted");
-
-    // 9. Schedule async backup to Neon + R2 (runs after response is sent)
-    after(() =>
-      backupCertificado(
+    // 8. Upload to R2 + backup to Neon (async, after response)
+    after(async () => {
+      let r2Url: string | null = null;
+      try {
+        r2Url = await uploadToR2(pdfBuffer, filename);
+      } catch (err) {
+        console.error("[certificados/r2] Upload failed (non-blocking):", err);
+      }
+      await backupToNeon(
         recordId!,
         pdfProps,
         pdfBuffer,
+        r2Url,
         body.coordinadorId,
         body.municipioDevolucionId,
         fullRecord.createdTime
-      )
-    );
+      );
+    });
 
     // 10. Return result
     console.log(`[certificados/generar] Certificate ${consecutivo} generated successfully`);
