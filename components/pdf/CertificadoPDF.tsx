@@ -43,77 +43,76 @@ export interface CertificadoPDFProps {
 // ---------- Gestores data (static, same for every certificate) ----------
 const GESTORES = [
   {
-    nombre: "TRANSFORMACIONES GIRASOL SAS",
-    nit: "900636048-8",
-    resolucion:
-      "Resolución No. 112-3986 del 03 de octubre de 2013 Resolución 112 4731 del 13 de Noviembre de 2013.",
-    autoridad: "CORNARE",
-    proceso: "RECICLAJE",
+    nombre: "Holcim Colombia SA",
+    resolucion: "Res. 620 de 1994 / Res.704 de 2002 / Res. 005 de 2033 del Min. Ambiente",
+    autoridad: "Corpoboyacá",
+    direccion: "Km 15 vía Duitama-Belencito",
+    departamento: "Boyacá",
+    proceso: "Coprocesamiento",
   },
   {
-    nombre: "Maderas Plásticas Ecológicas -German Valencia",
-    nit: "10,136,661",
-    resolucion: "0100 N° 0150-0161 del 11 marzo 2015",
+    nombre: "German Valencia / Maderas Plásticas Ecológicas",
+    resolucion: "0150-0161 marzo 11 del 2015",
     autoridad: "CVC",
-    proceso: "RECICLAJE",
+    direccion: "Carrera 13 18A-10",
+    departamento: "Valle del Cauca",
+    proceso: "Reciclaje transformación",
   },
   {
-    nombre: "HOLCIM COLOMBIA S.A. - ECO PROCESAMIENTO LTDA",
-    nit: "860.009.808-5",
-    resolucion: "Res. 005 de 2033 del Min. Ambiente",
-    autoridad: "CORPOBOYACA",
-    proceso: "COPROCESAMIENTO",
+    nombre: "Operadores de Servicios de la Sierra SAS ESP",
+    resolucion: "Resolución No 4395 del 03 de octubre del año 2019",
+    autoridad: "Corporación Autónoma Regional del Magdalena",
+    direccion: "Avenida el Libertador 32-201",
+    departamento: "Magdalena",
+    proceso: "Celda de seguridad",
   },
   {
-    nombre: "OPERADORES DE SERVICIOS DE LA SIERRA S.A.S E.S.P.",
-    nit: "819003805-7",
-    resolucion:
-      "RESOLUCIÓN LICENCIA AMBIENTAL:4395 de 03 de octubre de 2019",
-    autoridad: "CORPAMAG",
-    proceso: "CELDA DE SEGURIDAD",
+    nombre: "Transformaciones Girasol SAS",
+    resolucion: "Resolución No. 112-3986 del 03 de octubre de 2013 y la Resolución 112 4731 del 13 de noviembre de 2013.",
+    autoridad: "Cornare",
+    direccion: "Km 36 Autopista Medellín-Bogotá Vereda La Ceja",
+    departamento: "Antioquia",
+    proceso: "Reciclaje transformación",
   },
   {
-    nombre: "INDUSTRIA AMBIENTAL SAS",
-    nit: "900916121-1",
-    resolucion: "374 DE 2016",
-    autoridad: "EPA",
-    proceso: "INCINERACIÓN CON APROVECHAMIENTO ENERGÉTICO",
-  },
-  {
-    nombre: "INDUSTRIA AMBIENTAL SAS",
-    nit: "900916121-1",
-    resolucion: "0345 DE 2018",
+    nombre: "Industria Ambiental SAS",
+    resolucion: "Resolución 0191 de 2018 y Resolución 0374 de 2016. Resolución 0100 No. 0150-0968 de 2023, Resolución 0100 No. 0150 - 0628 de 2023 y Resolución 0100 No. 0150 – 0345 de 2018",
     autoridad: "CVC",
-    proceso: "INCINERACION",
+    direccion: "Carrera 56 5-33, Palmira",
+    departamento: "Valle del Cauca",
+    proceso: "Aprovechamiento energético",
   },
   {
-    nombre: "ECOLOGÍA Y ENTORNO SA ESP",
-    nit: "80019344-6",
-    resolucion: "00491 DE 2020",
+    nombre: "Ecología y Entorno SA ESP",
+    resolucion: "Resolución 491 de 28 de febrero de 2020",
     autoridad: "CAR",
-    proceso: "APROVECHAMIENTO ENERGÉTICO",
+    direccion: "Vereda Balsillas",
+    departamento: "Cundinamarca",
+    proceso: "Aprovechamiento energético",
   },
   {
-    nombre: "TECNOLOGÍAS AMBIENTALES DE COLOMBIA S.A. E.S.P. TECNIAMSA",
-    nit: "805.001.538-5",
-    resolucion: "Res. No. 462 del 26 de Agosto de 2009.",
-    autoridad: "CRA",
-    proceso: "INCINERACIÓN / CELDA DE SEGURIDAD",
+    nombre: "Ática IA4 SAS",
+    resolucion: "Resolución 0100 No. 0150-1020 de 2024 (CVC) - cesión total de derechos de Res. 0150-0968/2023, Res. 0150-0628/2023 y Res. 0150-0345/2018",
+    autoridad: "CVC",
+    direccion: "Carrera 56 5-33, Palmira",
+    departamento: "Valle del Cauca",
+    proceso: "Aprovechamiento energético",
   },
   {
-    nombre: "TECNOLOGÍAS AMBIENTALES DE COLOMBIA S.A. E.S.P. TECNIAMSA",
-    nit: "805001538-5",
-    resolucion: "Res 141 del 4 febrero de 2013.",
-    autoridad: "CAR",
-    proceso: "CELDA DE SEGURIDAD",
+    nombre: "Recotransforma de Urabá SAS Zomac",
+    resolucion: "Resolución No. 200-03-20-01-001590 del 23 de septiembre del 2008",
+    autoridad: "Corpourabá",
+    direccion: "Km 2 Vía Zungo embarcadero",
+    departamento: "Antioquia",
+    proceso: "Reciclaje transformación",
   },
   {
-    nombre: "TECNOLOGÍAS AMBIENTALES DE COLOMBIA S.A. E.S.P. TECNIAMSA",
-    nit: "900.229.776-6",
-    resolucion:
-      "Res 455 del 26 marzo de 2013 y Res. No. 2469 del 19 de Octubre de 2009",
-    autoridad: "CAR",
-    proceso: "INCINERACIÓN",
+    nombre: "Veolia Servicios Industriales Colombia SAS ESP",
+    resolucion: "Resolución No. 858 de 2011, cedida parcialmente por Res. 1741/2018, modificada por Res. 877/2015, 053/2022, 070/2023 y 604/2023",
+    autoridad: "Corpocesar",
+    direccion: "5 km del mpio. de Aguachica, vía corregimiento Puerto Mosquito (Vda. Las Bateas)",
+    departamento: "Cesar",
+    proceso: "Celda de seguridad",
   },
 ];
 
@@ -277,11 +276,12 @@ const s = StyleSheet.create({
     borderBottom: "1 solid #000",
     minHeight: 13,
   },
-  gestorCol1: { width: "22%", padding: 2, borderRight: "1 solid #000" },
-  gestorCol2: { width: "12%", padding: 2, borderRight: "1 solid #000", alignItems: "center" as const },
-  gestorCol3: { width: "26%", padding: 2, borderRight: "1 solid #000" },
-  gestorCol4: { width: "16%", padding: 2, borderRight: "1 solid #000", alignItems: "center" as const },
-  gestorCol5: { width: "24%", padding: 2, alignItems: "center" as const },
+  gestorCol1: { width: "18%", padding: 2, borderRight: "1 solid #000" },
+  gestorCol2: { width: "24%", padding: 2, borderRight: "1 solid #000" },
+  gestorCol3: { width: "14%", padding: 2, borderRight: "1 solid #000", alignItems: "center" as const },
+  gestorCol4: { width: "16%", padding: 2, borderRight: "1 solid #000" },
+  gestorCol5: { width: "12%", padding: 2, borderRight: "1 solid #000", alignItems: "center" as const },
+  gestorCol6: { width: "16%", padding: 2, alignItems: "center" as const },
   gestorHeaderText: {
     fontSize: 6,
     fontFamily: "Helvetica-Bold",
@@ -588,17 +588,18 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.gestorHeaderText}>GESTOR</Text>
           </View>
           <View style={[s.gestorCol2, { justifyContent: "center" }]}>
-            <Text style={s.gestorHeaderText}>NIT</Text>
+            <Text style={s.gestorHeaderText}>LICENCIA AMBIENTAL</Text>
           </View>
           <View style={[s.gestorCol3, { justifyContent: "center" }]}>
-            <Text style={s.gestorHeaderText}>RESOLUCIÓN LICENCIA AMBIENTAL</Text>
+            <Text style={s.gestorHeaderText}>AUTORIDAD AMBIENTAL</Text>
           </View>
           <View style={[s.gestorCol4, { justifyContent: "center" }]}>
-            <Text style={s.gestorHeaderText}>
-              AUTOR AMBIENTAL QUE EMITIÓ LA LICENCIA
-            </Text>
+            <Text style={s.gestorHeaderText}>DIRECCIÓN</Text>
           </View>
           <View style={[s.gestorCol5, { justifyContent: "center" }]}>
+            <Text style={s.gestorHeaderText}>DEPARTAMENTO</Text>
+          </View>
+          <View style={[s.gestorCol6, { justifyContent: "center" }]}>
             <Text style={s.gestorHeaderText}>PROCESO</Text>
           </View>
         </View>
@@ -610,15 +611,18 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
               <Text style={s.gestorText}>{g.nombre}</Text>
             </View>
             <View style={[s.gestorCol2, { justifyContent: "center" }]}>
-              <Text style={s.gestorText}>{g.nit}</Text>
-            </View>
-            <View style={[s.gestorCol3, { justifyContent: "center" }]}>
               <Text style={s.gestorText}>{g.resolucion}</Text>
             </View>
-            <View style={[s.gestorCol4, { justifyContent: "center" }]}>
+            <View style={[s.gestorCol3, { justifyContent: "center" }]}>
               <Text style={s.gestorText}>{g.autoridad}</Text>
             </View>
+            <View style={[s.gestorCol4, { justifyContent: "center" }]}>
+              <Text style={s.gestorText}>{g.direccion}</Text>
+            </View>
             <View style={[s.gestorCol5, { justifyContent: "center" }]}>
+              <Text style={s.gestorText}>{g.departamento}</Text>
+            </View>
+            <View style={[s.gestorCol6, { justifyContent: "center" }]}>
               <Text style={s.gestorText}>{g.proceso}</Text>
             </View>
           </View>
