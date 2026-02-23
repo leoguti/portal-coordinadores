@@ -5,6 +5,16 @@ Uso:
   python test_bot.py salida_con_ca     # Salida desde Centro de Acopio
   python test_bot.py salida_con_mun    # Salida desde municipio (conciliación)
   python test_bot.py entrada           # Entrada desde municipio
+  python test_bot.py certificado       # Certificado v3 (flujo actual)
+  python test_bot.py certificado_v4    # Certificado v4 (endpoint consolidado)
+
+Requisitos:
+  pip install telethon  (o usar venv: ./venv/bin/python test_bot.py ...)
+
+Variables de entorno:
+  TELEGRAM_API_ID      API ID de Telegram (https://my.telegram.org)
+  TELEGRAM_API_HASH    API Hash de Telegram
+  TELEGRAM_BOT_USERNAME  Username del bot (ej: @campolimpiobot)
 
 La primera ejecución pedirá autenticación (código por SMS/Telegram).
 Las siguientes reutilizan la sesión guardada en 'test_session.session'.
@@ -23,6 +33,7 @@ BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
 
 SESSION_NAME = "test_session"
 TIMEOUT_SECONDS = 30
+TIMEOUT_WEBHOOK = 90  # para pasos que invocan webhooks (PDF generation)
 
 # ── Pruebas disponibles ───────────────────────────────────────
 TESTS = {
@@ -59,22 +70,24 @@ TESTS = {
         {"text": "SI"},       # confirmación final
     ],
     "certificado": [
-        {"text": "salir"},
-        {"text": "C+13-02-2025"},
-        {"text": "800019277+200+800+0+0+si+SORA+SORA"},
-        {"text": "2"},
-        {"text": "si"},
-        {"text": "si"},
-        {"text": "si"},
+        {"text": "salir"},                                          # 1. reset
+        {"text": "C+13-02-2025"},                                   # 2. trigger + fecha
+        {"text": "800019277+200+800+0+0+si+SORA+SORA"},            # 3. datos certificado
+        {"text": "2"},                                              # 4. seleccionar municipio de lista
+        {"text": "si"},                                             # 5. confirmar municipio
+        {"text": "si"},                                             # 6. confirmar resumen certificado
+        {"text": "si"},                                             # 7. confirmar datos generador
+        {"text": "si", "timeout": TIMEOUT_WEBHOOK},                 # 8. confirmar → webhooks generan PDF
     ],
     "certificado_v4": [
-        {"text": "salir"},
-        {"text": "v4C+23/02/2026"},
-        {"text": "800019277+200+800+0+0+si+SORA+SORA"},
-        {"text": "2"},
-        {"text": "si"},
-        {"text": "si"},
-        {"text": "si"},
+        {"text": "salir"},                                          # 1. reset
+        {"text": "v4C+23/02/2026"},                                 # 2. trigger + fecha
+        {"text": "800019277+200+800+0+0+si+SORA+SORA"},            # 3. datos certificado
+        {"text": "2"},                                              # 4. seleccionar municipio de lista
+        {"text": "si"},                                             # 5. confirmar municipio (Sora - Boyacá)
+        {"text": "si"},                                             # 6. confirmar resumen certificado
+        {"text": "si"},                                             # 7. confirmar datos generador
+        {"text": "si", "timeout": TIMEOUT_WEBHOOK},                 # 8. confirmar → webhook genera PDF (~30-60s)
     ],
 }
 
@@ -141,8 +154,9 @@ async def main():
             print(f"── Paso {i}: Enviando foto '{photo_path}' ──")
             await client.send_file(BOT_USERNAME, photo_path)
 
-        print(f"   Esperando respuesta (máx {TIMEOUT_SECONDS}s)...")
-        response = await wait_for_response(client, last_id)
+        step_timeout = step.get("timeout", TIMEOUT_SECONDS)
+        print(f"   Esperando respuesta (máx {step_timeout}s)...")
+        response = await wait_for_response(client, last_id, timeout=step_timeout)
 
         if response:
             print(f"   Respuesta: {response.text}")
@@ -154,7 +168,7 @@ async def main():
             last_id = response.id
             print()
         else:
-            print(f"   Sin respuesta después de {TIMEOUT_SECONDS}s.\n")
+            print(f"   Sin respuesta después de {step_timeout}s.\n")
 
         if i < len(steps):
             await asyncio.sleep(3)
