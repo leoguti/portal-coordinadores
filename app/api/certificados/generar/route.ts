@@ -71,6 +71,9 @@ async function backupCertificado(
 
     const r2Url =
       r2Result.status === "fulfilled" ? r2Result.value : null;
+    if (r2Result.status === "rejected") {
+      console.error(`${tag} R2 upload failed:`, r2Result.reason);
+    }
 
     // INSERT into Neon
     const { Client } = await import("pg");
