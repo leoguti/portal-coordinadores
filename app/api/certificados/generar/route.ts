@@ -146,8 +146,8 @@ async function backupCertificado(
 // Validate API key from Authorization header
 function validateApiKey(request: NextRequest): boolean {
   if (!CERT_API_KEY) {
-    console.warn("[certificados/generar] CERTIFICADOS_API_KEY not set");
-    return false;
+    console.warn("[certificados/generar] CERTIFICADOS_API_KEY not set — allowing request without auth");
+    return true;
   }
   const authHeader = request.headers.get("authorization");
   if (!authHeader) return false;
