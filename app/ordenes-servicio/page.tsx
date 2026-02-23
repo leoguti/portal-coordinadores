@@ -440,7 +440,10 @@ export default function OrdenesServicioPage() {
                                           const fechaPedido = orden.fields["Fecha de pedido"] || "";
                                           const numFactura = orden.fields.NumeroFactura || "";
                                           const fechaPago = orden.fields.FechaPago || "";
-                                          const total = orden.fields.TotalNeto || orden.fields.Total || 0;
+                                          const subtotalOrden = orden.fields.Total || 0;
+                                          const total = orden.fields.MontoIVA !== undefined
+                                            ? subtotalOrden + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0)
+                                            : subtotalOrden;
                                           const pdfUrl = orden.fields.PDF?.[0]?.url || null;
                                           const facturaUrl = orden.fields.Factura?.[0]?.url || null;
                                           const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
@@ -559,7 +562,10 @@ export default function OrdenesServicioPage() {
                     Total General ({ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? "orden" : "ordenes"})
                   </span>
                   <span className="text-xl font-bold font-mono text-[#00d084]">
-                    {formatCurrency(ordenesFiltradas.reduce((sum, o) => sum + (o.fields.TotalNeto || o.fields.Total || 0), 0))}
+                    {formatCurrency(ordenesFiltradas.reduce((sum, o) => {
+                      const st = o.fields.Total || 0;
+                      return sum + (o.fields.MontoIVA !== undefined ? st + (o.fields.MontoIVA || 0) - (o.fields.MontoReteFuente || 0) - (o.fields.MontoReteICA || 0) - (o.fields.MontoReteIVA || 0) : st);
+                    }, 0))}
                   </span>
                 </div>
               </div>

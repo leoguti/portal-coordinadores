@@ -146,7 +146,6 @@ interface OrdenFields {
   MontoReteICA?: number;
   PorcentajeReteIVA?: number;
   MontoReteIVA?: number;
-  TotalNeto?: number;
 }
 
 interface TerceroFields {
@@ -3030,7 +3029,6 @@ export async function uploadFacturaOrden(
     montoReteICA?: number;
     porcentajeReteIVA?: number;
     montoReteIVA?: number;
-    totalNeto?: number;
   }
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -3066,15 +3064,14 @@ export async function uploadFacturaOrden(
           Estado: "Facturada",
           NumeroFactura: numeroFactura,
           ...(impuestos?.fechaFactura && { FechaFactura: impuestos.fechaFactura }),
-          ...(impuestos?.porcentajeIVA !== undefined && { PorcentajeIVA: impuestos.porcentajeIVA / 100 }),
+          ...(impuestos?.porcentajeIVA !== undefined && { PorcentajeIVA: impuestos.porcentajeIVA }),
           ...(impuestos?.montoIVA !== undefined && { MontoIVA: impuestos.montoIVA }),
-          ...(impuestos?.porcentajeReteFuente !== undefined && { PorcentajeReteFuente: impuestos.porcentajeReteFuente / 100 }),
+          ...(impuestos?.porcentajeReteFuente !== undefined && { PorcentajeReteFuente: impuestos.porcentajeReteFuente }),
           ...(impuestos?.montoReteFuente !== undefined && { MontoReteFuente: impuestos.montoReteFuente }),
-          ...(impuestos?.porcentajeReteICA !== undefined && { PorcentajeReteICA: impuestos.porcentajeReteICA / 100 }),
+          ...(impuestos?.porcentajeReteICA !== undefined && { PorcentajeReteICA: impuestos.porcentajeReteICA }),
           ...(impuestos?.montoReteICA !== undefined && { MontoReteICA: impuestos.montoReteICA }),
-          ...(impuestos?.porcentajeReteIVA !== undefined && { PorcentajeReteIVA: impuestos.porcentajeReteIVA / 100 }),
+          ...(impuestos?.porcentajeReteIVA !== undefined && { PorcentajeReteIVA: impuestos.porcentajeReteIVA }),
           ...(impuestos?.montoReteIVA !== undefined && { MontoReteIVA: impuestos.montoReteIVA }),
-          ...(impuestos?.totalNeto !== undefined && { TotalNeto: impuestos.totalNeto }),
         },
       }),
     });
@@ -3295,7 +3292,7 @@ export async function createGastoCajaMenor(data: {
     };
 
     if (data.porcentajeIVA !== undefined) {
-      fields.PorcentajeIVA = data.porcentajeIVA / 100;
+      fields.PorcentajeIVA = data.porcentajeIVA;
     }
     if (data.montoIVA !== undefined) {
       fields.MontoIVA = data.montoIVA;
@@ -3422,7 +3419,7 @@ export async function updateGastoCajaMenor(
     if (data.observaciones !== undefined) fields.Observaciones = data.observaciones;
     if (data.valor !== undefined) fields.Valor = data.valor;
     if (data.porcentajeRetencion !== undefined) fields.PorcentajeRetencion = data.porcentajeRetencion / 100;
-    if (data.porcentajeIVA !== undefined) fields.PorcentajeIVA = data.porcentajeIVA / 100;
+    if (data.porcentajeIVA !== undefined) fields.PorcentajeIVA = data.porcentajeIVA;
     if (data.montoIVA !== undefined) fields.MontoIVA = data.montoIVA;
     if (data.facturaUrl) fields.Factura = [{ url: data.facturaUrl }];
 

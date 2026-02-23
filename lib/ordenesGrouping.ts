@@ -37,7 +37,10 @@ export function groupOrdenesByMes(
     const beneficiario =
       orden.fields.RazonSocial?.[0] || "Sin beneficiario";
     const estado = orden.fields.Estado || "Sin estado";
-    const total = orden.fields.TotalNeto || orden.fields.Total || 0;
+    const subtotal = orden.fields.Total || 0;
+    const total = orden.fields.MontoIVA !== undefined
+      ? subtotal + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0)
+      : subtotal;
 
     if (!mesMap.has(mesKey)) {
       mesMap.set(mesKey, {

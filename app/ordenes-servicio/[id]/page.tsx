@@ -135,7 +135,7 @@ export default function OrdenDetallePage() {
       formData.append("montoReteICA", String(Math.round(facturaMontoReteICA)));
       formData.append("porcentajeReteIVA", String(parseFloat(pctReteIVA) || 0));
       formData.append("montoReteIVA", String(Math.round(facturaMontoReteIVA)));
-      formData.append("totalNeto", String(Math.round(facturaTotalNeto)));
+      // TotalNeto is calculated client-side, not stored in Airtable
 
       const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
         method: "PATCH",
@@ -769,8 +769,8 @@ export default function OrdenDetallePage() {
                 </a>
               </div>
 
-              {/* Tax breakdown (only if tax data exists) */}
-              {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null && (
+              {/* Tax breakdown (only if tax data exists — check MontoIVA presence) */}
+              {orden.fields.MontoIVA !== undefined && orden.fields.MontoIVA !== null && (
                 <div className="mt-3 pt-3 border-t border-amber-200">
                   <h4 className="text-xs font-bold text-amber-700 uppercase mb-2">Desglose de Impuestos</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
@@ -780,32 +780,32 @@ export default function OrdenDetallePage() {
                     </div>
                     {(orden.fields.MontoIVA ?? 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-green-700">+ IVA ({((orden.fields.PorcentajeIVA || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-green-700">+ IVA ({(orden.fields.PorcentajeIVA || 0).toFixed(1)}%)</span>
                         <span className="font-mono font-semibold text-green-700">+{formatCurrency(orden.fields.MontoIVA || 0)}</span>
                       </div>
                     )}
                     {(orden.fields.MontoReteFuente ?? 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-red-700">- ReteFuente ({((orden.fields.PorcentajeReteFuente || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-red-700">- ReteFuente ({(orden.fields.PorcentajeReteFuente || 0).toFixed(1)}%)</span>
                         <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteFuente || 0)}</span>
                       </div>
                     )}
                     {(orden.fields.MontoReteICA ?? 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-red-700">- ReteICA ({((orden.fields.PorcentajeReteICA || 0) * 100).toFixed(3)}%)</span>
+                        <span className="text-red-700">- ReteICA ({(orden.fields.PorcentajeReteICA || 0).toFixed(3)}%)</span>
                         <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteICA || 0)}</span>
                       </div>
                     )}
                     {(orden.fields.MontoReteIVA ?? 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-red-700">- ReteIVA ({((orden.fields.PorcentajeReteIVA || 0) * 100).toFixed(1)}% del IVA)</span>
+                        <span className="text-red-700">- ReteIVA ({(orden.fields.PorcentajeReteIVA || 0).toFixed(1)}% del IVA)</span>
                         <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteIVA || 0)}</span>
                       </div>
                     )}
                   </div>
                   <div className="mt-2 pt-2 border-t border-amber-300 flex justify-between items-center">
                     <span className="font-bold text-gray-900">Total a Pagar</span>
-                    <span className="text-lg font-bold font-mono text-[#00d084]">{formatCurrency(orden.fields.TotalNeto)}</span>
+                    <span className="text-lg font-bold font-mono text-[#00d084]">{formatCurrency(total + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0))}</span>
                   </div>
                 </div>
               )}
@@ -1016,17 +1016,17 @@ export default function OrdenDetallePage() {
           <div className="border-t-2 border-gray-300 pt-4 mb-6">
             <div className="flex justify-between items-center">
               <span className="text-xl font-bold text-gray-900">
-                {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null ? "SUBTOTAL:" : "TOTAL:"}
+                {orden.fields.MontoIVA !== undefined && orden.fields.MontoIVA !== null ? "SUBTOTAL:" : "TOTAL:"}
               </span>
-              <span className={`text-2xl font-bold ${orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null ? "text-gray-600" : "text-[#00d084]"}`}>
+              <span className={`text-2xl font-bold ${orden.fields.MontoIVA !== undefined && orden.fields.MontoIVA !== null ? "text-gray-600" : "text-[#00d084]"}`}>
                 {formatCurrency(total)}
               </span>
             </div>
-            {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null && (
+            {orden.fields.MontoIVA !== undefined && orden.fields.MontoIVA !== null && (
               <div className="flex justify-between items-center mt-1">
                 <span className="text-xl font-bold text-gray-900">TOTAL A PAGAR:</span>
                 <span className="text-2xl font-bold text-[#00d084]">
-                  {formatCurrency(orden.fields.TotalNeto)}
+                  {formatCurrency(total + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0))}
                 </span>
               </div>
             )}

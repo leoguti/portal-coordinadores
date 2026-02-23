@@ -161,7 +161,7 @@ export default function GastoDetallePage() {
     setEditRubroId(gasto.fields.Rubro?.[0] || "");
     setEditObservaciones(gasto.fields.Observaciones || "");
     setEditValor(String(gasto.fields.Valor || ""));
-    setEditPorcentajeIVA(String((gasto.fields.PorcentajeIVA || 0) * 100 || "19"));
+    setEditPorcentajeIVA(String(gasto.fields.PorcentajeIVA || 19));
     setEditPorcentajeRetencion(String((gasto.fields.PorcentajeRetencion || 0) * 100));
     setEditFactura(null);
     setEditMode(true);
@@ -316,7 +316,7 @@ export default function GastoDetallePage() {
   const coordinador = gasto.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const observacionesGasto = gasto.fields.Observaciones || "";
   const valor = gasto.fields.Valor || 0;
-  const porcentajeIVAGasto = gasto.fields.PorcentajeIVA || 0; // Airtable Percent: 0.19 = 19%
+  const porcentajeIVAGasto = gasto.fields.PorcentajeIVA || 0; // Airtable Number: 19 = 19%
   const montoIVAGasto = gasto.fields.MontoIVA || 0;
   const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
   const valorRetencion = valor * porcentajeRetencion;
@@ -759,7 +759,7 @@ export default function GastoDetallePage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase mb-1">+ IVA ({(porcentajeIVAGasto * 100).toFixed(1).replace(/\.0$/, "")}%)</p>
+                <p className="text-xs text-gray-500 uppercase mb-1">+ IVA ({porcentajeIVAGasto.toFixed(1).replace(/\.0$/, "")}%)</p>
                 <p className="text-lg font-mono font-bold text-green-700">
                   +{formatCurrency(montoIVAGasto)}
                 </p>

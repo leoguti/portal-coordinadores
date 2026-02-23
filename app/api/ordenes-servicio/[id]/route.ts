@@ -145,7 +145,6 @@ export async function PATCH(
       const montoReteICA = parseFloat(formData.get("montoReteICA") as string || "0");
       const porcentajeReteIVA = parseFloat(formData.get("porcentajeReteIVA") as string || "0");
       const montoReteIVA = parseFloat(formData.get("montoReteIVA") as string || "0");
-      const totalNeto = parseFloat(formData.get("totalNeto") as string || "0");
 
       // Validate file type
       if (file.type !== "application/pdf") {
@@ -185,7 +184,6 @@ export async function PATCH(
         montoReteICA,
         porcentajeReteIVA,
         montoReteIVA,
-        totalNeto,
       });
 
       if (!success) {
