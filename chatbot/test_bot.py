@@ -67,6 +67,15 @@ TESTS = {
         {"text": "si"},
         {"text": "si"},
     ],
+    "certificado_v4": [
+        {"text": "salir"},
+        {"text": "v4C+23/02/2026"},
+        {"text": "800019277+200+800+0+0+si+SORA+SORA"},
+        {"text": "2"},
+        {"text": "si"},
+        {"text": "si"},
+        {"text": "si"},
+    ],
 }
 
 

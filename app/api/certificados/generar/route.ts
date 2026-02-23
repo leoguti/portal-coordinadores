@@ -305,7 +305,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Upload to R2 + backup to Neon (async, after response)
+    // 8. Async: R2 backup + Neon INSERT + delete blob after 60s
+    const blobUrl = blob.url;
     after(async () => {
       let r2Url: string | null = null;
       try {
@@ -322,6 +323,15 @@ export async function POST(request: NextRequest) {
         body.municipioDevolucionId,
         fullRecord.createdTime
       );
+      // Wait 60s for Airtable + TextIt/Telegram to download, then cleanup
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+      try {
+        const { del } = await import("@vercel/blob");
+        await del(blobUrl);
+        console.log(`[certificados/cleanup] Blob deleted: ${blobUrl}`);
+      } catch (err) {
+        console.error("[certificados/cleanup] Blob delete failed:", err);
+      }
     });
 
     // 10. Return result
