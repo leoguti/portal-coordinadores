@@ -3,6 +3,8 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import CertificadoPDF from "@/components/pdf/CertificadoPDF";
 import type { CertificadoPDFProps } from "@/components/pdf/CertificadoPDF";
 import React from "react";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { Client as PgClient } from "pg";
 
 export const maxDuration = 60;
 
@@ -44,9 +46,6 @@ async function backupCertificado(
     const [r2Result] = await Promise.allSettled([
       // R2 upload
       (async () => {
-        const { S3Client, PutObjectCommand } = await import(
-          "@aws-sdk/client-s3"
-        );
         const s3 = new S3Client({
           region: "auto",
           endpoint: process.env.R2_ENDPOINT!,
@@ -76,8 +75,7 @@ async function backupCertificado(
     }
 
     // INSERT into Neon
-    const { Client } = await import("pg");
-    const pg = new Client({
+    const pg = new PgClient({
       connectionString: process.env.NEON_DATABASE_URL!,
     });
     await pg.connect();
