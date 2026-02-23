@@ -422,15 +422,18 @@ export default function OrdenesServicioPage() {
                                     <table className="w-full">
                                       <thead className="bg-gray-50 border-b border-gray-200">
                                         <tr>
-                                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase"># Orden</th>
-                                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
-                                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">N.° Factura</th>
-                                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
-                                          <th className="px-4 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
-                                          <th className="px-4 py-2 text-right text-xs font-bold text-gray-600 uppercase">Total</th>
-                                          <th className="px-4 py-2 text-center text-xs font-bold text-gray-600 uppercase">Docs</th>
-                                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-600 uppercase">F. Pago</th>
-                                          <th className="px-4 py-2 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>
+                                          <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">#</th>
+                                          <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Fecha</th>
+                                          <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Factura</th>
+                                          <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">Concepto</th>
+                                          <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Estado</th>
+                                          <th className="px-2 py-2 text-right text-xs font-bold text-gray-600 uppercase">Subtotal</th>
+                                          <th className="px-2 py-2 text-right text-xs font-bold text-gray-600 uppercase">IVA</th>
+                                          <th className="px-2 py-2 text-right text-xs font-bold text-gray-600 uppercase">Ret.</th>
+                                          <th className="px-2 py-2 text-right text-xs font-bold text-gray-600 uppercase">Total</th>
+                                          <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase">Docs</th>
+                                          <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 uppercase">F. Pago</th>
+                                          <th className="px-3 py-2 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -441,8 +444,11 @@ export default function OrdenesServicioPage() {
                                           const numFactura = orden.fields.NumeroFactura || "";
                                           const fechaPago = orden.fields.FechaPago || "";
                                           const subtotalOrden = orden.fields.Total || 0;
-                                          const total = orden.fields.MontoIVA !== undefined
-                                            ? subtotalOrden + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0)
+                                          const ivaOrden = orden.fields.MontoIVA || 0;
+                                          const retOrden = (orden.fields.MontoReteFuente || 0) + (orden.fields.MontoReteICA || 0) + (orden.fields.MontoReteIVA || 0);
+                                          const hasTaxOrden = orden.fields.MontoIVA !== undefined;
+                                          const total = hasTaxOrden
+                                            ? subtotalOrden + ivaOrden - retOrden
                                             : subtotalOrden;
                                           const pdfUrl = orden.fields.PDF?.[0]?.url || null;
                                           const facturaUrl = orden.fields.Factura?.[0]?.url || null;
@@ -471,15 +477,28 @@ export default function OrdenesServicioPage() {
                                                   )) : <span className="text-gray-400 text-sm">-</span>}
                                                 </div>
                                               </td>
-                                              <td className="px-4 py-2.5 text-center">
+                                              <td className="px-3 py-2.5 text-center">
                                                 <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
                                                   {estado}
                                                 </span>
                                               </td>
-                                              <td className="px-4 py-2.5 text-right font-mono font-bold text-sm text-[#00d084]">
+                                              <td className="px-2 py-2.5 text-right font-mono text-xs text-gray-700">
+                                                {formatCurrency(subtotalOrden)}
+                                              </td>
+                                              <td className="px-2 py-2.5 text-right font-mono text-xs">
+                                                {hasTaxOrden && ivaOrden > 0
+                                                  ? <span className="text-green-700">+{formatCurrency(ivaOrden)}</span>
+                                                  : <span className="text-gray-300">-</span>}
+                                              </td>
+                                              <td className="px-2 py-2.5 text-right font-mono text-xs">
+                                                {hasTaxOrden && retOrden > 0
+                                                  ? <span className="text-red-600">-{formatCurrency(retOrden)}</span>
+                                                  : <span className="text-gray-300">-</span>}
+                                              </td>
+                                              <td className="px-2 py-2.5 text-right font-mono font-bold text-sm text-[#00d084]">
                                                 {formatCurrency(total)}
                                               </td>
-                                              <td className="px-4 py-2.5 text-center">
+                                              <td className="px-3 py-2.5 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                   {pdfUrl ? (
                                                     <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-2 py-0.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors">
@@ -534,15 +553,35 @@ export default function OrdenesServicioPage() {
                                         })}
                                       </tbody>
                                       <tfoot className="bg-gray-50 border-t border-gray-200">
-                                        <tr>
-                                          <td colSpan={5} className="px-4 py-2 text-sm font-bold text-gray-700 text-right">
-                                            Subtotal {beneficiario}:
-                                          </td>
-                                          <td className="px-4 py-2 text-right font-mono font-bold text-sm text-[#00d084]">
-                                            {formatCurrency(benGrupo.total)}
-                                          </td>
-                                          <td colSpan={3}></td>
-                                        </tr>
+                                        {(() => {
+                                          const taxSum = benGrupo.ordenes.reduce((acc, o) => {
+                                            acc.subtotal += o.fields.Total || 0;
+                                            acc.iva += o.fields.MontoIVA || 0;
+                                            acc.ret += (o.fields.MontoReteFuente || 0) + (o.fields.MontoReteICA || 0) + (o.fields.MontoReteIVA || 0);
+                                            return acc;
+                                          }, { subtotal: 0, iva: 0, ret: 0 });
+                                          const hasTaxGroup = taxSum.iva > 0 || taxSum.ret > 0;
+                                          return (
+                                            <tr>
+                                              <td colSpan={5} className="px-3 py-2 text-sm font-bold text-gray-700 text-right">
+                                                Subtotal {beneficiario}:
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-mono font-bold text-xs text-gray-700">
+                                                {formatCurrency(taxSum.subtotal)}
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-mono font-bold text-xs text-green-700">
+                                                {hasTaxGroup && taxSum.iva > 0 ? `+${formatCurrency(taxSum.iva)}` : "-"}
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-mono font-bold text-xs text-red-600">
+                                                {hasTaxGroup && taxSum.ret > 0 ? `-${formatCurrency(taxSum.ret)}` : "-"}
+                                              </td>
+                                              <td className="px-2 py-2 text-right font-mono font-bold text-sm text-[#00d084]">
+                                                {formatCurrency(benGrupo.total)}
+                                              </td>
+                                              <td colSpan={3}></td>
+                                            </tr>
+                                          );
+                                        })()}
                                       </tfoot>
                                     </table>
                                   </div>

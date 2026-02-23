@@ -1,14 +1,15 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
-// Column widths must add up to 100%
-// #Orden(8) + Fecha(12) + Factura(12) + Concepto(23) + Estado(10) = 65% left side
-// Total(20) + F.Pago(15) = 35% right side
+// Column widths must add up to 100% (landscape LETTER)
+// #Orden(6) + Fecha(9) + Factura(8) + Concepto(13) + Estado(7) = 43% left side
+// Subtotal(10) + IVA(9) + Ret.(9) + Total(11) + F.Pago(9) = 48% right side
+// = 91% (remaining is absorbed by padding)
 
 export const reporteStyles = StyleSheet.create({
   page: {
-    padding: 30,
-    paddingBottom: 50,
-    fontSize: 8,
+    padding: 25,
+    paddingBottom: 45,
+    fontSize: 7,
     fontFamily: "Helvetica",
   },
 
@@ -17,40 +18,40 @@ export const reporteStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
     borderBottom: "2 solid #042726",
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   logo: {
-    width: 100,
-    height: 33,
+    width: 90,
+    height: 30,
   },
   headerRight: {
     alignItems: "flex-end",
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#042726",
   },
   dateText: {
-    fontSize: 8,
+    fontSize: 7,
     color: "#6b7280",
-    marginTop: 3,
+    marginTop: 2,
   },
 
   // Filtros
   filtrosContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-    padding: 8,
+    gap: 6,
+    marginBottom: 10,
+    padding: 6,
     backgroundColor: "#f9fafb",
-    borderRadius: 4,
+    borderRadius: 3,
   },
   filtroTag: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: "#374151",
   },
   filtroLabel: {
@@ -59,34 +60,40 @@ export const reporteStyles = StyleSheet.create({
   },
 
   // === Column widths (shared across ALL rows) ===
-  colOrden: { width: "8%" },
-  colFecha: { width: "12%" },
-  colFactura: { width: "12%" },
-  colConcepto: { width: "23%" },
-  colEstado: { width: "10%", textAlign: "center" },
-  colTotal: { width: "20%", textAlign: "right" },
-  colFPago: { width: "15%", textAlign: "right" },
-  // Label spanning left columns (used by subtotals, month totals, grand total)
-  colLabel: { width: "65%", textAlign: "right", paddingRight: 8 },
+  colOrden: { width: "6%" },
+  colFecha: { width: "9%" },
+  colFactura: { width: "8%" },
+  colConcepto: { width: "14%" },
+  colEstado: { width: "7%", textAlign: "center" },
+  colSubtotal: { width: "10%", textAlign: "right" },
+  colIVA: { width: "9%", textAlign: "right" },
+  colRet: { width: "9%", textAlign: "right" },
+  colTotal: { width: "10%", textAlign: "right" },
+  colFPago: { width: "9%", textAlign: "right" },
+  // Label spanning left columns (used by subtotals, grand total)
+  // = Orden+Fecha+Factura+Concepto+Estado = 44%
+  colLabel: { width: "44%", textAlign: "right", paddingRight: 6 },
+  // Monetary columns span for group header total = Subtotal+IVA+Ret+Total = 38%
+  colMoneySpan: { width: "38%", textAlign: "right" },
 
   // Group header (mes + beneficiario combined)
   groupHeader: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f3f4f6",
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    marginTop: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginTop: 8,
     borderBottom: "1 solid #d1d5db",
-    minHeight: 20,
+    minHeight: 18,
   },
   groupHeaderText: {
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: "bold",
     color: "#1f2937",
   },
   groupHeaderTotal: {
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: "bold",
     color: "#00d084",
   },
@@ -96,13 +103,13 @@ export const reporteStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#e5e7eb",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     borderBottom: "1 solid #d1d5db",
-    minHeight: 16,
+    minHeight: 14,
   },
   tableHeaderText: {
-    fontSize: 7,
+    fontSize: 6,
     fontWeight: "bold",
     color: "#374151",
     textTransform: "uppercase",
@@ -112,76 +119,66 @@ export const reporteStyles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     borderBottom: "0.5 solid #e5e7eb",
-    minHeight: 16,
+    minHeight: 14,
   },
   tableRowAlt: {
     backgroundColor: "#f9fafb",
   },
   tableCell: {
-    fontSize: 7.5,
+    fontSize: 6.5,
     color: "#1f2937",
   },
   tableCellBold: {
-    fontSize: 7.5,
+    fontSize: 6.5,
     fontWeight: "bold",
     color: "#1f2937",
   },
   tableCellGreen: {
-    fontSize: 7.5,
+    fontSize: 6.5,
     fontWeight: "bold",
     color: "#00875a",
+  },
+  tableCellRed: {
+    fontSize: 6.5,
+    color: "#dc2626",
+  },
+  tableCellMuted: {
+    fontSize: 6.5,
+    color: "#9ca3af",
   },
 
   // Subtotal beneficiario
   subtotalRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     backgroundColor: "#ecfdf5",
     borderBottom: "1 solid #d1fae5",
-    minHeight: 16,
+    minHeight: 14,
   },
   subtotalLabel: {
-    fontSize: 7.5,
+    fontSize: 7,
     fontWeight: "bold",
     color: "#065f46",
   },
   subtotalValue: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "bold",
     color: "#065f46",
   },
-
-  // Tax breakdown rows (above subtotal)
-  taxBreakdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    backgroundColor: "#f9fafb",
-    minHeight: 13,
-  },
-  taxBreakdownLabel: {
-    fontSize: 7,
-    color: "#6b7280",
-  },
-  taxBreakdownValue: {
-    fontSize: 7,
-    color: "#374151",
-  },
-  taxBreakdownValueGreen: {
+  subtotalValueGreen: {
     fontSize: 7,
     fontWeight: "bold",
     color: "#059669",
   },
-  taxBreakdownValueRed: {
+  subtotalValueRed: {
     fontSize: 7,
     fontWeight: "bold",
-    color: "#dc2626",
+    color: "#b91c1c",
   },
 
   // Grand total
@@ -189,40 +186,48 @@ export const reporteStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#042726",
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    marginTop: 10,
     borderRadius: 3,
-    minHeight: 24,
+    minHeight: 20,
   },
   grandTotalLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "bold",
     color: "#ffffff",
     textTransform: "uppercase",
   },
   grandTotalValue: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "bold",
     color: "#00d084",
+  },
+  grandTotalValueLight: {
+    fontSize: 8,
+    color: "#a7f3d0",
+  },
+  grandTotalValueRed: {
+    fontSize: 8,
+    color: "#fca5a5",
   },
 
   // Estado subtotal rows (same grid as data rows, below grand total)
   estadoSubtotalRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     backgroundColor: "#1f2937",
     borderBottom: "0.5 solid #374151",
-    minHeight: 16,
+    minHeight: 14,
   },
   estadoSubtotalLabel: {
-    fontSize: 8,
+    fontSize: 7,
     color: "#d1d5db",
   },
   estadoSubtotalValue: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "bold",
     color: "#00d084",
   },
@@ -230,21 +235,21 @@ export const reporteStyles = StyleSheet.create({
   // Footer
   footer: {
     position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
+    bottom: 18,
+    left: 25,
+    right: 25,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderTop: "1 solid #e5e7eb",
-    paddingTop: 6,
+    paddingTop: 5,
   },
   footerText: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: "#9ca3af",
   },
   pageNumber: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: "#9ca3af",
   },
 });

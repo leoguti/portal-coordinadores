@@ -39,14 +39,6 @@ const formatMesLabel = (mesKey: string) => {
   return `${nombres[parseInt(month) - 1]} ${year}`;
 };
 
-// Calculate total with taxes for a single order
-const calcTotalOrden = (orden: { fields: { Total?: number; MontoIVA?: number; MontoReteFuente?: number; MontoReteICA?: number; MontoReteIVA?: number } }) => {
-  const st = orden.fields.Total || 0;
-  return orden.fields.MontoIVA !== undefined
-    ? st + (orden.fields.MontoIVA || 0) - (orden.fields.MontoReteFuente || 0) - (orden.fields.MontoReteICA || 0) - (orden.fields.MontoReteIVA || 0)
-    : st;
-};
-
 // Ordered estado list for consistent display
 const ESTADO_ORDER = ["Enviada", "Facturada", "Pagada", "Rechazada"];
 
@@ -56,6 +48,31 @@ const sortEstados = (entries: [string, number][]) =>
     const ib = ESTADO_ORDER.indexOf(b[0]);
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
+
+// Tax helpers
+type OrdenLike = { fields: { Total?: number; MontoIVA?: number; MontoReteFuente?: number; MontoReteICA?: number; MontoReteIVA?: number } };
+
+const getRetenciones = (o: OrdenLike) =>
+  (o.fields.MontoReteFuente || 0) + (o.fields.MontoReteICA || 0) + (o.fields.MontoReteIVA || 0);
+
+const calcTotalOrden = (o: OrdenLike) => {
+  const st = o.fields.Total || 0;
+  return o.fields.MontoIVA !== undefined
+    ? st + (o.fields.MontoIVA || 0) - getRetenciones(o)
+    : st;
+};
+
+const sumTax = (ordenes: OrdenLike[]) =>
+  ordenes.reduce(
+    (acc, o) => {
+      acc.subtotal += o.fields.Total || 0;
+      acc.iva += o.fields.MontoIVA || 0;
+      acc.ret += getRetenciones(o);
+      acc.total += calcTotalOrden(o);
+      return acc;
+    },
+    { subtotal: 0, iva: 0, ret: 0, total: 0 }
+  );
 
 const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
   gruposPorMes,
@@ -78,6 +95,11 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
       grandEstadoTotals[estado] = (grandEstadoTotals[estado] || 0) + total;
     });
   });
+
+  // Grand tax totals
+  const allOrdenes = gruposPorMes.flatMap(([, mg]) => mg.beneficiarios.flatMap(([, bg]) => bg.ordenes));
+  const grandTax = sumTax(allOrdenes);
+  const hasTaxGlobal = grandTax.iva > 0 || grandTax.ret > 0;
 
   return (
     <Document>
@@ -109,146 +131,134 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
         {/* Groups */}
         {gruposPorMes.map(([mesKey, mesGrupo]) => (
           <View key={mesKey}>
-            {mesGrupo.beneficiarios.map(([beneficiario, benGrupo]) => (
-              <View key={`${mesKey}|${beneficiario}`}>
-                {/* Combined header (mes + beneficiario) + table header kept together */}
-                <View wrap={false}>
-                  <View style={s.groupHeader}>
-                    <Text style={[s.groupHeaderText, s.colLabel]}>
-                      {formatMesLabel(mesKey)} {"\u00B7"} {beneficiario} {"\u00B7"} {benGrupo.ordenes.length}{" "}
-                      {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
+            {mesGrupo.beneficiarios.map(([beneficiario, benGrupo]) => {
+              const tax = sumTax(benGrupo.ordenes);
+              const hasTax = tax.iva > 0 || tax.ret > 0;
+
+              return (
+                <View key={`${mesKey}|${beneficiario}`}>
+                  {/* Combined header + table header kept together */}
+                  <View wrap={false}>
+                    <View style={s.groupHeader}>
+                      <Text style={[s.groupHeaderText, s.colLabel]}>
+                        {formatMesLabel(mesKey)} {"\u00B7"} {beneficiario} {"\u00B7"} {benGrupo.ordenes.length}{" "}
+                        {benGrupo.ordenes.length === 1 ? "orden" : "ordenes"}
+                      </Text>
+                      <Text style={[s.groupHeaderTotal, s.colMoneySpan]}>
+                        {formatCurrency(benGrupo.total)}
+                      </Text>
+                      <View style={s.colFPago} />
+                    </View>
+
+                    {/* Table header */}
+                    <View style={s.tableHeader}>
+                      <Text style={[s.tableHeaderText, s.colOrden]}>#</Text>
+                      <Text style={[s.tableHeaderText, s.colFecha]}>Fecha</Text>
+                      <Text style={[s.tableHeaderText, s.colFactura]}>Factura</Text>
+                      <Text style={[s.tableHeaderText, s.colConcepto]}>Concepto</Text>
+                      <Text style={[s.tableHeaderText, s.colEstado]}>Estado</Text>
+                      <Text style={[s.tableHeaderText, s.colSubtotal]}>Subtotal</Text>
+                      <Text style={[s.tableHeaderText, s.colIVA]}>IVA</Text>
+                      <Text style={[s.tableHeaderText, s.colRet]}>Ret.</Text>
+                      <Text style={[s.tableHeaderText, s.colTotal]}>Total</Text>
+                      <Text style={[s.tableHeaderText, s.colFPago]}>F. Pago</Text>
+                    </View>
+                  </View>
+
+                  {/* Rows */}
+                  {benGrupo.ordenes.map((orden, idx) => {
+                    const tags = conceptos[orden.id] || [];
+                    const subtotal = orden.fields.Total || 0;
+                    const iva = orden.fields.MontoIVA || 0;
+                    const ret = getRetenciones(orden);
+                    const total = calcTotalOrden(orden);
+                    const hasTaxRow = orden.fields.MontoIVA !== undefined;
+
+                    return (
+                      <View
+                        key={orden.id}
+                        style={[
+                          s.tableRow,
+                          idx % 2 === 1 ? s.tableRowAlt : {},
+                        ]}
+                      >
+                        <Text style={[s.tableCellBold, s.colOrden]}>
+                          #{orden.fields.NumeroOrden || "S/N"}
+                        </Text>
+                        <Text style={[s.tableCell, s.colFecha]}>
+                          {orden.fields["Fecha de pedido"]
+                            ? formatDate(orden.fields["Fecha de pedido"])
+                            : "-"}
+                        </Text>
+                        <Text style={[s.tableCell, s.colFactura]}>
+                          {orden.fields.NumeroFactura || "-"}
+                        </Text>
+                        <Text style={[s.tableCell, s.colConcepto]}>
+                          {tags.length > 0 ? tags.join(", ") : "-"}
+                        </Text>
+                        <Text style={[s.tableCell, s.colEstado]}>
+                          {orden.fields.Estado || "-"}
+                        </Text>
+                        <Text style={[s.tableCell, s.colSubtotal]}>
+                          {formatCurrency(subtotal)}
+                        </Text>
+                        <Text style={[hasTaxRow && iva > 0 ? s.tableCellGreen : s.tableCellMuted, s.colIVA]}>
+                          {hasTaxRow && iva > 0 ? `+${formatCurrency(iva)}` : "-"}
+                        </Text>
+                        <Text style={[hasTaxRow && ret > 0 ? s.tableCellRed : s.tableCellMuted, s.colRet]}>
+                          {hasTaxRow && ret > 0 ? `-${formatCurrency(ret)}` : "-"}
+                        </Text>
+                        <Text style={[s.tableCellGreen, s.colTotal]}>
+                          {formatCurrency(total)}
+                        </Text>
+                        <Text style={[s.tableCell, s.colFPago]}>
+                          {orden.fields.FechaPago
+                            ? formatDate(orden.fields.FechaPago)
+                            : "-"}
+                        </Text>
+                      </View>
+                    );
+                  })}
+
+                  {/* Subtotal row with tax columns */}
+                  <View style={s.subtotalRow}>
+                    <Text style={[s.subtotalLabel, s.colLabel]}>
+                      Subtotal {beneficiario}:
                     </Text>
-                    <Text style={[s.groupHeaderTotal, s.colTotal]}>
-                      {formatCurrency(benGrupo.total)}
+                    <Text style={[s.subtotalValue, s.colSubtotal]}>
+                      {formatCurrency(tax.subtotal)}
+                    </Text>
+                    <Text style={[hasTax && tax.iva > 0 ? s.subtotalValueGreen : s.subtotalValue, s.colIVA]}>
+                      {hasTax && tax.iva > 0 ? `+${formatCurrency(tax.iva)}` : "-"}
+                    </Text>
+                    <Text style={[hasTax && tax.ret > 0 ? s.subtotalValueRed : s.subtotalValue, s.colRet]}>
+                      {hasTax && tax.ret > 0 ? `-${formatCurrency(tax.ret)}` : "-"}
+                    </Text>
+                    <Text style={[s.subtotalValue, s.colTotal]}>
+                      {formatCurrency(tax.total)}
                     </Text>
                     <View style={s.colFPago} />
                   </View>
-
-                  {/* Table header */}
-                  <View style={s.tableHeader}>
-                    <Text style={[s.tableHeaderText, s.colOrden]}># Orden</Text>
-                    <Text style={[s.tableHeaderText, s.colFecha]}>Fecha</Text>
-                    <Text style={[s.tableHeaderText, s.colFactura]}>N. Factura</Text>
-                    <Text style={[s.tableHeaderText, s.colConcepto]}>Concepto</Text>
-                    <Text style={[s.tableHeaderText, s.colEstado]}>Estado</Text>
-                    <Text style={[s.tableHeaderText, s.colTotal]}>Total</Text>
-                    <Text style={[s.tableHeaderText, s.colFPago]}>F. Pago</Text>
-                  </View>
                 </View>
-
-                {/* Rows */}
-                {benGrupo.ordenes.map((orden, idx) => {
-                  const tags = conceptos[orden.id] || [];
-                  return (
-                    <View
-                      key={orden.id}
-                      style={[
-                        s.tableRow,
-                        idx % 2 === 1 ? s.tableRowAlt : {},
-                      ]}
-                    >
-                      <Text style={[s.tableCellBold, s.colOrden]}>
-                        #{orden.fields.NumeroOrden || "S/N"}
-                      </Text>
-                      <Text style={[s.tableCell, s.colFecha]}>
-                        {orden.fields["Fecha de pedido"]
-                          ? formatDate(orden.fields["Fecha de pedido"])
-                          : "-"}
-                      </Text>
-                      <Text style={[s.tableCell, s.colFactura]}>
-                        {orden.fields.NumeroFactura || "-"}
-                      </Text>
-                      <Text style={[s.tableCell, s.colConcepto]}>
-                        {tags.length > 0 ? tags.join(", ") : "-"}
-                      </Text>
-                      <Text style={[s.tableCell, s.colEstado]}>
-                        {orden.fields.Estado || "-"}
-                      </Text>
-                      <Text style={[s.tableCellGreen, s.colTotal]}>
-                        {formatCurrency(calcTotalOrden(orden))}
-                      </Text>
-                      <Text style={[s.tableCell, s.colFPago]}>
-                        {orden.fields.FechaPago
-                          ? formatDate(orden.fields.FechaPago)
-                          : "-"}
-                      </Text>
-                    </View>
-                  );
-                })}
-
-                {/* Tax breakdown + subtotal */}
-                {(() => {
-                  const tax = benGrupo.ordenes.reduce((acc, o) => {
-                    acc.subtotal += o.fields.Total || 0;
-                    acc.iva += o.fields.MontoIVA || 0;
-                    acc.reteFuente += o.fields.MontoReteFuente || 0;
-                    acc.reteICA += o.fields.MontoReteICA || 0;
-                    acc.reteIVA += o.fields.MontoReteIVA || 0;
-                    return acc;
-                  }, { subtotal: 0, iva: 0, reteFuente: 0, reteICA: 0, reteIVA: 0 });
-                  const hasTax = tax.iva > 0 || tax.reteFuente > 0 || tax.reteICA > 0 || tax.reteIVA > 0;
-
-                  return (
-                    <>
-                      {hasTax && (
-                        <>
-                          <View style={s.taxBreakdownRow}>
-                            <Text style={[s.taxBreakdownLabel, s.colLabel]}>Subtotal ítems:</Text>
-                            <Text style={[s.taxBreakdownValue, s.colTotal]}>{formatCurrency(tax.subtotal)}</Text>
-                            <View style={s.colFPago} />
-                          </View>
-                          {tax.iva > 0 && (
-                            <View style={s.taxBreakdownRow}>
-                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>+ IVA:</Text>
-                              <Text style={[s.taxBreakdownValueGreen, s.colTotal]}>+{formatCurrency(tax.iva)}</Text>
-                              <View style={s.colFPago} />
-                            </View>
-                          )}
-                          {tax.reteFuente > 0 && (
-                            <View style={s.taxBreakdownRow}>
-                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteFuente:</Text>
-                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteFuente)}</Text>
-                              <View style={s.colFPago} />
-                            </View>
-                          )}
-                          {tax.reteICA > 0 && (
-                            <View style={s.taxBreakdownRow}>
-                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteICA:</Text>
-                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteICA)}</Text>
-                              <View style={s.colFPago} />
-                            </View>
-                          )}
-                          {tax.reteIVA > 0 && (
-                            <View style={s.taxBreakdownRow}>
-                              <Text style={[s.taxBreakdownLabel, s.colLabel]}>- ReteIVA:</Text>
-                              <Text style={[s.taxBreakdownValueRed, s.colTotal]}>-{formatCurrency(tax.reteIVA)}</Text>
-                              <View style={s.colFPago} />
-                            </View>
-                          )}
-                        </>
-                      )}
-                      <View style={s.subtotalRow}>
-                        <Text style={[s.subtotalLabel, s.colLabel]}>
-                          {hasTax ? "Total a Pagar" : "Subtotal"} {formatMesLabel(mesKey)}:
-                        </Text>
-                        <Text style={[s.subtotalValue, s.colTotal]}>
-                          {formatCurrency(benGrupo.total)}
-                        </Text>
-                        <View style={s.colFPago} />
-                      </View>
-                    </>
-                  );
-                })()}
-              </View>
-            ))}
+              );
+            })}
           </View>
         ))}
 
-        {/* Grand total - same grid */}
+        {/* Grand total */}
         <View style={s.grandTotalRow}>
           <Text style={[s.grandTotalLabel, s.colLabel]}>
             TOTAL GENERAL ({totalOrdenes}{" "}
             {totalOrdenes === 1 ? "orden" : "ordenes"})
+          </Text>
+          <Text style={[s.grandTotalValue, s.colSubtotal]}>
+            {formatCurrency(grandTax.subtotal)}
+          </Text>
+          <Text style={[hasTaxGlobal && grandTax.iva > 0 ? s.grandTotalValueLight : s.grandTotalValue, s.colIVA]}>
+            {hasTaxGlobal && grandTax.iva > 0 ? `+${formatCurrency(grandTax.iva)}` : "-"}
+          </Text>
+          <Text style={[hasTaxGlobal && grandTax.ret > 0 ? s.grandTotalValueRed : s.grandTotalValue, s.colRet]}>
+            {hasTaxGlobal && grandTax.ret > 0 ? `-${formatCurrency(grandTax.ret)}` : "-"}
           </Text>
           <Text style={[s.grandTotalValue, s.colTotal]}>
             {formatCurrency(grandTotal)}
@@ -256,12 +266,15 @@ const ReporteOrdenesPDF: React.FC<ReporteOrdenesPDFProps> = ({
           <View style={s.colFPago} />
         </View>
 
-        {/* Estado breakdown as subtotal rows in same grid */}
+        {/* Estado breakdown */}
         {sortEstados(Object.entries(grandEstadoTotals)).map(([estado, monto]) => (
           <View key={estado} style={s.estadoSubtotalRow}>
             <Text style={[s.estadoSubtotalLabel, s.colLabel]}>
               {estado} ({grandEstadoCounts[estado]})
             </Text>
+            <View style={s.colSubtotal} />
+            <View style={s.colIVA} />
+            <View style={s.colRet} />
             <Text style={[s.estadoSubtotalValue, s.colTotal]}>
               {formatCurrency(monto)}
             </Text>
