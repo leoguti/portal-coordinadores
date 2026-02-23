@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { fecha, beneficiarioId, rubroRecordId, observaciones, valor, porcentajeRetencion, facturaUrl, kardexIds } = body;
+    const { fecha, beneficiarioId, rubroRecordId, observaciones, valor, porcentajeRetencion, porcentajeIVA, montoIVA, facturaUrl, kardexIds } = body;
 
     // Validaciones
     if (!fecha || !beneficiarioId || !rubroRecordId || valor === undefined) {
@@ -68,6 +68,8 @@ export async function POST(request: Request) {
       observaciones: observaciones || undefined,
       valor,
       porcentajeRetencion: porcentajeRetencion || 0,
+      porcentajeIVA: porcentajeIVA !== undefined ? porcentajeIVA : undefined,
+      montoIVA: montoIVA !== undefined ? montoIVA : undefined,
       facturaUrl,
       kardexIds: Array.isArray(kardexIds) ? kardexIds : undefined,
     });

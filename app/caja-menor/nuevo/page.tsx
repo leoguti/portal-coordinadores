@@ -70,6 +70,7 @@ export default function NuevoGastoCajaMenorPage() {
   const [loadingRubros, setLoadingRubros] = useState(true);
   const [observaciones, setObservaciones] = useState("");
   const [valor, setValor] = useState("");
+  const [porcentajeIVA, setPorcentajeIVA] = useState("19");
   const [porcentajeRetencion, setPorcentajeRetencion] = useState("0");
   const [factura, setFactura] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -153,9 +154,11 @@ export default function NuevoGastoCajaMenorPage() {
   }
 
   const valorNum = parseFloat(valor) || 0;
+  const ivaNum = parseFloat(porcentajeIVA) || 0;
   const retencionNum = parseFloat(porcentajeRetencion) || 0;
+  const montoIVA = valorNum * ivaNum / 100;
   const valorRetencion = valorNum * retencionNum / 100;
-  const valorNeto = valorNum - valorRetencion;
+  const valorNeto = valorNum + montoIVA - valorRetencion;
 
 
   async function handleSubmit(e: React.FormEvent) {
@@ -193,6 +196,8 @@ export default function NuevoGastoCajaMenorPage() {
           observaciones: observaciones.trim() || undefined,
           valor: valorNum,
           porcentajeRetencion: retencionNum,
+          porcentajeIVA: ivaNum,
+          montoIVA: Math.round(montoIVA),
           ...(kardexSeleccionados.length > 0 && { kardexIds: kardexSeleccionados }),
         }),
       });
@@ -420,8 +425,8 @@ export default function NuevoGastoCajaMenorPage() {
             />
           </div>
 
-          {/* Valor y Retencion en fila */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Valor, IVA y Retencion en fila */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Valor (COP) <span className="text-red-500">*</span>
@@ -434,6 +439,21 @@ export default function NuevoGastoCajaMenorPage() {
                 min="1"
                 step="1"
                 required
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                % IVA
+              </label>
+              <input
+                type="number"
+                value={porcentajeIVA}
+                onChange={(e) => setPorcentajeIVA(e.target.value)}
+                placeholder="19"
+                min="0"
+                max="100"
+                step="0.1"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
               />
             </div>
@@ -458,9 +478,9 @@ export default function NuevoGastoCajaMenorPage() {
           {valorNum > 0 && (
             <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">Resumen</h4>
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500">Valor bruto</p>
+                  <p className="text-gray-500">Valor base</p>
                   <p className="font-mono font-bold text-gray-900">
                     {new Intl.NumberFormat("es-CO", {
                       style: "currency",
@@ -470,13 +490,23 @@ export default function NuevoGastoCajaMenorPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Retencion ({retencionNum}%)</p>
+                  <p className="text-gray-500">+ IVA ({ivaNum}%)</p>
+                  <p className="font-mono font-bold text-green-700">
+                    +{new Intl.NumberFormat("es-CO", {
+                      style: "currency",
+                      currency: "COP",
+                      minimumFractionDigits: 0,
+                    }).format(Math.round(montoIVA))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">- Retencion ({retencionNum}%)</p>
                   <p className="font-mono font-bold text-red-600">
                     -{new Intl.NumberFormat("es-CO", {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(valorRetencion)}
+                    }).format(Math.round(valorRetencion))}
                   </p>
                 </div>
                 <div>
@@ -486,7 +516,7 @@ export default function NuevoGastoCajaMenorPage() {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(valorNeto)}
+                    }).format(Math.round(valorNeto))}
                   </p>
                 </div>
               </div>

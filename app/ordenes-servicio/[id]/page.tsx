@@ -36,6 +36,13 @@ export default function OrdenDetallePage() {
   const [showPagoForm, setShowPagoForm] = useState(false);
   const [fechaPagoInput, setFechaPagoInput] = useState("");
 
+  // Tax fields for factura form
+  const [fechaFactura, setFechaFactura] = useState("");
+  const [pctIVA, setPctIVA] = useState("19");
+  const [pctReteFuente, setPctReteFuente] = useState("4");
+  const [pctReteICA, setPctReteICA] = useState("0.414");
+  const [pctReteIVA, setPctReteIVA] = useState("15");
+
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const canWrite = isAdmin(session?.user?.rol);
 
@@ -100,6 +107,14 @@ export default function OrdenDetallePage() {
   };
 
   // Admin actions
+  // Computed tax amounts for the factura form
+  const facturaSubtotal = orden?.fields.Total || 0;
+  const facturaMontoIVA = facturaSubtotal * (parseFloat(pctIVA) || 0) / 100;
+  const facturaMontoReteFuente = facturaSubtotal * (parseFloat(pctReteFuente) || 0) / 100;
+  const facturaMontoReteICA = facturaSubtotal * (parseFloat(pctReteICA) || 0) / 100;
+  const facturaMontoReteIVA = facturaMontoIVA * (parseFloat(pctReteIVA) || 0) / 100;
+  const facturaTotalNeto = facturaSubtotal + facturaMontoIVA - facturaMontoReteFuente - facturaMontoReteICA - facturaMontoReteIVA;
+
   async function handleSubirFactura() {
     if (!facturaFile || !numeroFactura.trim()) return;
 
@@ -111,6 +126,16 @@ export default function OrdenDetallePage() {
       formData.append("action", "subir-factura");
       formData.append("factura", facturaFile);
       formData.append("numeroFactura", numeroFactura.trim());
+      formData.append("fechaFactura", fechaFactura);
+      formData.append("porcentajeIVA", String(parseFloat(pctIVA) || 0));
+      formData.append("montoIVA", String(Math.round(facturaMontoIVA)));
+      formData.append("porcentajeReteFuente", String(parseFloat(pctReteFuente) || 0));
+      formData.append("montoReteFuente", String(Math.round(facturaMontoReteFuente)));
+      formData.append("porcentajeReteICA", String(parseFloat(pctReteICA) || 0));
+      formData.append("montoReteICA", String(Math.round(facturaMontoReteICA)));
+      formData.append("porcentajeReteIVA", String(parseFloat(pctReteIVA) || 0));
+      formData.append("montoReteIVA", String(Math.round(facturaMontoReteIVA)));
+      formData.append("totalNeto", String(Math.round(facturaTotalNeto)));
 
       const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
         method: "PATCH",
@@ -124,6 +149,11 @@ export default function OrdenDetallePage() {
         setShowFacturaForm(false);
         setNumeroFactura("");
         setFacturaFile(null);
+        setFechaFactura("");
+        setPctIVA("19");
+        setPctReteFuente("4");
+        setPctReteICA("0.414");
+        setPctReteIVA("15");
         await loadOrden();
       } else {
         setActionMessage({ type: "error", text: data.error || "Error al subir la factura" });
@@ -438,47 +468,157 @@ export default function OrdenDetallePage() {
             {/* Inline Factura Form */}
             {showFacturaForm && estado === "Enviada" && (
               <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <h4 className="text-sm font-bold text-amber-800 mb-3">Subir Factura</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numero de factura <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={numeroFactura}
-                      onChange={(e) => setNumeroFactura(e.target.value)}
-                      placeholder="Ej: FAC-001234"
-                      className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Archivo PDF <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      ref={facturaInputRef}
-                      type="file"
-                      accept="application/pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setFacturaFile(file);
-                      }}
-                    />
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => facturaInputRef.current?.click()}
-                        className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                      >
-                        Seleccionar PDF
-                      </button>
-                      {facturaFile && (
-                        <span className="text-sm text-gray-600">{facturaFile.name}</span>
-                      )}
+                <h4 className="text-sm font-bold text-amber-800 mb-3">Subir Factura e Impuestos</h4>
+                <div className="space-y-4">
+                  {/* Row 1: Numero factura + Fecha factura + Archivo */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        N.° de factura <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={numeroFactura}
+                        onChange={(e) => setNumeroFactura(e.target.value)}
+                        placeholder="Ej: FAC-001234"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de factura
+                      </label>
+                      <input
+                        type="date"
+                        value={fechaFactura}
+                        onChange={(e) => setFechaFactura(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Archivo PDF <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        ref={facturaInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setFacturaFile(file);
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => facturaInputRef.current?.click()}
+                          className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                        >
+                          Seleccionar PDF
+                        </button>
+                        {facturaFile && (
+                          <span className="text-sm text-gray-600 truncate">{facturaFile.name}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Tax breakdown */}
+                  <div className="bg-white border border-amber-200 rounded-lg p-4">
+                    <h5 className="text-xs font-bold text-gray-600 uppercase mb-3">Desglose de Impuestos</h5>
+                    <div className="text-sm text-gray-700 mb-3">
+                      Base gravable (Subtotal): <span className="font-bold text-gray-900">{formatCurrency(facturaSubtotal)}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* IVA */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-28 text-sm text-gray-700 font-medium">+ IVA</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={pctIVA}
+                            onChange={(e) => setPctIVA(e.target.value)}
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            step="0.01"
+                            min="0"
+                          />
+                          <span className="text-sm text-gray-500">%</span>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-green-700 ml-auto">
+                          +{formatCurrency(Math.round(facturaMontoIVA))}
+                        </span>
+                      </div>
+
+                      {/* ReteFuente */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-28 text-sm text-gray-700 font-medium">- ReteFuente</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={pctReteFuente}
+                            onChange={(e) => setPctReteFuente(e.target.value)}
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            step="0.01"
+                            min="0"
+                          />
+                          <span className="text-sm text-gray-500">%</span>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-red-700 ml-auto">
+                          -{formatCurrency(Math.round(facturaMontoReteFuente))}
+                        </span>
+                      </div>
+
+                      {/* ReteICA */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-28 text-sm text-gray-700 font-medium">- ReteICA</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={pctReteICA}
+                            onChange={(e) => setPctReteICA(e.target.value)}
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            step="0.001"
+                            min="0"
+                          />
+                          <span className="text-sm text-gray-500">%</span>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-red-700 ml-auto">
+                          -{formatCurrency(Math.round(facturaMontoReteICA))}
+                        </span>
+                      </div>
+
+                      {/* ReteIVA */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-28 text-sm text-gray-700 font-medium">- ReteIVA</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={pctReteIVA}
+                            onChange={(e) => setPctReteIVA(e.target.value)}
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            step="0.01"
+                            min="0"
+                          />
+                          <span className="text-sm text-gray-500">% del IVA</span>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-red-700 ml-auto">
+                          -{formatCurrency(Math.round(facturaMontoReteIVA))}
+                        </span>
+                      </div>
+
+                      {/* Total */}
+                      <div className="border-t-2 border-gray-300 pt-2 mt-2 flex items-center justify-between">
+                        <span className="text-base font-bold text-gray-900">TOTAL A PAGAR</span>
+                        <span className="text-xl font-bold font-mono text-[#00d084]">
+                          {formatCurrency(Math.round(facturaTotalNeto))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleSubirFactura}
@@ -488,7 +628,7 @@ export default function OrdenDetallePage() {
                       {actionLoading ? "Subiendo..." : "Subir Factura"}
                     </button>
                     <button
-                      onClick={() => { setShowFacturaForm(false); setNumeroFactura(""); setFacturaFile(null); }}
+                      onClick={() => { setShowFacturaForm(false); setNumeroFactura(""); setFacturaFile(null); setFechaFactura(""); }}
                       disabled={actionLoading}
                       className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors font-medium text-sm"
                     >
@@ -600,14 +740,21 @@ export default function OrdenDetallePage() {
           {/* Factura info */}
           {facturaUrl && (
             <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <div>
                   <h3 className="text-sm font-bold text-amber-800">Factura del proveedor</h3>
-                  {orden.fields.NumeroFactura && (
-                    <p className="text-sm text-amber-800 mt-1">
-                      N.° Factura: <span className="font-semibold">{orden.fields.NumeroFactura}</span>
-                    </p>
-                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {orden.fields.NumeroFactura && (
+                      <p className="text-sm text-amber-800">
+                        N.° Factura: <span className="font-semibold">{orden.fields.NumeroFactura}</span>
+                      </p>
+                    )}
+                    {orden.fields.FechaFactura && (
+                      <p className="text-sm text-amber-800">
+                        Fecha: <span className="font-semibold">{new Date(orden.fields.FechaFactura + 'T00:00:00').toLocaleDateString("es-CO")}</span>
+                      </p>
+                    )}
+                  </div>
                   <p className="text-xs text-amber-600 mt-1">
                     Archivo: {orden.fields.Factura?.[0]?.filename || "factura.pdf"}
                   </p>
@@ -616,11 +763,52 @@ export default function OrdenDetallePage() {
                   href={facturaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded transition-colors"
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded transition-colors shrink-0"
                 >
                   Descargar Factura
                 </a>
               </div>
+
+              {/* Tax breakdown (only if tax data exists) */}
+              {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null && (
+                <div className="mt-3 pt-3 border-t border-amber-200">
+                  <h4 className="text-xs font-bold text-amber-700 uppercase mb-2">Desglose de Impuestos</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Base gravable (Subtotal)</span>
+                      <span className="font-mono font-semibold">{formatCurrency(total)}</span>
+                    </div>
+                    {(orden.fields.MontoIVA ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-green-700">+ IVA ({((orden.fields.PorcentajeIVA || 0) * 100).toFixed(1)}%)</span>
+                        <span className="font-mono font-semibold text-green-700">+{formatCurrency(orden.fields.MontoIVA || 0)}</span>
+                      </div>
+                    )}
+                    {(orden.fields.MontoReteFuente ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-red-700">- ReteFuente ({((orden.fields.PorcentajeReteFuente || 0) * 100).toFixed(1)}%)</span>
+                        <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteFuente || 0)}</span>
+                      </div>
+                    )}
+                    {(orden.fields.MontoReteICA ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-red-700">- ReteICA ({((orden.fields.PorcentajeReteICA || 0) * 100).toFixed(3)}%)</span>
+                        <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteICA || 0)}</span>
+                      </div>
+                    )}
+                    {(orden.fields.MontoReteIVA ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-red-700">- ReteIVA ({((orden.fields.PorcentajeReteIVA || 0) * 100).toFixed(1)}% del IVA)</span>
+                        <span className="font-mono font-semibold text-red-700">-{formatCurrency(orden.fields.MontoReteIVA || 0)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-amber-300 flex justify-between items-center">
+                    <span className="font-bold text-gray-900">Total a Pagar</span>
+                    <span className="text-lg font-bold font-mono text-[#00d084]">{formatCurrency(orden.fields.TotalNeto)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -827,11 +1015,21 @@ export default function OrdenDetallePage() {
           {/* Total */}
           <div className="border-t-2 border-gray-300 pt-4 mb-6">
             <div className="flex justify-between items-center">
-              <span className="text-xl font-bold text-gray-900">TOTAL:</span>
-              <span className="text-2xl font-bold text-[#00d084]">
+              <span className="text-xl font-bold text-gray-900">
+                {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null ? "SUBTOTAL:" : "TOTAL:"}
+              </span>
+              <span className={`text-2xl font-bold ${orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null ? "text-gray-600" : "text-[#00d084]"}`}>
                 {formatCurrency(total)}
               </span>
             </div>
+            {orden.fields.TotalNeto !== undefined && orden.fields.TotalNeto !== null && (
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xl font-bold text-gray-900">TOTAL A PAGAR:</span>
+                <span className="text-2xl font-bold text-[#00d084]">
+                  {formatCurrency(orden.fields.TotalNeto)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Observaciones */}

@@ -137,6 +137,16 @@ interface OrdenFields {
     url: string;
     filename: string;
   }>;
+  FechaFactura?: string;
+  PorcentajeIVA?: number;
+  MontoIVA?: number;
+  PorcentajeReteFuente?: number;
+  MontoReteFuente?: number;
+  PorcentajeReteICA?: number;
+  MontoReteICA?: number;
+  PorcentajeReteIVA?: number;
+  MontoReteIVA?: number;
+  TotalNeto?: number;
 }
 
 interface TerceroFields {
@@ -269,6 +279,8 @@ interface GastoCajaMenorFields {
   MesLegalizacion?: string;
   Reembolso?: string[]; // Linked to ReembolsosCajaMenor
   Kardex?: string[]; // Linked to Kardex records (optional)
+  PorcentajeIVA?: number;
+  MontoIVA?: number;
 }
 
 export interface GastoCajaMenor {
@@ -3007,7 +3019,19 @@ export async function uploadFacturaOrden(
   ordenId: string,
   facturaBuffer: Buffer,
   filename: string,
-  numeroFactura: string
+  numeroFactura: string,
+  impuestos?: {
+    fechaFactura?: string;
+    porcentajeIVA?: number;
+    montoIVA?: number;
+    porcentajeReteFuente?: number;
+    montoReteFuente?: number;
+    porcentajeReteICA?: number;
+    montoReteICA?: number;
+    porcentajeReteIVA?: number;
+    montoReteIVA?: number;
+    totalNeto?: number;
+  }
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -3041,6 +3065,16 @@ export async function uploadFacturaOrden(
           Factura: [{ url: blob.url }],
           Estado: "Facturada",
           NumeroFactura: numeroFactura,
+          ...(impuestos?.fechaFactura && { FechaFactura: impuestos.fechaFactura }),
+          ...(impuestos?.porcentajeIVA !== undefined && { PorcentajeIVA: impuestos.porcentajeIVA / 100 }),
+          ...(impuestos?.montoIVA !== undefined && { MontoIVA: impuestos.montoIVA }),
+          ...(impuestos?.porcentajeReteFuente !== undefined && { PorcentajeReteFuente: impuestos.porcentajeReteFuente / 100 }),
+          ...(impuestos?.montoReteFuente !== undefined && { MontoReteFuente: impuestos.montoReteFuente }),
+          ...(impuestos?.porcentajeReteICA !== undefined && { PorcentajeReteICA: impuestos.porcentajeReteICA / 100 }),
+          ...(impuestos?.montoReteICA !== undefined && { MontoReteICA: impuestos.montoReteICA }),
+          ...(impuestos?.porcentajeReteIVA !== undefined && { PorcentajeReteIVA: impuestos.porcentajeReteIVA / 100 }),
+          ...(impuestos?.montoReteIVA !== undefined && { MontoReteIVA: impuestos.montoReteIVA }),
+          ...(impuestos?.totalNeto !== undefined && { TotalNeto: impuestos.totalNeto }),
         },
       }),
     });
@@ -3234,6 +3268,8 @@ export async function createGastoCajaMenor(data: {
   observaciones?: string;
   valor: number;
   porcentajeRetencion: number;
+  porcentajeIVA?: number;
+  montoIVA?: number;
   facturaUrl?: string;
   kardexIds?: string[];
 }): Promise<GastoCajaMenor | null> {
@@ -3257,6 +3293,13 @@ export async function createGastoCajaMenor(data: {
       PorcentajeRetencion: data.porcentajeRetencion / 100,
       Estado: "Pendiente",
     };
+
+    if (data.porcentajeIVA !== undefined) {
+      fields.PorcentajeIVA = data.porcentajeIVA / 100;
+    }
+    if (data.montoIVA !== undefined) {
+      fields.MontoIVA = data.montoIVA;
+    }
 
     if (data.observaciones) {
       fields.Observaciones = data.observaciones;
@@ -3353,6 +3396,8 @@ export async function updateGastoCajaMenor(
     observaciones?: string;
     valor?: number;
     porcentajeRetencion?: number;
+    porcentajeIVA?: number;
+    montoIVA?: number;
     facturaUrl?: string;
   }
 ): Promise<boolean> {
@@ -3377,6 +3422,8 @@ export async function updateGastoCajaMenor(
     if (data.observaciones !== undefined) fields.Observaciones = data.observaciones;
     if (data.valor !== undefined) fields.Valor = data.valor;
     if (data.porcentajeRetencion !== undefined) fields.PorcentajeRetencion = data.porcentajeRetencion / 100;
+    if (data.porcentajeIVA !== undefined) fields.PorcentajeIVA = data.porcentajeIVA / 100;
+    if (data.montoIVA !== undefined) fields.MontoIVA = data.montoIVA;
     if (data.facturaUrl) fields.Factura = [{ url: data.facturaUrl }];
 
     const response = await fetch(url, {

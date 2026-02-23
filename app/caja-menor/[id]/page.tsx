@@ -62,6 +62,7 @@ export default function GastoDetallePage() {
   const [editRubroId, setEditRubroId] = useState("");
   const [editObservaciones, setEditObservaciones] = useState("");
   const [editValor, setEditValor] = useState("");
+  const [editPorcentajeIVA, setEditPorcentajeIVA] = useState("19");
   const [editPorcentajeRetencion, setEditPorcentajeRetencion] = useState("");
   const [editFactura, setEditFactura] = useState<File | null>(null);
   const editFacturaRef = useRef<HTMLInputElement>(null);
@@ -160,6 +161,7 @@ export default function GastoDetallePage() {
     setEditRubroId(gasto.fields.Rubro?.[0] || "");
     setEditObservaciones(gasto.fields.Observaciones || "");
     setEditValor(String(gasto.fields.Valor || ""));
+    setEditPorcentajeIVA(String((gasto.fields.PorcentajeIVA || 0) * 100 || "19"));
     setEditPorcentajeRetencion(String((gasto.fields.PorcentajeRetencion || 0) * 100));
     setEditFactura(null);
     setEditMode(true);
@@ -185,6 +187,8 @@ export default function GastoDetallePage() {
           rubroRecordId: editRubroId || undefined,
           observaciones: editObservaciones.trim() || undefined,
           valor: parseFloat(editValor) || 0,
+          porcentajeIVA: parseFloat(editPorcentajeIVA) || 0,
+          montoIVA: Math.round((parseFloat(editValor) || 0) * (parseFloat(editPorcentajeIVA) || 0) / 100),
           porcentajeRetencion: parseFloat(editPorcentajeRetencion) || 0,
         }),
       });
@@ -312,9 +316,11 @@ export default function GastoDetallePage() {
   const coordinador = gasto.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const observacionesGasto = gasto.fields.Observaciones || "";
   const valor = gasto.fields.Valor || 0;
+  const porcentajeIVAGasto = gasto.fields.PorcentajeIVA || 0; // Airtable Percent: 0.19 = 19%
+  const montoIVAGasto = gasto.fields.MontoIVA || 0;
   const porcentajeRetencion = gasto.fields.PorcentajeRetencion || 0; // Airtable Percent: 0.03 = 3%
   const valorRetencion = valor * porcentajeRetencion;
-  const valorNeto = valor - valorRetencion;
+  const valorNeto = valor + montoIVAGasto - valorRetencion;
   const estado = gasto.fields.Estado || "Pendiente";
   const observacionesAdmin = gasto.fields.ObservacionesAdmin || "";
   const factura = gasto.fields.Factura?.[0] || null;
@@ -326,9 +332,11 @@ export default function GastoDetallePage() {
 
   // Edit mode values for calculations
   const editValorNum = parseFloat(editValor) || 0;
+  const editIVANum = parseFloat(editPorcentajeIVA) || 0;
   const editRetencionNum = parseFloat(editPorcentajeRetencion) || 0;
-  const editValorRetencion = editValorNum * editRetencionNum / 100; // editRetencionNum is user-entered (e.g. 3 for 3%)
-  const editValorNeto = editValorNum - editValorRetencion; // API conversion (/100) happens in lib/airtable.ts
+  const editMontoIVA = editValorNum * editIVANum / 100;
+  const editValorRetencion = editValorNum * editRetencionNum / 100;
+  const editValorNeto = editValorNum + editMontoIVA - editValorRetencion;
 
   return (
     <AuthenticatedLayout>
@@ -552,7 +560,7 @@ export default function GastoDetallePage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Valor (COP)
@@ -564,6 +572,20 @@ export default function GastoDetallePage() {
                   min="1"
                   step="1"
                   required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  % IVA
+                </label>
+                <input
+                  type="number"
+                  value={editPorcentajeIVA}
+                  onChange={(e) => setEditPorcentajeIVA(e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
                 />
               </div>
@@ -586,23 +608,29 @@ export default function GastoDetallePage() {
             {/* Edit calc summary */}
             {editValorNum > 0 && (
               <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Valor bruto</p>
+                    <p className="text-gray-500">Valor base</p>
                     <p className="font-mono font-bold text-gray-900">
                       {formatCurrency(editValorNum)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Retencion ({editRetencionNum}%)</p>
+                    <p className="text-gray-500">+ IVA ({editIVANum}%)</p>
+                    <p className="font-mono font-bold text-green-700">
+                      +{formatCurrency(Math.round(editMontoIVA))}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">- Retencion ({editRetencionNum}%)</p>
                     <p className="font-mono font-bold text-red-600">
-                      -{formatCurrency(editValorRetencion)}
+                      -{formatCurrency(Math.round(editValorRetencion))}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Valor neto</p>
                     <p className="font-mono font-bold text-[#00d084] text-lg">
-                      {formatCurrency(editValorNeto)}
+                      {formatCurrency(Math.round(editValorNeto))}
                     </p>
                   </div>
                 </div>
@@ -723,11 +751,17 @@ export default function GastoDetallePage() {
           {/* Valores */}
           <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
             <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase">Valores</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <p className="text-xs text-gray-500 uppercase mb-1">Valor bruto</p>
+                <p className="text-xs text-gray-500 uppercase mb-1">Valor base</p>
                 <p className="text-lg font-mono font-bold text-gray-900">
                   {formatCurrency(valor)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase mb-1">+ IVA ({(porcentajeIVAGasto * 100).toFixed(1).replace(/\.0$/, "")}%)</p>
+                <p className="text-lg font-mono font-bold text-green-700">
+                  +{formatCurrency(montoIVAGasto)}
                 </p>
               </div>
               <div>
@@ -737,15 +771,15 @@ export default function GastoDetallePage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase mb-1">Valor retencion</p>
+                <p className="text-xs text-gray-500 uppercase mb-1">- Retencion</p>
                 <p className="text-lg font-mono font-bold text-red-600">
-                  -{formatCurrency(valorRetencion)}
+                  -{formatCurrency(Math.round(valorRetencion))}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase mb-1">Valor neto</p>
                 <p className="text-xl font-mono font-bold text-[#00d084]">
-                  {formatCurrency(valorNeto)}
+                  {formatCurrency(Math.round(valorNeto))}
                 </p>
               </div>
             </div>

@@ -135,6 +135,18 @@ export async function PATCH(
         );
       }
 
+      // Parse tax fields from FormData
+      const fechaFactura = (formData.get("fechaFactura") as string || "").trim();
+      const porcentajeIVA = parseFloat(formData.get("porcentajeIVA") as string || "0");
+      const montoIVA = parseFloat(formData.get("montoIVA") as string || "0");
+      const porcentajeReteFuente = parseFloat(formData.get("porcentajeReteFuente") as string || "0");
+      const montoReteFuente = parseFloat(formData.get("montoReteFuente") as string || "0");
+      const porcentajeReteICA = parseFloat(formData.get("porcentajeReteICA") as string || "0");
+      const montoReteICA = parseFloat(formData.get("montoReteICA") as string || "0");
+      const porcentajeReteIVA = parseFloat(formData.get("porcentajeReteIVA") as string || "0");
+      const montoReteIVA = parseFloat(formData.get("montoReteIVA") as string || "0");
+      const totalNeto = parseFloat(formData.get("totalNeto") as string || "0");
+
       // Validate file type
       if (file.type !== "application/pdf") {
         return NextResponse.json(
@@ -163,7 +175,18 @@ export async function PATCH(
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      const success = await uploadFacturaOrden(ordenId, buffer, file.name, numeroFactura);
+      const success = await uploadFacturaOrden(ordenId, buffer, file.name, numeroFactura, {
+        fechaFactura: fechaFactura || undefined,
+        porcentajeIVA,
+        montoIVA,
+        porcentajeReteFuente,
+        montoReteFuente,
+        porcentajeReteICA,
+        montoReteICA,
+        porcentajeReteIVA,
+        montoReteIVA,
+        totalNeto,
+      });
 
       if (!success) {
         return NextResponse.json(

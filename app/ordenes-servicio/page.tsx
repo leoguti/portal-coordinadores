@@ -440,7 +440,7 @@ export default function OrdenesServicioPage() {
                                           const fechaPedido = orden.fields["Fecha de pedido"] || "";
                                           const numFactura = orden.fields.NumeroFactura || "";
                                           const fechaPago = orden.fields.FechaPago || "";
-                                          const total = orden.fields.Total || 0;
+                                          const total = orden.fields.TotalNeto || orden.fields.Total || 0;
                                           const pdfUrl = orden.fields.PDF?.[0]?.url || null;
                                           const facturaUrl = orden.fields.Factura?.[0]?.url || null;
                                           const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
@@ -559,7 +559,7 @@ export default function OrdenesServicioPage() {
                     Total General ({ordenesFiltradas.length} {ordenesFiltradas.length === 1 ? "orden" : "ordenes"})
                   </span>
                   <span className="text-xl font-bold font-mono text-[#00d084]">
-                    {formatCurrency(ordenesFiltradas.reduce((sum, o) => sum + (o.fields.Total || 0), 0))}
+                    {formatCurrency(ordenesFiltradas.reduce((sum, o) => sum + (o.fields.TotalNeto || o.fields.Total || 0), 0))}
                   </span>
                 </div>
               </div>

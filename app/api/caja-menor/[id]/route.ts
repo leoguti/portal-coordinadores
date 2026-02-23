@@ -111,6 +111,8 @@ export async function PATCH(
         observaciones: body.observaciones,
         valor: body.valor,
         porcentajeRetencion: body.porcentajeRetencion,
+        porcentajeIVA: body.porcentajeIVA,
+        montoIVA: body.montoIVA,
         facturaUrl: body.facturaUrl,
       });
 

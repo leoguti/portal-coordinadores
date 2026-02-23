@@ -154,8 +154,9 @@ export default function CajaMenorPage() {
   // Calcular valor neto
   const calcValorNeto = (g: GastoCajaMenor) => {
     const valor = g.fields.Valor || 0;
+    const montoIVA = g.fields.MontoIVA || 0;
     const pct = g.fields.PorcentajeRetencion || 0;
-    return valor - (valor * pct);
+    return valor + montoIVA - (valor * pct);
   };
 
   const estadoColors: Record<string, string> = {
