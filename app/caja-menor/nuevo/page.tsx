@@ -36,6 +36,7 @@ export default function NuevoGastoCajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [verificandoSaldo, setVerificandoSaldo] = useState(true);
+  const [sinSaldo, setSinSaldo] = useState(false);
 
   // Verificar que el coordinador tenga saldo inicial asignado
   useEffect(() => {
@@ -47,10 +48,8 @@ export default function NuevoGastoCajaMenorPage() {
         );
         if (res.ok) {
           const { saldoInicial } = await res.json();
-          // Si no tiene saldo inicial, redirigir
           if (saldoInicial === 0 || saldoInicial === undefined) {
-            router.replace("/caja-menor");
-            return;
+            setSinSaldo(true);
           }
         }
       } catch {
@@ -251,13 +250,23 @@ export default function NuevoGastoCajaMenorPage() {
 
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Registrar Gasto</h1>
 
+        {sinSaldo && (
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
+            <p className="text-yellow-800 font-medium">No tienes saldo de caja menor asignado.</p>
+            <p className="text-yellow-700 text-sm mt-1">Contacta al administrador para que te asigne un saldo inicial antes de registrar gastos.</p>
+            <Link href="/caja-menor" className="inline-block mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+              Volver a Caja Menor
+            </Link>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-800">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+        {!sinSaldo && <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
           {/* Fecha */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -580,7 +589,7 @@ export default function NuevoGastoCajaMenorPage() {
               {saving ? "Guardando..." : "Registrar Gasto"}
             </button>
           </div>
-        </form>
+        </form>}
       </div>
     </AuthenticatedLayout>
   );
