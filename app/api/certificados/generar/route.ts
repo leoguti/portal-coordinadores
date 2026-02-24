@@ -5,6 +5,7 @@ import type { CertificadoPDFProps } from "@/components/pdf/CertificadoPDF";
 import React from "react";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Client as PgClient } from "pg";
+import { sendCertificadoEmail } from "@/lib/sendCertificadoEmail";
 
 export const maxDuration = 60;
 
@@ -323,6 +324,25 @@ export async function POST(request: NextRequest) {
         body.municipioDevolucionId,
         fullRecord.createdTime
       );
+      // Send certificate email
+      try {
+        const emailRecipients = [
+          "certificados@campolimpio.org",
+          "leogiga@gmail.com",
+          pdfProps.emailgenerador,
+          pdfProps.emailcoordinador,
+        ].filter(Boolean);
+        if (emailRecipients.length > 0) {
+          const emailResult = await sendCertificadoEmail({
+            consecutivo: pdfProps.consecutivo,
+            pdfBuffer: Buffer.from(pdfBuffer),
+            emails: emailRecipients,
+          });
+          console.log(`[certificados/email] ${emailResult.message}`);
+        }
+      } catch (err) {
+        console.error("[certificados/email] Send failed (non-blocking):", err);
+      }
       // Wait 60s for Airtable + TextIt/Telegram to download, then cleanup
       await new Promise((resolve) => setTimeout(resolve, 60000));
       try {
