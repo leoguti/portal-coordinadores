@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "8mb",
     },
   },
+  outputFileTracingIncludes: {
+    "/api/certificados/*": ["./lib/email-assets/**/*"],
+  },
 };
 
 export default nextConfig;
