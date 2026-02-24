@@ -1,0 +1,115 @@
+{
+  "version": "13",
+  "site": "https://textit.com",
+  "flows": [
+    {
+      "name": "Test Certificado Portal",
+      "uuid": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+      "spec_version": "13.5.0",
+      "language": "spa",
+      "type": "messaging",
+      "nodes": [
+        {
+          "uuid": "a1000001-0000-0000-0000-000000000001",
+          "actions": [
+            {
+              "type": "send_msg",
+              "uuid": "b1000001-0000-0000-0000-000000000001",
+              "text": "Generando certificado de prueba desde el nuevo endpoint del portal..."
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c1000001-0000-0000-0000-000000000001",
+              "destination_uuid": "a1000002-0000-0000-0000-000000000002"
+            }
+          ]
+        },
+        {
+          "uuid": "a1000002-0000-0000-0000-000000000002",
+          "actions": [
+            {
+              "type": "call_webhook",
+              "uuid": "b1000002-0000-0000-0000-000000000002",
+              "method": "POST",
+              "url": "https://portal.campolimpio.org/api/certificados/generar",
+              "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer 2VEqFeV9TUF8DV5ooduH3+eWdW2kGCbwhgBfTna4Ufk="
+              },
+              "body": "{\"ubicacionId\":\"recnin0YCgOoF33n1\",\"coordinadorId\":\"recLcrL8iaUboSV6B\",\"municipioDevolucionId\":\"rectGXQHlaO6DylD8\",\"rigidos\":10,\"flexibles\":5,\"metalicos\":3,\"embalaje\":2,\"triplelavado\":\"SI\",\"lugardevolucion\":\"Bodega Municipal\",\"fechadevolucion\":\"2026-02-23\",\"observaciones\":\"Prueba desde TextIt\"}",
+              "result_name": "certificado"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c1000002-0000-0000-0000-000000000001",
+              "destination_uuid": "a1000003-0000-0000-0000-000000000003"
+            },
+            {
+              "uuid": "c1000002-0000-0000-0000-000000000002",
+              "destination_uuid": "a1000004-0000-0000-0000-000000000004"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "default_category_uuid": "d1000002-0000-0000-0000-000000000002",
+            "categories": [
+              {
+                "uuid": "d1000002-0000-0000-0000-000000000001",
+                "name": "Success",
+                "exit_uuid": "c1000002-0000-0000-0000-000000000001"
+              },
+              {
+                "uuid": "d1000002-0000-0000-0000-000000000002",
+                "name": "Failure",
+                "exit_uuid": "c1000002-0000-0000-0000-000000000002"
+              }
+            ],
+            "operand": "@results.certificado.category",
+            "cases": [
+              {
+                "uuid": "e1000002-0000-0000-0000-000000000001",
+                "type": "has_only_text",
+                "arguments": ["Success"],
+                "category_uuid": "d1000002-0000-0000-0000-000000000001"
+              }
+            ]
+          }
+        },
+        {
+          "uuid": "a1000003-0000-0000-0000-000000000003",
+          "actions": [
+            {
+              "type": "send_msg",
+              "uuid": "b1000003-0000-0000-0000-000000000003",
+              "text": "Certificado generado exitosamente!\n\nConsecutivo: @results.certificado.extra.consecutivo\nRecord ID: @results.certificado.extra.recordId\nPDF: @results.certificado.extra.pdfUrl\nStatus: @results.certificado.extra.status"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c1000003-0000-0000-0000-000000000001",
+              "destination_uuid": null
+            }
+          ]
+        },
+        {
+          "uuid": "a1000004-0000-0000-0000-000000000004",
+          "actions": [
+            {
+              "type": "send_msg",
+              "uuid": "b1000004-0000-0000-0000-000000000004",
+              "text": "Error generando certificado.\n\nRespuesta: @results.certificado.value\nCategoria: @results.certificado.category"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c1000004-0000-0000-0000-000000000001",
+              "destination_uuid": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
