@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 
 // Allow up to 60 seconds for PDF regeneration (fetches images, generates PDF, uploads)
@@ -52,6 +52,36 @@ export async function DELETE(
         { error: getMensajeErrorFecha() },
         { status: 403 }
       );
+    }
+
+    // Validar que los Kardex vinculados no quedarían fuera de fecha
+    const items = await getItemsOrden(ordenId);
+    const kardexIds = items
+      .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
+      .map(item => item.fields.Kardex![0]);
+
+    if (kardexIds.length > 0) {
+      const kardexRecords = await getKardexByIds(kardexIds);
+      const kardexFueraFecha = kardexRecords.filter(
+        k => k.fields.fechakardex && !puedeModificarFecha(k.fields.fechakardex)
+      );
+
+      if (kardexFueraFecha.length > 0) {
+        const detalles = kardexFueraFecha
+          .map(k => {
+            const id = k.fields.idkardex || k.id;
+            const fecha = k.fields.fechakardex || "sin fecha";
+            return `#${id} del ${fecha}`;
+          })
+          .join(", ");
+
+        return NextResponse.json(
+          {
+            error: `No se puede eliminar esta orden porque contiene Kardex con fecha fuera del periodo permitido (${detalles}). Si se elimina, estos registros no podrán ser reasignados a una nueva orden.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     console.log(`Deleting orden ${ordenId}...`);
