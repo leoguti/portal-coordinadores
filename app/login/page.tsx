@@ -65,8 +65,8 @@ function LoginForm() {
         </div>
         <div className="relative z-10 text-center">
           <img src="/logo-campolimpio-white.png" alt="CampoLimpio" className="h-24 mx-auto mb-8" />
-          <h1 className="text-4xl font-bold text-white mb-4">Portal CampoLimpio</h1>
-          <p className="text-xl text-white/80 font-medium mb-6">Gestión integral de operaciones en campo</p>
+          <h1 className="text-4xl font-bold text-[#4fffb0] mb-4">Portal CampoLimpio</h1>
+          <p className="text-xl text-[#b0ffd9] font-medium mb-6">Gestión integral de operaciones en campo</p>
           <div className="mt-8 space-y-3 text-left max-w-sm mx-auto">
             <div className="flex items-center gap-3 text-white/80">
               <span className="w-2 h-2 bg-[#00d084] rounded-full flex-shrink-0"></span>
