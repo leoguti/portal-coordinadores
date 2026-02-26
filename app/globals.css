@@ -206,12 +206,18 @@ button {
   background-color: #ffffff !important;
 }
 
-/* Forzar texto negro en elementos importantes */
+/* Forzar texto negro en elementos importantes (excepto dentro de .login-branding) */
 h1, h2, h3, h4, h5, h6 {
-  color: #111827 !important;
+  color: #111827;
   font-weight: 700;
 }
 
 p {
-  color: #374151 !important;
+  color: #374151;
+}
+
+.login-branding h1,
+.login-branding p,
+.login-branding span {
+  color: inherit !important;
 }

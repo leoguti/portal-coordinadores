@@ -69,7 +69,7 @@ function LoginForm() {
           position: "relative",
           overflow: "hidden",
         }}
-        className="hidden lg:flex"
+        className="hidden lg:flex login-branding"
       >
         {/* Efecto de luz decorativo */}
         <div style={{ position: "absolute", inset: 0, opacity: 0.08 }}>
