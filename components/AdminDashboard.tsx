@@ -40,6 +40,7 @@ interface AdminDashboardStats {
     porCoordinador: Array<{
       id: string;
       nombre: string;
+      saldoAnterior: number;
       meta: number;
       entradas: number;
       salidas: number;
@@ -280,6 +281,7 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
               <thead>
                 <tr className="bg-gray-50 border-b">
                   <th className="text-left p-3 font-semibold text-gray-700">Coordinador</th>
+                  <th className="text-right p-3 font-semibold text-gray-700">Saldo Cierre ({year - 1})</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Meta (kg)</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Entradas</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Salidas</th>
@@ -291,6 +293,7 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                 {stats.metasRecoleccion.porCoordinador.map((c) => (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="p-3 font-medium">{c.nombre}</td>
+                    <td className="p-3 text-right text-amber-700 font-semibold">{c.saldoAnterior.toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right">{c.meta.toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right text-green-700">{c.entradas.toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right text-blue-700">{c.salidas.toLocaleString("es-CO")}</td>
