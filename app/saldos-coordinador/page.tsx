@@ -110,15 +110,17 @@ export default function SaldosCoordinadorPage() {
       return fecha <= fechaFinMes;
     });
 
-    // Mapa centro -> coordinador dueño
+    // Mapa centro -> coordinador dueño, nombre, saldo inicial
     const centroDueno = new Map<string, string>();
     const centroNombre = new Map<string, string>();
+    const centroSaldoInicial = new Map<string, number>();
     for (const c of centros) {
       const coordId = c.fields.Coordinador?.[0];
       if (coordId) {
         centroDueno.set(c.id, coordId);
       }
       centroNombre.set(c.id, c.fields.Nombre || "Sin nombre");
+      centroSaldoInicial.set(c.id, c.fields.SaldoInicialTotal || 0);
     }
 
     // Obtener todos los coordinadores únicos de kardex
@@ -205,9 +207,10 @@ export default function SaldosCoordinadorPage() {
         const ca = saldoPorCentro.get(caId);
         const ent = ca?.entradas || 0;
         const sal = ca?.salidas || 0;
-        const saldo = ent - sal;
+        const si = centroSaldoInicial.get(caId) || 0;
+        const saldo = si + ent - sal;
         sumaCentros += saldo;
-        if (ent > 0 || sal > 0) {
+        if (ent > 0 || sal > 0 || si !== 0) {
           centrosCoord.push({
             centroId: caId,
             nombre: centroNombre.get(caId) || "Sin nombre",
