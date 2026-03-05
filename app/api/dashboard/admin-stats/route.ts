@@ -98,20 +98,33 @@ export async function GET(request: Request) {
       coordinadoresActivos.map((c) => [c.id, c.name])
     );
 
-    // Saldo año anterior per coordinator (entradas - salidas del año anterior)
-    const prevYearStr = String(year - 1);
-    const kardexPrevYear = allKardex.filter((k) => k.fields.AÑO === prevYearStr);
-    const entradaPrevPorCoord = new Map<string, number>();
-    const salidaPrevPorCoord = new Map<string, number>();
-    for (const k of kardexPrevYear) {
+    // Saldo acumulativo al cierre del año anterior per coordinator
+    // = SaldoInicialTotal de sus centros + entradas históricas (hasta año-1) - salidas históricas (hasta año-1)
+    const kardexHastaAnterior = allKardex.filter((k) => {
+      const kYear = parseInt(k.fields.AÑO || "0");
+      return kYear > 0 && kYear < year;
+    });
+    const entradaHistPorCoord = new Map<string, number>();
+    const salidaHistPorCoord = new Map<string, number>();
+    for (const k of kardexHastaAnterior) {
       const coordId = k.fields.idcoordinador?.[0] || k.fields.Coordinador?.[0];
       if (!coordId) continue;
       const total = k.fields.Total || 0;
       if (k.fields.TipoMovimiento === "ENTRADA") {
-        entradaPrevPorCoord.set(coordId, (entradaPrevPorCoord.get(coordId) || 0) + total);
+        entradaHistPorCoord.set(coordId, (entradaHistPorCoord.get(coordId) || 0) + total);
       } else if (k.fields.TipoMovimiento === "SALIDA") {
-        salidaPrevPorCoord.set(coordId, (salidaPrevPorCoord.get(coordId) || 0) + Math.abs(total));
+        salidaHistPorCoord.set(coordId, (salidaHistPorCoord.get(coordId) || 0) + Math.abs(total));
       }
+    }
+    // Saldo inicial de centros de acopio por coordinador
+    const saldoInicialPorCoord = new Map<string, number>();
+    for (const centro of centrosAcopio) {
+      const coordId = centro.fields.Coordinador?.[0];
+      if (!coordId) continue;
+      saldoInicialPorCoord.set(
+        coordId,
+        (saldoInicialPorCoord.get(coordId) || 0) + (centro.fields.SaldoInicialTotal || 0)
+      );
     }
 
     // Accumulate kardex kg per coordinator
@@ -150,7 +163,9 @@ export async function GET(request: Request) {
       const entradas = Math.round((entradaPorCoord.get(coordId) || 0) * 100) / 100;
       const salidas = Math.round((salidaPorCoord.get(coordId) || 0) * 100) / 100;
       const saldoAnterior = Math.round(
-        ((entradaPrevPorCoord.get(coordId) || 0) - (salidaPrevPorCoord.get(coordId) || 0)) * 100
+        ((saldoInicialPorCoord.get(coordId) || 0) +
+        (entradaHistPorCoord.get(coordId) || 0) -
+        (salidaHistPorCoord.get(coordId) || 0)) * 100
       ) / 100;
       const porcentaje = meta > 0 ? Math.round((entradas / meta) * 100) : 0;
       return {
