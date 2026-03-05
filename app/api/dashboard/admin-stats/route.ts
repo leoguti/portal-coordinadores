@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     );
 
     // Saldo acumulativo al cierre del año anterior per coordinator
-    // = SaldoInicialTotal de sus centros + entradas históricas (hasta año-1) - salidas históricas (hasta año-1)
+    // = entradas históricas (hasta año-1) - salidas históricas (hasta año-1)
     const kardexHastaAnterior = allKardex.filter((k) => {
       const kYear = parseInt(k.fields.AÑO || "0");
       return kYear > 0 && kYear < year;
@@ -115,16 +115,6 @@ export async function GET(request: Request) {
       } else if (k.fields.TipoMovimiento === "SALIDA") {
         salidaHistPorCoord.set(coordId, (salidaHistPorCoord.get(coordId) || 0) + Math.abs(total));
       }
-    }
-    // Saldo inicial de centros de acopio por coordinador
-    const saldoInicialPorCoord = new Map<string, number>();
-    for (const centro of centrosAcopio) {
-      const coordId = centro.fields.Coordinador?.[0];
-      if (!coordId) continue;
-      saldoInicialPorCoord.set(
-        coordId,
-        (saldoInicialPorCoord.get(coordId) || 0) + (centro.fields.SaldoInicialTotal || 0)
-      );
     }
 
     // Accumulate kardex kg per coordinator
@@ -163,8 +153,7 @@ export async function GET(request: Request) {
       const entradas = Math.round((entradaPorCoord.get(coordId) || 0) * 100) / 100;
       const salidas = Math.round((salidaPorCoord.get(coordId) || 0) * 100) / 100;
       const saldoAnterior = Math.round(
-        ((saldoInicialPorCoord.get(coordId) || 0) +
-        (entradaHistPorCoord.get(coordId) || 0) -
+        ((entradaHistPorCoord.get(coordId) || 0) -
         (salidaHistPorCoord.get(coordId) || 0)) * 100
       ) / 100;
       const porcentaje = meta > 0 ? Math.round((entradas / meta) * 100) : 0;
