@@ -157,6 +157,7 @@ interface TerceroFields {
   Municipio?: string[]; // Linked to MUNICIPIOS table
   "Municipio-Departamento"?: string[]; // Lookup field
   Tipo?: string;
+  Proceso?: string; // Single select: Reciclaje, Celda de Seguridad, Incineracion, Coprocesamiento
   Ordenes?: string[]; // Linked to Ordenes
 }
 

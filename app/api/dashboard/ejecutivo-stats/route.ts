@@ -7,6 +7,7 @@ import {
   listAllActividades,
   getAllMetas,
   getAllCoordinadoresActivos,
+  listTerceros,
 } from "@/lib/airtable";
 
 const MATERIALES = [
@@ -52,12 +53,13 @@ export async function GET(request: Request) {
     const prevYearStr = String(year - 1);
 
     // Fetch only what we need
-    const [allKardex, allActividades, allMetas, coordinadoresActivos] =
+    const [allKardex, allActividades, allMetas, coordinadoresActivos, allTerceros] =
       await Promise.all([
         getAllKardex(),
         listAllActividades(),
         getAllMetas(year),
         getAllCoordinadoresActivos(),
+        listTerceros(),
       ]);
 
     const kardexYear = allKardex.filter((k) => k.fields.AÑO === yearStr);
@@ -263,6 +265,33 @@ export async function GET(request: Request) {
       });
     }
 
+    // --- Salidas por Proceso (del gestor) ---
+    const gestorProcesoMap = new Map<string, string>();
+    for (const t of allTerceros) {
+      if (t.fields.Tipo === "Gestor" && t.fields.Proceso) {
+        gestorProcesoMap.set(t.id, t.fields.Proceso);
+      }
+    }
+
+    const salidasPorProceso = new Map<string, number>();
+    for (const k of kardexYear) {
+      if (k.fields.TipoMovimiento !== "SALIDA") continue;
+      const gestorId = k.fields.gestor?.[0];
+      if (!gestorId) continue;
+      const proceso = gestorProcesoMap.get(gestorId) || "Sin proceso";
+      salidasPorProceso.set(
+        proceso,
+        (salidasPorProceso.get(proceso) || 0) + Math.abs(k.fields.Total || 0)
+      );
+    }
+
+    const salidasProceso = Array.from(salidasPorProceso.entries())
+      .map(([proceso, kg]) => ({
+        proceso,
+        kg: Math.round(kg),
+      }))
+      .sort((a, b) => b.kg - a.kg);
+
     // --- Tendencia mensual (últimos 12 meses desde hoy, más nuevo primero) ---
     const hoy = new Date();
     const tendenciaMensual = Array.from({ length: 12 }, (_, i) => {
@@ -322,6 +351,7 @@ export async function GET(request: Request) {
       },
       materiales: materialesGlobal,
       materialesPorCoord,
+      salidasProceso,
       tendenciaMensual,
       coordinadoresList: coordinadoresActivos
         .filter((c) => c.rol === "Coordinador")

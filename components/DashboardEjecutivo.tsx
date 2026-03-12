@@ -61,6 +61,7 @@ interface Stats {
   };
   materiales: MaterialRow[];
   materialesPorCoord: Record<string, MaterialRow[]>;
+  salidasProceso: Array<{ proceso: string; kg: number }>;
   tendenciaMensual: Array<{ mes: string; entradas: number; salidas: number }>;
   coordinadoresList: Array<{ id: string; name: string }>;
   year: number;
@@ -397,6 +398,57 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
           <p className="text-xs text-gray-500">kg neto</p>
         </div>
       </div>
+
+      {/* SECTION: Salidas por Proceso */}
+      {stats.salidasProceso.length > 0 && (() => {
+        const maxProceso = Math.max(...stats.salidasProceso.map((p) => p.kg), 1);
+        const totalProceso = stats.salidasProceso.reduce((s, p) => s + p.kg, 0);
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              Salidas por Proceso
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left p-2.5 font-semibold text-gray-600 w-48">Proceso</th>
+                    <th className="text-right p-2.5 font-semibold text-blue-700 w-28">Salidas (kg)</th>
+                    <th className="p-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.salidasProceso.map((p) => (
+                    <tr key={p.proceso} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="p-2.5 font-medium text-gray-900">{p.proceso}</td>
+                      <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
+                        {fmt(p.kg)}
+                      </td>
+                      <td className="p-2.5 w-64">
+                        <div className="w-full bg-gray-100 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full"
+                            style={{ width: `${(p.kg / maxProceso) * 100}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                    <td className="p-2.5">TOTAL</td>
+                    <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
+                      {fmt(totalProceso)}
+                    </td>
+                    <td className="p-2.5"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* SECTION 3: Material por tipo */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
