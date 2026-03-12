@@ -415,12 +415,9 @@ export default function KardexPage() {
     return esMesCerrado(diciembreStr);
   };
   
-  // Para los resúmenes anuales/mensuales, usar TODO el histórico hasta 2025-12-31
-  // NO solo meses cerrados
+  // Para los resúmenes anuales/mensuales, usar TODO el histórico con fecha
   const registrosParaResumen = filteredRecords.filter((record) => {
-    if (!record.fields.fechakardex) return false;
-    // Incluir TODO hasta 2025-12-31
-    return record.fields.fechakardex <= '2025-12-31';
+    return Boolean(record.fields.fechakardex);
   });
   
   // Resumen por Mes - Últimos 12 meses hasta hoy, del más nuevo al más antiguo
