@@ -393,19 +393,19 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Entradas</p>
-          <p className="text-2xl font-bold text-gray-900">{fmtK(stats.kpis.entradasKg)}</p>
+          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.entradasKg)}</p>
           <p className="text-xs text-gray-500">kg</p>
           <DeltaBadge value={stats.kpis.deltaEntradas} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Salidas</p>
-          <p className="text-2xl font-bold text-gray-900">{fmtK(stats.kpis.salidasKg)}</p>
+          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.salidasKg)}</p>
           <p className="text-xs text-gray-500">kg</p>
           <DeltaBadge value={stats.kpis.deltaSalidas} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Saldo</p>
-          <p className="text-2xl font-bold text-gray-900">{fmtK(stats.kpis.saldoKg)}</p>
+          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.saldoKg)}</p>
           <p className="text-xs text-gray-500">kg neto</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
