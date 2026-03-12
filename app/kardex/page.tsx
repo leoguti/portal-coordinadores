@@ -531,8 +531,8 @@ export default function KardexPage() {
   // Agrupar por coordinador
   const huerfanosPorCoord = new Map<string, { nombre: string; registros: typeof kardexHuerfanos }>();
   for (const k of kardexHuerfanos) {
-    const coordId = k.fields.idcoordinador?.[0] || k.fields.Coordinador?.[0] || "sin-coord";
     const coordNombre = k.fields["Name (from Coordinador)"]?.[0] || "Sin coordinador";
+    const coordId = coordNombre;
     if (!huerfanosPorCoord.has(coordId)) {
       huerfanosPorCoord.set(coordId, { nombre: coordNombre, registros: [] });
     }
