@@ -423,16 +423,15 @@ export default function KardexPage() {
     return record.fields.fechakardex <= '2025-12-31';
   });
   
-  // Resumen por Mes - Entradas/Salidas del mes, SALDO HISTÓRICO ACUMULADO
-  const mesesDisponibles = Array.from(
-    new Set(
-      registrosParaResumen
-        .map(r => r.fields.MES)
-        .filter((mes): mes is string => Boolean(mes))
-    )
-  ).sort((a, b) => a.localeCompare(b)); // ASCENDENTE: más antiguo primero
-  
-  const resumenMensual = mesesDisponibles.slice(-12).map(mes => { // Últimos 12 meses
+  // Resumen por Mes - Últimos 12 meses hasta hoy, del más nuevo al más antiguo
+  const hoy = new Date();
+  const ultimos12Meses: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    ultimos12Meses.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const resumenMensual = ultimos12Meses.map(mes => { // Últimos 12 meses, más nuevo primero
     // ENTRADAS Y SALIDAS: Solo movimientos DE este mes específico
     const registrosDelMes = registrosParaResumen.filter(r => r.fields.MES === mes);
     
@@ -654,7 +653,7 @@ export default function KardexPage() {
                     📆 Resumen por Mes (últimos 12 meses)
                   </h2>
                   <span className="text-xs text-gray-600">
-                    📊 Movimientos por mes hasta 2025-12-31
+                    📊 Movimientos por mes hasta {new Date().toISOString().slice(0, 10)}
                   </span>
                 </div>
               </div>
