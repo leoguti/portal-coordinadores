@@ -398,6 +398,7 @@ export default function KardexPage() {
   // Función para determinar si un mes está cerrado (más de 7 días después del fin del mes)
   const esMesCerrado = (mesStr: string): boolean => {
     // mesStr formato: "YYYY-MM"
+    if (!mesStr || typeof mesStr !== "string" || !mesStr.includes("-")) return false;
     const [año, mes] = mesStr.split('-').map(Number);
     // Último día del mes
     const ultimoDiaMes = new Date(año, mes, 0); // mes sin restar 1 da el último día del mes anterior
