@@ -50,10 +50,6 @@ export default function PasoKardex({
 
   const contarPorTipo = (tipo: string) => {
     return kardexDisponibles.filter((k) => {
-      if (k.fields.fechakardex) {
-        const fechaKardex = new Date(k.fields.fechakardex + "T00:00:00");
-        if (fechaKardex < fechaLimite) return false;
-      }
       if (tipo === "TODOS") return true;
       return k.fields.TipoMovimiento === tipo;
     }).length;
