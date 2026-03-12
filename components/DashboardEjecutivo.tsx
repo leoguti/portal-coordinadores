@@ -517,8 +517,9 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               tickFormatter={(v) => fmtK(v)}
             />
             <Tooltip
-              formatter={(value: number, name: string) => [
-                fmt(value) + " kg",
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any, name: any) => [
+                fmt(Number(value)) + " kg",
                 name === "entradas" ? "Entradas" : "Salidas",
               ]}
               labelFormatter={(label) => `${label}`}
