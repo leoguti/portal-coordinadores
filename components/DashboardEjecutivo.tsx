@@ -87,16 +87,6 @@ function metaBarColor(porcentaje: number): string {
   return "#dc2626";
 }
 
-function DeltaBadge({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-xs text-gray-400">—</span>;
-  const isUp = value >= 0;
-  return (
-    <span className={`text-xs font-semibold ${isUp ? "text-green-600" : "text-red-600"}`}>
-      {isUp ? "↑" : "↓"} {Math.abs(value)}%
-    </span>
-  );
-}
-
 // --- Month label helper ---
 const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 function mesLabel(mesStr: string) {
@@ -390,29 +380,21 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
       </div>
 
       {/* SECTION 2: KPIs rápidos */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Entradas</p>
           <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.entradasKg)}</p>
           <p className="text-xs text-gray-500">kg</p>
-          <DeltaBadge value={stats.kpis.deltaEntradas} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Salidas</p>
           <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.salidasKg)}</p>
           <p className="text-xs text-gray-500">kg</p>
-          <DeltaBadge value={stats.kpis.deltaSalidas} />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Saldo</p>
           <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.saldoKg)}</p>
           <p className="text-xs text-gray-500">kg neto</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">Movimientos</p>
-          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.movimientos)}</p>
-          <p className="text-xs text-gray-500">registros kardex</p>
-          <DeltaBadge value={stats.kpis.deltaMovimientos} />
         </div>
       </div>
 
