@@ -249,7 +249,10 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error in alertas-kardex cron:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error interno", detail: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }
 
