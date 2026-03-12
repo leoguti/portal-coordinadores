@@ -10,6 +10,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
 // --- Types ---
@@ -399,57 +402,6 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         </div>
       </div>
 
-      {/* SECTION: Salidas por Proceso */}
-      {stats.salidasProceso.length > 0 && (() => {
-        const maxProceso = Math.max(...stats.salidasProceso.map((p) => p.kg), 1);
-        const totalProceso = stats.salidasProceso.reduce((s, p) => s + p.kg, 0);
-        return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-              Salidas por Proceso
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="text-left p-2.5 font-semibold text-gray-600 w-48">Proceso</th>
-                    <th className="text-right p-2.5 font-semibold text-blue-700 w-28">Salidas (kg)</th>
-                    <th className="p-2.5"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.salidasProceso.map((p) => (
-                    <tr key={p.proceso} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="p-2.5 font-medium text-gray-900">{p.proceso}</td>
-                      <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
-                        {fmt(p.kg)}
-                      </td>
-                      <td className="p-2.5 w-64">
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div
-                            className="bg-blue-500 h-2 rounded-full"
-                            style={{ width: `${(p.kg / maxProceso) * 100}%` }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
-                    <td className="p-2.5">TOTAL</td>
-                    <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
-                      {fmt(totalProceso)}
-                    </td>
-                    <td className="p-2.5"></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* SECTION 3: Material por tipo */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -568,6 +520,62 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* SECTION: Salidas por Proceso */}
+      {stats.salidasProceso.length > 0 && (() => {
+        const PROCESO_COLORS: Record<string, string> = {
+          "Reciclaje": "#22c55e",
+          "Celda de Seguridad": "#f59e0b",
+          "Aprovechamiento Energético": "#ef4444",
+          "Coprocesamiento": "#8b5cf6",
+          "Incineracion": "#ef4444",
+          "Otros": "#6b7280",
+          "Sin proceso": "#d1d5db",
+        };
+        const totalProceso = stats.salidasProceso.reduce((s, p) => s + p.kg, 0);
+        const maxProceso = Math.max(...stats.salidasProceso.map((p) => p.kg), 1);
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mt-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              Salidas por Proceso
+            </h2>
+            <div className="space-y-3">
+              {stats.salidasProceso.map((p) => {
+                const color = PROCESO_COLORS[p.proceso] || "#94a3b8";
+                const pct = totalProceso > 0 ? Math.round((p.kg / totalProceso) * 100) : 0;
+                return (
+                  <div key={p.proceso}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-700">{p.proceso}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-mono font-bold text-gray-900">
+                          {fmt(p.kg)} kg
+                        </span>
+                        <span className="text-xs text-gray-500 w-10 text-right">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-3">
+                      <div
+                        className="h-3 rounded-full transition-all"
+                        style={{
+                          width: `${(p.kg / maxProceso) * 100}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="border-t pt-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-900">TOTAL</span>
+                <span className="text-sm font-mono font-bold text-gray-900">
+                  {fmt(totalProceso)} kg
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
