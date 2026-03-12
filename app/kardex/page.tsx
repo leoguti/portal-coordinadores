@@ -68,6 +68,7 @@ export default function KardexPage() {
   
   // Vista de resúmenes
   const [showResumen, setShowResumen] = useState(false);
+  const [expandedHuerfanos, setExpandedHuerfanos] = useState<Set<string>>(new Set());
   const [datosYaCargados, setDatosYaCargados] = useState(false);
   const [expandedMes, setExpandedMes] = useState<string | null>(null);
 
@@ -517,6 +518,58 @@ export default function KardexPage() {
     };
   }); // Sin slice adicional, ya tomamos últimos 5 con slice(-5)
 
+  // --- Kardex huérfanos: "Por Pagar" de meses cerrados (solo admin) ---
+  const kardexHuerfanos = canViewAll
+    ? allKardexRecords.filter((k) => {
+        if (k.fields.EstadoPago !== "Por Pagar") return false;
+        const mes = k.fields.MES;
+        if (!mes) return false;
+        return esMesCerrado(mes);
+      })
+    : [];
+
+  // Agrupar por coordinador
+  const huerfanosPorCoord = new Map<string, { nombre: string; registros: typeof kardexHuerfanos }>();
+  for (const k of kardexHuerfanos) {
+    const coordId = k.fields.idcoordinador?.[0] || k.fields.Coordinador?.[0] || "sin-coord";
+    const coordNombre = k.fields["Name (from Coordinador)"]?.[0] || "Sin coordinador";
+    if (!huerfanosPorCoord.has(coordId)) {
+      huerfanosPorCoord.set(coordId, { nombre: coordNombre, registros: [] });
+    }
+    huerfanosPorCoord.get(coordId)!.registros.push(k);
+  }
+
+  const huerfanosResumen = Array.from(huerfanosPorCoord.values())
+    .map((g) => ({
+      nombre: g.nombre,
+      count: g.registros.length,
+      totalKg: Math.round(g.registros.reduce((s, r) => s + Math.abs(r.fields.Total || 0), 0)),
+      mesAntiguo: g.registros
+        .map((r) => r.fields.MES || "")
+        .filter(Boolean)
+        .sort()[0] || "",
+      registros: g.registros
+        .sort((a, b) => (a.fields.fechakardex || "").localeCompare(b.fields.fechakardex || ""))
+        .map((r) => ({
+          id: r.fields.idkardex || 0,
+          fecha: r.fields.fechakardex || "",
+          tipo: r.fields.TipoMovimiento || "",
+          municipio: r.fields["mundep (from MunicipioOrigen)"]?.[0] || "",
+          centro: r.fields.NombreCentrodeAcopio?.[0] || "",
+          totalKg: Math.round(Math.abs(r.fields.Total || 0)),
+        })),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const toggleHuerfano = (nombre: string) => {
+    setExpandedHuerfanos((prev) => {
+      const next = new Set(prev);
+      if (next.has(nombre)) next.delete(nombre);
+      else next.add(nombre);
+      return next;
+    });
+  };
+
   const limpiarFiltros = () => {
     setFechaDesde("");
     setFechaHasta("");
@@ -743,6 +796,97 @@ export default function KardexPage() {
                 </table>
               </div>
             </div>
+            {/* Kardex Pendientes (Huérfanos) - Solo Admin */}
+            {canViewAll && huerfanosResumen.length > 0 && (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-6 py-4 bg-red-50 border-b border-red-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      ⚠️ Kardex Pendientes de Orden ({kardexHuerfanos.length} registros)
+                    </h2>
+                    <span className="text-xs text-red-600 font-medium">
+                      Registros &quot;Por Pagar&quot; de meses cerrados sin orden de servicio
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Coordinador</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Registros</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total (kg)</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Mes más antiguo</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Detalle</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {huerfanosResumen.map((h) => (
+                        <Fragment key={h.nombre}>
+                          <tr className="hover:bg-red-50">
+                            <td className="px-6 py-3 text-sm font-medium text-gray-900">{h.nombre}</td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-red-700">{h.count}</td>
+                            <td className="px-6 py-3 text-sm text-right font-semibold">{h.totalKg.toLocaleString("es-CO")}</td>
+                            <td className="px-6 py-3 text-sm text-center text-gray-600">{h.mesAntiguo}</td>
+                            <td className="px-6 py-3 text-center">
+                              <button
+                                onClick={() => toggleHuerfano(h.nombre)}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                {expandedHuerfanos.has(h.nombre) ? "▾ Ocultar" : "▸ Ver"}
+                              </button>
+                            </td>
+                          </tr>
+                          {expandedHuerfanos.has(h.nombre) && (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-3 bg-gray-50">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="text-gray-500">
+                                      <th className="text-left py-1 px-2">ID</th>
+                                      <th className="text-left py-1 px-2">Fecha</th>
+                                      <th className="text-left py-1 px-2">Tipo</th>
+                                      <th className="text-left py-1 px-2">Municipio</th>
+                                      <th className="text-left py-1 px-2">Centro</th>
+                                      <th className="text-right py-1 px-2">Total (kg)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {h.registros.map((r) => (
+                                      <tr key={r.id} className="border-t border-gray-200">
+                                        <td className="py-1 px-2 font-mono">{r.id}</td>
+                                        <td className="py-1 px-2">{r.fecha}</td>
+                                        <td className="py-1 px-2">
+                                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${r.tipo === "ENTRADA" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}`}>
+                                            {r.tipo}
+                                          </span>
+                                        </td>
+                                        <td className="py-1 px-2">{r.municipio}</td>
+                                        <td className="py-1 px-2">{r.centro}</td>
+                                        <td className="py-1 px-2 text-right font-semibold">{r.totalKg.toLocaleString("es-CO")}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-red-50 font-bold border-t-2 border-red-200">
+                        <td className="px-6 py-3 text-sm">TOTAL</td>
+                        <td className="px-6 py-3 text-sm text-right text-red-700">{kardexHuerfanos.length}</td>
+                        <td className="px-6 py-3 text-sm text-right">{huerfanosResumen.reduce((s, h) => s + h.totalKg, 0).toLocaleString("es-CO")}</td>
+                        <td className="px-6 py-3"></td>
+                        <td className="px-6 py-3"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
