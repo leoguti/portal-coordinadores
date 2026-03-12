@@ -34,14 +34,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const isTest = searchParams.get("test") === "true";
+  const testEmail = searchParams.get("email");
+
   // Colombia timezone
   const now = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Bogota" })
   );
-  const dia = now.getDate();
+  const dia = isTest ? 7 : now.getDate(); // In test mode, simulate day 7 (urgent)
 
   // Only send on days 1, 4, and 7
-  if (![1, 4, 7].includes(dia)) {
+  if (!isTest && ![1, 4, 7].includes(dia)) {
     return NextResponse.json({ message: `Día ${dia}: no es día de alerta`, sent: 0 });
   }
 
@@ -133,9 +137,14 @@ export async function GET(request: Request) {
     let emailsSent = 0;
     const errors: string[] = [];
 
-    for (const [coordId, registros] of huerfanosPorCoord) {
+    // In test mode, only send to the first coordinator with pending records (to testEmail)
+    const entries = isTest
+      ? Array.from(huerfanosPorCoord.entries()).slice(0, 1)
+      : Array.from(huerfanosPorCoord.entries());
+
+    for (const [coordId, registros] of entries) {
       const coord = coordMap.get(coordId);
-      if (!coord || !coord.email) continue;
+      if (!coord || (!coord.email && !testEmail)) continue;
 
       const totalKg = registros.reduce((s, r) => s + r.totalKg, 0);
 
@@ -214,10 +223,11 @@ export async function GET(request: Request) {
 </html>`;
 
       try {
+        const recipient = isTest && testEmail ? testEmail : coord.email;
         await transport.sendMail({
           from: `"CampoLimpio - Alertas" <${process.env.EMAIL_FROM}>`,
-          to: coord.email,
-          subject: `⚠️ ${asunto} (${registros.length} registros)`,
+          to: recipient,
+          subject: `${isTest ? "[TEST] " : ""}⚠️ ${asunto} (${registros.length} registros)`,
           html,
         });
         emailsSent++;
