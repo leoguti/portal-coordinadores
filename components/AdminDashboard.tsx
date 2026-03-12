@@ -304,6 +304,28 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                  <td className="p-3">TOTAL</td>
+                  <td className="p-3 text-right">
+                    {stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.meta, 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right text-green-700">
+                    {stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.entradas, 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right text-blue-700">
+                    {stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.salidas, 0).toLocaleString("es-CO")}
+                  </td>
+                  <td className="p-3 text-right">
+                    {(() => {
+                      const totalMeta = stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.meta, 0);
+                      const totalEntradas = stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.entradas, 0);
+                      return totalMeta > 0 ? Math.round((totalEntradas / totalMeta) * 100) : 0;
+                    })()}%
+                  </td>
+                  <td className="p-3"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
