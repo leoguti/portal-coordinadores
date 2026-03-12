@@ -307,6 +307,9 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
                   <td className="p-3">TOTAL</td>
+                  <td className="p-3 text-right text-amber-700">
+                    {stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.saldoAnterior, 0).toLocaleString("es-CO")}
+                  </td>
                   <td className="p-3 text-right">
                     {stats.metasRecoleccion.porCoordinador.reduce((s, c) => s + c.meta, 0).toLocaleString("es-CO")}
                   </td>
