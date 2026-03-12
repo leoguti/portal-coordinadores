@@ -566,11 +566,16 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                   </div>
                 );
               })}
-              <div className="border-t pt-3 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-900">TOTAL</span>
-                <span className="text-sm font-mono font-bold text-gray-900">
-                  {fmt(totalProceso)} kg
-                </span>
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900">TOTAL</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-mono font-bold text-gray-900">
+                      {fmt(totalProceso)} kg
+                    </span>
+                    <span className="text-xs text-gray-500 w-10 text-right">100%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
