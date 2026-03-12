@@ -254,7 +254,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.metasRecoleccion.porCoordinador.map((c) => (
+                  {[...stats.metasRecoleccion.porCoordinador].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => (
                     <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="p-2 font-medium">{c.nombre}</td>
                       <td className="p-2 text-right">{fmt(c.meta)}</td>
@@ -352,7 +352,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.metasSensibilizacion.porCoordinador.map((c) => (
+                  {[...stats.metasSensibilizacion.porCoordinador].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => (
                     <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="p-2 font-medium">{c.nombre}</td>
                       <td className="p-2 text-right">{fmt(c.meta)}</td>
