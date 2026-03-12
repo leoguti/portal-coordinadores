@@ -110,15 +110,7 @@ export default function PasoKardex({
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-800">
           <strong>Selecciona los Kardex</strong> que deseas incluir en la orden
-          de servicio. Solo se muestran Kardex desde el{" "}
-          <strong>
-            {fechaLimite.toLocaleDateString("es-CO", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </strong>
-          .
+          de servicio. Se muestran todos los Kardex con estado &quot;Por Pagar&quot;.
         </p>
       </div>
 
