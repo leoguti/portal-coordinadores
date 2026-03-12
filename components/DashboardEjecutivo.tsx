@@ -108,6 +108,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
   const [expandRecol, setExpandRecol] = useState(false);
   const [expandSens, setExpandSens] = useState(false);
   const [materialCoord, setMaterialCoord] = useState<string>("global");
+  const [showInfoProceso, setShowInfoProceso] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -536,9 +537,27 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         const maxProceso = Math.max(...stats.salidasProceso.map((p) => p.kg), 1);
         return (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mt-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-              Salidas por Proceso
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                Salidas por Proceso
+              </h2>
+              <button
+                onClick={() => setShowInfoProceso(!showInfoProceso)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Ver explicación"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            {showInfoProceso && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                Cada salida de kardex tiene un gestor asignado, y cada gestor tiene un tipo de proceso
+                (Reciclaje, Celda de Seguridad, Aprovechamiento Energético, Coprocesamiento, Otros).
+                Esta sección suma los kilogramos de todas las salidas del año agrupadas por el proceso del gestor.
+              </div>
+            )}
             <div className="space-y-3">
               {stats.salidasProceso.map((p) => {
                 const color = PROCESO_COLORS[p.proceso] || "#94a3b8";
