@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { type Kardex } from "@/lib/airtable";
-import { getFechaMinimaPermitida } from "@/lib/dateValidations";
 
 interface PasoKardexProps {
   kardexDisponibles: Kardex[];
@@ -22,19 +21,11 @@ export default function PasoKardex({
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
 
-  const fechaLimite = useMemo(() => {
-    return new Date(getFechaMinimaPermitida() + "T00:00:00");
-  }, []);
-
-  // Filtrar kardex por fecha, tipo y busqueda
+  // Filtrar kardex por tipo y busqueda
+  // Note: No date filter — "Por Pagar" records must always be available
+  // for inclusion in orders, even from closed months (orphan resolution)
   const kardexFiltrados = useMemo(() => {
     return kardexDisponibles.filter((k) => {
-      // Filtro de fecha
-      if (k.fields.fechakardex) {
-        const fechaKardex = new Date(k.fields.fechakardex + "T00:00:00");
-        if (fechaKardex < fechaLimite) return false;
-      }
-
       // Filtro por tipo
       if (filtroTipo !== "TODOS" && k.fields.TipoMovimiento !== filtroTipo) {
         return false;
@@ -55,7 +46,7 @@ export default function PasoKardex({
 
       return true;
     });
-  }, [kardexDisponibles, fechaLimite, filtroTipo, busqueda]);
+  }, [kardexDisponibles, filtroTipo, busqueda]);
 
   const contarPorTipo = (tipo: string) => {
     return kardexDisponibles.filter((k) => {
