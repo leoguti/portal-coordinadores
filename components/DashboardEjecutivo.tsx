@@ -428,7 +428,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084]"
           >
             <option value="global">Global (todos)</option>
-            {stats.coordinadoresList.map((c) => (
+            {[...stats.coordinadoresList].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
