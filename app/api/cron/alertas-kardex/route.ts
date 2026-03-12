@@ -115,12 +115,11 @@ export async function GET(request: Request) {
       huerfanosPorCoord.get(coordId)!.push(registro);
     }
 
-    // Send emails
-    const smtpPort = Number(process.env.EMAIL_SERVER_PORT) || 587;
+    // Send emails (Gmail + app password, same config as sendCertificadoEmail)
     const transport = nodemailer.createTransport({
-      host: process.env.EMAIL_SERVER_HOST,
-      port: smtpPort,
-      secure: smtpPort === 465, // true for 465, false for 587 (STARTTLS)
+      host: process.env.EMAIL_SERVER_HOST || "smtp.gmail.com",
+      port: Number(process.env.EMAIL_SERVER_PORT) || 587,
+      secure: false, // STARTTLS on port 587
       auth: {
         user: process.env.EMAIL_SERVER_USER,
         pass: process.env.EMAIL_SERVER_PASSWORD,
