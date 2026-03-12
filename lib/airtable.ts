@@ -883,52 +883,14 @@ export async function getMetasCoordinador(
 export async function getOrdenesCoordinador(
   coordinatorRecordId: string
 ): Promise<Orden[]> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return [];
-  }
-
-  try {
-    // Fetch orders sorted by NumeroOrden descending (newest first: #5, #4, #3...)
-    const url = `https://api.airtable.com/v0/${baseId}/Ordenes?sort[0][field]=NumeroOrden&sort[0][direction]=desc`;
-
-    console.log(`Fetching Ordenes for coordinator: ${coordinatorRecordId}`);
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Airtable API error fetching Ordenes: ${response.status}`,
-        errorText
-      );
-      return [];
-    }
-
-    const data: AirtableResponse<OrdenFields> = await response.json();
-
-    // Filter client-side by coordinator
-    const filteredOrders = data.records.filter((orden) => {
-      const coordinadores = orden.fields.Coordinador || [];
-      return coordinadores.includes(coordinatorRecordId);
-    });
-
-    console.log(`Successfully fetched ${filteredOrders.length} Ordenes for coordinator`);
-
-    return filteredOrders;
-  } catch (error) {
-    console.error("Error fetching Ordenes from Airtable:", error);
-    return [];
-  }
+  // Use getAllOrdenes (paginated) and filter by coordinator
+  const allOrdenes = await getAllOrdenes();
+  const filtered = allOrdenes.filter((orden) => {
+    const coordinadores = orden.fields.Coordinador || [];
+    return coordinadores.includes(coordinatorRecordId);
+  });
+  console.log(`Filtered ${filtered.length} ordenes for coordinator (of ${allOrdenes.length} total)`);
+  return filtered;
 }
 
 /**
