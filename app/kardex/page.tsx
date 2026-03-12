@@ -424,7 +424,6 @@ export default function KardexPage() {
   });
   
   // Resumen por Mes - Últimos 12 meses hasta hoy, del más nuevo al más antiguo
-  const hoy = new Date();
   const ultimos12Meses: string[] = [];
   for (let i = 0; i < 12; i++) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
