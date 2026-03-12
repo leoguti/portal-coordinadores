@@ -522,9 +522,9 @@ export default function KardexPage() {
   const kardexHuerfanos = canViewAll
     ? allKardexRecords.filter((k) => {
         if (k.fields.EstadoPago !== "Por Pagar") return false;
-        const mes = k.fields.MES;
-        if (!mes) return false;
-        return esMesCerrado(mes);
+        const mesK = k.fields.MES;
+        if (!mesK) return false;
+        return esMesCerrado(mesK);
       })
     : [];
 
