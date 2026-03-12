@@ -94,6 +94,7 @@ interface KardexFields {
   Descripción?: string; // Computed field - read only
   gestor?: string[];
   nombregestor?: string[];
+  proceso?: string[]; // Lookup from gestor → Proceso
   AÑO?: string; // Year as string (e.g., "2025")
   MES?: string; // Year-Month format (e.g., "2025-02")
   soportebascula?: Array<{

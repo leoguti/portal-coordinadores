@@ -51,43 +51,13 @@ export async function GET(request: Request) {
     const yearStr = String(year);
     const prevYearStr = String(year - 1);
 
-    // Fetch gestores with Proceso field (paginated)
-    async function fetchGestores(): Promise<Array<{ id: string; proceso: string }>> {
-      const apiKey = process.env.AIRTABLE_API_KEY;
-      const baseId = process.env.AIRTABLE_BASE_ID;
-      if (!apiKey || !baseId) return [];
-      const results: Array<{ id: string; proceso: string }> = [];
-      let offset: string | undefined;
-      do {
-        const params = new URLSearchParams({
-          filterByFormula: "{Tipo}='Gestor'",
-          "fields[]": "Proceso",
-        });
-        if (offset) params.set("offset", offset);
-        const res = await fetch(
-          `https://api.airtable.com/v0/${baseId}/Terceros?${params}`,
-          { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
-        );
-        if (!res.ok) break;
-        const data = await res.json();
-        for (const r of data.records || []) {
-          if (r.fields?.Proceso) {
-            results.push({ id: r.id, proceso: r.fields.Proceso });
-          }
-        }
-        offset = data.offset;
-      } while (offset);
-      return results;
-    }
-
     // Fetch only what we need
-    const [allKardex, allActividades, allMetas, coordinadoresActivos, gestores] =
+    const [allKardex, allActividades, allMetas, coordinadoresActivos] =
       await Promise.all([
         getAllKardex(),
         listAllActividades(),
         getAllMetas(year),
         getAllCoordinadoresActivos(),
-        fetchGestores(),
       ]);
 
     const kardexYear = allKardex.filter((k) => k.fields.AÑO === yearStr);
@@ -293,18 +263,11 @@ export async function GET(request: Request) {
       });
     }
 
-    // --- Salidas por Proceso (del gestor) ---
-    const gestorProcesoMap = new Map<string, string>();
-    for (const g of gestores) {
-      gestorProcesoMap.set(g.id, g.proceso);
-    }
-
+    // --- Salidas por Proceso (lookup directo del kardex) ---
     const salidasPorProceso = new Map<string, number>();
     for (const k of kardexYear) {
       if (k.fields.TipoMovimiento !== "SALIDA") continue;
-      const gestorId = k.fields.gestor?.[0];
-      if (!gestorId) continue;
-      const proceso = gestorProcesoMap.get(gestorId) || "Sin proceso";
+      const proceso = k.fields.proceso?.[0] || "Sin proceso";
       salidasPorProceso.set(
         proceso,
         (salidasPorProceso.get(proceso) || 0) + Math.abs(k.fields.Total || 0)
