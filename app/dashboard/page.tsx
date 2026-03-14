@@ -159,9 +159,12 @@ export default function DashboardPage() {
     : 0;
 
   if (canViewAll) {
+    router.push("/dashboard-ejecutivo");
     return (
       <AuthenticatedLayout>
-        <AdminDashboard userName={session.user?.name || undefined} />
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00d084] mx-auto"></div>
+        </div>
       </AuthenticatedLayout>
     );
   }

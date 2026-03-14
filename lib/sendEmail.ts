@@ -33,10 +33,11 @@ export async function sendOrdenEmail(params: SendOrdenEmailParams): Promise<bool
     console.log(`Sending email for Orden #${params.numeroOrden} to ${params.to}`);
 
     // Configurar transporte SMTP
+    const port = Number(process.env.EMAIL_SERVER_PORT) || 587;
     const transport = nodemailer.createTransport({
       host: process.env.EMAIL_SERVER_HOST,
-      port: Number(process.env.EMAIL_SERVER_PORT) || 465,
-      secure: true, // SSL
+      port,
+      secure: port === 465,
       auth: {
         user: process.env.EMAIL_SERVER_USER,
         pass: process.env.EMAIL_SERVER_PASSWORD,
