@@ -36,7 +36,7 @@
               "type": "send_msg",
               "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de capacitación, conforme a la Ley 1581 de 2012.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
               "attachments": [],
-              "quick_replies": ["1. Sí, acepto", "2. No acepto"],
+              "quick_replies": ["1. Sí", "2. No"],
               "templating": null
             }
           ],
@@ -49,7 +49,7 @@
               {
                 "uuid": "3ec33b2a-5375-41be-bf1c-f5b0b8d0d797",
                 "type": "has_any_word",
-                "arguments": ["1 si sí acepto"],
+                "arguments": ["1 si sí"],
                 "category_uuid": "3310c772-329e-4107-9da3-3f87dbd54839"
               }
             ],
