@@ -3905,3 +3905,146 @@ export async function getAllCoordinadoresActivos(): Promise<
     return [];
   }
 }
+
+// ============================================================
+// EVALUACIONES DE CAMPO
+// ============================================================
+
+export interface PersonaEvaluada {
+  id: string;
+  nombre: string;
+  documento: string;
+  telefono: string;
+  municipioId: string | null;
+  mundep: string | null;
+}
+
+export async function getPersonaEvaluadaByTelefono(
+  telefono: string
+): Promise<PersonaEvaluada | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return null;
+
+  try {
+    const filter = `{Telefono}="${telefono}"`;
+    const url = `https://api.airtable.com/v0/${baseId}/tbl5paHosldxyyNBW?filterByFormula=${encodeURIComponent(filter)}&maxRecords=1`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.records?.length) return null;
+    const r = data.records[0];
+    const municipioIds: string[] = r.fields["EMunicipio"] || [];
+    const mundepArr: string[] = r.fields["mundep"] || [];
+    return {
+      id: r.id,
+      nombre: r.fields["Nombre"] || "",
+      documento: r.fields["Documento"] || "",
+      telefono: r.fields["Telefono"] || "",
+      municipioId: municipioIds[0] || null,
+      mundep: mundepArr[0] || null,
+    };
+  } catch (error) {
+    console.error("Error fetching persona evaluada:", error);
+    return null;
+  }
+}
+
+export async function findMunicipioByName(nombre: string): Promise<string | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return null;
+
+  try {
+    const filter = `LOWER({MUNICIPIO})="${nombre.toLowerCase()}"`;
+    const url = `https://api.airtable.com/v0/${baseId}/tblkVGe8LHsEdNbWl?filterByFormula=${encodeURIComponent(filter)}&maxRecords=1`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.records?.length) return null;
+    return data.records[0].id;
+  } catch {
+    return null;
+  }
+}
+
+export async function createPersonaEvaluada(params: {
+  nombre: string;
+  documento: string;
+  telefono: string;
+  municipioId: string | null;
+}): Promise<string | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return null;
+
+  const fields: Record<string, unknown> = {
+    Nombre: params.nombre,
+    Documento: params.documento,
+    Telefono: params.telefono,
+  };
+  if (params.municipioId) {
+    fields["EMunicipio"] = [params.municipioId];
+  }
+
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/tbl5paHosldxyyNBW`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.id || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createEvaluacion(params: {
+  actividadId: string;
+  personaId: string;
+  respuestaP1: string;
+  respuestaP2: string;
+  respuestaP3: string;
+  puntaje: number;
+}): Promise<string | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return null;
+
+  const fields = {
+    "Respuesta P1": params.respuestaP1,
+    "Respuesta P2": params.respuestaP2,
+    "Respuesta P3": params.respuestaP3,
+    Puntaje: params.puntaje,
+    Timestamp: new Date().toISOString(),
+    Actividad: [params.actividadId],
+    "Persona Evaluada": [params.personaId],
+  };
+
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/tblh0WNCj0P0z0vGg`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.id || null;
+  } catch {
+    return null;
+  }
+}
