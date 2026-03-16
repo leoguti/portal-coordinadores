@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const persona = await getPersonaEvaluadaByTelefono(telefono);
   if (!persona) {
-    return NextResponse.json({ found: false }, { status: 200 });
+    return NextResponse.json({ found: false }, { status: 404 });
   }
 
   return NextResponse.json({ found: true, persona });

@@ -1,0 +1,505 @@
+{
+  "version": "13",
+  "flows": [
+    {
+      "name": "Evaluaciones Campo CampoLimpio",
+      "uuid": "e2a45c3d-7f8b-4c5a-9d6e-1f2a3b4c5d6e",
+      "spec_version": "13.1.0",
+      "language": "spa",
+      "type": "messaging",
+      "nodes": [
+
+        {
+          "uuid": "aa000001-0000-4000-8000-000000000001",
+          "actions": [
+            {
+              "uuid": "ab000001-0000-4000-8000-000000000001",
+              "type": "set_run_result",
+              "name": "actividad_id",
+              "value": "@(mid(input.text, 6, 100))",
+              "category": "Actividad"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000001-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000002-0000-4000-8000-000000000002"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000002-0000-4000-8000-000000000002",
+          "actions": [
+            {
+              "uuid": "ab000002-0000-4000-8000-000000000002",
+              "type": "send_msg",
+              "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de capacitación, conforme a la Ley 1581 de 2012 de protección de datos personales de Colombia.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
+              "attachments": [],
+              "quick_replies": ["1. Sí, acepto", "2. No acepto"],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "consentimiento",
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "cc000002-0000-4000-8000-000000000001",
+                "type": "has_any_word",
+                "arguments": ["1", "si", "sí", "acepto"],
+                "category_uuid": "ct000002-0000-4000-8000-000000000001"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "ct000002-0000-4000-8000-000000000001",
+                "name": "Acepta",
+                "exit_uuid": "ex000002-0000-4000-8000-000000000001"
+              },
+              {
+                "uuid": "ct000002-0000-4000-8000-000000000002",
+                "name": "No acepta",
+                "exit_uuid": "ex000002-0000-4000-8000-000000000002"
+              }
+            ],
+            "default_category_uuid": "ct000002-0000-4000-8000-000000000002"
+          },
+          "exits": [
+            {
+              "uuid": "ex000002-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000004-0000-4000-8000-000000000004"
+            },
+            {
+              "uuid": "ex000002-0000-4000-8000-000000000002",
+              "destination_uuid": "aa000003-0000-4000-8000-000000000003"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000003-0000-4000-8000-000000000003",
+          "actions": [
+            {
+              "uuid": "ab000003-0000-4000-8000-000000000003",
+              "type": "send_msg",
+              "text": "Gracias por tu tiempo. Sin tu autorización no podemos continuar. ¡Hasta pronto! 👋",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000003-0000-4000-8000-000000000001",
+              "destination_uuid": null
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000004-0000-4000-8000-000000000004",
+          "actions": [
+            {
+              "uuid": "ab000004-0000-4000-8000-000000000004",
+              "type": "call_webhook",
+              "method": "GET",
+              "url": "https://portal.campolimpio.org/api/evaluaciones/persona?telefono=@(format_urn(urns.whatsapp))",
+              "headers": {},
+              "body": "",
+              "result_name": "persona_check"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@results.persona_check.category",
+            "cases": [
+              {
+                "uuid": "cc000004-0000-4000-8000-000000000001",
+                "type": "has_phrase",
+                "arguments": ["Success"],
+                "category_uuid": "ct000004-0000-4000-8000-000000000001"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "ct000004-0000-4000-8000-000000000001",
+                "name": "Encontrado",
+                "exit_uuid": "ex000004-0000-4000-8000-000000000001"
+              },
+              {
+                "uuid": "ct000004-0000-4000-8000-000000000002",
+                "name": "Nuevo",
+                "exit_uuid": "ex000004-0000-4000-8000-000000000002"
+              }
+            ],
+            "default_category_uuid": "ct000004-0000-4000-8000-000000000002"
+          },
+          "exits": [
+            {
+              "uuid": "ex000004-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000005-0000-4000-8000-000000000005"
+            },
+            {
+              "uuid": "ex000004-0000-4000-8000-000000000002",
+              "destination_uuid": "aa000006-0000-4000-8000-000000000006"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000005-0000-4000-8000-000000000005",
+          "actions": [
+            {
+              "uuid": "ab000005-0000-4000-8000-000000000005",
+              "type": "send_msg",
+              "text": "¡Hola de nuevo! 👋 Ya te tenemos registrado en nuestro sistema. Vamos directo a la evaluación.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000005-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000009-0000-4000-8000-000000000009"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000006-0000-4000-8000-000000000006",
+          "actions": [
+            {
+              "uuid": "ab000006-0000-4000-8000-000000000006",
+              "type": "send_msg",
+              "text": "¡Hola! 👋 Para registrarte necesitamos algunos datos.\n\n¿Cuál es tu *nombre completo*?",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "nombre",
+            "operand": "@input.text",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000006-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000006-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000006-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000006-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000007-0000-4000-8000-000000000007"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000007-0000-4000-8000-000000000007",
+          "actions": [
+            {
+              "uuid": "ab000007-0000-4000-8000-000000000007",
+              "type": "send_msg",
+              "text": "¿Cuál es tu número de *documento de identidad*? (cédula, pasaporte, etc.)",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "documento",
+            "operand": "@input.text",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000007-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000007-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000007-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000007-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000008-0000-4000-8000-000000000008"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000008-0000-4000-8000-000000000008",
+          "actions": [
+            {
+              "uuid": "ab000008-0000-4000-8000-000000000008",
+              "type": "send_msg",
+              "text": "¿En qué *municipio* vives? (Escribe el nombre del municipio)",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "municipio",
+            "operand": "@input.text",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000008-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000008-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000008-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000008-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000009-0000-4000-8000-000000000009"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000009-0000-4000-8000-000000000009",
+          "actions": [
+            {
+              "uuid": "ab000009-0000-4000-8000-000000000009",
+              "type": "send_msg",
+              "text": "📝 *Pregunta 1 de 3*\n\n¿Cómo se debe disponer los envases, empaques y embalajes que contuvieron plaguicidas?\n\n*A.* Con el carro recolector de basura Municipal\n*B.* Con el reciclador formal del Municipio\n*C.* Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013)\n*D.* Abandonar los envases en el cultivo después de la aplicación\n\nResponde con la letra: *A, B, C o D*",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "respuesta_p1",
+            "operand": "@(upper(trim(input.text)))",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000009-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000009-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000009-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000009-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000010-0000-4000-8000-000000000010"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000010-0000-4000-8000-000000000010",
+          "actions": [
+            {
+              "uuid": "ab000010-0000-4000-8000-000000000010",
+              "type": "send_msg",
+              "text": "@(if(results.respuesta_p1.value = \"C\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *C*: Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013).\"))",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000010-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000011-0000-4000-8000-000000000011"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000011-0000-4000-8000-000000000011",
+          "actions": [
+            {
+              "uuid": "ab000011-0000-4000-8000-000000000011",
+              "type": "send_msg",
+              "text": "📝 *Pregunta 2 de 3*\n\n¿Cuáles son los riesgos que se generan con el mal manejo de estos envases?\n\n*A.* Reutilización doméstica de los envases\n*B.* Arrojar los envases en las fuentes hídricas\n*C.* Venta ilegal de los envases y falsificación de productos agroquímicos\n*D.* Todas las anteriores\n\nResponde con la letra: *A, B, C o D*",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "respuesta_p2",
+            "operand": "@(upper(trim(input.text)))",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000011-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000011-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000011-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000011-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000012-0000-4000-8000-000000000012"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000012-0000-4000-8000-000000000012",
+          "actions": [
+            {
+              "uuid": "ab000012-0000-4000-8000-000000000012",
+              "type": "send_msg",
+              "text": "@(if(results.respuesta_p2.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000012-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000013-0000-4000-8000-000000000013"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000013-0000-4000-8000-000000000013",
+          "actions": [
+            {
+              "uuid": "ab000013-0000-4000-8000-000000000013",
+              "type": "send_msg",
+              "text": "📝 *Pregunta 3 de 3*\n\n¿Para qué sirve el triple lavado en los envases de plaguicidas?\n\n*A.* Permite economizar dinero porque aprovecha el 100% de la inversión en el producto\n*B.* Asegura que los envases puedan ser reciclados para transformación en madera plástica\n*C.* Porque el envase puede ser entregado a un programa posconsumo y puede recibir la certificación de devolución\n*D.* Todas las anteriores\n\nResponde con la letra: *A, B, C o D*",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "respuesta_p3",
+            "operand": "@(upper(trim(input.text)))",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ct000013-0000-4000-8000-000000000001",
+                "name": "Other",
+                "exit_uuid": "ex000013-0000-4000-8000-000000000001"
+              }
+            ],
+            "default_category_uuid": "ct000013-0000-4000-8000-000000000001"
+          },
+          "exits": [
+            {
+              "uuid": "ex000013-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000014-0000-4000-8000-000000000014"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000014-0000-4000-8000-000000000014",
+          "actions": [
+            {
+              "uuid": "ab000014-0000-4000-8000-000000000014",
+              "type": "send_msg",
+              "text": "@(if(results.respuesta_p3.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000014-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000015-0000-4000-8000-000000000015"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000015-0000-4000-8000-000000000015",
+          "actions": [
+            {
+              "uuid": "ab000015-0000-4000-8000-000000000015",
+              "type": "set_run_result",
+              "name": "puntaje",
+              "value": "@(if(results.respuesta_p1.value = \"C\", 1, 0) + if(results.respuesta_p2.value = \"D\", 1, 0) + if(results.respuesta_p3.value = \"D\", 1, 0))",
+              "category": "Calculado"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000015-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000016-0000-4000-8000-000000000016"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000016-0000-4000-8000-000000000016",
+          "actions": [
+            {
+              "uuid": "ab000016-0000-4000-8000-000000000016",
+              "type": "call_webhook",
+              "method": "POST",
+              "url": "https://portal.campolimpio.org/api/evaluaciones/webhook",
+              "headers": { "Content-Type": "application/json" },
+              "body": "{\"actividadId\": \"@results.actividad_id.value\", \"telefono\": \"@(format_urn(urns.whatsapp))\", \"nombre\": \"@results.nombre.value\", \"documento\": \"@results.documento.value\", \"municipio\": \"@results.municipio.value\", \"respuestaP1\": \"@results.respuesta_p1.value\", \"respuestaP2\": \"@results.respuesta_p2.value\", \"respuestaP3\": \"@results.respuesta_p3.value\", \"puntaje\": \"@results.puntaje.value\"}",
+              "result_name": "save_result"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000016-0000-4000-8000-000000000001",
+              "destination_uuid": "aa000017-0000-4000-8000-000000000017"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000017-0000-4000-8000-000000000017",
+          "actions": [
+            {
+              "uuid": "ab000017-0000-4000-8000-000000000017",
+              "type": "send_msg",
+              "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje.value >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje.value >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje.value >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de capacitación.\"))))\n\nGracias por participar en la capacitación de CampoLimpio. 🌿",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ex000017-0000-4000-8000-000000000001",
+              "destination_uuid": null
+            }
+          ]
+        }
+
+      ]
+    }
+  ]
+}

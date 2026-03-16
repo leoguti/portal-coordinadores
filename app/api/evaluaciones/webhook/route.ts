@@ -45,9 +45,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const { actividadId, telefono, respuestaP1, respuestaP2, respuestaP3, puntaje } = body;
+  const { actividadId, telefono, respuestaP1, respuestaP2, respuestaP3 } = body;
+  const puntaje = Number(body.puntaje);
 
-  if (!actividadId || !telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || puntaje === undefined) {
+  if (!actividadId || !telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || isNaN(puntaje)) {
     return NextResponse.json({ error: "Campos requeridos faltantes" }, { status: 400 });
   }
 
