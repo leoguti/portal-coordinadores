@@ -3,17 +3,17 @@
   "flows": [
     {
       "name": "Evaluaciones Campo CampoLimpio",
-      "uuid": "e2a45c3d-7f8b-4c5a-9d6e-1f2a3b4c5d6e",
+      "uuid": "3fd2432a-9b3a-40d3-be27-3d4c9ac69d8f",
       "spec_version": "13.1.0",
       "language": "spa",
       "type": "messaging",
       "nodes": [
 
         {
-          "uuid": "aa000001-0000-4000-8000-000000000001",
+          "uuid": "f8534dc9-c0f9-4de0-83d4-66f1655b3d13",
           "actions": [
             {
-              "uuid": "ab000001-0000-4000-8000-000000000001",
+              "uuid": "1efde551-7e3e-41ec-9bde-a7d49b02676c",
               "type": "set_run_result",
               "name": "actividad_id",
               "value": "@(mid(input.text, 6, 100))",
@@ -22,19 +22,19 @@
           ],
           "exits": [
             {
-              "uuid": "ex000001-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000002-0000-4000-8000-000000000002"
+              "uuid": "e704ef0d-0d1a-4611-a554-0391a231024f",
+              "destination_uuid": "9eab69aa-ad9e-4e4d-b356-b166014c380d"
             }
           ]
         },
 
         {
-          "uuid": "aa000002-0000-4000-8000-000000000002",
+          "uuid": "9eab69aa-ad9e-4e4d-b356-b166014c380d",
           "actions": [
             {
-              "uuid": "ab000002-0000-4000-8000-000000000002",
+              "uuid": "314fddf6-c9dd-4042-ba9d-33cfa590d242",
               "type": "send_msg",
-              "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de capacitación, conforme a la Ley 1581 de 2012 de protección de datos personales de Colombia.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
+              "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de capacitación, conforme a la Ley 1581 de 2012.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
               "attachments": [],
               "quick_replies": ["1. Sí, acepto", "2. No acepto"],
               "templating": null
@@ -47,43 +47,43 @@
             "operand": "@input.text",
             "cases": [
               {
-                "uuid": "cc000002-0000-4000-8000-000000000001",
+                "uuid": "3ec33b2a-5375-41be-bf1c-f5b0b8d0d797",
                 "type": "has_any_word",
-                "arguments": ["1", "si", "sí", "acepto"],
-                "category_uuid": "ct000002-0000-4000-8000-000000000001"
+                "arguments": ["1 si sí acepto"],
+                "category_uuid": "3310c772-329e-4107-9da3-3f87dbd54839"
               }
             ],
             "categories": [
               {
-                "uuid": "ct000002-0000-4000-8000-000000000001",
+                "uuid": "3310c772-329e-4107-9da3-3f87dbd54839",
                 "name": "Acepta",
-                "exit_uuid": "ex000002-0000-4000-8000-000000000001"
+                "exit_uuid": "bd85ffc4-a983-4856-9ec3-e33ad68cbf75"
               },
               {
-                "uuid": "ct000002-0000-4000-8000-000000000002",
+                "uuid": "ecaad0c7-57ed-48c4-9a04-df312eeafd0a",
                 "name": "No acepta",
-                "exit_uuid": "ex000002-0000-4000-8000-000000000002"
+                "exit_uuid": "a882b2d3-bfcc-43ca-b336-2e0b579c9ea2"
               }
             ],
-            "default_category_uuid": "ct000002-0000-4000-8000-000000000002"
+            "default_category_uuid": "ecaad0c7-57ed-48c4-9a04-df312eeafd0a"
           },
           "exits": [
             {
-              "uuid": "ex000002-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000004-0000-4000-8000-000000000004"
+              "uuid": "bd85ffc4-a983-4856-9ec3-e33ad68cbf75",
+              "destination_uuid": "2986d65f-fa21-4700-a5de-a580a5e3facf"
             },
             {
-              "uuid": "ex000002-0000-4000-8000-000000000002",
-              "destination_uuid": "aa000003-0000-4000-8000-000000000003"
+              "uuid": "a882b2d3-bfcc-43ca-b336-2e0b579c9ea2",
+              "destination_uuid": "056471d9-4de8-4c63-b94e-7776923698ed"
             }
           ]
         },
 
         {
-          "uuid": "aa000003-0000-4000-8000-000000000003",
+          "uuid": "056471d9-4de8-4c63-b94e-7776923698ed",
           "actions": [
             {
-              "uuid": "ab000003-0000-4000-8000-000000000003",
+              "uuid": "373bfddd-b26a-4b7d-9732-c8529cab1b0f",
               "type": "send_msg",
               "text": "Gracias por tu tiempo. Sin tu autorización no podemos continuar. ¡Hasta pronto! 👋",
               "attachments": [],
@@ -93,17 +93,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000003-0000-4000-8000-000000000001",
+              "uuid": "573185e6-e025-431e-8eb9-1ce945df243d",
               "destination_uuid": null
             }
           ]
         },
 
         {
-          "uuid": "aa000004-0000-4000-8000-000000000004",
+          "uuid": "2986d65f-fa21-4700-a5de-a580a5e3facf",
           "actions": [
             {
-              "uuid": "ab000004-0000-4000-8000-000000000004",
+              "uuid": "413a67ec-9bb4-43aa-ac1e-37f5130179e8",
               "type": "call_webhook",
               "method": "GET",
               "url": "https://portal.campolimpio.org/api/evaluaciones/persona?telefono=@(format_urn(urns.whatsapp))",
@@ -117,45 +117,45 @@
             "operand": "@results.persona_check.category",
             "cases": [
               {
-                "uuid": "cc000004-0000-4000-8000-000000000001",
-                "type": "has_phrase",
+                "uuid": "b4a1f22b-c067-468a-bb30-7f0eea4c3ab5",
+                "type": "has_any_word",
                 "arguments": ["Success"],
-                "category_uuid": "ct000004-0000-4000-8000-000000000001"
+                "category_uuid": "5ec05780-ba56-4fab-b8ca-72beebf3ca20"
               }
             ],
             "categories": [
               {
-                "uuid": "ct000004-0000-4000-8000-000000000001",
+                "uuid": "5ec05780-ba56-4fab-b8ca-72beebf3ca20",
                 "name": "Encontrado",
-                "exit_uuid": "ex000004-0000-4000-8000-000000000001"
+                "exit_uuid": "8f9f1264-9050-4acd-a328-f527ebd73baa"
               },
               {
-                "uuid": "ct000004-0000-4000-8000-000000000002",
+                "uuid": "42828314-a5d2-4730-bfde-77341c40fffe",
                 "name": "Nuevo",
-                "exit_uuid": "ex000004-0000-4000-8000-000000000002"
+                "exit_uuid": "008472af-5109-4371-ad8b-2e4d079e6fdf"
               }
             ],
-            "default_category_uuid": "ct000004-0000-4000-8000-000000000002"
+            "default_category_uuid": "42828314-a5d2-4730-bfde-77341c40fffe"
           },
           "exits": [
             {
-              "uuid": "ex000004-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000005-0000-4000-8000-000000000005"
+              "uuid": "8f9f1264-9050-4acd-a328-f527ebd73baa",
+              "destination_uuid": "239562bb-7d1f-4442-a86f-91d1d0d170ca"
             },
             {
-              "uuid": "ex000004-0000-4000-8000-000000000002",
-              "destination_uuid": "aa000006-0000-4000-8000-000000000006"
+              "uuid": "008472af-5109-4371-ad8b-2e4d079e6fdf",
+              "destination_uuid": "c6e46eee-98ab-4078-a66c-9ce92b3546e8"
             }
           ]
         },
 
         {
-          "uuid": "aa000005-0000-4000-8000-000000000005",
+          "uuid": "239562bb-7d1f-4442-a86f-91d1d0d170ca",
           "actions": [
             {
-              "uuid": "ab000005-0000-4000-8000-000000000005",
+              "uuid": "a3775fdc-0916-4a3e-ac0b-468900ab8b8f",
               "type": "send_msg",
-              "text": "¡Hola de nuevo! 👋 Ya te tenemos registrado en nuestro sistema. Vamos directo a la evaluación.",
+              "text": "¡Hola de nuevo! 👋 Ya te tenemos registrado. Vamos directo a la evaluación.",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -163,17 +163,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000005-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000009-0000-4000-8000-000000000009"
+              "uuid": "d77d1206-e1b2-4d9e-a962-e76c8614b1d4",
+              "destination_uuid": "2455af5a-a602-4738-9797-b00627198a72"
             }
           ]
         },
 
         {
-          "uuid": "aa000006-0000-4000-8000-000000000006",
+          "uuid": "c6e46eee-98ab-4078-a66c-9ce92b3546e8",
           "actions": [
             {
-              "uuid": "ab000006-0000-4000-8000-000000000006",
+              "uuid": "05208d6b-dd90-44b6-afa9-b15a11bbd29f",
               "type": "send_msg",
               "text": "¡Hola! 👋 Para registrarte necesitamos algunos datos.\n\n¿Cuál es tu *nombre completo*?",
               "attachments": [],
@@ -189,28 +189,28 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000006-0000-4000-8000-000000000001",
+                "uuid": "497ef43c-c063-4ee6-b208-79aa0e09e726",
                 "name": "Other",
-                "exit_uuid": "ex000006-0000-4000-8000-000000000001"
+                "exit_uuid": "7ff95c2c-53ee-4994-a6e5-bace8ce2b592"
               }
             ],
-            "default_category_uuid": "ct000006-0000-4000-8000-000000000001"
+            "default_category_uuid": "497ef43c-c063-4ee6-b208-79aa0e09e726"
           },
           "exits": [
             {
-              "uuid": "ex000006-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000007-0000-4000-8000-000000000007"
+              "uuid": "7ff95c2c-53ee-4994-a6e5-bace8ce2b592",
+              "destination_uuid": "2dd3ec9a-bfb8-44c3-88ed-da0f67f4c72a"
             }
           ]
         },
 
         {
-          "uuid": "aa000007-0000-4000-8000-000000000007",
+          "uuid": "2dd3ec9a-bfb8-44c3-88ed-da0f67f4c72a",
           "actions": [
             {
-              "uuid": "ab000007-0000-4000-8000-000000000007",
+              "uuid": "24286cdc-6a19-4122-821d-3892c12edcaa",
               "type": "send_msg",
-              "text": "¿Cuál es tu número de *documento de identidad*? (cédula, pasaporte, etc.)",
+              "text": "¿Cuál es tu número de *documento de identidad*?",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -224,26 +224,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000007-0000-4000-8000-000000000001",
+                "uuid": "0f7bfedc-d67e-4482-8c5d-a33f98bdf1d1",
                 "name": "Other",
-                "exit_uuid": "ex000007-0000-4000-8000-000000000001"
+                "exit_uuid": "83a6d584-a777-4109-b2d2-ebad43c7f4e8"
               }
             ],
-            "default_category_uuid": "ct000007-0000-4000-8000-000000000001"
+            "default_category_uuid": "0f7bfedc-d67e-4482-8c5d-a33f98bdf1d1"
           },
           "exits": [
             {
-              "uuid": "ex000007-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000008-0000-4000-8000-000000000008"
+              "uuid": "83a6d584-a777-4109-b2d2-ebad43c7f4e8",
+              "destination_uuid": "115ed4f1-9d82-4655-bfb8-71f438b03f1d"
             }
           ]
         },
 
         {
-          "uuid": "aa000008-0000-4000-8000-000000000008",
+          "uuid": "115ed4f1-9d82-4655-bfb8-71f438b03f1d",
           "actions": [
             {
-              "uuid": "ab000008-0000-4000-8000-000000000008",
+              "uuid": "e75e48dd-d994-4e1f-8000-8e5435bf07ac",
               "type": "send_msg",
               "text": "¿En qué *municipio* vives? (Escribe el nombre del municipio)",
               "attachments": [],
@@ -259,26 +259,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000008-0000-4000-8000-000000000001",
+                "uuid": "f08d4fda-8d0d-4687-97d8-b50899332018",
                 "name": "Other",
-                "exit_uuid": "ex000008-0000-4000-8000-000000000001"
+                "exit_uuid": "e616e7f7-6540-414f-836a-7f932e822323"
               }
             ],
-            "default_category_uuid": "ct000008-0000-4000-8000-000000000001"
+            "default_category_uuid": "f08d4fda-8d0d-4687-97d8-b50899332018"
           },
           "exits": [
             {
-              "uuid": "ex000008-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000009-0000-4000-8000-000000000009"
+              "uuid": "e616e7f7-6540-414f-836a-7f932e822323",
+              "destination_uuid": "2455af5a-a602-4738-9797-b00627198a72"
             }
           ]
         },
 
         {
-          "uuid": "aa000009-0000-4000-8000-000000000009",
+          "uuid": "2455af5a-a602-4738-9797-b00627198a72",
           "actions": [
             {
-              "uuid": "ab000009-0000-4000-8000-000000000009",
+              "uuid": "255fcb74-4b1d-4ae7-873b-35c60be27174",
               "type": "send_msg",
               "text": "📝 *Pregunta 1 de 3*\n\n¿Cómo se debe disponer los envases, empaques y embalajes que contuvieron plaguicidas?\n\n*A.* Con el carro recolector de basura Municipal\n*B.* Con el reciclador formal del Municipio\n*C.* Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013)\n*D.* Abandonar los envases en el cultivo después de la aplicación\n\nResponde con la letra: *A, B, C o D*",
               "attachments": [],
@@ -294,26 +294,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000009-0000-4000-8000-000000000001",
+                "uuid": "6b6eef17-f31e-4796-8b0d-6507e2e55474",
                 "name": "Other",
-                "exit_uuid": "ex000009-0000-4000-8000-000000000001"
+                "exit_uuid": "c3612a17-ba77-4133-ba82-7343e97e0027"
               }
             ],
-            "default_category_uuid": "ct000009-0000-4000-8000-000000000001"
+            "default_category_uuid": "6b6eef17-f31e-4796-8b0d-6507e2e55474"
           },
           "exits": [
             {
-              "uuid": "ex000009-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000010-0000-4000-8000-000000000010"
+              "uuid": "c3612a17-ba77-4133-ba82-7343e97e0027",
+              "destination_uuid": "df8596cf-7bef-4e17-afd1-8bc8738e75d9"
             }
           ]
         },
 
         {
-          "uuid": "aa000010-0000-4000-8000-000000000010",
+          "uuid": "df8596cf-7bef-4e17-afd1-8bc8738e75d9",
           "actions": [
             {
-              "uuid": "ab000010-0000-4000-8000-000000000010",
+              "uuid": "cb768602-33b7-4546-be61-83528e5d1dcc",
               "type": "send_msg",
               "text": "@(if(results.respuesta_p1.value = \"C\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *C*: Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013).\"))",
               "attachments": [],
@@ -323,17 +323,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000010-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000011-0000-4000-8000-000000000011"
+              "uuid": "f614778e-7604-4d28-9241-9c5516d1bc8e",
+              "destination_uuid": "f2dc7888-fae2-4532-b59d-bfb7ad0d62f8"
             }
           ]
         },
 
         {
-          "uuid": "aa000011-0000-4000-8000-000000000011",
+          "uuid": "f2dc7888-fae2-4532-b59d-bfb7ad0d62f8",
           "actions": [
             {
-              "uuid": "ab000011-0000-4000-8000-000000000011",
+              "uuid": "f59fcc50-e892-4290-a1f7-2e263740129b",
               "type": "send_msg",
               "text": "📝 *Pregunta 2 de 3*\n\n¿Cuáles son los riesgos que se generan con el mal manejo de estos envases?\n\n*A.* Reutilización doméstica de los envases\n*B.* Arrojar los envases en las fuentes hídricas\n*C.* Venta ilegal de los envases y falsificación de productos agroquímicos\n*D.* Todas las anteriores\n\nResponde con la letra: *A, B, C o D*",
               "attachments": [],
@@ -349,26 +349,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000011-0000-4000-8000-000000000001",
+                "uuid": "b0c0db40-3c68-4bd2-b3d8-bded4eb80e3a",
                 "name": "Other",
-                "exit_uuid": "ex000011-0000-4000-8000-000000000001"
+                "exit_uuid": "b4c66635-da60-40db-afe6-97ece6c11280"
               }
             ],
-            "default_category_uuid": "ct000011-0000-4000-8000-000000000001"
+            "default_category_uuid": "b0c0db40-3c68-4bd2-b3d8-bded4eb80e3a"
           },
           "exits": [
             {
-              "uuid": "ex000011-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000012-0000-4000-8000-000000000012"
+              "uuid": "b4c66635-da60-40db-afe6-97ece6c11280",
+              "destination_uuid": "8413a3b7-8c40-4e6b-a9c3-499c685dbba8"
             }
           ]
         },
 
         {
-          "uuid": "aa000012-0000-4000-8000-000000000012",
+          "uuid": "8413a3b7-8c40-4e6b-a9c3-499c685dbba8",
           "actions": [
             {
-              "uuid": "ab000012-0000-4000-8000-000000000012",
+              "uuid": "1d0dd0c4-0026-4deb-9daf-ff50f0c57078",
               "type": "send_msg",
               "text": "@(if(results.respuesta_p2.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
               "attachments": [],
@@ -378,17 +378,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000012-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000013-0000-4000-8000-000000000013"
+              "uuid": "9ed48b7b-a54d-456f-b6b4-8c7afe65ed61",
+              "destination_uuid": "31c38bc6-bb0e-4809-abb2-63d26458ccb9"
             }
           ]
         },
 
         {
-          "uuid": "aa000013-0000-4000-8000-000000000013",
+          "uuid": "31c38bc6-bb0e-4809-abb2-63d26458ccb9",
           "actions": [
             {
-              "uuid": "ab000013-0000-4000-8000-000000000013",
+              "uuid": "9a389ac9-5f8d-44d9-a74e-c75c4b786479",
               "type": "send_msg",
               "text": "📝 *Pregunta 3 de 3*\n\n¿Para qué sirve el triple lavado en los envases de plaguicidas?\n\n*A.* Permite economizar dinero porque aprovecha el 100% de la inversión en el producto\n*B.* Asegura que los envases puedan ser reciclados para transformación en madera plástica\n*C.* Porque el envase puede ser entregado a un programa posconsumo y puede recibir la certificación de devolución\n*D.* Todas las anteriores\n\nResponde con la letra: *A, B, C o D*",
               "attachments": [],
@@ -404,26 +404,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ct000013-0000-4000-8000-000000000001",
+                "uuid": "6e32da66-48f0-477d-87fb-4666a331e0fe",
                 "name": "Other",
-                "exit_uuid": "ex000013-0000-4000-8000-000000000001"
+                "exit_uuid": "f348b0a2-1fbf-4e3a-bc99-c38efcc90b72"
               }
             ],
-            "default_category_uuid": "ct000013-0000-4000-8000-000000000001"
+            "default_category_uuid": "6e32da66-48f0-477d-87fb-4666a331e0fe"
           },
           "exits": [
             {
-              "uuid": "ex000013-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000014-0000-4000-8000-000000000014"
+              "uuid": "f348b0a2-1fbf-4e3a-bc99-c38efcc90b72",
+              "destination_uuid": "21c33824-45a7-49d1-aaf6-eb217ee54267"
             }
           ]
         },
 
         {
-          "uuid": "aa000014-0000-4000-8000-000000000014",
+          "uuid": "21c33824-45a7-49d1-aaf6-eb217ee54267",
           "actions": [
             {
-              "uuid": "ab000014-0000-4000-8000-000000000014",
+              "uuid": "0e0dcb44-d55a-40eb-a4ea-9c6092e88ff6",
               "type": "send_msg",
               "text": "@(if(results.respuesta_p3.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
               "attachments": [],
@@ -433,17 +433,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000014-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000015-0000-4000-8000-000000000015"
+              "uuid": "1fc7c0ee-7503-46ec-a284-cec8d8cc0d4a",
+              "destination_uuid": "9e283ab6-581d-4406-8691-0979d780800f"
             }
           ]
         },
 
         {
-          "uuid": "aa000015-0000-4000-8000-000000000015",
+          "uuid": "9e283ab6-581d-4406-8691-0979d780800f",
           "actions": [
             {
-              "uuid": "ab000015-0000-4000-8000-000000000015",
+              "uuid": "b3cc6fe9-1dab-4aab-86ce-c1c4df36ce84",
               "type": "set_run_result",
               "name": "puntaje",
               "value": "@(if(results.respuesta_p1.value = \"C\", 1, 0) + if(results.respuesta_p2.value = \"D\", 1, 0) + if(results.respuesta_p3.value = \"D\", 1, 0))",
@@ -452,17 +452,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000015-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000016-0000-4000-8000-000000000016"
+              "uuid": "8cb0f048-4c66-4ca5-b10f-da5365a0a1f8",
+              "destination_uuid": "629c980f-178a-4b0a-ab4e-9f1145dce0f3"
             }
           ]
         },
 
         {
-          "uuid": "aa000016-0000-4000-8000-000000000016",
+          "uuid": "629c980f-178a-4b0a-ab4e-9f1145dce0f3",
           "actions": [
             {
-              "uuid": "ab000016-0000-4000-8000-000000000016",
+              "uuid": "200e9616-8b63-40ff-8662-12bce4f9954e",
               "type": "call_webhook",
               "method": "POST",
               "url": "https://portal.campolimpio.org/api/evaluaciones/webhook",
@@ -473,17 +473,17 @@
           ],
           "exits": [
             {
-              "uuid": "ex000016-0000-4000-8000-000000000001",
-              "destination_uuid": "aa000017-0000-4000-8000-000000000017"
+              "uuid": "1f6539fa-faf5-4f0c-bdc9-8c2fac434ddb",
+              "destination_uuid": "b0c8ae43-a4de-444a-899e-b9fd7fde64e7"
             }
           ]
         },
 
         {
-          "uuid": "aa000017-0000-4000-8000-000000000017",
+          "uuid": "b0c8ae43-a4de-444a-899e-b9fd7fde64e7",
           "actions": [
             {
-              "uuid": "ab000017-0000-4000-8000-000000000017",
+              "uuid": "09508f58-aa92-4c65-a6ca-647684834c49",
               "type": "send_msg",
               "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje.value >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje.value >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje.value >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de capacitación.\"))))\n\nGracias por participar en la capacitación de CampoLimpio. 🌿",
               "attachments": [],
@@ -493,7 +493,7 @@
           ],
           "exits": [
             {
-              "uuid": "ex000017-0000-4000-8000-000000000001",
+              "uuid": "57a88f81-5543-49a2-849d-cd3c53e84aa5",
               "destination_uuid": null
             }
           ]
