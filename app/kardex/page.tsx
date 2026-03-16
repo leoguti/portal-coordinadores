@@ -65,6 +65,7 @@ export default function KardexPage() {
   const [centroAcopio, setCentroAcopio] = useState("");
   const [gestor, setGestor] = useState("");
   const [estadoPago, setEstadoPago] = useState("");
+  const [tipoMaterial, setTipoMaterial] = useState("");
   
   // Vista de resúmenes
   const [showResumen, setShowResumen] = useState(false);
@@ -366,6 +367,14 @@ export default function KardexPage() {
       return false;
     }
 
+    // Filtro de tipo de material
+    if (tipoMaterial) {
+      const valor = record.fields[tipoMaterial as keyof typeof record.fields];
+      if (!valor || (typeof valor === "number" && valor <= 0)) {
+        return false;
+      }
+    }
+
     return true;
   });
 
@@ -580,6 +589,7 @@ export default function KardexPage() {
     setCentroAcopio("");
     setGestor("");
     setEstadoPago("");
+    setTipoMaterial("");
     setSelectedCoordinador("");
     setCurrentPage(1);
   };
@@ -1086,6 +1096,27 @@ export default function KardexPage() {
                         {ges}
                       </option>
                     ))}
+                  </select>
+                </div>
+
+                {/* Tipo de Material */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🧴 Tipo de Material
+                  </label>
+                  <select
+                    value={tipoMaterial}
+                    onChange={(e) => setTipoMaterial(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+                  >
+                    <option value="">Todos</option>
+                    <option value="Reciclaje">♻️ Reciclaje</option>
+                    <option value="Incineracion">🔥 Incineración</option>
+                    <option value="Flexibles">📦 Flexibles</option>
+                    <option value="PlasticoContaminado">⚠️ Plástico Contaminado</option>
+                    <option value="Lonas">🎪 Lonas</option>
+                    <option value="Carton">📄 Cartón</option>
+                    <option value="Metal">⚙️ Metal</option>
                   </select>
                 </div>
               </div>
