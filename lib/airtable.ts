@@ -519,6 +519,7 @@ export async function createActividad(params: {
   fecha: string;
   descripcion: string;
   tipo: string;
+  estado?: string;
   cultivo?: string;
   municipioId?: string;
   modalidad?: string[];
@@ -550,6 +551,7 @@ export async function createActividad(params: {
         ...(params.cantidadParticipantes && { "Cantidad de Participantes": params.cantidadParticipantes }),
         ...(params.personasEvaluadas && { "Personas Evaluadas": params.personasEvaluadas }),
         ...(params.observaciones && { Observaciones: params.observaciones }),
+        ...(params.estado && { Estado: params.estado }),
         Coordinador: [params.coordinatorRecordId], // Linked record array
       },
     };

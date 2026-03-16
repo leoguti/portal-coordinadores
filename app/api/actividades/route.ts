@@ -4,39 +4,35 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { listActividadesForCoordinator, listAllActividades, createActividad } from "@/lib/airtable";
 import { isAdminOrSupervisor } from "@/lib/roles";
 
-// Función auxiliar para validar fecha dentro del período de gracia
-function esFechaValida(fecha: string): boolean {
+// Validar fecha para actividades pasadas (mes actual o mes anterior en período de gracia)
+function esFechaValidaPasada(fecha: string): boolean {
   const fechaActividad = new Date(fecha + 'T00:00:00');
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-  
-  // No permitir fechas futuras
-  if (fechaActividad > hoy) {
-    return false;
-  }
-  
-  // Calcular mes anterior
+
+  if (fechaActividad > hoy) return false;
+
   const mesAnterior = new Date(hoy);
   mesAnterior.setMonth(mesAnterior.getMonth() - 1);
-  
-  // Último día del mes anterior
   const ultimoDiaMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0);
-  
-  // Fecha de cierre del mes anterior (último día + 7)
   const fechaCierreMesAnterior = new Date(ultimoDiaMesAnterior);
   fechaCierreMesAnterior.setDate(fechaCierreMesAnterior.getDate() + 7);
-  
-  // Determinar fecha mínima permitida
-  let fechaMinima: Date;
-  if (hoy <= fechaCierreMesAnterior) {
-    // Mes anterior aún está abierto
-    fechaMinima = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth(), 1);
-  } else {
-    // Solo mes actual permitido
-    fechaMinima = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  }
-  
+
+  const fechaMinima = hoy <= fechaCierreMesAnterior
+    ? new Date(mesAnterior.getFullYear(), mesAnterior.getMonth(), 1)
+    : new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
   return fechaActividad >= fechaMinima;
+}
+
+// Validar fecha para actividades "En curso": hoy hasta +7 días
+function esFechaValidaEnCurso(fecha: string): boolean {
+  const fechaActividad = new Date(fecha + 'T00:00:00');
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const maxFecha = new Date(hoy);
+  maxFecha.setDate(maxFecha.getDate() + 7);
+  return fechaActividad >= hoy && fechaActividad <= maxFecha;
 }
 
 /**
@@ -104,22 +100,41 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, fecha, descripcion, tipo, cultivo, municipioId, modalidad, perfilAsistentes, cantidadParticipantes, personasEvaluadas, observaciones } = body;
+    const { name, fecha, descripcion, tipo, estado, cultivo, municipioId, modalidad, perfilAsistentes, cantidadParticipantes, personasEvaluadas, observaciones } = body;
 
-    // Validate required fields (municipio y cultivo son condicionales)
-    if (!name || !fecha || !descripcion || !tipo) {
+    // Validate required fields
+    if (!name || !fecha || !tipo) {
       return NextResponse.json(
-        { error: "Missing required fields: name, fecha, descripcion, tipo" },
+        { error: "Missing required fields: name, fecha, tipo" },
         { status: 400 }
       );
     }
 
-    // Validar que la fecha esté dentro del período permitido
-    if (!esFechaValida(fecha)) {
-      return NextResponse.json(
-        { error: "La fecha está fuera del período permitido. Solo puedes crear actividades del mes actual o del mes anterior si aún está en el período de gracia (7 días después del fin de mes)." },
-        { status: 400 }
-      );
+    // Descripcion requerida solo para actividades pasadas
+    if (!estado || estado !== "En curso") {
+      if (!descripcion) {
+        return NextResponse.json(
+          { error: "Missing required field: descripcion" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validar fecha según estado
+    if (estado === "En curso") {
+      if (!esFechaValidaEnCurso(fecha)) {
+        return NextResponse.json(
+          { error: "La fecha debe ser hoy o hasta 7 días en el futuro." },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!esFechaValidaPasada(fecha)) {
+        return NextResponse.json(
+          { error: "La fecha está fuera del período permitido. Solo puedes crear actividades del mes actual o del mes anterior si aún está en el período de gracia (7 días después del fin de mes)." },
+          { status: 400 }
+        );
+      }
     }
 
     // Create activity in Airtable
@@ -127,8 +142,9 @@ export async function POST(request: Request) {
       coordinatorRecordId: session.user.coordinatorRecordId,
       name,
       fecha,
-      descripcion,
+      descripcion: descripcion || "",
       tipo,
+      estado,
       cultivo,
       municipioId,
       modalidad,
