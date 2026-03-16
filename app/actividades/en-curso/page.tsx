@@ -8,14 +8,6 @@ import MunicipioSearch from "@/components/MunicipioSearch";
 import Link from "next/link";
 import Image from "next/image";
 
-const TIPOS = [
-  "Sensibilización",
-  "Visita acopio",
-  "Visita almacenes ",
-  "Reuniones intersectoriales ",
-  "Recoleccion",
-];
-
 function hoyISO() {
   return new Date().toISOString().split("T")[0];
 }
@@ -35,7 +27,6 @@ export default function ActividadEnCursoPage() {
   // Form
   const [name, setName] = useState("");
   const [fecha, setFecha] = useState(hoyISO());
-  const [tipo, setTipo] = useState("");
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
 
   // Resultado
@@ -73,7 +64,7 @@ export default function ActividadEnCursoPage() {
         body: JSON.stringify({
           name,
           fecha,
-          tipo,
+          tipo: "Sensibilización",
           estado: "En curso",
           municipioId: municipio.id,
           descripcion: "",
@@ -215,28 +206,6 @@ export default function ActividadEnCursoPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-400 mt-1">Hoy o hasta 7 días en el futuro.</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Actividad <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {TIPOS.map((t) => (
-                  <label key={t} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="tipo"
-                      value={t}
-                      checked={tipo === t}
-                      onChange={(e) => setTipo(e.target.value)}
-                      required
-                      className="mr-2"
-                    />
-                    <span className="text-sm">{t.trim()}</span>
-                  </label>
-                ))}
-              </div>
             </div>
 
             <div>
