@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +10,7 @@ import { puedeModificarFecha } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 
-export default function OrdenesServicioPage() {
+function OrdenesServicioPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -631,5 +631,13 @@ export default function OrdenesServicioPage() {
         )}
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+export default function OrdenesServicioPage() {
+  return (
+    <Suspense>
+      <OrdenesServicioPageInner />
+    </Suspense>
   );
 }

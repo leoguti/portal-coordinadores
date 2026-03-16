@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, Suspense } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KardexFormModal from "@/components/KardexFormModal";
 import { puedeModificarFecha, getFechaCorteMesesCerrados } from "@/lib/dateValidations";
@@ -35,7 +35,7 @@ interface KardexRecord {
   };
 }
 
-export default function KardexPage() {
+function KardexPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1629,5 +1629,13 @@ export default function KardexPage() {
         )}
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+export default function KardexPage() {
+  return (
+    <Suspense>
+      <KardexPageInner />
+    </Suspense>
   );
 }
