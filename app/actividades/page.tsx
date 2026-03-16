@@ -494,7 +494,7 @@ export default function ActividadesPage() {
             className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <span>📍</span>
-            Actividad en campo
+            Generar QR de Sensibilización
           </Link>
           <Link
             href="/actividades/nueva"
