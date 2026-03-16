@@ -199,7 +199,7 @@ export default function DashboardCoordinador() {
                     <strong>{stats.alertas.kardexPorPagar}</strong> kardex &quot;Por Pagar&quot; sin orden de servicio
                   </span>
                 </div>
-                <Link href="/kardex" className="text-xs text-[#00d084] font-medium hover:text-[#00b872]">
+                <Link href="/kardex?estadoPago=Por+Pagar" className="text-xs text-[#00d084] font-medium hover:text-[#00b872]">
                   Ver →
                 </Link>
               </div>
@@ -212,7 +212,7 @@ export default function DashboardCoordinador() {
                     <strong>{stats.alertas.ordenesSinFacturar}</strong> órdenes pendientes por facturar
                   </span>
                 </div>
-                <Link href="/ordenes-servicio" className="text-xs text-[#00d084] font-medium hover:text-[#00b872]">
+                <Link href="/ordenes-servicio?estado=Enviada" className="text-xs text-[#00d084] font-medium hover:text-[#00b872]">
                   Ver →
                 </Link>
               </div>

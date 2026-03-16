@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
   getMetasCoordinador,
-  listKardexForCoordinator,
+  getAllKardex,
   listActividadesForCoordinator,
   getOrdenesCoordinador,
   getGastosCajaMenorCoordinador,
@@ -27,14 +27,20 @@ export async function GET(request: Request) {
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
     const yearStr = String(year);
 
-    const [metas, kardexAll, actividades, ordenes, gastos, rubros] = await Promise.all([
+    const [metas, allKardex, actividades, ordenes, gastos, rubros] = await Promise.all([
       getMetasCoordinador(coordinatorId, year),
-      listKardexForCoordinator(coordinatorId),
+      getAllKardex(),
       listActividadesForCoordinator(coordinatorId),
       getOrdenesCoordinador(coordinatorId),
       getGastosCajaMenorCoordinador(coordinatorId),
       getRubros(),
     ]);
+
+    // Filter kardex by coordinator (paginated, all records)
+    const kardexAll = allKardex.filter(
+      (k) =>
+        (k.fields.idcoordinador?.[0] || k.fields.Coordinador?.[0]) === coordinatorId
+    );
 
     const rubroNameMap = new Map(rubros.map((r) => [r.id, r.fields.Nombre || "Rubro"]));
     const kardexYear = kardexAll.filter((k) => k.fields.AÑO === yearStr);

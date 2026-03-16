@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenesCoordinador, getAllOrdenes, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
@@ -13,15 +13,16 @@ import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 export default function OrdenesServicioPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [conceptos, setConceptos] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filtros
+  // Filtros — inicializados desde query params si vienen del dashboard
   const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
   const [filtroBeneficiario, setFiltroBeneficiario] = useState<string>("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>(searchParams.get("estado") || "");
   const [filtroMes, setFiltroMes] = useState<string>("");
 
   // Export PDF

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Fragment } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KardexFormModal from "@/components/KardexFormModal";
@@ -38,6 +38,7 @@ interface KardexRecord {
 export default function KardexPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [allKardexRecords, setAllKardexRecords] = useState<KardexRecord[]>([]); // TODOS los registros
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,18 +46,18 @@ export default function KardexPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [kardexCreado, setKardexCreado] = useState<any>(null);
-  
+
   // Pagination (cliente)
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
-  
+
   // Admin features
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const canWrite = isAdmin(session?.user?.rol);
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCoordinador, setSelectedCoordinador] = useState("");
-  
-  // Filtros
+
+  // Filtros — inicializados desde query params si vienen del dashboard
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [tipoMovimiento, setTipoMovimiento] = useState("");
@@ -64,7 +65,7 @@ export default function KardexPage() {
   const [municipio, setMunicipio] = useState("");
   const [centroAcopio, setCentroAcopio] = useState("");
   const [gestor, setGestor] = useState("");
-  const [estadoPago, setEstadoPago] = useState("");
+  const [estadoPago, setEstadoPago] = useState(searchParams.get("estadoPago") || "");
   const [tipoMaterial, setTipoMaterial] = useState("");
   
   // Vista de resúmenes
