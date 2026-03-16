@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const { actividadId, telefono, respuestaP1, respuestaP2, respuestaP3 } = body;
   const puntaje = Number(body.puntaje);
 
-  if (!actividadId || !telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || isNaN(puntaje)) {
+  if (!telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || isNaN(puntaje)) {
     return NextResponse.json({ error: "Campos requeridos faltantes" }, { status: 400 });
   }
 

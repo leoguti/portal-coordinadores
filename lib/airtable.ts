@@ -4013,7 +4013,7 @@ export async function createPersonaEvaluada(params: {
 }
 
 export async function createEvaluacion(params: {
-  actividadId: string;
+  actividadId?: string;
   personaId: string;
   respuestaP1: string;
   respuestaP2: string;
@@ -4024,15 +4024,17 @@ export async function createEvaluacion(params: {
   const baseId = process.env.AIRTABLE_BASE_ID;
   if (!apiKey || !baseId) return null;
 
-  const fields = {
+  const fields: Record<string, unknown> = {
     "Respuesta P1": params.respuestaP1,
     "Respuesta P2": params.respuestaP2,
     "Respuesta P3": params.respuestaP3,
     Puntaje: params.puntaje,
     Timestamp: new Date().toISOString(),
-    Actividad: [params.actividadId],
     "Persona Evaluada": [params.personaId],
   };
+  if (params.actividadId) {
+    fields["Actividad"] = [params.actividadId];
+  }
 
   try {
     const res = await fetch(`https://api.airtable.com/v0/${baseId}/tblh0WNCj0P0z0vGg`, {
