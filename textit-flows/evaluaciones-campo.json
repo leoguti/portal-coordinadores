@@ -16,7 +16,7 @@
               "uuid": "1efde551-7e3e-41ec-9bde-a7d49b02676c",
               "type": "set_run_result",
               "name": "actividad_id",
-              "value": "@(mid(input.text, 6, 100))",
+              "value": "@(mid(trigger.text, 6, 100))",
               "category": "Actividad"
             }
           ],
