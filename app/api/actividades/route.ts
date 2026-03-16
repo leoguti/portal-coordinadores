@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       fecha,
       descripcion: descripcion || "",
       tipo,
-      estado,
+      estado: estado || "Completada",
       cultivo,
       municipioId,
       modalidad,
