@@ -37,7 +37,7 @@
               "uuid": "1efde551-7e3e-41ec-9bde-a7d49b02676c",
               "type": "set_run_result",
               "name": "actividad_id",
-              "value": "@(mid(trigger.text, 6, 100))",
+              "value": "@(mid(input.text, 6, 100))",
               "category": "Actividad"
             }
           ],
@@ -488,7 +488,7 @@
               "method": "POST",
               "url": "https://portal.campolimpio.org/api/evaluaciones/webhook",
               "headers": { "Content-Type": "application/json" },
-              "body": "{\"actividadId\": \"@(mid(trigger.text, 6, 100))\", \"telefono\": \"@(format_urn(urns.whatsapp))\", \"nombre\": \"@results.nombre.value\", \"documento\": \"@results.documento.value\", \"municipio\": \"@results.municipio.value\", \"respuestaP1\": \"@results.respuesta_p1.value\", \"respuestaP2\": \"@results.respuesta_p2.value\", \"respuestaP3\": \"@results.respuesta_p3.value\", \"puntaje\": \"@results.puntaje.value\"}",
+              "body": "{\"actividadId\": \"@results.actividad_id.value\", \"telefono\": \"@(format_urn(urns.whatsapp))\", \"nombre\": \"@results.nombre.value\", \"documento\": \"@results.documento.value\", \"municipio\": \"@results.municipio.value\", \"respuestaP1\": \"@results.respuesta_p1.value\", \"respuestaP2\": \"@results.respuesta_p2.value\", \"respuestaP3\": \"@results.respuesta_p3.value\", \"puntaje\": \"@results.puntaje.value\"}",
               "result_name": "save_result"
             }
           ],
