@@ -55,7 +55,7 @@
             {
               "uuid": "314fddf6-c9dd-4042-ba9d-33cfa590d242",
               "type": "send_msg",
-              "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de capacitación, conforme a la Ley 1581 de 2012.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
+              "text": "📋 *Aviso de Privacidad*\n\nCampoLimpio recolectará tus datos personales (nombre, documento y municipio) para el registro de actividades de sensibilización, conforme a la Ley 1581 de 2012.\n\n¿Autorizas el uso de tus datos personales?\n\n*1.* Sí, acepto\n*2.* No acepto",
               "attachments": [],
               "quick_replies": ["1. Sí", "2. No"],
               "templating": null
@@ -506,7 +506,7 @@
             {
               "uuid": "09508f58-aa92-4c65-a6ca-647684834c49",
               "type": "send_msg",
-              "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje.value >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje.value >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje.value >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de capacitación.\"))))\n\nGracias por participar en la capacitación de CampoLimpio. 🌿",
+              "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje.value >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje.value >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje.value >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de sensibilización.\"))))\n\nGracias por participar en la sensibilización de CampoLimpio. 🌿",
               "attachments": [],
               "quick_replies": [],
               "templating": null
