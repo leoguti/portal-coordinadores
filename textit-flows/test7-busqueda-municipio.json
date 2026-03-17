@@ -129,7 +129,7 @@
           "actions": [],
           "router": {
             "type": "switch",
-            "operand": "@results.busqueda.resultado",
+            "operand": "@extra.resultado",
             "cases": [
               {
                 "uuid": "b0000000-0000-4000-8000-000000000002",
@@ -206,7 +206,7 @@
             {
               "uuid": "a0000000-0000-4000-8000-000000000003",
               "type": "send_msg",
-              "text": "Encontramos varios municipios. Escoge el número:\n\n@results.busqueda.lista",
+              "text": "Encontramos varios municipios. Escoge el número:\n\n@extra.lista",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -303,14 +303,14 @@
               "uuid": "a0000000-0000-4000-8000-000000000005",
               "type": "set_run_result",
               "name": "mundep",
-              "value": "@results.busqueda2.mundep",
+              "value": "@extra.mundep",
               "category": "Calculado"
             },
             {
               "uuid": "a0000000-0000-4000-8000-000000000006",
               "type": "set_run_result",
               "name": "idmunicipio",
-              "value": "@results.busqueda2.id",
+              "value": "@extra.id",
               "category": "Calculado"
             }
           ],
@@ -329,14 +329,14 @@
               "uuid": "a0000000-0000-4000-8000-000000000007",
               "type": "set_run_result",
               "name": "mundep",
-              "value": "@results.busqueda.first_mundep",
+              "value": "@extra.first_mundep",
               "category": "Calculado"
             },
             {
               "uuid": "a0000000-0000-4000-8000-000000000008",
               "type": "set_run_result",
               "name": "idmunicipio",
-              "value": "@results.busqueda.first_id",
+              "value": "@extra.first_id",
               "category": "Calculado"
             }
           ],
