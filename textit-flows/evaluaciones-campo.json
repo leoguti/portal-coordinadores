@@ -7,6 +7,27 @@
       "spec_version": "13.1.0",
       "language": "spa",
       "type": "messaging",
+      "_ui": {
+        "nodes": {
+          "f8534dc9-c0f9-4de0-83d4-66f1655b3d13": { "position": { "left": 400, "top": 0 } },
+          "9eab69aa-ad9e-4e4d-b356-b166014c380d": { "position": { "left": 400, "top": 150 } },
+          "056471d9-4de8-4c63-b94e-7776923698ed": { "position": { "left": 800, "top": 150 } },
+          "2986d65f-fa21-4700-a5de-a580a5e3facf": { "position": { "left": 400, "top": 400 } },
+          "239562bb-7d1f-4442-a86f-91d1d0d170ca": { "position": { "left": 800, "top": 400 } },
+          "c6e46eee-98ab-4078-a66c-9ce92b3546e8": { "position": { "left": 0, "top": 400 } },
+          "2dd3ec9a-bfb8-44c3-88ed-da0f67f4c72a": { "position": { "left": 0, "top": 600 } },
+          "115ed4f1-9d82-4655-bfb8-71f438b03f1d": { "position": { "left": 0, "top": 800 } },
+          "2455af5a-a602-4738-9797-b00627198a72": { "position": { "left": 400, "top": 700 } },
+          "df8596cf-7bef-4e17-afd1-8bc8738e75d9": { "position": { "left": 400, "top": 900 } },
+          "f2dc7888-fae2-4532-b59d-bfb7ad0d62f8": { "position": { "left": 400, "top": 1100 } },
+          "8413a3b7-8c40-4e6b-a9c3-499c685dbba8": { "position": { "left": 400, "top": 1300 } },
+          "31c38bc6-bb0e-4809-abb2-63d26458ccb9": { "position": { "left": 400, "top": 1500 } },
+          "21c33824-45a7-49d1-aaf6-eb217ee54267": { "position": { "left": 400, "top": 1700 } },
+          "9e283ab6-581d-4406-8691-0979d780800f": { "position": { "left": 400, "top": 1900 } },
+          "629c980f-178a-4b0a-ab4e-9f1145dce0f3": { "position": { "left": 400, "top": 2100 } },
+          "b0c8ae43-a4de-444a-899e-b9fd7fde64e7": { "position": { "left": 400, "top": 2300 } }
+        }
+      },
       "nodes": [
 
         {
