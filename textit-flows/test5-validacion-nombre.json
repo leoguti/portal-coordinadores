@@ -1,0 +1,113 @@
+{
+  "version": "13",
+  "flows": [
+    {
+      "name": "test5",
+      "uuid": "eb9daf1a-8013-4e87-b975-89843407f5d5",
+      "spec_version": "13.1.0",
+      "language": "spa",
+      "type": "messaging",
+      "_ui": {
+        "nodes": {
+          "4f8a234c-aad7-47e9-b5b9-e84b670611d9": { "position": { "left": 400, "top": 0 } },
+          "bb85aed4-b00c-4520-bb13-48dd2263ebb9": { "position": { "left": 400, "top": 200 } },
+          "fef1ae1d-1c50-4aec-8732-9c0426632c58": { "position": { "left": 400, "top": 450 } }
+        }
+      },
+      "nodes": [
+
+        {
+          "uuid": "4f8a234c-aad7-47e9-b5b9-e84b670611d9",
+          "actions": [
+            {
+              "uuid": "d7aa5101-9e54-4678-8460-1019bc0b674a",
+              "type": "send_msg",
+              "text": "¿Cuál es tu *nombre completo*?",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "nombre",
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "fde78783-27fe-4e33-9566-496323fdbfcd",
+                "type": "has_pattern",
+                "arguments": ["\\w+ \\w+"],
+                "category_uuid": "3bf4be5c-6d77-42f6-aa5c-8174d54b682c"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "3bf4be5c-6d77-42f6-aa5c-8174d54b682c",
+                "name": "Válido",
+                "exit_uuid": "e7f48f72-339e-4b14-b958-a39dc2451e9e"
+              },
+              {
+                "uuid": "702b1855-091a-4444-bcc7-869fb57b9707",
+                "name": "Other",
+                "exit_uuid": "cac6acf4-4638-4f7b-879b-d19a7e00ddae"
+              }
+            ],
+            "default_category_uuid": "702b1855-091a-4444-bcc7-869fb57b9707"
+          },
+          "exits": [
+            {
+              "uuid": "e7f48f72-339e-4b14-b958-a39dc2451e9e",
+              "destination_uuid": "fef1ae1d-1c50-4aec-8732-9c0426632c58"
+            },
+            {
+              "uuid": "cac6acf4-4638-4f7b-879b-d19a7e00ddae",
+              "destination_uuid": "bb85aed4-b00c-4520-bb13-48dd2263ebb9"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb85aed4-b00c-4520-bb13-48dd2263ebb9",
+          "actions": [
+            {
+              "uuid": "30eb5046-c1bc-41ed-991c-cebcc3b6fa43",
+              "type": "send_msg",
+              "text": "Por favor escribe tu nombre y apellido completos. Ejemplo: *Juan Pérez*",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "3383c804-3730-49e4-9567-f253858e157d",
+              "destination_uuid": "4f8a234c-aad7-47e9-b5b9-e84b670611d9"
+            }
+          ]
+        },
+
+        {
+          "uuid": "fef1ae1d-1c50-4aec-8732-9c0426632c58",
+          "actions": [
+            {
+              "uuid": "92371715-b940-4685-bde4-98b68dc36451",
+              "type": "send_msg",
+              "text": "✅ Nombre registrado: @results.nombre.value",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "b987ad2e-f9ea-422c-806f-881551cc40e8",
+              "destination_uuid": null
+            }
+          ]
+        }
+
+      ]
+    }
+  ]
+}
