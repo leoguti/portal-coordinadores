@@ -385,7 +385,7 @@
             {
               "uuid": "cb768602-33b7-4546-be61-83528e5d1dcc",
               "type": "send_msg",
-              "text": "@(if(results.respuesta_p1.value = \"C\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *C*: Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013).\"))",
+              "text": "@(if(results.respuesta_p1 = \"C\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *C*: Con un programa de manejo seguro y responsable de residuos posconsumo (Resolución 1675/2013).\"))",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -440,7 +440,7 @@
             {
               "uuid": "1d0dd0c4-0026-4deb-9daf-ff50f0c57078",
               "type": "send_msg",
-              "text": "@(if(results.respuesta_p2.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
+              "text": "@(if(results.respuesta_p2 = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -495,7 +495,7 @@
             {
               "uuid": "0e0dcb44-d55a-40eb-a4ea-9c6092e88ff6",
               "type": "send_msg",
-              "text": "@(if(results.respuesta_p3.value = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
+              "text": "@(if(results.respuesta_p3 = \"D\", \"✅ ¡Correcto! 🎉\", \"❌ La respuesta correcta es *D*: Todas las anteriores.\"))",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -516,7 +516,7 @@
               "uuid": "b3cc6fe9-1dab-4aab-86ce-c1c4df36ce84",
               "type": "set_run_result",
               "name": "puntaje",
-              "value": "@(if(results.respuesta_p1.value = \"C\", 1, 0) + if(results.respuesta_p2.value = \"D\", 1, 0) + if(results.respuesta_p3.value = \"D\", 1, 0))",
+              "value": "@(if(results.respuesta_p1 = \"C\", 1, 0) + if(results.respuesta_p2 = \"D\", 1, 0) + if(results.respuesta_p3 = \"D\", 1, 0))",
               "category": "Calculado"
             }
           ],
@@ -555,7 +555,7 @@
             {
               "uuid": "09508f58-aa92-4c65-a6ca-647684834c49",
               "type": "send_msg",
-              "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje.value >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje.value >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje.value >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de sensibilización.\"))))\n\nGracias por participar en la sensibilización de CampoLimpio. 🌿",
+              "text": "🎉 *¡Evaluación completada!*\n\nTu puntaje: *@results.puntaje.value / 3*\n\n@(if(results.puntaje >= 3, \"🏆 ¡Felicitaciones! Respondiste todas correctamente.\", if(results.puntaje >= 2, \"👍 ¡Muy bien! Casi lo logras.\", if(results.puntaje >= 1, \"📚 Respondiste 1 de 3. Te invitamos a repasar el material.\", \"📚 Te invitamos a revisar el material de sensibilización.\"))))\n\nGracias por participar en la sensibilización de CampoLimpio. 🌿",
               "attachments": [],
               "quick_replies": [],
               "templating": null

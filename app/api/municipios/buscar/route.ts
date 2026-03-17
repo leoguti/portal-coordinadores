@@ -91,17 +91,18 @@ export async function GET(req: NextRequest) {
     const count = found.length;
 
     if (count === 0) {
-      return NextResponse.json({ count: 0, lista: "", matches: [] });
+      return NextResponse.json({ count: 0, resultado: "none", lista: "", matches: [] });
     }
 
     if (count > 10) {
-      return NextResponse.json({ count, lista: "", matches: [] });
+      return NextResponse.json({ count, resultado: "toomany", lista: "", matches: [] });
     }
 
     const matches = found.map(({ id, mundep }) => ({ id, mundep }));
     const lista = matches.map((m, i) => `${i + 1}-${m.mundep}`).join("\n");
+    const resultado = count === 1 ? "one" : "varios";
 
-    return NextResponse.json({ count, lista, matches });
+    return NextResponse.json({ count, resultado, lista, matches });
   } catch (error) {
     console.error("Error buscando municipio:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
