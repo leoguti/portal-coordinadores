@@ -230,28 +230,28 @@
               "uuid": "90783eee-6707-438d-9327-ede2418c2685",
               "type": "set_run_result",
               "name": "encontrado",
-              "value": "@webhook.json.resultado",
+              "value": "@results.busqueda.resultado",
               "category": "Calculado"
             },
             {
               "uuid": "60882bf2-3505-43d9-8d14-15b65ca1ee1b",
               "type": "set_run_result",
               "name": "lista",
-              "value": "@webhook.json.lista",
+              "value": "@results.busqueda.lista",
               "category": "Calculado"
             },
             {
               "uuid": "c97bbe91-7535-484e-9909-6ae60b810ca1",
               "type": "set_run_result",
               "name": "idmunicipio",
-              "value": "@(webhook.json.matches[0].id)",
+              "value": "@(results.busqueda.matches[0].id)",
               "category": "Calculado"
             },
             {
               "uuid": "5cd6ba74-595a-4720-a6d1-121048c2d2a2",
               "type": "set_run_result",
               "name": "mundep",
-              "value": "@(webhook.json.matches[0].mundep)",
+              "value": "@(results.busqueda.matches[0].mundep)",
               "category": "Calculado"
             }
           ],
@@ -456,14 +456,14 @@
               "uuid": "4b9814f9-f123-4c8a-bc16-0733f649cb56",
               "type": "set_run_result",
               "name": "idmunicipio",
-              "value": "@(webhook.json.matches[results.eleccion-1].id)",
+              "value": "@(results.busqueda2.matches[results.eleccion-1].id)",
               "category": "Calculado"
             },
             {
               "uuid": "72985c81-d579-49ed-b35b-94f8c2689262",
               "type": "set_run_result",
               "name": "mundep",
-              "value": "@(webhook.json.matches[results.eleccion-1].mundep)",
+              "value": "@(results.busqueda2.matches[results.eleccion-1].mundep)",
               "category": "Calculado"
             }
           ],
