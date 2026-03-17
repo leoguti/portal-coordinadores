@@ -1,0 +1,125 @@
+{
+  "version": "13",
+  "flows": [
+    {
+      "name": "test6",
+      "uuid": "c2a84f31-7d9e-4b15-a3e0-5f6c8d902e41",
+      "spec_version": "13.1.0",
+      "language": "spa",
+      "type": "messaging",
+      "_ui": {
+        "nodes": {
+          "a1b2c3d4-0001-4000-8000-100000000001": { "position": { "left": 360, "top": 20 } },
+          "a1b2c3d4-0001-4000-8000-100000000002": { "type": "wait_for_response", "position": { "left": 340, "top": 180 }, "config": { "cases": {} } },
+          "a1b2c3d4-0001-4000-8000-100000000003": { "position": { "left": 820, "top": 400 } },
+          "a1b2c3d4-0001-4000-8000-100000000004": { "position": { "left": 120, "top": 540 } }
+        }
+      },
+      "nodes": [
+
+        {
+          "uuid": "a1b2c3d4-0001-4000-8000-100000000001",
+          "actions": [
+            {
+              "uuid": "b1c2d3e4-0001-4000-8000-200000000001",
+              "type": "send_msg",
+              "text": "¿Cuál es tu número de *documento de identidad*?",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c1d2e3f4-0001-4000-8000-300000000001",
+              "destination_uuid": "a1b2c3d4-0001-4000-8000-100000000002"
+            }
+          ]
+        },
+
+        {
+          "uuid": "a1b2c3d4-0001-4000-8000-100000000002",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "documento",
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "d1e2f3a4-0001-4000-8000-400000000001",
+                "type": "has_pattern",
+                "arguments": ["^\\d{6,10}$"],
+                "category_uuid": "e1f2a3b4-0001-4000-8000-500000000001"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "e1f2a3b4-0001-4000-8000-500000000001",
+                "name": "Válido",
+                "exit_uuid": "f1a2b3c4-0001-4000-8000-600000000001"
+              },
+              {
+                "uuid": "f1a2b3c4-0001-4000-8000-500000000002",
+                "name": "Other",
+                "exit_uuid": "a2b3c4d5-0001-4000-8000-600000000002"
+              }
+            ],
+            "default_category_uuid": "f1a2b3c4-0001-4000-8000-500000000002"
+          },
+          "exits": [
+            {
+              "uuid": "f1a2b3c4-0001-4000-8000-600000000001",
+              "destination_uuid": "a1b2c3d4-0001-4000-8000-100000000004"
+            },
+            {
+              "uuid": "a2b3c4d5-0001-4000-8000-600000000002",
+              "destination_uuid": "a1b2c3d4-0001-4000-8000-100000000003"
+            }
+          ]
+        },
+
+        {
+          "uuid": "a1b2c3d4-0001-4000-8000-100000000003",
+          "actions": [
+            {
+              "uuid": "b2c3d4e5-0001-4000-8000-200000000003",
+              "type": "send_msg",
+              "text": "Por favor escribe solo los números de tu cédula (entre 6 y 10 dígitos). Ejemplo: *1098765432*",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "c2d3e4f5-0001-4000-8000-300000000003",
+              "destination_uuid": "a1b2c3d4-0001-4000-8000-100000000002"
+            }
+          ]
+        },
+
+        {
+          "uuid": "a1b2c3d4-0001-4000-8000-100000000004",
+          "actions": [
+            {
+              "uuid": "d2e3f4a5-0001-4000-8000-200000000004",
+              "type": "send_msg",
+              "text": "✅ Documento registrado: @results.documento.value",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "e2f3a4b5-0001-4000-8000-300000000004",
+              "destination_uuid": null
+            }
+          ]
+        }
+
+      ]
+    }
+  ]
+}

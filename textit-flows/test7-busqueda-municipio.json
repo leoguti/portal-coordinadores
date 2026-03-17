@@ -1,0 +1,487 @@
+{
+  "version": "13",
+  "flows": [
+    {
+      "name": "test7",
+      "uuid": "d4e5f6a7-b8c9-4d0e-a1f2-d4e5f6a7b8c9",
+      "spec_version": "13.1.0",
+      "language": "spa",
+      "type": "messaging",
+      "_ui": {
+        "nodes": {
+          "bb000001-0000-4001-b000-000000000001": { "type": "execute_actions",   "position": { "left": 400,  "top": 0    } },
+          "bb000001-0000-4001-b000-000000000002": { "type": "wait_for_response", "position": { "left": 400,  "top": 160  }, "config": { "cases": {} } },
+          "bb000001-0000-4001-b000-000000000003": { "type": "execute_actions",   "position": { "left": 400,  "top": 340  } },
+          "bb000001-0000-4001-b000-000000000004": { "type": "execute_actions",   "position": { "left": 400,  "top": 560  } },
+          "bb000001-0000-4001-b000-000000000005": { "type": "execute_actions",   "position": { "left": 700,  "top": 560  } },
+          "bb000001-0000-4001-b000-000000000006": { "type": "execute_actions",   "position": { "left": 0,    "top": 560  } },
+          "bb000001-0000-4001-b000-000000000007": { "type": "execute_actions",   "position": { "left": 1000, "top": 560  } },
+          "bb000001-0000-4001-b000-000000000008": { "type": "wait_for_response", "position": { "left": 700,  "top": 760  }, "config": { "cases": {} } },
+          "bb000001-0000-4001-b000-000000000009": { "type": "execute_actions",   "position": { "left": 700,  "top": 960  } },
+          "bb000001-0000-4001-b000-000000000010": { "type": "execute_actions",   "position": { "left": 700,  "top": 1160 } },
+          "bb000001-0000-4001-b000-000000000011": { "type": "execute_actions",   "position": { "left": 400,  "top": 1100 } },
+          "bb000001-0000-4001-b000-000000000012": { "type": "wait_for_response", "position": { "left": 400,  "top": 1300 }, "config": { "cases": {} } },
+          "bb000001-0000-4001-b000-000000000013": { "type": "execute_actions",   "position": { "left": 400,  "top": 1500 } },
+          "bb000001-0000-4001-b000-000000000014": { "type": "execute_actions",   "position": { "left": 400,  "top": 1700 } }
+        }
+      },
+      "nodes": [
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000001",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000001",
+              "type": "send_msg",
+              "text": "¿En qué municipio vives? (Escribe el nombre)",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000001",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000002"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000002",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "textomunicipio",
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "be000001-0000-4001-b000-000000000002",
+                "type": "has_text",
+                "arguments": [],
+                "category_uuid": "bf000001-0000-4001-b000-000000000002"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "bf000001-0000-4001-b000-000000000002",
+                "name": "Has Text",
+                "exit_uuid": "bd000001-0000-4001-b000-000000000002a"
+              },
+              {
+                "uuid": "bf000002-0000-4001-b000-000000000002",
+                "name": "Other",
+                "exit_uuid": "bd000002-0000-4001-b000-000000000002"
+              }
+            ],
+            "default_category_uuid": "bf000002-0000-4001-b000-000000000002"
+          },
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000002a",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000003"
+            },
+            {
+              "uuid": "bd000002-0000-4001-b000-000000000002",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000003",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000003",
+              "type": "call_webhook",
+              "method": "GET",
+              "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.textomunicipio))",
+              "headers": {},
+              "body": "",
+              "result_name": "busqueda"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@webhook.json.count",
+            "cases": [
+              {
+                "uuid": "be000001-0000-4001-b000-000000000003a",
+                "type": "has_number_eq",
+                "arguments": ["0"],
+                "category_uuid": "bf000001-0000-4001-b000-000000000003"
+              },
+              {
+                "uuid": "be000001-0000-4001-b000-000000000003b",
+                "type": "has_number_eq",
+                "arguments": ["1"],
+                "category_uuid": "bf000002-0000-4001-b000-000000000003"
+              },
+              {
+                "uuid": "be000001-0000-4001-b000-000000000003c",
+                "type": "has_number_between",
+                "arguments": ["2", "10"],
+                "category_uuid": "bf000003-0000-4001-b000-000000000003"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "bf000001-0000-4001-b000-000000000003",
+                "name": "Ninguno",
+                "exit_uuid": "bd000001-0000-4001-b000-000000000003"
+              },
+              {
+                "uuid": "bf000002-0000-4001-b000-000000000003",
+                "name": "Unico",
+                "exit_uuid": "bd000002-0000-4001-b000-000000000003"
+              },
+              {
+                "uuid": "bf000003-0000-4001-b000-000000000003",
+                "name": "Varios",
+                "exit_uuid": "bd000003-0000-4001-b000-000000000003"
+              },
+              {
+                "uuid": "bf000004-0000-4001-b000-000000000003",
+                "name": "Demasiados",
+                "exit_uuid": "bd000004-0000-4001-b000-000000000003"
+              }
+            ],
+            "default_category_uuid": "bf000004-0000-4001-b000-000000000003"
+          },
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000003",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000006"
+            },
+            {
+              "uuid": "bd000002-0000-4001-b000-000000000003",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000004"
+            },
+            {
+              "uuid": "bd000003-0000-4001-b000-000000000003",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000005"
+            },
+            {
+              "uuid": "bd000004-0000-4001-b000-000000000003",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000007"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000004",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000004a",
+              "type": "set_run_result",
+              "name": "idmunicipio",
+              "value": "@(webhook.json.matches[0].id)",
+              "category": "Calculado"
+            },
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000004b",
+              "type": "set_run_result",
+              "name": "mundep",
+              "value": "@(webhook.json.matches[0].mundep)",
+              "category": "Calculado"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000004",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000005",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000005",
+              "type": "send_msg",
+              "text": "Encontramos varios municipios. Escoge un número:\n\n@webhook.json.lista",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000005",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000008"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000008",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "eleccion",
+            "operand": "@input.text",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "bf000001-0000-4001-b000-000000000008",
+                "name": "All Responses",
+                "exit_uuid": "bd000001-0000-4001-b000-000000000008"
+              }
+            ],
+            "default_category_uuid": "bf000001-0000-4001-b000-000000000008"
+          },
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000008",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000009"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000009",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000009",
+              "type": "call_webhook",
+              "method": "GET",
+              "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.textomunicipio))",
+              "headers": {},
+              "body": "",
+              "result_name": "busqueda2"
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@webhook.status",
+            "cases": [
+              {
+                "uuid": "be000001-0000-4001-b000-000000000009",
+                "type": "has_number_between",
+                "arguments": ["200", "299"],
+                "category_uuid": "bf000001-0000-4001-b000-000000000009"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "bf000001-0000-4001-b000-000000000009",
+                "name": "Success",
+                "exit_uuid": "bd000001-0000-4001-b000-000000000009"
+              },
+              {
+                "uuid": "bf000002-0000-4001-b000-000000000009",
+                "name": "Failure",
+                "exit_uuid": "bd000002-0000-4001-b000-000000000009"
+              }
+            ],
+            "default_category_uuid": "bf000002-0000-4001-b000-000000000009"
+          },
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000009",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000010"
+            },
+            {
+              "uuid": "bd000002-0000-4001-b000-000000000009",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000006"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000010",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000010a",
+              "type": "set_run_result",
+              "name": "jid",
+              "value": "@(results.eleccion-1)",
+              "category": "Calculado"
+            },
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000010b",
+              "type": "set_run_result",
+              "name": "idmunicipio",
+              "value": "@(webhook.json.matches[results.jid].id)",
+              "category": "Calculado"
+            },
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000010c",
+              "type": "set_run_result",
+              "name": "mundep",
+              "value": "@(webhook.json.matches[results.jid].mundep)",
+              "category": "Calculado"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000010",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000011",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000011",
+              "type": "send_msg",
+              "text": "¿El municipio que buscas es *@results.mundep*?\n\n*1.* Sí\n*2.* No, buscar de nuevo",
+              "attachments": [],
+              "quick_replies": ["1. Sí", "2. No"],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000011",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000012"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000012",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "confirmacion",
+            "operand": "@input.text",
+            "cases": [
+              {
+                "uuid": "be000001-0000-4001-b000-000000000012a",
+                "type": "has_any_word",
+                "arguments": ["1 si sí SI"],
+                "category_uuid": "bf000001-0000-4001-b000-000000000012"
+              },
+              {
+                "uuid": "be000001-0000-4001-b000-000000000012b",
+                "type": "has_any_word",
+                "arguments": ["2 no No NO"],
+                "category_uuid": "bf000002-0000-4001-b000-000000000012"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "bf000001-0000-4001-b000-000000000012",
+                "name": "Si",
+                "exit_uuid": "bd000001-0000-4001-b000-000000000012"
+              },
+              {
+                "uuid": "bf000002-0000-4001-b000-000000000012",
+                "name": "No",
+                "exit_uuid": "bd000002-0000-4001-b000-000000000012"
+              },
+              {
+                "uuid": "bf000003-0000-4001-b000-000000000012",
+                "name": "Other",
+                "exit_uuid": "bd000003-0000-4001-b000-000000000012"
+              }
+            ],
+            "default_category_uuid": "bf000003-0000-4001-b000-000000000012"
+          },
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000012",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000013"
+            },
+            {
+              "uuid": "bd000002-0000-4001-b000-000000000012",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+            },
+            {
+              "uuid": "bd000003-0000-4001-b000-000000000012",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000013",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000013",
+              "type": "send_msg",
+              "text": "✅ Municipio registrado:\n*@results.mundep*\n\nID: @results.idmunicipio",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000013",
+              "destination_uuid": null
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000006",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000006",
+              "type": "send_msg",
+              "text": "No encontramos ningún municipio con el nombre *@results.textomunicipio*. Por favor intenta con otro nombre.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000006",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000007",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000007",
+              "type": "send_msg",
+              "text": "Hay demasiadas opciones para *@results.textomunicipio*. Por favor sé más específico.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000007",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+            }
+          ]
+        },
+
+        {
+          "uuid": "bb000001-0000-4001-b000-000000000014",
+          "actions": [
+            {
+              "uuid": "bc000001-0000-4001-b000-000000000014",
+              "type": "send_msg",
+              "text": "Por favor responde *1* para Sí o *2* para No.",
+              "attachments": [],
+              "quick_replies": ["1. Sí", "2. No"],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "bd000001-0000-4001-b000-000000000014",
+              "destination_uuid": "bb000001-0000-4001-b000-000000000012"
+            }
+          ]
+        }
+
+      ]
+    }
+  ]
+}

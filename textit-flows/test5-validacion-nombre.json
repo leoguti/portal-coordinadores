@@ -3,24 +3,25 @@
   "flows": [
     {
       "name": "test5",
-      "uuid": "eb9daf1a-8013-4e87-b975-89843407f5d5",
+      "uuid": "f5871d24-48df-403d-aa9e-337f6ee3bfad",
       "spec_version": "13.1.0",
       "language": "spa",
       "type": "messaging",
       "_ui": {
         "nodes": {
-          "4f8a234c-aad7-47e9-b5b9-e84b670611d9": { "position": { "left": 400, "top": 0 } },
-          "bb85aed4-b00c-4520-bb13-48dd2263ebb9": { "position": { "left": 400, "top": 200 } },
-          "fef1ae1d-1c50-4aec-8732-9c0426632c58": { "position": { "left": 400, "top": 450 } }
+          "52cbebf2-b4bb-451d-ae86-a4f9c58c0255": { "type": "execute_actions", "position": { "left": 360, "top": 20 } },
+          "153a68f6-f940-434b-8428-e79ddea8ef7b": { "type": "wait_for_response", "position": { "left": 340, "top": 180 }, "config": { "cases": {} } },
+          "1d06085b-9b3c-4429-b20f-6d2357fd0392": { "position": { "left": 820, "top": 400 } },
+          "c7a8fcdd-b064-456c-8e09-36af9f0dd4e7": { "position": { "left": 120, "top": 540 } }
         }
       },
       "nodes": [
 
         {
-          "uuid": "4f8a234c-aad7-47e9-b5b9-e84b670611d9",
+          "uuid": "52cbebf2-b4bb-451d-ae86-a4f9c58c0255",
           "actions": [
             {
-              "uuid": "d7aa5101-9e54-4678-8460-1019bc0b674a",
+              "uuid": "0996989c-dad6-4cf4-9d47-c2a7cbf208a8",
               "type": "send_msg",
               "text": "¿Cuál es tu *nombre completo*?",
               "attachments": [],
@@ -28,6 +29,17 @@
               "templating": null
             }
           ],
+          "exits": [
+            {
+              "uuid": "d8e747a5-d20b-4dc4-822a-330fd7d14b91",
+              "destination_uuid": "153a68f6-f940-434b-8428-e79ddea8ef7b"
+            }
+          ]
+        },
+
+        {
+          "uuid": "153a68f6-f940-434b-8428-e79ddea8ef7b",
+          "actions": [],
           "router": {
             "type": "switch",
             "wait": { "type": "msg" },
@@ -35,43 +47,43 @@
             "operand": "@input.text",
             "cases": [
               {
-                "uuid": "fde78783-27fe-4e33-9566-496323fdbfcd",
+                "uuid": "8c86538a-c8f0-4b52-b85b-391ec7b16b72",
                 "type": "has_pattern",
                 "arguments": ["\\w+ \\w+"],
-                "category_uuid": "3bf4be5c-6d77-42f6-aa5c-8174d54b682c"
+                "category_uuid": "603cf66e-badd-4247-b5b7-766c1213e097"
               }
             ],
             "categories": [
               {
-                "uuid": "3bf4be5c-6d77-42f6-aa5c-8174d54b682c",
+                "uuid": "603cf66e-badd-4247-b5b7-766c1213e097",
                 "name": "Válido",
-                "exit_uuid": "e7f48f72-339e-4b14-b958-a39dc2451e9e"
+                "exit_uuid": "bcc22ade-3f52-433b-bd6c-88ad97a96fb2"
               },
               {
-                "uuid": "702b1855-091a-4444-bcc7-869fb57b9707",
+                "uuid": "c03f9c1a-3939-404a-a1c7-aa405ced8890",
                 "name": "Other",
-                "exit_uuid": "cac6acf4-4638-4f7b-879b-d19a7e00ddae"
+                "exit_uuid": "958740f8-141a-4fc5-a66e-0ea92bc30f48"
               }
             ],
-            "default_category_uuid": "702b1855-091a-4444-bcc7-869fb57b9707"
+            "default_category_uuid": "c03f9c1a-3939-404a-a1c7-aa405ced8890"
           },
           "exits": [
             {
-              "uuid": "e7f48f72-339e-4b14-b958-a39dc2451e9e",
-              "destination_uuid": "fef1ae1d-1c50-4aec-8732-9c0426632c58"
+              "uuid": "bcc22ade-3f52-433b-bd6c-88ad97a96fb2",
+              "destination_uuid": "c7a8fcdd-b064-456c-8e09-36af9f0dd4e7"
             },
             {
-              "uuid": "cac6acf4-4638-4f7b-879b-d19a7e00ddae",
-              "destination_uuid": "bb85aed4-b00c-4520-bb13-48dd2263ebb9"
+              "uuid": "958740f8-141a-4fc5-a66e-0ea92bc30f48",
+              "destination_uuid": "1d06085b-9b3c-4429-b20f-6d2357fd0392"
             }
           ]
         },
 
         {
-          "uuid": "bb85aed4-b00c-4520-bb13-48dd2263ebb9",
+          "uuid": "1d06085b-9b3c-4429-b20f-6d2357fd0392",
           "actions": [
             {
-              "uuid": "30eb5046-c1bc-41ed-991c-cebcc3b6fa43",
+              "uuid": "49fdf1ef-280f-4ddf-9f6d-c874ede80f96",
               "type": "send_msg",
               "text": "Por favor escribe tu nombre y apellido completos. Ejemplo: *Juan Pérez*",
               "attachments": [],
@@ -81,17 +93,17 @@
           ],
           "exits": [
             {
-              "uuid": "3383c804-3730-49e4-9567-f253858e157d",
-              "destination_uuid": "4f8a234c-aad7-47e9-b5b9-e84b670611d9"
+              "uuid": "48cd70f9-036c-4477-a365-e1c79e56b05d",
+              "destination_uuid": "52cbebf2-b4bb-451d-ae86-a4f9c58c0255"
             }
           ]
         },
 
         {
-          "uuid": "fef1ae1d-1c50-4aec-8732-9c0426632c58",
+          "uuid": "c7a8fcdd-b064-456c-8e09-36af9f0dd4e7",
           "actions": [
             {
-              "uuid": "92371715-b940-4685-bde4-98b68dc36451",
+              "uuid": "bb372e02-b268-4900-9b86-8fac2599f057",
               "type": "send_msg",
               "text": "✅ Nombre registrado: @results.nombre.value",
               "attachments": [],
@@ -101,7 +113,7 @@
           ],
           "exits": [
             {
-              "uuid": "b987ad2e-f9ea-422c-806f-881551cc40e8",
+              "uuid": "64edb7b1-62e1-455d-814f-e2768aed1c4f",
               "destination_uuid": null
             }
           ]
