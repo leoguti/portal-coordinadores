@@ -3,35 +3,141 @@
   "flows": [
     {
       "name": "test7",
-      "uuid": "d4e5f6a7-b8c9-4d0e-a1f2-d4e5f6a7b8c9",
+      "uuid": "25db6a9c-ed45-44e9-a888-b7a92ce0e6fc",
       "spec_version": "13.1.0",
       "language": "spa",
       "type": "messaging",
       "_ui": {
         "nodes": {
-          "bb000001-0000-4001-b000-000000000001": { "type": "execute_actions",   "position": { "left": 400,  "top": 0    } },
-          "bb000001-0000-4001-b000-000000000002": { "type": "wait_for_response", "position": { "left": 400,  "top": 160  }, "config": { "cases": {} } },
-          "bb000001-0000-4001-b000-000000000003": { "type": "execute_actions",   "position": { "left": 400,  "top": 340  } },
-          "bb000001-0000-4001-b000-000000000004": { "type": "execute_actions",   "position": { "left": 400,  "top": 560  } },
-          "bb000001-0000-4001-b000-000000000005": { "type": "execute_actions",   "position": { "left": 700,  "top": 560  } },
-          "bb000001-0000-4001-b000-000000000006": { "type": "execute_actions",   "position": { "left": 0,    "top": 560  } },
-          "bb000001-0000-4001-b000-000000000007": { "type": "execute_actions",   "position": { "left": 1000, "top": 560  } },
-          "bb000001-0000-4001-b000-000000000008": { "type": "wait_for_response", "position": { "left": 700,  "top": 760  }, "config": { "cases": {} } },
-          "bb000001-0000-4001-b000-000000000009": { "type": "execute_actions",   "position": { "left": 700,  "top": 960  } },
-          "bb000001-0000-4001-b000-000000000010": { "type": "execute_actions",   "position": { "left": 700,  "top": 1160 } },
-          "bb000001-0000-4001-b000-000000000011": { "type": "execute_actions",   "position": { "left": 400,  "top": 1100 } },
-          "bb000001-0000-4001-b000-000000000012": { "type": "wait_for_response", "position": { "left": 400,  "top": 1300 }, "config": { "cases": {} } },
-          "bb000001-0000-4001-b000-000000000013": { "type": "execute_actions",   "position": { "left": 400,  "top": 1500 } },
-          "bb000001-0000-4001-b000-000000000014": { "type": "execute_actions",   "position": { "left": 400,  "top": 1700 } }
+          "06c245f7-390e-45e7-9849-98ba15e5d9fb": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 0
+            }
+          },
+          "895e8885-505f-4b95-a156-365743001c22": {
+            "type": "wait_for_response",
+            "position": {
+              "left": 400,
+              "top": 160
+            },
+            "config": {
+              "cases": {}
+            }
+          },
+          "571c1b89-7c41-492d-b9a5-775cd46a524b": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 340
+            }
+          },
+          "35269b58-38ba-4fba-91ab-6cd4433bdcb9": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 540
+            }
+          },
+          "b1446ea5-1164-42ce-a734-a1a3128d9572": {
+            "type": "execute_actions",
+            "position": {
+              "left": 700,
+              "top": 740
+            }
+          },
+          "ee52cf02-11d3-4654-bfdf-b18981e850d7": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 740
+            }
+          },
+          "62554bce-ba90-41a2-a8cc-b632471369e2": {
+            "type": "execute_actions",
+            "position": {
+              "left": 0,
+              "top": 540
+            }
+          },
+          "ae317d37-fa00-480b-9cd5-427d721f3abf": {
+            "type": "execute_actions",
+            "position": {
+              "left": 800,
+              "top": 540
+            }
+          },
+          "8f788ecd-8478-4588-b511-751bf6ada29a": {
+            "type": "wait_for_response",
+            "position": {
+              "left": 400,
+              "top": 940
+            },
+            "config": {
+              "cases": {}
+            }
+          },
+          "f1e93844-f12f-41e6-b5ad-29b0dd8d3ef7": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 1140
+            }
+          },
+          "42f64356-427c-402e-83e9-befd0a9937ec": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 1340
+            }
+          },
+          "4bbe24fe-32c7-4cca-a9a2-1505ac009399": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 1540
+            }
+          },
+          "c597240f-d15b-44fa-b814-dcca554ec5ee": {
+            "type": "execute_actions",
+            "position": {
+              "left": 400,
+              "top": 1740
+            }
+          },
+          "97c10001-3a26-4c2c-ba9c-6bc36dc28352": {
+            "type": "wait_for_response",
+            "position": {
+              "left": 400,
+              "top": 1940
+            },
+            "config": {
+              "cases": {}
+            }
+          },
+          "e1ea9251-3830-49eb-84ea-0a93d6573c8d": {
+            "type": "execute_actions",
+            "position": {
+              "left": 700,
+              "top": 2140
+            }
+          },
+          "ec773d6b-5817-4669-a9fa-382c178bd7d8": {
+            "type": "execute_actions",
+            "position": {
+              "left": 0,
+              "top": 1140
+            }
+          }
         }
       },
       "nodes": [
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000001",
+          "uuid": "06c245f7-390e-45e7-9849-98ba15e5d9fb",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000001",
+              "uuid": "4e537674-93aa-48e5-b1ce-05910e334e76",
               "type": "send_msg",
               "text": "¿En qué municipio vives? (Escribe el nombre)",
               "attachments": [],
@@ -41,59 +147,43 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000001",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000002"
+              "uuid": "5e831513-c791-43e2-ba5c-ef918bf44ea6",
+              "destination_uuid": "895e8885-505f-4b95-a156-365743001c22"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000002",
+          "uuid": "895e8885-505f-4b95-a156-365743001c22",
           "actions": [],
           "router": {
             "type": "switch",
-            "wait": { "type": "msg" },
+            "wait": {
+              "type": "msg"
+            },
             "result_name": "textomunicipio",
             "operand": "@input.text",
-            "cases": [
-              {
-                "uuid": "be000001-0000-4001-b000-000000000002",
-                "type": "has_text",
-                "arguments": [],
-                "category_uuid": "bf000001-0000-4001-b000-000000000002"
-              }
-            ],
+            "cases": [],
             "categories": [
               {
-                "uuid": "bf000001-0000-4001-b000-000000000002",
-                "name": "Has Text",
-                "exit_uuid": "bd000001-0000-4001-b000-000000000002a"
-              },
-              {
-                "uuid": "bf000002-0000-4001-b000-000000000002",
-                "name": "Other",
-                "exit_uuid": "bd000002-0000-4001-b000-000000000002"
+                "uuid": "d6f54af9-b5a1-4cce-b5d9-537ff1459f7c",
+                "name": "All Responses",
+                "exit_uuid": "9f1d2e11-75b4-4305-8b58-331805af7880"
               }
             ],
-            "default_category_uuid": "bf000002-0000-4001-b000-000000000002"
+            "default_category_uuid": "d6f54af9-b5a1-4cce-b5d9-537ff1459f7c"
           },
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000002a",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000003"
-            },
-            {
-              "uuid": "bd000002-0000-4001-b000-000000000002",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+              "uuid": "9f1d2e11-75b4-4305-8b58-331805af7880",
+              "destination_uuid": "571c1b89-7c41-492d-b9a5-775cd46a524b"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000003",
+          "uuid": "571c1b89-7c41-492d-b9a5-775cd46a524b",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000003",
+              "uuid": "3ac5cc85-4c08-4671-a464-b8099a342bbf",
               "type": "call_webhook",
               "method": "GET",
               "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.textomunicipio))",
@@ -104,83 +194,130 @@
           ],
           "router": {
             "type": "switch",
-            "operand": "@webhook.json.count",
+            "operand": "@results.busqueda.category",
             "cases": [
               {
-                "uuid": "be000001-0000-4001-b000-000000000003a",
-                "type": "has_number_eq",
-                "arguments": ["0"],
-                "category_uuid": "bf000001-0000-4001-b000-000000000003"
-              },
-              {
-                "uuid": "be000001-0000-4001-b000-000000000003b",
-                "type": "has_number_eq",
-                "arguments": ["1"],
-                "category_uuid": "bf000002-0000-4001-b000-000000000003"
-              },
-              {
-                "uuid": "be000001-0000-4001-b000-000000000003c",
-                "type": "has_number_between",
-                "arguments": ["2", "10"],
-                "category_uuid": "bf000003-0000-4001-b000-000000000003"
+                "uuid": "d85e0afa-ff11-45d5-b45b-022fc6440ff6",
+                "type": "has_any_word",
+                "arguments": [
+                  "Success"
+                ],
+                "category_uuid": "94e89b22-6985-400d-826b-707535ff8dc5"
               }
             ],
             "categories": [
               {
-                "uuid": "bf000001-0000-4001-b000-000000000003",
-                "name": "Ninguno",
-                "exit_uuid": "bd000001-0000-4001-b000-000000000003"
+                "uuid": "94e89b22-6985-400d-826b-707535ff8dc5",
+                "name": "Success",
+                "exit_uuid": "87e958f1-abe6-4c17-a8b7-4f79a4af41f3"
               },
               {
-                "uuid": "bf000002-0000-4001-b000-000000000003",
-                "name": "Unico",
-                "exit_uuid": "bd000002-0000-4001-b000-000000000003"
-              },
-              {
-                "uuid": "bf000003-0000-4001-b000-000000000003",
-                "name": "Varios",
-                "exit_uuid": "bd000003-0000-4001-b000-000000000003"
-              },
-              {
-                "uuid": "bf000004-0000-4001-b000-000000000003",
-                "name": "Demasiados",
-                "exit_uuid": "bd000004-0000-4001-b000-000000000003"
+                "uuid": "201162f5-7787-4417-85b9-46b54fa48c2c",
+                "name": "Failure",
+                "exit_uuid": "11644266-5939-4723-8272-41f8af5fd0e5"
               }
             ],
-            "default_category_uuid": "bf000004-0000-4001-b000-000000000003"
+            "default_category_uuid": "201162f5-7787-4417-85b9-46b54fa48c2c"
           },
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000003",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000006"
+              "uuid": "87e958f1-abe6-4c17-a8b7-4f79a4af41f3",
+              "destination_uuid": "35269b58-38ba-4fba-91ab-6cd4433bdcb9"
             },
             {
-              "uuid": "bd000002-0000-4001-b000-000000000003",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000004"
-            },
-            {
-              "uuid": "bd000003-0000-4001-b000-000000000003",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000005"
-            },
-            {
-              "uuid": "bd000004-0000-4001-b000-000000000003",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000007"
+              "uuid": "11644266-5939-4723-8272-41f8af5fd0e5",
+              "destination_uuid": "ec773d6b-5817-4669-a9fa-382c178bd7d8"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000004",
+          "uuid": "35269b58-38ba-4fba-91ab-6cd4433bdcb9",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "operand": "@webhook.json.count",
+            "cases": [
+              {
+                "uuid": "cab293b2-284a-4217-b7e6-181fa0901a63",
+                "type": "has_number_eq",
+                "arguments": [
+                  "0"
+                ],
+                "category_uuid": "4260c02b-8f69-4b60-9eee-7f602dc32ba5"
+              },
+              {
+                "uuid": "6c72a780-8765-430c-9ecf-f003617651de",
+                "type": "has_number_eq",
+                "arguments": [
+                  "1"
+                ],
+                "category_uuid": "e02d41a3-4288-48d1-9133-e144f77bddaf"
+              },
+              {
+                "uuid": "c5cf6e89-68d5-4fd2-be64-10c8fd892de6",
+                "type": "has_number_between",
+                "arguments": [
+                  "2",
+                  "10"
+                ],
+                "category_uuid": "1399eff5-fba1-46bc-a7e7-edee2b0d4463"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "4260c02b-8f69-4b60-9eee-7f602dc32ba5",
+                "name": "Ninguno",
+                "exit_uuid": "4d2731cc-2b8f-4e85-abab-0de9f7fb15ac"
+              },
+              {
+                "uuid": "e02d41a3-4288-48d1-9133-e144f77bddaf",
+                "name": "Unico",
+                "exit_uuid": "f721b991-6a50-4778-b995-790f522b03f1"
+              },
+              {
+                "uuid": "1399eff5-fba1-46bc-a7e7-edee2b0d4463",
+                "name": "Varios",
+                "exit_uuid": "3386260e-f844-44e6-8524-473be08e15cb"
+              },
+              {
+                "uuid": "7e8935f2-0840-411d-8b95-dd6b9519eb3b",
+                "name": "Demasiados",
+                "exit_uuid": "52b648e2-4652-471e-951a-e8b60b380b49"
+              }
+            ],
+            "default_category_uuid": "7e8935f2-0840-411d-8b95-dd6b9519eb3b"
+          },
+          "exits": [
+            {
+              "uuid": "4d2731cc-2b8f-4e85-abab-0de9f7fb15ac",
+              "destination_uuid": "62554bce-ba90-41a2-a8cc-b632471369e2"
+            },
+            {
+              "uuid": "f721b991-6a50-4778-b995-790f522b03f1",
+              "destination_uuid": "b1446ea5-1164-42ce-a734-a1a3128d9572"
+            },
+            {
+              "uuid": "3386260e-f844-44e6-8524-473be08e15cb",
+              "destination_uuid": "ee52cf02-11d3-4654-bfdf-b18981e850d7"
+            },
+            {
+              "uuid": "52b648e2-4652-471e-951a-e8b60b380b49",
+              "destination_uuid": "ae317d37-fa00-480b-9cd5-427d721f3abf"
+            }
+          ]
+        },
+        {
+          "uuid": "b1446ea5-1164-42ce-a734-a1a3128d9572",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000004a",
+              "uuid": "df055695-9d7c-4959-a694-3ab3d246932f",
               "type": "set_run_result",
               "name": "idmunicipio",
               "value": "@(webhook.json.matches[0].id)",
               "category": "Calculado"
             },
             {
-              "uuid": "bc000001-0000-4001-b000-000000000004b",
+              "uuid": "929aca22-7bda-434b-b194-f8d209046272",
               "type": "set_run_result",
               "name": "mundep",
               "value": "@(webhook.json.matches[0].mundep)",
@@ -189,19 +326,18 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000004",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+              "uuid": "b320c46a-c2c7-49bb-90e2-2250e084a536",
+              "destination_uuid": "c597240f-d15b-44fa-b814-dcca554ec5ee"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000005",
+          "uuid": "ee52cf02-11d3-4654-bfdf-b18981e850d7",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000005",
+              "uuid": "f085c022-d9e7-4356-bf52-330ac465b30b",
               "type": "send_msg",
-              "text": "Encontramos varios municipios. Escoge un número:\n\n@webhook.json.lista",
+              "text": "Encontramos varios municipios. Escoge el número:\n\n@webhook.json.lista",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -209,43 +345,43 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000005",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000008"
+              "uuid": "ad304203-b2ab-4956-93e6-9ac2c95fd6d2",
+              "destination_uuid": "8f788ecd-8478-4588-b511-751bf6ada29a"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000008",
+          "uuid": "8f788ecd-8478-4588-b511-751bf6ada29a",
           "actions": [],
           "router": {
             "type": "switch",
-            "wait": { "type": "msg" },
+            "wait": {
+              "type": "msg"
+            },
             "result_name": "eleccion",
             "operand": "@input.text",
             "cases": [],
             "categories": [
               {
-                "uuid": "bf000001-0000-4001-b000-000000000008",
+                "uuid": "352fcbfd-3e4d-47b7-ba77-9cb864775ed5",
                 "name": "All Responses",
-                "exit_uuid": "bd000001-0000-4001-b000-000000000008"
+                "exit_uuid": "15cb968c-02fd-483e-860e-d34c33d00cd5"
               }
             ],
-            "default_category_uuid": "bf000001-0000-4001-b000-000000000008"
+            "default_category_uuid": "352fcbfd-3e4d-47b7-ba77-9cb864775ed5"
           },
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000008",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000009"
+              "uuid": "15cb968c-02fd-483e-860e-d34c33d00cd5",
+              "destination_uuid": "f1e93844-f12f-41e6-b5ad-29b0dd8d3ef7"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000009",
+          "uuid": "f1e93844-f12f-41e6-b5ad-29b0dd8d3ef7",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000009",
+              "uuid": "6e7f14ce-f82a-4b09-bafa-a3bef5d8dd73",
               "type": "call_webhook",
               "method": "GET",
               "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.textomunicipio))",
@@ -256,60 +392,72 @@
           ],
           "router": {
             "type": "switch",
-            "operand": "@webhook.status",
+            "operand": "@results.busqueda2.category",
             "cases": [
               {
-                "uuid": "be000001-0000-4001-b000-000000000009",
-                "type": "has_number_between",
-                "arguments": ["200", "299"],
-                "category_uuid": "bf000001-0000-4001-b000-000000000009"
+                "uuid": "2727648d-7edd-4298-bcf0-e5727a787f99",
+                "type": "has_any_word",
+                "arguments": [
+                  "Success"
+                ],
+                "category_uuid": "fe8cf50e-5bb3-449c-88da-c1f584c9eeb6"
               }
             ],
             "categories": [
               {
-                "uuid": "bf000001-0000-4001-b000-000000000009",
+                "uuid": "fe8cf50e-5bb3-449c-88da-c1f584c9eeb6",
                 "name": "Success",
-                "exit_uuid": "bd000001-0000-4001-b000-000000000009"
+                "exit_uuid": "93507076-233f-49cc-a046-f58f78965761"
               },
               {
-                "uuid": "bf000002-0000-4001-b000-000000000009",
+                "uuid": "4bcf1d82-4f98-4727-bbe1-0afab294dd91",
                 "name": "Failure",
-                "exit_uuid": "bd000002-0000-4001-b000-000000000009"
+                "exit_uuid": "87423d7a-160b-4c3a-976d-46472c97ed4f"
               }
             ],
-            "default_category_uuid": "bf000002-0000-4001-b000-000000000009"
+            "default_category_uuid": "4bcf1d82-4f98-4727-bbe1-0afab294dd91"
           },
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000009",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000010"
+              "uuid": "93507076-233f-49cc-a046-f58f78965761",
+              "destination_uuid": "42f64356-427c-402e-83e9-befd0a9937ec"
             },
             {
-              "uuid": "bd000002-0000-4001-b000-000000000009",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000006"
+              "uuid": "87423d7a-160b-4c3a-976d-46472c97ed4f",
+              "destination_uuid": "ec773d6b-5817-4669-a9fa-382c178bd7d8"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000010",
+          "uuid": "42f64356-427c-402e-83e9-befd0a9937ec",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000010a",
+              "uuid": "1bd19854-6a60-41f4-a18f-6f5fc43b8ca3",
               "type": "set_run_result",
               "name": "jid",
               "value": "@(results.eleccion-1)",
               "category": "Calculado"
-            },
+            }
+          ],
+          "exits": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000010b",
+              "uuid": "c2030755-4ff3-44b9-9550-f6fd7d1d95c6",
+              "destination_uuid": "4bbe24fe-32c7-4cca-a9a2-1505ac009399"
+            }
+          ]
+        },
+        {
+          "uuid": "4bbe24fe-32c7-4cca-a9a2-1505ac009399",
+          "actions": [
+            {
+              "uuid": "4d4b66a2-1e1f-45ab-b2c2-396a52d074ce",
               "type": "set_run_result",
               "name": "idmunicipio",
               "value": "@(webhook.json.matches[results.jid].id)",
               "category": "Calculado"
             },
             {
-              "uuid": "bc000001-0000-4001-b000-000000000010c",
+              "uuid": "3829e32b-f48f-4a37-b237-3ab40a0ff8a8",
               "type": "set_run_result",
               "name": "mundep",
               "value": "@(webhook.json.matches[results.jid].mundep)",
@@ -318,94 +466,100 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000010",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+              "uuid": "29b3d8b8-d155-45a1-b421-a8dd4232526c",
+              "destination_uuid": "c597240f-d15b-44fa-b814-dcca554ec5ee"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000011",
+          "uuid": "c597240f-d15b-44fa-b814-dcca554ec5ee",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000011",
+              "uuid": "4aaacac4-b081-45ab-8ed0-8cc47c0243b1",
               "type": "send_msg",
               "text": "¿El municipio que buscas es *@results.mundep*?\n\n*1.* Sí\n*2.* No, buscar de nuevo",
               "attachments": [],
-              "quick_replies": ["1. Sí", "2. No"],
+              "quick_replies": [
+                "1. Sí",
+                "2. No"
+              ],
               "templating": null
             }
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000011",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000012"
+              "uuid": "61f1758c-6b85-4fe1-bce0-4df6f73f8c31",
+              "destination_uuid": "97c10001-3a26-4c2c-ba9c-6bc36dc28352"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000012",
+          "uuid": "97c10001-3a26-4c2c-ba9c-6bc36dc28352",
           "actions": [],
           "router": {
             "type": "switch",
-            "wait": { "type": "msg" },
+            "wait": {
+              "type": "msg"
+            },
             "result_name": "confirmacion",
             "operand": "@input.text",
             "cases": [
               {
-                "uuid": "be000001-0000-4001-b000-000000000012a",
+                "uuid": "fa6ca38e-781a-4d93-a106-85c186f700f7",
                 "type": "has_any_word",
-                "arguments": ["1 si sí SI"],
-                "category_uuid": "bf000001-0000-4001-b000-000000000012"
+                "arguments": [
+                  "1 si sí SI"
+                ],
+                "category_uuid": "98a69728-40c9-4e70-9f81-ea2bfcdcff2e"
               },
               {
-                "uuid": "be000001-0000-4001-b000-000000000012b",
+                "uuid": "172273dd-d02a-483a-86f1-79b9975be2ce",
                 "type": "has_any_word",
-                "arguments": ["2 no No NO"],
-                "category_uuid": "bf000002-0000-4001-b000-000000000012"
+                "arguments": [
+                  "2 no No NO"
+                ],
+                "category_uuid": "d79c8b36-6043-4025-bcc0-9b6ef959cc1d"
               }
             ],
             "categories": [
               {
-                "uuid": "bf000001-0000-4001-b000-000000000012",
+                "uuid": "98a69728-40c9-4e70-9f81-ea2bfcdcff2e",
                 "name": "Si",
-                "exit_uuid": "bd000001-0000-4001-b000-000000000012"
+                "exit_uuid": "453a4231-fc53-455f-a537-acdcee716747"
               },
               {
-                "uuid": "bf000002-0000-4001-b000-000000000012",
+                "uuid": "d79c8b36-6043-4025-bcc0-9b6ef959cc1d",
                 "name": "No",
-                "exit_uuid": "bd000002-0000-4001-b000-000000000012"
+                "exit_uuid": "286de77d-667e-439f-bbf6-30b8e4efb71f"
               },
               {
-                "uuid": "bf000003-0000-4001-b000-000000000012",
+                "uuid": "b4df7b85-41e6-465f-8a1f-8d2c5d37060b",
                 "name": "Other",
-                "exit_uuid": "bd000003-0000-4001-b000-000000000012"
+                "exit_uuid": "feb599ac-f646-4e9e-950c-02b77b9a2750"
               }
             ],
-            "default_category_uuid": "bf000003-0000-4001-b000-000000000012"
+            "default_category_uuid": "b4df7b85-41e6-465f-8a1f-8d2c5d37060b"
           },
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000012",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000013"
+              "uuid": "453a4231-fc53-455f-a537-acdcee716747",
+              "destination_uuid": "e1ea9251-3830-49eb-84ea-0a93d6573c8d"
             },
             {
-              "uuid": "bd000002-0000-4001-b000-000000000012",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+              "uuid": "286de77d-667e-439f-bbf6-30b8e4efb71f",
+              "destination_uuid": "06c245f7-390e-45e7-9849-98ba15e5d9fb"
             },
             {
-              "uuid": "bd000003-0000-4001-b000-000000000012",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000011"
+              "uuid": "feb599ac-f646-4e9e-950c-02b77b9a2750",
+              "destination_uuid": "c597240f-d15b-44fa-b814-dcca554ec5ee"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000013",
+          "uuid": "e1ea9251-3830-49eb-84ea-0a93d6573c8d",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000013",
+              "uuid": "c442b7e6-e117-44ae-8812-c6c29423a0d2",
               "type": "send_msg",
               "text": "✅ Municipio registrado:\n*@results.mundep*\n\nID: @results.idmunicipio",
               "attachments": [],
@@ -415,19 +569,18 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000013",
+              "uuid": "ed7bf8d6-fd54-4f1f-9c0b-73a9bad78c5e",
               "destination_uuid": null
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000006",
+          "uuid": "62554bce-ba90-41a2-a8cc-b632471369e2",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000006",
+              "uuid": "dbf42081-56e6-4213-bef0-05c8db36776f",
               "type": "send_msg",
-              "text": "No encontramos ningún municipio con el nombre *@results.textomunicipio*. Por favor intenta con otro nombre.",
+              "text": "No encontramos ningún municipio con el nombre *@results.textomunicipio*. Intenta de nuevo.",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -435,17 +588,16 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000006",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+              "uuid": "2f460b2f-c1c4-4c6c-aef8-0774364618fe",
+              "destination_uuid": "06c245f7-390e-45e7-9849-98ba15e5d9fb"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000007",
+          "uuid": "ae317d37-fa00-480b-9cd5-427d721f3abf",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000007",
+              "uuid": "580b63c2-5c65-4942-9256-e69c6b789dc4",
               "type": "send_msg",
               "text": "Hay demasiadas opciones para *@results.textomunicipio*. Por favor sé más específico.",
               "attachments": [],
@@ -455,32 +607,30 @@
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000007",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000001"
+              "uuid": "e56724eb-9189-40bd-9881-cf0b7bf4da0f",
+              "destination_uuid": "06c245f7-390e-45e7-9849-98ba15e5d9fb"
             }
           ]
         },
-
         {
-          "uuid": "bb000001-0000-4001-b000-000000000014",
+          "uuid": "ec773d6b-5817-4669-a9fa-382c178bd7d8",
           "actions": [
             {
-              "uuid": "bc000001-0000-4001-b000-000000000014",
+              "uuid": "aa9cadcc-8d06-482e-a118-b72a4460e5e7",
               "type": "send_msg",
-              "text": "Por favor responde *1* para Sí o *2* para No.",
+              "text": "Ocurrió un error técnico. Por favor intenta de nuevo.",
               "attachments": [],
-              "quick_replies": ["1. Sí", "2. No"],
+              "quick_replies": [],
               "templating": null
             }
           ],
           "exits": [
             {
-              "uuid": "bd000001-0000-4001-b000-000000000014",
-              "destination_uuid": "bb000001-0000-4001-b000-000000000012"
+              "uuid": "bb019ad2-0801-4d08-a1ff-d6f413fe7ac6",
+              "destination_uuid": "06c245f7-390e-45e7-9849-98ba15e5d9fb"
             }
           ]
         }
-
       ]
     }
   ]
