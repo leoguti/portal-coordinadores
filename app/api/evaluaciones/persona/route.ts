@@ -5,7 +5,7 @@ import { getPersonaEvaluadaByTelefono } from "@/lib/airtable";
 export async function GET(req: NextRequest) {
   const telefono = req.nextUrl.searchParams.get("telefono");
   if (!telefono) {
-    return NextResponse.json({ error: "telefono requerido" }, { status: 400 });
+    return NextResponse.json({ found: false }, { status: 404 });
   }
 
   const persona = await getPersonaEvaluadaByTelefono(telefono);
