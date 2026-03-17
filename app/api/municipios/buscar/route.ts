@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * GET /api/municipios/buscar?q=<texto>
+ * GET /api/municipios/buscar?q=<texto>[&pick=<N>]
  *
  * Endpoint público (sin auth) para búsqueda de municipios desde TextIt.
- * Usa el mismo cache en memoria que /api/municipios.
  *
- * Respuesta:
- * {
- *   count: number,          // total de resultados (0-10, o >10 si hay demasiados)
- *   lista: string,          // lista numerada "1-Medellín - Antioquia\n2-..." (vacía si count=0 o >10)
- *   matches: [{id, mundep}] // array de resultados (vacío si count=0 o >10)
- * }
+ * Sin pick:
+ * { count, resultado, lista, first_id, first_mundep, matches }
+ * resultado: "none" | "one" | "varios" | "toomany"
+ *
+ * Con pick=N (1-indexed):
+ * { resultado: "selected", id, mundep }
  */
 
 interface CachedMunicipio {
@@ -78,31 +77,51 @@ async function getCache(): Promise<CachedMunicipio[]> {
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() || "";
+  const pick = req.nextUrl.searchParams.get("pick");
 
   if (q.length < 2) {
-    return NextResponse.json({ count: 0, lista: "", matches: [] });
+    return NextResponse.json({ resultado: "none", count: 0, lista: "", first_id: "", first_mundep: "", matches: [] });
   }
 
   try {
     const cache = await getCache();
     const normalizedQ = normalizeText(q);
-
     const found = cache.filter((m) => m.mundepNormalized.includes(normalizedQ));
     const count = found.length;
 
+    // Modo pick: devuelve solo el municipio seleccionado (1-indexed)
+    if (pick !== null) {
+      const idx = parseInt(pick) - 1;
+      if (!isNaN(idx) && idx >= 0 && idx < count) {
+        return NextResponse.json({
+          resultado: "selected",
+          id: found[idx].id,
+          mundep: found[idx].mundep,
+        });
+      }
+      return NextResponse.json({ resultado: "none", id: "", mundep: "" });
+    }
+
     if (count === 0) {
-      return NextResponse.json({ count: 0, resultado: "none", lista: "", matches: [] });
+      return NextResponse.json({ resultado: "none", count: 0, lista: "", first_id: "", first_mundep: "", matches: [] });
     }
 
     if (count > 10) {
-      return NextResponse.json({ count, resultado: "toomany", lista: "", matches: [] });
+      return NextResponse.json({ resultado: "toomany", count, lista: "", first_id: "", first_mundep: "", matches: [] });
     }
 
     const matches = found.map(({ id, mundep }) => ({ id, mundep }));
     const lista = matches.map((m, i) => `${i + 1}-${m.mundep}`).join("\n");
     const resultado = count === 1 ? "one" : "varios";
 
-    return NextResponse.json({ count, resultado, lista, matches });
+    return NextResponse.json({
+      resultado,
+      count,
+      lista,
+      first_id: matches[0].id,
+      first_mundep: matches[0].mundep,
+      matches,
+    });
   } catch (error) {
     console.error("Error buscando municipio:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
