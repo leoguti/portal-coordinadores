@@ -12,7 +12,11 @@
           "aa000001-0000-4000-8000-000000000001": { "type": "execute_actions", "position": { "left": 400, "top": 0 } },
           "aa000002-0000-4000-8000-000000000002": { "type": "wait_for_response", "position": { "left": 400, "top": 160 }, "config": { "cases": {} } },
           "aa000003-0000-4000-8000-000000000003": { "type": "execute_actions", "position": { "left": 400, "top": 320 } },
-          "aa000004-0000-4000-8000-000000000004": { "type": "execute_actions", "position": { "left": 400, "top": 500 } }
+          "aa000005-0000-4000-8000-000000000005": { "type": "wait_for_response", "position": { "left": 400, "top": 480 }, "config": { "cases": {} } },
+          "aa000006-0000-4000-8000-000000000006": { "type": "execute_actions", "position": { "left": 0, "top": 700 } },
+          "aa000007-0000-4000-8000-000000000007": { "type": "execute_actions", "position": { "left": 250, "top": 700 } },
+          "aa000008-0000-4000-8000-000000000008": { "type": "execute_actions", "position": { "left": 550, "top": 700 } },
+          "aa000009-0000-4000-8000-000000000009": { "type": "execute_actions", "position": { "left": 800, "top": 700 } }
         }
       },
       "nodes": [
@@ -79,28 +83,148 @@
           "exits": [
             {
               "uuid": "ac000003-0000-4000-8000-000000000003",
-              "destination_uuid": "aa000004-0000-4000-8000-000000000004"
+              "destination_uuid": "aa000005-0000-4000-8000-000000000005"
             }
           ]
         },
 
         {
-          "uuid": "aa000004-0000-4000-8000-000000000004",
+          "uuid": "aa000005-0000-4000-8000-000000000005",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": null,
+            "result_name": "resultado_busqueda",
+            "operand": "@results.resp.extra.resultado",
+            "cases": [
+              {
+                "uuid": "ae000001-0000-4000-8000-000000000001",
+                "type": "has_any_word",
+                "arguments": ["none"],
+                "category_uuid": "ad000010-0000-4000-8000-000000000010"
+              },
+              {
+                "uuid": "ae000002-0000-4000-8000-000000000002",
+                "type": "has_any_word",
+                "arguments": ["one"],
+                "category_uuid": "ad000011-0000-4000-8000-000000000011"
+              },
+              {
+                "uuid": "ae000003-0000-4000-8000-000000000003",
+                "type": "has_any_word",
+                "arguments": ["varios"],
+                "category_uuid": "ad000012-0000-4000-8000-000000000012"
+              },
+              {
+                "uuid": "ae000004-0000-4000-8000-000000000004",
+                "type": "has_any_word",
+                "arguments": ["toomany"],
+                "category_uuid": "ad000013-0000-4000-8000-000000000013"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "ad000010-0000-4000-8000-000000000010",
+                "name": "none",
+                "exit_uuid": "ac000010-0000-4000-8000-000000000010"
+              },
+              {
+                "uuid": "ad000011-0000-4000-8000-000000000011",
+                "name": "one",
+                "exit_uuid": "ac000011-0000-4000-8000-000000000011"
+              },
+              {
+                "uuid": "ad000012-0000-4000-8000-000000000012",
+                "name": "varios",
+                "exit_uuid": "ac000012-0000-4000-8000-000000000012"
+              },
+              {
+                "uuid": "ad000013-0000-4000-8000-000000000013",
+                "name": "toomany",
+                "exit_uuid": "ac000013-0000-4000-8000-000000000013"
+              },
+              {
+                "uuid": "ad000014-0000-4000-8000-000000000014",
+                "name": "Other",
+                "exit_uuid": "ac000014-0000-4000-8000-000000000014"
+              }
+            ],
+            "default_category_uuid": "ad000014-0000-4000-8000-000000000014"
+          },
+          "exits": [
+            { "uuid": "ac000010-0000-4000-8000-000000000010", "destination_uuid": "aa000006-0000-4000-8000-000000000006" },
+            { "uuid": "ac000011-0000-4000-8000-000000000011", "destination_uuid": "aa000007-0000-4000-8000-000000000007" },
+            { "uuid": "ac000012-0000-4000-8000-000000000012", "destination_uuid": "aa000008-0000-4000-8000-000000000008" },
+            { "uuid": "ac000013-0000-4000-8000-000000000013", "destination_uuid": "aa000009-0000-4000-8000-000000000009" },
+            { "uuid": "ac000014-0000-4000-8000-000000000014", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "aa000006-0000-4000-8000-000000000006",
           "actions": [
             {
-              "uuid": "ab000003-0000-4000-8000-000000000003",
+              "uuid": "ab000006-0000-4000-8000-000000000006",
               "type": "send_msg",
-              "text": "category: @results.resp.category\nvalue: @results.resp.value\nextra.resultado: @results.resp.extra.resultado\nextra.lista: @results.resp.extra.lista",
+              "text": "❌ No encontré ningún municipio con ese nombre. Intenta de nuevo.",
               "attachments": [],
               "quick_replies": [],
               "templating": null
             }
           ],
           "exits": [
+            { "uuid": "ac000020-0000-4000-8000-000000000020", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "aa000007-0000-4000-8000-000000000007",
+          "actions": [
             {
-              "uuid": "ac000004-0000-4000-8000-000000000004",
-              "destination_uuid": null
+              "uuid": "ab000007-0000-4000-8000-000000000007",
+              "type": "send_msg",
+              "text": "✅ Encontré exactamente 1 municipio:\n@results.resp.extra.first_mundep\n\nID: @results.resp.extra.first_id",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
             }
+          ],
+          "exits": [
+            { "uuid": "ac000021-0000-4000-8000-000000000021", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "aa000008-0000-4000-8000-000000000008",
+          "actions": [
+            {
+              "uuid": "ab000008-0000-4000-8000-000000000008",
+              "type": "send_msg",
+              "text": "📋 Encontré varios municipios:\n@results.resp.extra.lista",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "ac000022-0000-4000-8000-000000000022", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "aa000009-0000-4000-8000-000000000009",
+          "actions": [
+            {
+              "uuid": "ab000009-0000-4000-8000-000000000009",
+              "type": "send_msg",
+              "text": "⚠️ Hay demasiados resultados. Escribe un nombre más específico.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "ac000023-0000-4000-8000-000000000023", "destination_uuid": null }
           ]
         }
 
