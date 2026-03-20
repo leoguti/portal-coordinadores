@@ -29,6 +29,32 @@ function normalizeText(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = temp;
+    }
+  }
+  return dp[n];
+}
+
+function fuzzyMatch(query: string, municipio: CachedMunicipio): boolean {
+  // Umbral: 1 error para queries cortos, 2 para más de 6 caracteres
+  const threshold = query.length > 6 ? 2 : 1;
+  const words = municipio.mundepNormalized.split(/[\s\-]+/);
+  return words.some((word) => {
+    // Solo comparar palabras de longitud similar (±2 caracteres)
+    if (Math.abs(word.length - query.length) > threshold + 1) return false;
+    return levenshtein(query, word) <= threshold;
+  });
+}
+
 async function loadAllMunicipios(): Promise<CachedMunicipio[]> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -86,7 +112,11 @@ export async function GET(req: NextRequest) {
   try {
     const cache = await getCache();
     const normalizedQ = normalizeText(q);
-    const found = cache.filter((m) => m.mundepNormalized.includes(normalizedQ));
+    let found = cache.filter((m) => m.mundepNormalized.includes(normalizedQ));
+    // Fallback fuzzy si no hay resultados exactos (mínimo 4 caracteres para evitar falsos positivos)
+    if (found.length === 0 && normalizedQ.length >= 4) {
+      found = cache.filter((m) => fuzzyMatch(normalizedQ, m));
+    }
     const count = found.length;
 
     // Modo pick: devuelve solo el municipio seleccionado (1-indexed)
