@@ -7,21 +7,6 @@
       "spec_version": "13.1.0",
       "language": "spa",
       "type": "messaging",
-      "_ui": {
-        "nodes": {
-          "aa000001-0000-4000-8000-000000000001": { "type": "execute_actions", "position": { "left": 400, "top": 0 } },
-          "aa000002-0000-4000-8000-000000000002": { "type": "wait_for_response", "position": { "left": 400, "top": 160 }, "config": { "cases": {} } },
-          "aa000003-0000-4000-8000-000000000003": { "type": "execute_actions", "position": { "left": 400, "top": 320 } },
-          "aa000005-0000-4000-8000-000000000005": { "type": "wait_for_response", "position": { "left": 400, "top": 480 }, "config": { "cases": {} } },
-          "aa000006-0000-4000-8000-000000000006": { "type": "execute_actions", "position": { "left": 0, "top": 700 } },
-          "aa000007-0000-4000-8000-000000000007": { "type": "execute_actions", "position": { "left": 250, "top": 700 } },
-          "aa000008-0000-4000-8000-000000000008": { "type": "execute_actions", "position": { "left": 550, "top": 700 } },
-          "aa000009-0000-4000-8000-000000000009": { "type": "execute_actions", "position": { "left": 900, "top": 700 } },
-          "aa000010-0000-4000-8000-000000000010": { "type": "wait_for_response", "position": { "left": 550, "top": 900 }, "config": { "cases": {} } },
-          "aa000011-0000-4000-8000-000000000011": { "type": "execute_actions", "position": { "left": 550, "top": 1060 } },
-          "aa000012-0000-4000-8000-000000000012": { "type": "execute_actions", "position": { "left": 550, "top": 1220 } }
-        }
-      },
       "nodes": [
 
         {
