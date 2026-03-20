@@ -154,14 +154,14 @@
             {
               "uuid": "47113d09-4b91-45e0-84b7-04e6b2f27c12",
               "type": "send_msg",
-              "text": "❌ No encontré ningún municipio con ese nombre.",
+              "text": "❌ No encontré ese municipio. Intenta con otro nombre:",
               "attachments": [],
               "quick_replies": [],
               "templating": null
             }
           ],
           "exits": [
-            { "uuid": "7fbb6cd4-9d00-4076-bb0e-88c17748d8d8", "destination_uuid": null }
+            { "uuid": "7fbb6cd4-9d00-4076-bb0e-88c17748d8d8", "destination_uuid": "315d1397-a61c-4ef2-af02-1c9022ff2879" }
           ]
         },
 
