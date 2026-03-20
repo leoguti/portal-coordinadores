@@ -44,15 +44,19 @@ function levenshtein(a: string, b: string): number {
   return dp[n];
 }
 
-function fuzzyMatch(query: string, municipio: CachedMunicipio): boolean {
-  // Umbral: 1 error para queries cortos, 2 para más de 6 caracteres
-  const threshold = query.length > 6 ? 2 : 1;
-  const words = municipio.mundepNormalized.split(/[\s\-]+/);
-  return words.some((word) => {
-    // Solo comparar palabras de longitud similar (±2 caracteres)
-    if (Math.abs(word.length - query.length) > threshold + 1) return false;
-    return levenshtein(query, word) <= threshold;
+function wordFuzzyMatch(queryWord: string, municipioWords: string[]): boolean {
+  const threshold = queryWord.length > 5 ? 2 : 1;
+  return municipioWords.some((word) => {
+    if (Math.abs(word.length - queryWord.length) > threshold + 1) return false;
+    return levenshtein(queryWord, word) <= threshold;
   });
+}
+
+function fuzzyMatch(query: string, municipio: CachedMunicipio): boolean {
+  const queryWords = query.split(/[\s\-]+/).filter((w) => w.length >= 3);
+  const municipioWords = municipio.mundepNormalized.split(/[\s\-]+/);
+  // Todas las palabras del query deben tener match en el municipio
+  return queryWords.every((qw) => wordFuzzyMatch(qw, municipioWords));
 }
 
 async function loadAllMunicipios(): Promise<CachedMunicipio[]> {
