@@ -16,7 +16,10 @@
           "aa000006-0000-4000-8000-000000000006": { "type": "execute_actions", "position": { "left": 0, "top": 700 } },
           "aa000007-0000-4000-8000-000000000007": { "type": "execute_actions", "position": { "left": 250, "top": 700 } },
           "aa000008-0000-4000-8000-000000000008": { "type": "execute_actions", "position": { "left": 550, "top": 700 } },
-          "aa000009-0000-4000-8000-000000000009": { "type": "execute_actions", "position": { "left": 800, "top": 700 } }
+          "aa000009-0000-4000-8000-000000000009": { "type": "execute_actions", "position": { "left": 900, "top": 700 } },
+          "aa000010-0000-4000-8000-000000000010": { "type": "wait_for_response", "position": { "left": 550, "top": 900 }, "config": { "cases": {} } },
+          "aa000011-0000-4000-8000-000000000011": { "type": "execute_actions", "position": { "left": 550, "top": 1060 } },
+          "aa000012-0000-4000-8000-000000000012": { "type": "execute_actions", "position": { "left": 550, "top": 1220 } }
         }
       },
       "nodes": [
@@ -183,7 +186,7 @@
             {
               "uuid": "ab000007-0000-4000-8000-000000000007",
               "type": "send_msg",
-              "text": "✅ Encontré exactamente 1 municipio:\n@results.resp.extra.first_mundep\n\nID: @results.resp.extra.first_id",
+              "text": "✅ Municipio seleccionado:\n@results.resp.extra.first_mundep\n\nID: @results.resp.extra.first_id",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -200,14 +203,14 @@
             {
               "uuid": "ab000008-0000-4000-8000-000000000008",
               "type": "send_msg",
-              "text": "📋 Encontré varios municipios:\n@results.resp.extra.lista",
+              "text": "📋 Encontré varios municipios:\n@results.resp.extra.lista\n\nEscribe el número del que quieres:",
               "attachments": [],
               "quick_replies": [],
               "templating": null
             }
           ],
           "exits": [
-            { "uuid": "ac000022-0000-4000-8000-000000000022", "destination_uuid": null }
+            { "uuid": "ac000022-0000-4000-8000-000000000022", "destination_uuid": "aa000010-0000-4000-8000-000000000010" }
           ]
         },
 
@@ -225,6 +228,70 @@
           ],
           "exits": [
             { "uuid": "ac000023-0000-4000-8000-000000000023", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "aa000010-0000-4000-8000-000000000010",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "wait": { "type": "msg" },
+            "result_name": "numero_elegido",
+            "operand": "@input.text",
+            "cases": [],
+            "categories": [
+              {
+                "uuid": "ad000020-0000-4000-8000-000000000020",
+                "name": "All Responses",
+                "exit_uuid": "ac000030-0000-4000-8000-000000000030"
+              }
+            ],
+            "default_category_uuid": "ad000020-0000-4000-8000-000000000020"
+          },
+          "exits": [
+            {
+              "uuid": "ac000030-0000-4000-8000-000000000030",
+              "destination_uuid": "aa000011-0000-4000-8000-000000000011"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000011-0000-4000-8000-000000000011",
+          "actions": [
+            {
+              "uuid": "ab000011-0000-4000-8000-000000000011",
+              "type": "call_webhook",
+              "method": "GET",
+              "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.busqueda_texto))&pick=@results.numero_elegido",
+              "headers": {},
+              "body": "",
+              "result_name": "resp_pick"
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "ac000031-0000-4000-8000-000000000031",
+              "destination_uuid": "aa000012-0000-4000-8000-000000000012"
+            }
+          ]
+        },
+
+        {
+          "uuid": "aa000012-0000-4000-8000-000000000012",
+          "actions": [
+            {
+              "uuid": "ab000012-0000-4000-8000-000000000012",
+              "type": "send_msg",
+              "text": "✅ Municipio seleccionado:\n@results.resp_pick.extra.mundep\n\nID: @results.resp_pick.extra.id",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "ac000032-0000-4000-8000-000000000032", "destination_uuid": null }
           ]
         }
 
