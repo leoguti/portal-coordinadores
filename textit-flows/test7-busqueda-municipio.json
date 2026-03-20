@@ -3,17 +3,18 @@
   "flows": [
     {
       "name": "test7",
-      "uuid": "d2109773-303d-4a6b-93aa-95a103010793",
-      "spec_version": "13.1.0",
+      "uuid": "655cf191-d8d8-4b01-a564-086f17b30cea",
+      "spec_version": "14.4.0",
       "language": "spa",
       "type": "messaging",
+      "expire_after_minutes": 4320,
       "nodes": [
 
         {
-          "uuid": "39726312-a11c-48e6-92e4-a8c5d2439ce2",
+          "uuid": "8a1bbb6d-fb88-495b-ab3f-7d64e3035c90",
           "actions": [
             {
-              "uuid": "e93816e8-19cd-4711-b0ef-a6c1eb15ffd2",
+              "uuid": "50fc8d18-03ad-4e13-afcf-f49075695df0",
               "type": "send_msg",
               "text": "🔍 Escribe el nombre del municipio:",
               "attachments": [],
@@ -23,14 +24,14 @@
           ],
           "exits": [
             {
-              "uuid": "ee9a8a9f-b00e-4749-9f1e-de6cffefd70f",
-              "destination_uuid": "04c13975-b863-4187-92fc-0c705b1dedbb"
+              "uuid": "2105a923-6e79-4bf6-9a5f-c3219fc37316",
+              "destination_uuid": "315d1397-a61c-4ef2-af02-1c9022ff2879"
             }
           ]
         },
 
         {
-          "uuid": "04c13975-b863-4187-92fc-0c705b1dedbb",
+          "uuid": "315d1397-a61c-4ef2-af02-1c9022ff2879",
           "actions": [],
           "router": {
             "type": "switch",
@@ -40,26 +41,26 @@
             "cases": [],
             "categories": [
               {
-                "uuid": "ae4dc8d5-45d5-4f85-87a8-6c87f19a8bbd",
+                "uuid": "de0e7c3e-abbd-43f8-8442-a9ec37ec1fca",
                 "name": "All Responses",
-                "exit_uuid": "6ba28c4e-bc6c-4209-88e2-749eb9ef7ca3"
+                "exit_uuid": "bb2a2376-f035-4881-9a7f-cfd8a8eff8e5"
               }
             ],
-            "default_category_uuid": "ae4dc8d5-45d5-4f85-87a8-6c87f19a8bbd"
+            "default_category_uuid": "de0e7c3e-abbd-43f8-8442-a9ec37ec1fca"
           },
           "exits": [
             {
-              "uuid": "6ba28c4e-bc6c-4209-88e2-749eb9ef7ca3",
-              "destination_uuid": "9bfe78fb-3690-46ba-8751-523c064b4d73"
+              "uuid": "bb2a2376-f035-4881-9a7f-cfd8a8eff8e5",
+              "destination_uuid": "159f3463-196e-417e-8bd5-33a861ebe5d3"
             }
           ]
         },
 
         {
-          "uuid": "9bfe78fb-3690-46ba-8751-523c064b4d73",
+          "uuid": "159f3463-196e-417e-8bd5-33a861ebe5d3",
           "actions": [
             {
-              "uuid": "0b074300-5ec5-4288-8a15-abca4d31fc6c",
+              "uuid": "40134d5d-afbf-434d-a644-f4bcfa7f795f",
               "type": "call_webhook",
               "method": "GET",
               "url": "https://portal.campolimpio.org/api/municipios/buscar?q=@(url_encode(results.busqueda_texto))",
@@ -70,7 +71,7 @@
           ],
           "exits": [
             {
-              "uuid": "fc57c4d3-6624-4178-876b-ff42994fcda2",
+              "uuid": "6bdafa0a-a6ef-40e7-a9b7-7203c6c68de3",
               "destination_uuid": "3a287b22-97ac-4752-9b8d-475e5c3b4a2e"
             }
           ]
@@ -81,7 +82,6 @@
           "actions": [],
           "router": {
             "type": "switch",
-            "wait": null,
             "result_name": "resultado_busqueda",
             "operand": "@results.resp.extra.resultado",
             "cases": [
