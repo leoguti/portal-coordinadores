@@ -90,7 +90,7 @@
           "actions": [],
           "router": {
             "type": "switch",
-            "operand": "@results.municipio_id",
+            "operand": "@child.results.municipio_id.value",
             "cases": [
               {
                 "uuid": "3e223a83-d27c-4764-b7a0-43a920a10358",
@@ -131,7 +131,7 @@
             {
               "uuid": "fa0360f4-5644-4022-8f4d-7144d9e84b79",
               "type": "send_msg",
-              "text": "✅ Municipio seleccionado:\n@results.municipio_nombre\n\nID: @results.municipio_id",
+              "text": "✅ Municipio seleccionado:\n@child.results.municipio_nombre.value\n\nID: @child.results.municipio_id.value",
               "attachments": [],
               "quick_replies": [],
               "templating": null
