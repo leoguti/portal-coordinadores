@@ -154,7 +154,7 @@
             {
               "uuid": "47113d09-4b91-45e0-84b7-04e6b2f27c12",
               "type": "send_msg",
-              "text": "❌ No encontré ningún municipio con ese nombre. Intenta de nuevo.",
+              "text": "❌ No encontré ningún municipio con ese nombre.",
               "attachments": [],
               "quick_replies": [],
               "templating": null
@@ -170,11 +170,17 @@
           "actions": [
             {
               "uuid": "1b3da969-1576-4d1c-9ec9-2b5011c29525",
-              "type": "send_msg",
-              "text": "✅ Municipio seleccionado:\n@results.resp.extra.first_mundep\n\nID: @results.resp.extra.first_id",
-              "attachments": [],
-              "quick_replies": [],
-              "templating": null
+              "type": "set_run_result",
+              "name": "municipio_id",
+              "value": "@results.resp.extra.first_id",
+              "category": "Seleccionado"
+            },
+            {
+              "uuid": "a1b2c3d4-e5f6-4789-abcd-ef0123456789",
+              "type": "set_run_result",
+              "name": "municipio_nombre",
+              "value": "@results.resp.extra.first_mundep",
+              "category": "Seleccionado"
             }
           ],
           "exits": [
@@ -268,15 +274,21 @@
           "actions": [
             {
               "uuid": "c48fe1de-b5f3-40b4-b1a6-c07565b1dfeb",
-              "type": "send_msg",
-              "text": "✅ Municipio seleccionado:\n@results.resp_pick.extra.mundep\n\nID: @results.resp_pick.extra.id",
-              "attachments": [],
-              "quick_replies": [],
-              "templating": null
+              "type": "set_run_result",
+              "name": "municipio_id",
+              "value": "@results.resp_pick.extra.id",
+              "category": "Seleccionado"
+            },
+            {
+              "uuid": "6f65c74f-fa0b-4cbf-b875-e23995d6fb6a",
+              "type": "set_run_result",
+              "name": "municipio_nombre",
+              "value": "@results.resp_pick.extra.mundep",
+              "category": "Seleccionado"
             }
           ],
           "exits": [
-            { "uuid": "6f65c74f-fa0b-4cbf-b875-e23995d6fb6a", "destination_uuid": null }
+            { "uuid": "dacb115a-ed4b-4bd9-bfc4-d4af85473d86", "destination_uuid": null }
           ]
         }
 
