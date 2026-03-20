@@ -1,0 +1,182 @@
+{
+  "version": "13",
+  "flows": [
+    {
+      "name": "test8-padre",
+      "uuid": "365fada7-b2f8-40d8-a63e-61b4fe79a9fa",
+      "spec_version": "14.4.0",
+      "language": "spa",
+      "type": "messaging",
+      "expire_after_minutes": 4320,
+      "nodes": [
+
+        {
+          "uuid": "f6546d8c-73cd-4f26-b7d1-af3619070d24",
+          "actions": [
+            {
+              "uuid": "8bfd31f7-51da-41d2-9f25-4f43fc727f31",
+              "type": "send_msg",
+              "text": "Bienvenido al flujo de prueba. Vamos a seleccionar un municipio.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            {
+              "uuid": "aace2f58-4eaa-41f5-93b3-b34a5e616226",
+              "destination_uuid": "6a63d124-9d08-46cc-a933-7bf54dac2361"
+            }
+          ]
+        },
+
+        {
+          "uuid": "6a63d124-9d08-46cc-a933-7bf54dac2361",
+          "actions": [
+            {
+              "uuid": "77de3e70-b228-47da-a974-c5f105999e41",
+              "type": "enter_flow",
+              "flow": {
+                "uuid": "655cf191-d8d8-4b01-a564-086f17b30cea",
+                "name": "test7"
+              }
+            }
+          ],
+          "router": {
+            "type": "switch",
+            "operand": "@child.status",
+            "cases": [
+              {
+                "uuid": "8edfaeb3-19dd-45a5-ae5a-3e6d36544e68",
+                "type": "has_only_text",
+                "arguments": ["completed"],
+                "category_uuid": "5cbd78b7-aa83-4b77-abb7-9eb7748127a4"
+              },
+              {
+                "uuid": "5ecf500c-023f-4f20-af41-c200f5120811",
+                "type": "has_only_text",
+                "arguments": ["expired"],
+                "category_uuid": "c616f308-1c51-454b-8ca1-ec14ea3dc71e"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "5cbd78b7-aa83-4b77-abb7-9eb7748127a4",
+                "name": "Completed",
+                "exit_uuid": "e239f390-645d-40e3-967c-00550062cdaf"
+              },
+              {
+                "uuid": "c616f308-1c51-454b-8ca1-ec14ea3dc71e",
+                "name": "Expired",
+                "exit_uuid": "1323db09-f60b-4288-876c-807fa729781b"
+              }
+            ],
+            "default_category_uuid": "c616f308-1c51-454b-8ca1-ec14ea3dc71e"
+          },
+          "exits": [
+            {
+              "uuid": "e239f390-645d-40e3-967c-00550062cdaf",
+              "destination_uuid": "f262a045-73fa-410e-be60-5dc60b64b220"
+            },
+            {
+              "uuid": "1323db09-f60b-4288-876c-807fa729781b",
+              "destination_uuid": "eaf9d42a-acb8-4e10-9815-d8e0555a97d7"
+            }
+          ]
+        },
+
+        {
+          "uuid": "f262a045-73fa-410e-be60-5dc60b64b220",
+          "actions": [],
+          "router": {
+            "type": "switch",
+            "operand": "@child.municipio_id",
+            "cases": [
+              {
+                "uuid": "3e223a83-d27c-4764-b7a0-43a920a10358",
+                "type": "has_value",
+                "arguments": [],
+                "category_uuid": "2b73cc64-2b11-40fc-a07c-073b0a9c779c"
+              }
+            ],
+            "categories": [
+              {
+                "uuid": "2b73cc64-2b11-40fc-a07c-073b0a9c779c",
+                "name": "Con municipio",
+                "exit_uuid": "f1654d10-8b82-4279-bea5-2e851665c44c"
+              },
+              {
+                "uuid": "3d14b618-9df9-4f22-a767-a2a931512f22",
+                "name": "Sin municipio",
+                "exit_uuid": "c6841256-78b9-4d9f-b7c8-ae6f87abfc16"
+              }
+            ],
+            "default_category_uuid": "3d14b618-9df9-4f22-a767-a2a931512f22"
+          },
+          "exits": [
+            {
+              "uuid": "f1654d10-8b82-4279-bea5-2e851665c44c",
+              "destination_uuid": "a651e7fd-3e68-4d45-a38b-5d97e3e4f856"
+            },
+            {
+              "uuid": "c6841256-78b9-4d9f-b7c8-ae6f87abfc16",
+              "destination_uuid": "2d3e2f95-1b48-43bd-8590-8e038145ca71"
+            }
+          ]
+        },
+
+        {
+          "uuid": "a651e7fd-3e68-4d45-a38b-5d97e3e4f856",
+          "actions": [
+            {
+              "uuid": "fa0360f4-5644-4022-8f4d-7144d9e84b79",
+              "type": "send_msg",
+              "text": "✅ Municipio seleccionado:\n@child.municipio_nombre\n\nID: @child.municipio_id",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "cd0d73b3-836a-4431-b668-c0be4ab5638b", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "2d3e2f95-1b48-43bd-8590-8e038145ca71",
+          "actions": [
+            {
+              "uuid": "a3bdd05e-afdb-4d75-b699-0772b7b1f387",
+              "type": "send_msg",
+              "text": "⚠️ No se seleccionó ningún municipio.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "548556d5-bea1-457f-9baa-5ceb1eae5aa1", "destination_uuid": null }
+          ]
+        },
+
+        {
+          "uuid": "eaf9d42a-acb8-4e10-9815-d8e0555a97d7",
+          "actions": [
+            {
+              "uuid": "3fd6b5ca-076b-495f-9e85-f2308f13489a",
+              "type": "send_msg",
+              "text": "⏱️ El tiempo expiró.",
+              "attachments": [],
+              "quick_replies": [],
+              "templating": null
+            }
+          ],
+          "exits": [
+            { "uuid": "70218d7e-1821-4e45-a03d-2ec5a89e91e4", "destination_uuid": null }
+          ]
+        }
+
+      ]
+    }
+  ]
+}
