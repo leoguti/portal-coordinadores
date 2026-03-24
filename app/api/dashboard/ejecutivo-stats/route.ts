@@ -135,6 +135,10 @@ export async function GET(request: Request) {
       (sum, m) => sum + (m.fields.MetaSensibilizacion || 0),
       0
     );
+    const metaGlobalEvaluaciones = allMetas.reduce(
+      (sum, m) => sum + (m.fields.MetaEvaluaciones || 0),
+      0
+    );
 
     function semaforo(porcentaje: number): string {
       if (porcentaje >= 70) return "verde";
@@ -168,6 +172,7 @@ export async function GET(request: Request) {
     );
     const personasPorCoord = new Map<string, number>();
     const evaluadasPorCoord = new Map<string, number>();
+    const evaluacionesPorCoord = new Map<string, number>();
     for (const a of actSensibilizacion) {
       const coordId = a.fields.Coordinador?.[0];
       if (!coordId) continue;
@@ -181,6 +186,11 @@ export async function GET(request: Request) {
         (evaluadasPorCoord.get(coordId) || 0) +
           (a.fields["Personas Evaluadas"] || 0)
       );
+      evaluacionesPorCoord.set(
+        coordId,
+        (evaluacionesPorCoord.get(coordId) || 0) +
+          (a.fields["CantidadEvaluaciones"] || 0)
+      );
     }
 
     const personasCapacitadas = actSensibilizacion.reduce(
@@ -189,6 +199,10 @@ export async function GET(request: Request) {
     );
     const personasEvaluadas = actSensibilizacion.reduce(
       (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      0
+    );
+    const totalEvaluaciones = actSensibilizacion.reduce(
+      (sum, a) => sum + (a.fields["CantidadEvaluaciones"] || 0),
       0
     );
 
@@ -205,6 +219,22 @@ export async function GET(request: Request) {
         meta,
         actual,
         evaluadas,
+        porcentaje,
+        semaforo: semaforo(porcentaje),
+      };
+    });
+
+    const metasEvaluacionesPorCoord = allMetas.map((m) => {
+      const coordId =
+        m.fields.id_coordinador?.[0] || m.fields.Coordinador?.[0] || "";
+      const meta = m.fields.MetaEvaluaciones || 0;
+      const actual = evaluacionesPorCoord.get(coordId) || 0;
+      const porcentaje = meta > 0 ? Math.round((actual / meta) * 100) : 0;
+      return {
+        id: coordId,
+        nombre: coordMap.get(coordId) || "Sin nombre",
+        meta,
+        actual,
         porcentaje,
         semaforo: semaforo(porcentaje),
       };
@@ -337,6 +367,17 @@ export async function GET(request: Request) {
               : 0,
         },
         porCoordinador: metasSensibilizacionPorCoord,
+      },
+      metasEvaluaciones: {
+        global: {
+          meta: metaGlobalEvaluaciones,
+          actual: totalEvaluaciones,
+          porcentaje:
+            metaGlobalEvaluaciones > 0
+              ? Math.round((totalEvaluaciones / metaGlobalEvaluaciones) * 100)
+              : 0,
+        },
+        porCoordinador: metasEvaluacionesPorCoord,
       },
       materiales: materialesGlobal,
       materialesPorCoord,

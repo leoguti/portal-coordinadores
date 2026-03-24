@@ -62,6 +62,10 @@ interface Stats {
     global: { meta: number; actual: number; evaluadas: number; porcentaje: number };
     porCoordinador: CoordSensMeta[];
   };
+  metasEvaluaciones: {
+    global: { meta: number; actual: number; porcentaje: number };
+    porCoordinador: Array<{ id: string; nombre: string; meta: number; actual: number; porcentaje: number; semaforo: string }>;
+  };
   materiales: MaterialRow[];
   materialesPorCoord: Record<string, MaterialRow[]>;
   salidasProceso: Array<{ proceso: string; kg: number }>;
@@ -193,7 +197,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
       </div>
 
       {/* SECTION 1: Metas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Meta Recolección */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
@@ -381,6 +385,69 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               </table>
             </div>
           )}
+        </div>
+
+        {/* Meta Evaluaciones */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              Meta Evaluaciones {year}
+            </h2>
+            <span
+              className="text-3xl font-bold"
+              style={{ color: metaBarColor(stats.metasEvaluaciones.global.porcentaje) }}
+            >
+              {stats.metasEvaluaciones.global.porcentaje}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-4 mb-3">
+            <div
+              className="h-4 rounded-full transition-all"
+              style={{
+                width: `${Math.min(stats.metasEvaluaciones.global.porcentaje, 100)}%`,
+                backgroundColor: metaBarColor(stats.metasEvaluaciones.global.porcentaje),
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-gray-500 mb-3">
+            <span>Evaluaciones: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.actual)}</strong></span>
+            <span>Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left p-2 font-semibold text-gray-600">Coordinador</th>
+                  <th className="text-right p-2 font-semibold text-gray-600">Meta</th>
+                  <th className="text-right p-2 font-semibold text-gray-600">Actual</th>
+                  <th className="text-right p-2 font-semibold text-gray-600">%</th>
+                  <th className="text-center p-2 w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...stats.metasEvaluaciones.porCoordinador].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => (
+                  <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
+                    <td className="p-2 font-medium">{c.nombre}</td>
+                    <td className="p-2 text-right">{fmt(c.meta)}</td>
+                    <td className="p-2 text-right">{fmt(c.actual)}</td>
+                    <td className="p-2 text-right font-bold">{c.porcentaje}%</td>
+                    <td className="p-2 text-center">
+                      <span className={`inline-block w-2.5 h-2.5 rounded-full ${semaforoColor[c.semaforo]}`} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                  <td className="p-2">TOTAL</td>
+                  <td className="p-2 text-right">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.meta, 0))}</td>
+                  <td className="p-2 text-right">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.actual, 0))}</td>
+                  <td className="p-2 text-right">{stats.metasEvaluaciones.global.porcentaje}%</td>
+                  <td className="p-2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       </div>
 
