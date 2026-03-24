@@ -49,6 +49,7 @@ interface ActividadFields {
   "CODIGOMUN Compilación (de Municipio)"?: number;
   "Cantidad de Participantes"?: number;
   "Personas Evaluadas"?: number;
+  CantidadEvaluaciones?: number;
   Modalidad?: string[];
   Consecutivo?: number;
   Cultivo?: string;

@@ -8,7 +8,6 @@ import {
   getOrdenesCoordinador,
   getGastosCajaMenorCoordinador,
   getRubros,
-  getEvaluacionesCountForCoordinator,
 } from "@/lib/airtable";
 
 /**
@@ -28,14 +27,13 @@ export async function GET(request: Request) {
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
     const yearStr = String(year);
 
-    const [metas, allKardex, actividades, ordenes, gastos, rubros, totalEvaluaciones] = await Promise.all([
+    const [metas, allKardex, actividades, ordenes, gastos, rubros] = await Promise.all([
       getMetasCoordinador(coordinatorId, year),
       getAllKardex(),
       listActividadesForCoordinator(coordinatorId),
       getOrdenesCoordinador(coordinatorId),
       getGastosCajaMenorCoordinador(coordinatorId),
       getRubros(),
-      getEvaluacionesCountForCoordinator(coordinatorId, year),
     ]);
 
     // Filter kardex by coordinator (paginated, all records)
@@ -66,6 +64,10 @@ export async function GET(request: Request) {
     );
     const personasEvaluadas = actSens.reduce(
       (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      0
+    );
+    const totalEvaluaciones = actSens.reduce(
+      (sum, a) => sum + (a.fields["CantidadEvaluaciones"] || 0),
       0
     );
 
