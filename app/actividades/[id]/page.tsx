@@ -57,6 +57,10 @@ export default function ActividadDetailPage() {
   const [selectedPhoto, setSelectedPhoto] = useState<AirtableAttachment | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [evaluaciones, setEvaluaciones] = useState<{
+    total: number; promedio: number;
+    evaluaciones: { id: string; nombre: string; telefono: string; puntaje: number; timestamp: string; respuestaP1: string; respuestaP2: string; respuestaP3: string }[];
+  } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -78,11 +82,14 @@ export default function ActividadDetailPage() {
 
       const data = await response.json();
       const found = data.actividades?.find((a: Actividad) => a.id === actividadId);
-      
+
       if (!found) {
         setError("Actividad no encontrada");
       } else {
         setActividad(found);
+        // Cargar evaluaciones
+        const evalRes = await fetch(`/api/evaluaciones?actividadId=${actividadId}`);
+        if (evalRes.ok) setEvaluaciones(await evalRes.json());
       }
     } catch (err) {
       console.error("Error fetching activity:", err);
@@ -300,7 +307,62 @@ export default function ActividadDetailPage() {
               </div>
             )}
 
-            {/* Evaluaciones Section */}
+            {/* Evaluaciones WhatsApp Section */}
+            {evaluaciones && evaluaciones.total > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Evaluaciones WhatsApp
+                  </h2>
+                  <div className="flex gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-[#042726]">{evaluaciones.total}</p>
+                      <p className="text-xs text-gray-500">respuestas</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">{evaluaciones.promedio}<span className="text-sm font-normal text-gray-400">/3</span></p>
+                      <p className="text-xs text-gray-500">prom. puntaje</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">P1</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">P2</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">P3</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Puntaje</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {evaluaciones.evaluaciones.map((e) => (
+                        <tr key={e.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 text-gray-900">{e.nombre || "—"}</td>
+                          <td className="px-4 py-2 text-gray-500">{e.telefono}</td>
+                          <td className="px-4 py-2 text-center font-mono">{e.respuestaP1.toUpperCase()}</td>
+                          <td className="px-4 py-2 text-center font-mono">{e.respuestaP2.toUpperCase()}</td>
+                          <td className="px-4 py-2 text-center font-mono">{e.respuestaP3.toUpperCase()}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${e.puntaje === 3 ? "bg-green-100 text-green-800" : e.puntaje >= 2 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
+                              {e.puntaje}/3
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-gray-500 text-xs">
+                            {e.timestamp ? new Date(e.timestamp).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+          {/* Evaluaciones (archivos) Section */}
             {actividad.fields["Evaluaciones"] && actividad.fields["Evaluaciones"].length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
