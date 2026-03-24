@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useTransition } from "react";
 import {
   BarChart,
   Bar,
@@ -112,6 +112,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
   const [expandRecol, setExpandRecol] = useState(false);
   const [expandSens, setExpandSens] = useState(false);
   const [expandEval, setExpandEval] = useState(false);
+  const [, startTransition] = useTransition();
   const [materialCoord, setMaterialCoord] = useState<string>("global");
   const [showInfoProceso, setShowInfoProceso] = useState(false);
 
@@ -235,7 +236,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.salidas)} kg</strong>
           </div>
           <button
-            onClick={() => setExpandRecol(!expandRecol)}
+            onClick={() => startTransition(() => setExpandRecol(!expandRecol))}
             className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
           >
             {expandRecol ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
@@ -333,7 +334,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             </strong>
           </div>
           <button
-            onClick={() => setExpandSens(!expandSens)}
+            onClick={() => startTransition(() => setExpandSens(!expandSens))}
             className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
           >
             {expandSens ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
@@ -415,7 +416,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             <span>Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
           </div>
           <button
-            onClick={() => setExpandEval(!expandEval)}
+            onClick={() => startTransition(() => setExpandEval(!expandEval))}
             className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
           >
             {expandEval ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
