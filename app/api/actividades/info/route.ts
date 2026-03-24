@@ -49,9 +49,9 @@ export async function GET(req: NextRequest) {
       const personaData = await personaRes.json();
       const personaId = personaData.records?.[0]?.id;
       if (personaId) {
-        // 2. Buscar evaluacion para esa persona + actividad
+        // 2. Buscar evaluacion para esa persona + actividad usando idactividad (lookup)
         const evalFilter = encodeURIComponent(
-          `AND(FIND("${personaId}", ARRAYJOIN({Persona Evaluada})), FIND("${id}", ARRAYJOIN({Actividad})))`
+          `AND(FIND("${personaId}", ARRAYJOIN({Persona Evaluada})), FIND("${id}", ARRAYJOIN({idactividad})))`
         );
         const evalRes = await fetch(
           `https://api.airtable.com/v0/${baseId}/Evaluaciones?filterByFormula=${evalFilter}&maxRecords=1&fields[]=Timestamp`,
