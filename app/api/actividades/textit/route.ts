@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://portal.campolimpio.org";
   const waNumber = "573234688397";
   const waUrl = `https://wa.me/${waNumber}?text=EVAL-${actividad.id}`;
-  const qrUrl = `${baseUrl}/api/actividades/qr?actividadId=${actividad.id}`;
+  const qrUrl = `${baseUrl}/api/actividades/qr?actividadId=${actividad.id}&format=png`;
 
   return NextResponse.json({
     ok: true,
