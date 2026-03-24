@@ -228,7 +228,7 @@ export default function DashboardCoordinador() {
       )}
 
       {/* SECTION 2: Metas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Meta Recolección */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
