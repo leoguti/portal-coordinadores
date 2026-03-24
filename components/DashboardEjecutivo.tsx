@@ -63,8 +63,8 @@ interface Stats {
     porCoordinador: CoordSensMeta[];
   };
   metasEvaluaciones: {
-    global: { meta: number; actual: number; porcentaje: number };
-    porCoordinador: Array<{ id: string; nombre: string; meta: number; actual: number; porcentaje: number; semaforo: string }>;
+    global: { meta: number; whatsapp: number; reportadas: number; total: number; porcentaje: number };
+    porCoordinador: Array<{ id: string; nombre: string; meta: number; whatsapp: number; reportadas: number; total: number; porcentaje: number; semaforo: string }>;
   };
   materiales: MaterialRow[];
   materialesPorCoord: Record<string, MaterialRow[]>;
@@ -402,17 +402,31 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               {stats.metasEvaluaciones.global.porcentaje}%
             </span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-4 mb-3">
+          <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden flex">
             <div
-              className="h-4 rounded-full transition-all"
+              className="h-4 transition-all"
               style={{
-                width: `${Math.min(stats.metasEvaluaciones.global.porcentaje, 100)}%`,
-                backgroundColor: metaBarColor(stats.metasEvaluaciones.global.porcentaje),
+                width: `${Math.min((stats.metasEvaluaciones.global.whatsapp / stats.metasEvaluaciones.global.meta) * 100, 100)}%`,
+                backgroundColor: "#00d084",
+              }}
+            />
+            <div
+              className="h-4 transition-all"
+              style={{
+                width: `${Math.min((stats.metasEvaluaciones.global.reportadas / stats.metasEvaluaciones.global.meta) * 100, 100 - (stats.metasEvaluaciones.global.whatsapp / stats.metasEvaluaciones.global.meta) * 100)}%`,
+                backgroundColor: "#3b82f6",
               }}
             />
           </div>
           <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>Evaluaciones: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.actual)}</strong></span>
+            <span>
+              <span className="inline-block w-2 h-2 rounded-full bg-[#00d084] mr-1" />
+              WhatsApp: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.whatsapp)}</strong>
+              <span className="ml-2 text-gray-400">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
+                Reportadas: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.reportadas)}</strong>
+              </span>
+            </span>
             <span>Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
           </div>
           <button
@@ -428,7 +442,9 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                   <tr className="border-b bg-gray-50">
                     <th className="text-left p-2 font-semibold text-gray-600">Coordinador</th>
                     <th className="text-right p-2 font-semibold text-gray-600">Meta</th>
-                    <th className="text-right p-2 font-semibold text-gray-600">Actual</th>
+                    <th className="text-right p-2 font-semibold text-gray-600 text-[#00d084]">WA</th>
+                    <th className="text-right p-2 font-semibold text-gray-600 text-blue-500">Rep.</th>
+                    <th className="text-right p-2 font-semibold text-gray-600">Total</th>
                     <th className="text-right p-2 font-semibold text-gray-600">%</th>
                     <th className="text-center p-2 w-8"></th>
                   </tr>
@@ -438,7 +454,9 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="p-2 font-medium">{c.nombre}</td>
                       <td className="p-2 text-right">{fmt(c.meta)}</td>
-                      <td className="p-2 text-right">{fmt(c.actual)}</td>
+                      <td className="p-2 text-right text-[#00d084]">{fmt(c.whatsapp)}</td>
+                      <td className="p-2 text-right text-blue-500">{fmt(c.reportadas)}</td>
+                      <td className="p-2 text-right font-medium">{fmt(c.total)}</td>
                       <td className="p-2 text-right font-bold">{c.porcentaje}%</td>
                       <td className="p-2 text-center">
                         <span className={`inline-block w-2.5 h-2.5 rounded-full ${semaforoColor[c.semaforo]}`} />
@@ -450,7 +468,9 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                   <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
                     <td className="p-2">TOTAL</td>
                     <td className="p-2 text-right">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.meta, 0))}</td>
-                    <td className="p-2 text-right">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.actual, 0))}</td>
+                    <td className="p-2 text-right text-[#00d084]">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.whatsapp, 0))}</td>
+                    <td className="p-2 text-right text-blue-500">{fmt(stats.metasEvaluaciones.porCoordinador.reduce((s, c) => s + c.reportadas, 0))}</td>
+                    <td className="p-2 text-right">{fmt(stats.metasEvaluaciones.global.total)}</td>
                     <td className="p-2 text-right">{stats.metasEvaluaciones.global.porcentaje}%</td>
                     <td className="p-2"></td>
                   </tr>

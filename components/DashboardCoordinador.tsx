@@ -37,7 +37,9 @@ interface Stats {
   };
   metaEvaluaciones: {
     meta: number;
-    actual: number;
+    whatsapp: number;
+    reportadas: number;
+    total: number;
     porcentaje: number;
     configurada: boolean;
   };
@@ -338,22 +340,35 @@ export default function DashboardCoordinador() {
           </div>
           {stats.metaEvaluaciones.configurada ? (
             <>
-              <div className="w-full bg-gray-100 rounded-full h-4 mb-3">
+              <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden flex">
                 <div
-                  className="h-4 rounded-full transition-all"
+                  className="h-4 transition-all"
                   style={{
-                    width: `${Math.min(stats.metaEvaluaciones.porcentaje, 100)}%`,
-                    backgroundColor: metaBarColor(stats.metaEvaluaciones.porcentaje),
+                    width: `${Math.min((stats.metaEvaluaciones.whatsapp / stats.metaEvaluaciones.meta) * 100, 100)}%`,
+                    backgroundColor: "#00d084",
+                  }}
+                />
+                <div
+                  className="h-4 transition-all"
+                  style={{
+                    width: `${Math.min((stats.metaEvaluaciones.reportadas / stats.metaEvaluaciones.meta) * 100, 100 - (stats.metaEvaluaciones.whatsapp / stats.metaEvaluaciones.meta) * 100)}%`,
+                    backgroundColor: "#3b82f6",
                   }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
                 <span>
-                  Evaluaciones: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.actual)}</strong>
+                  <span className="inline-block w-2 h-2 rounded-full bg-[#00d084] mr-1" />
+                  WhatsApp: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.whatsapp)}</strong>
                 </span>
                 <span>
                   Meta: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.meta)}</strong>
                 </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
+                Reportadas: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.reportadas)}</strong>
+                <span className="ml-3 text-gray-400">Total: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.total)}</strong></span>
               </div>
             </>
           ) : (

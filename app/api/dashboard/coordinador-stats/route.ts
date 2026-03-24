@@ -76,7 +76,8 @@ export async function GET(request: Request) {
     const metaEval = metas?.fields.MetaEvaluaciones || 0;
     const pctRecol = metaRecol > 0 ? Math.round((entradasKg / metaRecol) * 100) : 0;
     const pctSens = metaSens > 0 ? Math.round((personasSensibilizadas / metaSens) * 100) : 0;
-    const pctEval = metaEval > 0 ? Math.round((totalEvaluaciones / metaEval) * 100) : 0;
+    const totalEvalCombinado = totalEvaluaciones + personasEvaluadas;
+    const pctEval = metaEval > 0 ? Math.round((totalEvalCombinado / metaEval) * 100) : 0;
 
     // --- Salidas por Proceso ---
     const salidasPorProceso = new Map<string, number>();
@@ -185,7 +186,9 @@ export async function GET(request: Request) {
       },
       metaEvaluaciones: {
         meta: metaEval,
-        actual: totalEvaluaciones,
+        whatsapp: totalEvaluaciones,
+        reportadas: personasEvaluadas,
+        total: totalEvalCombinado,
         porcentaje: pctEval,
         configurada: metas !== null && metaEval > 0,
       },

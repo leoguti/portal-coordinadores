@@ -205,6 +205,7 @@ export async function GET(request: Request) {
       (sum, a) => sum + (a.fields["CantidadEvaluaciones"] || 0),
       0
     );
+    const totalEvalCombinado = totalEvaluaciones + personasEvaluadas;
 
     const metasSensibilizacionPorCoord = allMetas.map((m) => {
       const coordId =
@@ -228,13 +229,17 @@ export async function GET(request: Request) {
       const coordId =
         m.fields.id_coordinador?.[0] || m.fields.Coordinador?.[0] || "";
       const meta = m.fields.MetaEvaluaciones || 0;
-      const actual = evaluacionesPorCoord.get(coordId) || 0;
-      const porcentaje = meta > 0 ? Math.round((actual / meta) * 100) : 0;
+      const whatsapp = evaluacionesPorCoord.get(coordId) || 0;
+      const reportadas = evaluadasPorCoord.get(coordId) || 0;
+      const total = whatsapp + reportadas;
+      const porcentaje = meta > 0 ? Math.round((total / meta) * 100) : 0;
       return {
         id: coordId,
         nombre: coordMap.get(coordId) || "Sin nombre",
         meta,
-        actual,
+        whatsapp,
+        reportadas,
+        total,
         porcentaje,
         semaforo: semaforo(porcentaje),
       };
@@ -371,10 +376,12 @@ export async function GET(request: Request) {
       metasEvaluaciones: {
         global: {
           meta: metaGlobalEvaluaciones,
-          actual: totalEvaluaciones,
+          whatsapp: totalEvaluaciones,
+          reportadas: personasEvaluadas,
+          total: totalEvalCombinado,
           porcentaje:
             metaGlobalEvaluaciones > 0
-              ? Math.round((totalEvaluaciones / metaGlobalEvaluaciones) * 100)
+              ? Math.round((totalEvalCombinado / metaGlobalEvaluaciones) * 100)
               : 0,
         },
         porCoordinador: metasEvaluacionesPorCoord,
