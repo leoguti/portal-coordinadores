@@ -826,7 +826,22 @@ export default function ActividadesPage() {
 
                   {/* Month Content */}
                   {isMonthExpanded && (() => {
-                    const renderTablaActividades = (listaActividades: Actividad[]) => (
+                    const renderTablaActividades = (listaActividades: Actividad[]) => {
+                      const enCurso = listaActividades.filter(a => a.fields.Estado === "En curso");
+                      return (<>
+                      {enCurso.length > 0 && (
+                        <div className="mx-4 mb-3 p-3 bg-orange-50 border border-orange-300 rounded-lg flex items-center gap-3">
+                          <span className="text-orange-500 text-xl">⚠️</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-orange-800">
+                              {enCurso.length === 1
+                                ? "Tienes 1 actividad En Curso pendiente de completar"
+                                : `Tienes ${enCurso.length} actividades En Curso pendientes de completar`}
+                            </p>
+                            <p className="text-xs text-orange-600">Haz clic en "Completar" para agregar fotos, participantes y demás datos.</p>
+                          </div>
+                        </div>
+                      )}
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
@@ -914,7 +929,11 @@ export default function ActividadesPage() {
                                       )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                      {puedeModificar ? (
+                                      {actividad.fields.Estado === "En curso" ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
+                                          ⚠️ En Curso
+                                        </span>
+                                      ) : puedeModificar ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
                                           🔓 Abierta
                                         </span>
@@ -932,14 +951,21 @@ export default function ActividadesPage() {
                                         >
                                           Ver
                                         </Link>
-                                        {puedeModificar && (
+                                        {actividad.fields.Estado === "En curso" ? (
+                                          <Link
+                                            href={`/actividades/${actividad.id}/editar`}
+                                            className="inline-flex items-center px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs font-medium transition-colors"
+                                          >
+                                            ✏️ Completar
+                                          </Link>
+                                        ) : puedeModificar ? (
                                           <Link
                                             href={`/actividades/${actividad.id}/editar`}
                                             className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors"
                                           >
                                             Editar
                                           </Link>
-                                        )}
+                                        ) : null}
                                       </div>
                                     </td>
                                   </tr>
@@ -1036,7 +1062,8 @@ export default function ActividadesPage() {
                           </tbody>
                         </table>
                       </div>
-                    );
+                      </>);
+                    };
 
                     if (canViewAll) {
                       // Agrupar por coordinador
