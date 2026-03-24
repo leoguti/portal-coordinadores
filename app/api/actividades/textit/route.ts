@@ -49,10 +49,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // TextIt envía la fecha como ISO datetime completo — extraer solo YYYY-MM-DD
+  const fechaSolo = fecha.split("T")[0];
+
   const actividad = await createActividad({
     coordinatorRecordId: coordinadorId,
     name: nombre,
-    fecha,
+    fecha: fechaSolo,
     descripcion: "",
     tipo: "Sensibilización",
     estado: "En curso",
