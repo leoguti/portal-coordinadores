@@ -8,6 +8,7 @@ import {
   getOrdenesCoordinador,
   getGastosCajaMenorCoordinador,
   getRubros,
+  getEvaluacionesCountForCoordinator,
 } from "@/lib/airtable";
 
 /**
@@ -27,13 +28,14 @@ export async function GET(request: Request) {
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
     const yearStr = String(year);
 
-    const [metas, allKardex, actividades, ordenes, gastos, rubros] = await Promise.all([
+    const [metas, allKardex, actividades, ordenes, gastos, rubros, totalEvaluaciones] = await Promise.all([
       getMetasCoordinador(coordinatorId, year),
       getAllKardex(),
       listActividadesForCoordinator(coordinatorId),
       getOrdenesCoordinador(coordinatorId),
       getGastosCajaMenorCoordinador(coordinatorId),
       getRubros(),
+      getEvaluacionesCountForCoordinator(coordinatorId, year),
     ]);
 
     // Filter kardex by coordinator (paginated, all records)
@@ -69,8 +71,10 @@ export async function GET(request: Request) {
 
     const metaRecol = metas?.fields.MetaRecoleccion || 0;
     const metaSens = metas?.fields.MetaSensibilizacion || 0;
+    const metaEval = metas?.fields.MetaEvaluaciones || 0;
     const pctRecol = metaRecol > 0 ? Math.round((entradasKg / metaRecol) * 100) : 0;
     const pctSens = metaSens > 0 ? Math.round((personasSensibilizadas / metaSens) * 100) : 0;
+    const pctEval = metaEval > 0 ? Math.round((totalEvaluaciones / metaEval) * 100) : 0;
 
     // --- Salidas por Proceso ---
     const salidasPorProceso = new Map<string, number>();
@@ -176,6 +180,12 @@ export async function GET(request: Request) {
         evaluadas: personasEvaluadas,
         porcentaje: pctSens,
         configurada: metas !== null,
+      },
+      metaEvaluaciones: {
+        meta: metaEval,
+        actual: totalEvaluaciones,
+        porcentaje: pctEval,
+        configurada: metas !== null && metaEval > 0,
       },
       salidasProceso,
       tendenciaMensual,

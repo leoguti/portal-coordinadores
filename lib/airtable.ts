@@ -250,6 +250,7 @@ interface MetaFields {
   Año?: number;
   MetaRecoleccion?: number;
   MetaSensibilizacion?: number;
+  MetaEvaluaciones?: number;
 }
 
 export interface Meta {
@@ -4051,4 +4052,44 @@ export async function createEvaluacion(params: {
   } catch {
     return null;
   }
+}
+
+/**
+ * Count evaluaciones for a coordinator using the Coordinador lookup field.
+ * Optionally filter by year (based on Timestamp field).
+ */
+export async function getEvaluacionesCountForCoordinator(
+  coordinatorId: string,
+  year?: number
+): Promise<number> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return 0;
+
+  const yearFilter = year
+    ? `, {Año} = ${year}`
+    : "";
+  const filter = encodeURIComponent(
+    `AND(FIND("${coordinatorId}", ARRAYJOIN({Coordinador}))${yearFilter})`
+  );
+
+  let total = 0;
+  let offset: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      filterByFormula: decodeURIComponent(filter),
+      "fields[]": "Año",
+    });
+    if (offset) params.set("offset", offset);
+    const res = await fetch(
+      `https://api.airtable.com/v0/${baseId}/Evaluaciones?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
+    );
+    if (!res.ok) break;
+    const data = await res.json();
+    total += (data.records ?? []).length;
+    offset = data.offset;
+  } while (offset);
+
+  return total;
 }

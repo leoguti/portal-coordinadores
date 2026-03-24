@@ -35,6 +35,12 @@ interface Stats {
     porcentaje: number;
     configurada: boolean;
   };
+  metaEvaluaciones: {
+    meta: number;
+    actual: number;
+    porcentaje: number;
+    configurada: boolean;
+  };
   salidasProceso: Array<{ proceso: string; kg: number }>;
   tendenciaMensual: Array<{ mes: string; entradas: number; salidas: number }>;
   alertas: {
@@ -306,6 +312,48 @@ export default function DashboardCoordinador() {
               </div>
               <div className="text-xs text-gray-500">
                 Evaluados: <strong className="text-gray-900">{fmt(stats.metaSensibilizacion.evaluadas)}</strong>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">Contacta al administrador para configurar tu meta.</p>
+          )}
+        </div>
+
+        {/* Meta Evaluaciones */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              Meta Evaluaciones {year}
+            </h2>
+            {stats.metaEvaluaciones.configurada ? (
+              <span
+                className="text-3xl font-bold"
+                style={{ color: metaBarColor(stats.metaEvaluaciones.porcentaje) }}
+              >
+                {stats.metaEvaluaciones.porcentaje}%
+              </span>
+            ) : (
+              <span className="text-xs text-amber-600 font-medium">Sin configurar</span>
+            )}
+          </div>
+          {stats.metaEvaluaciones.configurada ? (
+            <>
+              <div className="w-full bg-gray-100 rounded-full h-4 mb-3">
+                <div
+                  className="h-4 rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(stats.metaEvaluaciones.porcentaje, 100)}%`,
+                    backgroundColor: metaBarColor(stats.metaEvaluaciones.porcentaje),
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>
+                  Evaluaciones: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.actual)}</strong>
+                </span>
+                <span>
+                  Meta: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.meta)}</strong>
+                </span>
               </div>
             </>
           ) : (
