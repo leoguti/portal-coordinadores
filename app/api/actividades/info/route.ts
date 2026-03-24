@@ -39,29 +39,16 @@ export async function GET(req: NextRequest) {
   // Si viene telefono, verificar si ya evaluó esta actividad
   let yaEvaluo = false;
   if (telefono) {
-    // 1. Buscar persona por telefono
-    const personaFilter = encodeURIComponent(`{Telefono}="${telefono}"`);
-    const personaRes = await fetch(
-      `https://api.airtable.com/v0/${baseId}/Personas%20Evaluadas?filterByFormula=${personaFilter}&maxRecords=1&fields[]=Telefono`,
+    const evalFilter = encodeURIComponent(
+      `AND(FIND("${telefono}", ARRAYJOIN({telefono})), FIND("${id}", ARRAYJOIN({idactividad})))`
+    );
+    const evalRes = await fetch(
+      `https://api.airtable.com/v0/${baseId}/Evaluaciones?filterByFormula=${evalFilter}&maxRecords=1&fields[]=Timestamp`,
       { headers: airtableHeaders, cache: "no-store" }
     );
-    if (personaRes.ok) {
-      const personaData = await personaRes.json();
-      const personaId = personaData.records?.[0]?.id;
-      if (personaId) {
-        // 2. Buscar evaluacion para esa persona + actividad usando idactividad (lookup)
-        const evalFilter = encodeURIComponent(
-          `AND(FIND("${personaId}", ARRAYJOIN({Persona Evaluada})), FIND("${id}", ARRAYJOIN({idactividad})))`
-        );
-        const evalRes = await fetch(
-          `https://api.airtable.com/v0/${baseId}/Evaluaciones?filterByFormula=${evalFilter}&maxRecords=1&fields[]=Timestamp`,
-          { headers: airtableHeaders, cache: "no-store" }
-        );
-        if (evalRes.ok) {
-          const evalData = await evalRes.json();
-          yaEvaluo = (evalData.records?.length ?? 0) > 0;
-        }
-      }
+    if (evalRes.ok) {
+      const evalData = await evalRes.json();
+      yaEvaluo = (evalData.records?.length ?? 0) > 0;
     }
   }
 
