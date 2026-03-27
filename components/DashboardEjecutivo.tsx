@@ -327,12 +327,6 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               </strong>
             </span>
           </div>
-          <div className="text-xs text-gray-500">
-            Evaluados:{" "}
-            <strong className="text-gray-900">
-              {fmt(stats.metasSensibilizacion.global.evaluadas)}
-            </strong>
-          </div>
           <button
             onClick={() => startTransition(() => setExpandSens(!expandSens))}
             className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
@@ -347,7 +341,6 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     <th className="text-left p-2 font-semibold text-gray-600">Coordinador</th>
                     <th className="text-right p-2 font-semibold text-gray-600">Meta</th>
                     <th className="text-right p-2 font-semibold text-gray-600">Actual</th>
-                    <th className="text-right p-2 font-semibold text-gray-600">Evaluadas</th>
                     <th className="text-right p-2 font-semibold text-gray-600">%</th>
                     <th className="text-center p-2 w-8"></th>
                   </tr>
@@ -358,7 +351,6 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                       <td className="p-2 font-medium">{c.nombre}</td>
                       <td className="p-2 text-right">{fmt(c.meta)}</td>
                       <td className="p-2 text-right">{fmt(c.actual)}</td>
-                      <td className="p-2 text-right">{fmt(c.evaluadas)}</td>
                       <td className="p-2 text-right font-bold">{c.porcentaje}%</td>
                       <td className="p-2 text-center">
                         <span className={`inline-block w-2.5 h-2.5 rounded-full ${semaforoColor[c.semaforo]}`} />
@@ -374,9 +366,6 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     </td>
                     <td className="p-2 text-right">
                       {fmt(stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.actual, 0))}
-                    </td>
-                    <td className="p-2 text-right">
-                      {fmt(stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.evaluadas, 0))}
                     </td>
                     <td className="p-2 text-right">
                       {stats.metasSensibilizacion.global.porcentaje}%
