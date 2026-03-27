@@ -312,9 +312,6 @@ export default function DashboardCoordinador() {
                   Meta: <strong className="text-gray-900">{fmt(stats.metaSensibilizacion.meta)}</strong>
                 </span>
               </div>
-              <div className="text-xs text-gray-500">
-                Evaluados: <strong className="text-gray-900">{fmt(stats.metaSensibilizacion.evaluadas)}</strong>
-              </div>
             </>
           ) : (
             <p className="text-sm text-gray-500">Contacta al administrador para configurar tu meta.</p>

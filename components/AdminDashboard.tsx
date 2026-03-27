@@ -356,7 +356,6 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
         />
         <div className="mt-2 flex gap-6 text-sm text-gray-600">
           <span>Sensibilizadas: <strong>{stats.metasSensibilizacion.global.actual.toLocaleString("es-CO")}</strong></span>
-          <span>Evaluadas: <strong>{stats.metasSensibilizacion.global.evaluadas.toLocaleString("es-CO")}</strong></span>
         </div>
         {expandedSensibilizacion && (
           <div className="mt-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
@@ -366,7 +365,6 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                   <th className="text-left p-3 font-semibold text-gray-700">Coordinador</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Meta</th>
                   <th className="text-right p-3 font-semibold text-gray-700">Actual</th>
-                  <th className="text-right p-3 font-semibold text-gray-700">Evaluadas</th>
                   <th className="text-right p-3 font-semibold text-gray-700">%</th>
                   <th className="text-center p-3 font-semibold text-gray-700">Estado</th>
                 </tr>
@@ -377,7 +375,6 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                     <td className="p-3 font-medium">{c.nombre}</td>
                     <td className="p-3 text-right">{c.meta.toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right">{c.actual.toLocaleString("es-CO")}</td>
-                    <td className="p-3 text-right">{(c.evaluadas || 0).toLocaleString("es-CO")}</td>
                     <td className="p-3 text-right font-bold">{c.porcentaje}%</td>
                     <td className="p-3 text-center">
                       <span className={`inline-block w-3 h-3 rounded-full ${semaforoColor[c.semaforo]}`} title={c.semaforo}></span>
@@ -393,9 +390,6 @@ export default function AdminDashboard({ userName }: AdminDashboardProps) {
                   </td>
                   <td className="p-3 text-right">
                     {stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + c.actual, 0).toLocaleString("es-CO")}
-                  </td>
-                  <td className="p-3 text-right">
-                    {stats.metasSensibilizacion.porCoordinador.reduce((s, c) => s + (c.evaluadas || 0), 0).toLocaleString("es-CO")}
                   </td>
                   <td className="p-3 text-right">
                     {(() => {
