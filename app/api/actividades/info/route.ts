@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!res.ok) {
-    return NextResponse.json({ error: "Actividad no encontrada" }, { status: 404 });
+    return NextResponse.json({ encontrada: false, error: "Actividad no encontrada" }, { status: 200 });
   }
 
   const data = await res.json();
@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
+    encontrada: true,
     id: data.id,
     nombre: fields["Nombre de la Actividad"] || "",
     fecha: fields["Fecha"] || "",
