@@ -29,6 +29,7 @@ interface ActividadFormProps {
   showImageUpload?: boolean;
   showDocumentUpload?: boolean;
   onModalidadEvaluacionChange?: (value: string) => void;
+  evalUploadSection?: React.ReactNode;
 }
 
 export default function ActividadForm({
@@ -41,6 +42,7 @@ export default function ActividadForm({
   showImageUpload = true,
   showDocumentUpload = true,
   onModalidadEvaluacionChange,
+  evalUploadSection,
 }: ActividadFormProps) {
   // Form state
   const [fecha, setFecha] = useState(initialData?.fecha || "");
@@ -401,6 +403,11 @@ export default function ActividadForm({
                   Adjunta fotos o PDF de los formularios físicos de evaluación.
                 </p>
               </div>
+            )}
+
+            {/* Slot para modo editar: uploader externo inyectado aquí */}
+            {!showDocumentUpload && evalUploadSection && (
+              <div>{evalUploadSection}</div>
             )}
           </div>
         )}

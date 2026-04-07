@@ -396,67 +396,67 @@ export default function EditarActividadPage() {
             showImageUpload={false}
             showDocumentUpload={false}
             onModalidadEvaluacionChange={setCurrentModalidadEval}
-          />
+            evalUploadSection={
+              actividad.fields.Tipo === "Sensibilización" &&
+              (currentModalidadEval === "Híbrida" || currentModalidadEval === "Solo manual") ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Soporte de evaluaciones en papel <span className="text-red-500">*</span>
+                  </label>
 
-          {/* Evaluaciones Management Section - junto a modalidad, solo si requiere físico */}
-          {actividad.fields.Tipo === "Sensibilización" &&
-            (currentModalidadEval === "Híbrida" || currentModalidadEval === "Solo manual") && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Soporte de evaluaciones en papel
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">Fotos o PDF de los formularios físicos de evaluación.</p>
-
-              {existingEvals.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-sm text-gray-600 mb-3">
-                    Archivos actuales ({existingEvals.length - evalsToRemove.size} de {existingEvals.length} se conservan)
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {existingEvals.map((evalFile) => {
-                      const isMarkedForRemoval = evalsToRemove.has(evalFile.id);
-                      const isPdf = evalFile.type === "application/pdf";
-                      const thumbUrl = evalFile.thumbnails?.large?.url || evalFile.url;
-                      return (
-                        <div key={evalFile.id} className="relative group">
-                          <div className={`aspect-square rounded-lg overflow-hidden bg-gray-100 ${isMarkedForRemoval ? "opacity-40" : ""}`}>
-                            {isPdf ? (
-                              <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
-                                <span className="text-4xl">📄</span>
-                                <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                  {existingEvals.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-600 mb-3">
+                        Archivos actuales ({existingEvals.length - evalsToRemove.size} de {existingEvals.length} se conservan)
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {existingEvals.map((evalFile) => {
+                          const isMarkedForRemoval = evalsToRemove.has(evalFile.id);
+                          const isPdf = evalFile.type === "application/pdf";
+                          const thumbUrl = evalFile.thumbnails?.large?.url || evalFile.url;
+                          return (
+                            <div key={evalFile.id} className="relative group">
+                              <div className={`aspect-square rounded-lg overflow-hidden bg-gray-100 ${isMarkedForRemoval ? "opacity-40" : ""}`}>
+                                {isPdf ? (
+                                  <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                                    <span className="text-4xl">📄</span>
+                                    <span className="text-xs text-red-600 font-medium mt-1">PDF</span>
+                                  </div>
+                                ) : (
+                                  <img src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`} alt={evalFile.filename} className="w-full h-full object-cover" />
+                                )}
                               </div>
-                            ) : (
-                              <img src={`/api/image-proxy?url=${encodeURIComponent(thumbUrl)}`} alt={evalFile.filename} className="w-full h-full object-cover" />
-                            )}
-                          </div>
-                          {isMarkedForRemoval ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
-                              <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded mb-2">Se eliminará</span>
-                              <button type="button" onClick={() => toggleRemoveEval(evalFile.id)} className="text-xs text-blue-600 hover:text-blue-800 underline">Deshacer</button>
+                              {isMarkedForRemoval ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
+                                  <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded mb-2">Se eliminará</span>
+                                  <button type="button" onClick={() => toggleRemoveEval(evalFile.id)} className="text-xs text-blue-600 hover:text-blue-800 underline">Deshacer</button>
+                                </div>
+                              ) : (
+                                <button type="button" onClick={() => toggleRemoveEval(evalFile.id)} disabled={saving} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                              )}
+                              <p className="text-xs text-gray-500 mt-1 truncate">{evalFile.filename}</p>
                             </div>
-                          ) : (
-                            <button type="button" onClick={() => toggleRemoveEval(evalFile.id)} disabled={saving} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1 truncate">{evalFile.filename}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-              <ImageUpload
-                images={newEvals}
-                onChange={setNewEvals}
-                maxFiles={Math.max(0, 5 - (existingEvals.length - evalsToRemove.size))}
-                maxSizeMB={4}
-                disabled={saving}
-                acceptPdf
-              />
-            </div>
-          )}
+                  <ImageUpload
+                    images={newEvals}
+                    onChange={setNewEvals}
+                    maxFiles={Math.max(0, 5 - (existingEvals.length - evalsToRemove.size))}
+                    maxSizeMB={4}
+                    disabled={saving}
+                    acceptPdf
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Adjunta fotos o PDF de los formularios físicos de evaluación.</p>
+                </div>
+              ) : null
+            }
+          />
 
           {/* Photo Management Section */}
           <div className="mt-8 pt-8 border-t border-gray-200">
