@@ -62,28 +62,28 @@ export default function ActividadForm({
   const [evaluaciones, setEvaluaciones] = useState<ImageFile[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Calcular fechas permitidas (regla de 7 días de gracia)
+  // Calcular fechas permitidas (regla de 5 días de gracia)
   const { minDate, maxDate } = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
+
     // Fecha máxima: hoy (no permitir futuro)
     const max = hoy.toISOString().split('T')[0];
-    
-    // Fecha mínima: basada en los 7 días de gracia
-    // Si una actividad de un mes se puede editar hasta 7 días después del fin de ese mes,
+
+    // Fecha mínima: basada en los 5 días de gracia
+    // Si una actividad de un mes se puede editar hasta 5 días después del fin de ese mes,
     // entonces la fecha mínima permitida es el mes cuyo cierre aún no ha llegado
-    
+
     // Calcular qué mes es el más antiguo que aún está abierto
     const mesAnterior = new Date(hoy);
     mesAnterior.setMonth(mesAnterior.getMonth() - 1);
-    
+
     // Último día del mes anterior
     const ultimoDiaMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0);
-    
+
     // Fecha de cierre del mes anterior
     const fechaCierreMesAnterior = new Date(ultimoDiaMesAnterior);
-    fechaCierreMesAnterior.setDate(fechaCierreMesAnterior.getDate() + 7);
+    fechaCierreMesAnterior.setDate(fechaCierreMesAnterior.getDate() + 5);
     
     // Si aún no ha pasado la fecha de cierre del mes anterior, podemos crear actividades de ese mes
     let min: string;
@@ -192,7 +192,7 @@ export default function ActividadForm({
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <p className="mt-1 text-sm text-gray-500">
-            Solo puedes registrar actividades dentro del período de gracia (7 días después del fin de mes). 
+            Solo puedes registrar actividades dentro del período de gracia (5 días después del fin de mes).
             Rango permitido: {new Date(minDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })} - Hoy
           </p>
         </div>
