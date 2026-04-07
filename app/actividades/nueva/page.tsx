@@ -416,11 +416,11 @@ export default function NuevaActividadPage() {
               </div>
             )}
 
-            {/* Personas Evaluadas - Solo Sensibilización */}
+            {/* Personas Evaluadas en papel - Solo Sensibilización */}
             {showCantidadParticipantes && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Personas Evaluadas <span className="text-red-500">*</span>
+                  Evaluadas en papel / presencial <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -430,9 +430,11 @@ export default function NuevaActividadPage() {
                   value={personasEvaluadas}
                   onChange={(e) => setPersonasEvaluadas(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Personas que presentaron evaluación"
+                  placeholder="Número de evaluaciones físicas recolectadas"
                 />
-                <p className="text-xs text-gray-500 mt-1">Debe ser menor o igual a la cantidad de participantes</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Solo evaluaciones en papel o presenciales. Las respuestas por WhatsApp se registran automáticamente.
+                </p>
               </div>
             )}
 

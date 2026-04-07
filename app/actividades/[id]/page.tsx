@@ -423,7 +423,7 @@ export default function ActividadDetailPage() {
                 )}
                 {actividad.fields["Personas Evaluadas"] != null && (
                   <div>
-                    <dt className="font-medium text-gray-500">Personas Evaluadas</dt>
+                    <dt className="font-medium text-gray-500">Evaluadas en papel / presencial</dt>
                     <dd className="text-gray-900">{actividad.fields["Personas Evaluadas"]}</dd>
                   </div>
                 )}
