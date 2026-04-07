@@ -150,6 +150,7 @@ export async function PUT(
       modalidad,
       perfilAsistentes,
       cantidadParticipantes,
+      modalidadEvaluacion,
       observaciones,
       fotografias,
       documentos,
@@ -168,6 +169,7 @@ export async function PUT(
     if (modalidad !== undefined) fields["Modalidad"] = modalidad || [];
     if (perfilAsistentes !== undefined) fields["Perfil de Asistentes"] = perfilAsistentes || null;
     if (cantidadParticipantes !== undefined) fields["Cantidad de Participantes"] = cantidadParticipantes || null;
+    if (modalidadEvaluacion !== undefined) fields["Modalidad Evaluacion"] = modalidadEvaluacion || null;
     if (observaciones !== undefined) fields["Observaciones"] = observaciones || null;
     if (fotografias !== undefined) fields["Fotografias"] = fotografias;
     if (documentos !== undefined) fields["Listado Asistencia"] = documentos;

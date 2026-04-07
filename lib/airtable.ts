@@ -528,6 +528,7 @@ export async function createActividad(params: {
   perfilAsistentes?: string; // singleSelect en Airtable
   cantidadParticipantes?: number;
   personasEvaluadas?: number;
+  modalidadEvaluacion?: string;
   observaciones?: string;
 }): Promise<Actividad> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -552,6 +553,7 @@ export async function createActividad(params: {
         ...(params.perfilAsistentes && { "Perfil de Asistentes": params.perfilAsistentes }),
         ...(params.cantidadParticipantes && { "Cantidad de Participantes": params.cantidadParticipantes }),
         ...(params.personasEvaluadas && { "Personas Evaluadas": params.personasEvaluadas }),
+        ...(params.modalidadEvaluacion && { "Modalidad Evaluacion": params.modalidadEvaluacion }),
         ...(params.observaciones && { Observaciones: params.observaciones }),
         ...(params.estado && { Estado: params.estado }),
         Coordinador: [params.coordinatorRecordId], // Linked record array

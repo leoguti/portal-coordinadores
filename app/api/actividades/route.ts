@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, fecha, descripcion, tipo, estado, cultivo, municipioId, modalidad, perfilAsistentes, cantidadParticipantes, personasEvaluadas, observaciones } = body;
+    const { name, fecha, descripcion, tipo, estado, cultivo, municipioId, modalidad, perfilAsistentes, cantidadParticipantes, personasEvaluadas, modalidadEvaluacion, observaciones } = body;
 
     // Validate required fields
     if (!name || !fecha || !tipo) {
@@ -151,6 +151,7 @@ export async function POST(request: Request) {
       perfilAsistentes,
       cantidadParticipantes,
       personasEvaluadas: personasEvaluadas ? Number(personasEvaluadas) : undefined,
+      modalidadEvaluacion,
       observaciones,
     });
 

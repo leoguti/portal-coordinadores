@@ -38,6 +38,7 @@ interface Actividad {
     Fotografias?: AirtableAttachment[];
     "Listado Asistencia"?: AirtableAttachment[];
     "Evaluaciones"?: AirtableAttachment[];
+    "Modalidad Evaluacion"?: string;
   };
 }
 
@@ -176,6 +177,7 @@ export default function EditarActividadPage() {
           cultivo: data.cultivo || undefined,
           municipioId: data.municipio?.id,
           cantidadParticipantes: data.cantidadParticipantes ? parseInt(data.cantidadParticipantes) : undefined,
+          modalidadEvaluacion: data.modalidadEvaluacion || undefined,
           observaciones: data.observaciones || undefined,
           fotografias: remainingPhotos,
           documentos: remainingDocs,
@@ -360,6 +362,7 @@ export default function EditarActividadPage() {
       ? { id: actividad.fields.Municipio[0], mundep: actividad.fields["mundep (from Municipio)"][0] }
       : null,
     cantidadParticipantes: actividad.fields["Cantidad de Participantes"]?.toString() || "",
+    modalidadEvaluacion: actividad.fields["Modalidad Evaluacion"] || "",
     observaciones: actividad.fields.Observaciones || "",
   };
 

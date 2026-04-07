@@ -15,6 +15,7 @@ export interface ActividadFormData {
   municipio: { id: string; mundep: string } | null;
   cantidadParticipantes: string;
   personasEvaluadas: string;
+  modalidadEvaluacion: string;
   observaciones: string;
 }
 
@@ -50,6 +51,7 @@ export default function ActividadForm({
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(initialData?.municipio || null);
   const [cantidadParticipantes, setCantidadParticipantes] = useState(initialData?.cantidadParticipantes || "");
   const [personasEvaluadas, setPersonasEvaluadas] = useState(initialData?.personasEvaluadas || "");
+  const [modalidadEvaluacion, setModalidadEvaluacion] = useState(initialData?.modalidadEvaluacion || "");
   const [observaciones, setObservaciones] = useState(initialData?.observaciones || "");
   const [fotografias, setFotografias] = useState<ImageFile[]>([]);
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
@@ -98,6 +100,8 @@ export default function ActividadForm({
   const showPerfil = tipo !== "" && !isVisitaAcopio;
   const showCultivo = tipo === "Recoleccion";
   const showCantidadParticipantes = isSensibilizacion;
+  const requiereEvalPapel = isSensibilizacion && (modalidadEvaluacion === "Híbrida" || modalidadEvaluacion === "Solo manual");
+  const requiereAdjuntoEval = requiereEvalPapel;
 
   const toggleModalidad = (value: string) => {
     setModalidad(prev => 
@@ -117,12 +121,24 @@ export default function ActividadForm({
       return;
     }
 
+    // Validar modalidad de evaluación si es sensibilización
+    if (isSensibilizacion && !modalidadEvaluacion) {
+      setValidationError("Debes seleccionar la modalidad de evaluación");
+      return;
+    }
+
     // Validar personas evaluadas <= participantes
-    if (showCantidadParticipantes && personasEvaluadas && cantidadParticipantes) {
+    if (requiereEvalPapel && personasEvaluadas && cantidadParticipantes) {
       if (Number(personasEvaluadas) > Number(cantidadParticipantes)) {
         setValidationError("Las personas evaluadas no pueden ser más que los participantes");
         return;
       }
+    }
+
+    // Validar adjunto obligatorio si hay evaluación en papel
+    if (requiereAdjuntoEval && showDocumentUpload && evaluaciones.length === 0) {
+      setValidationError("Debes adjuntar el soporte de las evaluaciones en papel");
+      return;
     }
 
     await onSubmit({
@@ -135,7 +151,8 @@ export default function ActividadForm({
       cultivo: showCultivo ? cultivo : "",
       municipio,
       cantidadParticipantes: showCantidadParticipantes ? cantidadParticipantes : "",
-      personasEvaluadas: showCantidadParticipantes ? personasEvaluadas : "",
+      personasEvaluadas: requiereEvalPapel ? personasEvaluadas : "",
+      modalidadEvaluacion: isSensibilizacion ? modalidadEvaluacion : "",
       observaciones,
     }, fotografias, documentos, evaluaciones);
   };
@@ -309,8 +326,39 @@ export default function ActividadForm({
           </div>
         )}
 
-        {/* Personas Evaluadas en papel - Solo Sensibilización */}
-        {showCantidadParticipantes && (
+        {/* Modalidad de Evaluación - Solo Sensibilización */}
+        {isSensibilizacion && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Modalidad de Evaluación <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {[
+                { value: "Solo WhatsApp", label: "Solo WhatsApp", desc: "Los participantes respondieron por WhatsApp" },
+                { value: "Híbrida", label: "Híbrida (WhatsApp + papel)", desc: "Combinación de WhatsApp y formularios físicos" },
+                { value: "Solo manual", label: "Solo manual / papel", desc: "Evaluaciones únicamente en papel o presencial" },
+              ].map((op) => (
+                <label key={op.value} className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="modalidadEvaluacion"
+                    value={op.value}
+                    checked={modalidadEvaluacion === op.value}
+                    onChange={(e) => setModalidadEvaluacion(e.target.value)}
+                    className="mt-0.5 rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>
+                    <span className="font-medium text-gray-800">{op.label}</span>
+                    <span className="text-xs text-gray-500 block">{op.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Personas Evaluadas en papel - Solo si hay evaluación física */}
+        {requiereEvalPapel && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Evaluadas en papel / presencial <span className="text-red-500">*</span>
@@ -326,7 +374,7 @@ export default function ActividadForm({
               placeholder="Número de evaluaciones físicas recolectadas"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Solo evaluaciones en papel o presenciales. Las respuestas por WhatsApp se registran automáticamente.
+              Cantidad de formularios físicos recolectados. Las respuestas por WhatsApp se registran aparte automáticamente.
             </p>
           </div>
         )}
@@ -391,11 +439,11 @@ export default function ActividadForm({
           </div>
         )}
 
-        {/* Evaluaciones - Solo Sensibilización */}
-        {isSensibilizacion && showDocumentUpload && (
+        {/* Evaluaciones adjunto - Solo si hay evaluación física */}
+        {requiereAdjuntoEval && showDocumentUpload && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Evaluaciones
+              Soporte de evaluaciones en papel <span className="text-red-500">*</span>
             </label>
             <ImageUpload
               images={evaluaciones}
@@ -405,6 +453,9 @@ export default function ActividadForm({
               disabled={loading}
               acceptPdf
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Adjunta fotos o PDF de los formularios físicos de evaluación.
+            </p>
           </div>
         )}
 
