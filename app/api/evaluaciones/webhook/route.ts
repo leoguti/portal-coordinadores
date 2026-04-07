@@ -48,25 +48,22 @@ export async function POST(req: NextRequest) {
   const { actividadId, telefono, respuestaP1, respuestaP2, respuestaP3 } = body;
   const puntaje = Number(body.puntaje);
 
-  if (!telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || isNaN(puntaje)) {
+  if (!telefono || !respuestaP1 || !respuestaP2 || !respuestaP3 || isNaN(puntaje) || puntaje < 0) {
     return NextResponse.json({ error: "Campos requeridos faltantes" }, { status: 400 });
   }
+
+  // Normalizar teléfono: quitar prefijo "whatsapp:" si viene de TextIt
+  const telefonoNorm = telefono.replace(/^whatsapp:/, "");
 
   // 1. Buscar o crear Persona Evaluada
   let personaId: string | null = null;
 
-  const personaExistente = await getPersonaEvaluadaByTelefono(telefono);
+  const personaExistente = await getPersonaEvaluadaByTelefono(telefonoNorm);
   if (personaExistente) {
     personaId = personaExistente.id;
   } else {
-    // Persona nueva — nombre y documento son requeridos
+    // Persona nueva — crear con los datos disponibles (nombre/documento opcionales)
     const { nombre, documento, municipio } = body;
-    if (!nombre || !documento) {
-      return NextResponse.json(
-        { error: "nombre y documento requeridos para persona nueva" },
-        { status: 400 }
-      );
-    }
 
     // Buscar municipio en Airtable si se proveyó
     let municipioId: string | null = null;
@@ -74,7 +71,12 @@ export async function POST(req: NextRequest) {
       municipioId = await findMunicipioByName(municipio);
     }
 
-    personaId = await createPersonaEvaluada({ nombre, documento, telefono, municipioId });
+    personaId = await createPersonaEvaluada({
+      nombre: nombre || "",
+      documento: documento || "",
+      telefono: telefonoNorm,
+      municipioId,
+    });
     if (!personaId) {
       return NextResponse.json({ error: "Error creando persona evaluada" }, { status: 500 });
     }
