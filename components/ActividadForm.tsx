@@ -28,6 +28,7 @@ interface ActividadFormProps {
   uploadProgress?: string | null;
   showImageUpload?: boolean;
   showDocumentUpload?: boolean;
+  onModalidadEvaluacionChange?: (value: string) => void;
 }
 
 export default function ActividadForm({
@@ -39,6 +40,7 @@ export default function ActividadForm({
   uploadProgress = null,
   showImageUpload = true,
   showDocumentUpload = true,
+  onModalidadEvaluacionChange,
 }: ActividadFormProps) {
   // Form state
   const [fecha, setFecha] = useState(initialData?.fecha || "");
@@ -344,7 +346,10 @@ export default function ActividadForm({
                     name="modalidadEvaluacion"
                     value={op.value}
                     checked={modalidadEvaluacion === op.value}
-                    onChange={(e) => setModalidadEvaluacion(e.target.value)}
+                    onChange={(e) => {
+                      setModalidadEvaluacion(e.target.value);
+                      onModalidadEvaluacionChange?.(e.target.value);
+                    }}
                     className="mt-0.5 rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span>
