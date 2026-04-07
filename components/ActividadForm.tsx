@@ -357,25 +357,46 @@ export default function ActividadForm({
           </div>
         )}
 
-        {/* Personas Evaluadas en papel - Solo si hay evaluación física */}
+        {/* Personas Evaluadas en papel + adjunto soporte - Solo si hay evaluación física */}
         {requiereEvalPapel && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Evaluadas en papel / presencial <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              max={cantidadParticipantes || undefined}
-              value={personasEvaluadas}
-              onChange={(e) => setPersonasEvaluadas(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Número de evaluaciones físicas recolectadas"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Cantidad de formularios físicos recolectados. Las respuestas por WhatsApp se registran aparte automáticamente.
-            </p>
+          <div className="space-y-4 pl-4 border-l-2 border-blue-100">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Evaluadas en papel / presencial <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                max={cantidadParticipantes || undefined}
+                value={personasEvaluadas}
+                onChange={(e) => setPersonasEvaluadas(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Número de evaluaciones físicas recolectadas"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Cantidad de formularios físicos recolectados.
+              </p>
+            </div>
+
+            {showDocumentUpload && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Soporte de evaluaciones en papel <span className="text-red-500">*</span>
+                </label>
+                <ImageUpload
+                  images={evaluaciones}
+                  onChange={setEvaluaciones}
+                  maxFiles={5}
+                  maxSizeMB={3}
+                  disabled={loading}
+                  acceptPdf
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Adjunta fotos o PDF de los formularios físicos de evaluación.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -439,25 +460,6 @@ export default function ActividadForm({
           </div>
         )}
 
-        {/* Evaluaciones adjunto - Solo si hay evaluación física */}
-        {requiereAdjuntoEval && showDocumentUpload && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Soporte de evaluaciones en papel <span className="text-red-500">*</span>
-            </label>
-            <ImageUpload
-              images={evaluaciones}
-              onChange={setEvaluaciones}
-              maxFiles={5}
-              maxSizeMB={3}
-              disabled={loading}
-              acceptPdf
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Adjunta fotos o PDF de los formularios físicos de evaluación.
-            </p>
-          </div>
-        )}
 
         {/* Municipio */}
         <div>
