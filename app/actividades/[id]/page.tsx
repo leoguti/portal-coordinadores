@@ -341,7 +341,7 @@ export default function ActividadDetailPage() {
                     <tbody className="divide-y divide-gray-100">
                       {evaluaciones.evaluaciones.map((e) => (
                         <tr key={e.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 text-gray-900">{e.nombre || "—"}</td>
+                          <td className="px-4 py-2 text-gray-900">{e.nombre || <span className="text-gray-400 italic">{e.telefono}</span>}</td>
                           <td className="px-4 py-2 text-gray-500">{e.telefono}</td>
                           <td className="px-4 py-2 text-center font-mono">{e.respuestaP1.toUpperCase()}</td>
                           <td className="px-4 py-2 text-center font-mono">{e.respuestaP2.toUpperCase()}</td>
