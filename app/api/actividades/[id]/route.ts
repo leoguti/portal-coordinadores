@@ -145,6 +145,7 @@ export async function PUT(
       fecha,
       descripcion,
       tipo,
+      estado,
       cultivo,
       municipioId,
       modalidad,
@@ -164,6 +165,7 @@ export async function PUT(
     if (fecha !== undefined) fields["Fecha"] = fecha;
     if (descripcion !== undefined) fields["Descripcion"] = descripcion;
     if (tipo !== undefined) fields["Tipo"] = tipo;
+    if (estado !== undefined) fields["Estado"] = estado;
     if (cultivo !== undefined) fields["Cultivo"] = cultivo || null;
     if (municipioId !== undefined) fields["Municipio"] = municipioId ? [municipioId] : [];
     if (modalidad !== undefined) fields["Modalidad"] = modalidad || [];

@@ -28,6 +28,7 @@ interface Actividad {
     Fecha?: string;
     Descripcion?: string;
     Tipo?: string;
+    Estado?: string;
     Modalidad?: string[];
     "Perfil de Asistentes"?: string;
     Cultivo?: string;
@@ -166,6 +167,10 @@ export default function EditarActividadPage() {
 
       // Step 1: Update activity fields + remaining photos + remaining docs + remaining evals
       setUploadProgress("Guardando cambios...");
+      // Si la actividad estaba "En curso", al guardar el formulario completo pasa a "Completada"
+      const estadoActual = actividad?.fields?.Estado;
+      const nuevoEstado = estadoActual === "En curso" ? "Completada" : undefined;
+
       const response = await fetch(`/api/actividades/${actividadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -174,6 +179,7 @@ export default function EditarActividadPage() {
           fecha: data.fecha,
           descripcion: data.descripcion,
           tipo: data.tipo,
+          estado: nuevoEstado,
           modalidad: data.modalidad,
           perfilAsistentes: data.perfilAsistentes || undefined,
           cultivo: data.cultivo || undefined,
