@@ -42,24 +42,24 @@ export async function GET(request: Request) {
   const now = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Bogota" })
   );
-  const dia = isTest ? 7 : now.getDate(); // In test mode, simulate day 7 (urgent)
+  const dia = isTest ? 5 : now.getDate(); // In test mode, simulate day 5 (urgent)
 
-  // Only send on days 1, 4, and 7
-  if (!isTest && ![1, 4, 7].includes(dia)) {
+  // Only send on days 1, 3, and 5
+  if (!isTest && ![1, 3, 5].includes(dia)) {
     return NextResponse.json({ message: `Día ${dia}: no es día de alerta`, sent: 0 });
   }
 
-  const diasRestantes = 7 - dia;
+  const diasRestantes = 5 - dia;
   let asunto: string;
   let urgencia: string;
   let colorUrgencia: string;
   if (dia === 1) {
-    asunto = "Tienes registros de Kardex pendientes - 7 días para el cierre";
-    urgencia = "Tienes hasta el día 7 de este mes para incluirlos en una orden de servicio.";
+    asunto = "Tienes registros de Kardex pendientes - 5 días para el cierre";
+    urgencia = "Tienes hasta el día 5 de este mes para incluirlos en una orden de servicio.";
     colorUrgencia = "#f59e0b"; // amarillo
-  } else if (dia === 4) {
-    asunto = "Faltan 3 días - Kardex pendientes de incluir en orden";
-    urgencia = "Faltan solo 3 días para el cierre. Después del día 7 estos registros quedarán sin orden.";
+  } else if (dia === 3) {
+    asunto = "Faltan 2 días - Kardex pendientes de incluir en orden";
+    urgencia = "Faltan solo 2 días para el cierre. Después del día 5 estos registros quedarán sin orden.";
     colorUrgencia = "#f97316"; // naranja
   } else {
     asunto = "ÚLTIMO DÍA - Kardex pendientes quedarán huérfanos";

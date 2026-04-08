@@ -129,11 +129,11 @@ export async function PUT(
       );
     }
 
-    // Verificar la regla de los 7 días
+    // Verificar la regla de los 5 días
     const fechaActividad = existingActividad.fields?.Fecha;
     if (fechaActividad && !puedeModificarActividad(fechaActividad)) {
       return NextResponse.json(
-        { error: "Esta actividad ya no se puede modificar. Han pasado más de 7 días desde el fin del mes de la actividad." },
+        { error: "Esta actividad ya no se puede modificar. Han pasado más de 5 días desde el fin del mes de la actividad." },
         { status: 403 }
       );
     }
@@ -270,11 +270,11 @@ export async function DELETE(
       );
     }
 
-    // Verificar la regla de los 7 días
+    // Verificar la regla de los 5 días
     const fechaActividad = actividad.fields?.Fecha;
     if (fechaActividad && !puedeModificarActividad(fechaActividad)) {
       return NextResponse.json(
-        { error: "Esta actividad ya no se puede eliminar. Han pasado más de 7 días desde el fin del mes de la actividad." },
+        { error: "Esta actividad ya no se puede eliminar. Han pasado más de 5 días desde el fin del mes de la actividad." },
         { status: 403 }
       );
     }

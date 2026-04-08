@@ -218,22 +218,22 @@ export default function SaldosCentrosPage() {
     setSaldos(centrosConMovimientos);
   };
 
-  // Función para verificar si el mes está cerrado (7 días después de fin de mes)
+  // Función para verificar si el mes está cerrado (5 días después de fin de mes)
   const esMesCerrado = (mesStr: string): boolean => {
     if (!mesStr || typeof mesStr !== 'string' || !mesStr.includes('-')) {
       return false;
     }
-    
+
     const [anio, mesNum] = mesStr.split('-');
     if (!anio || !mesNum) {
       return false;
     }
-    
+
     const ultimoDiaMes = new Date(parseInt(anio), parseInt(mesNum), 0);
-    
-    // Fecha de cierre = último día del mes + 7 días
+
+    // Fecha de cierre = último día del mes + 5 días
     const fechaCierre = new Date(ultimoDiaMes);
-    fechaCierre.setDate(fechaCierre.getDate() + 7);
+    fechaCierre.setDate(fechaCierre.getDate() + 5);
     
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);

@@ -400,21 +400,21 @@ function KardexPageInner() {
   // ========== CÁLCULOS DE RESÚMENES ==========
   
   // Fecha actual para determinar períodos abiertos vs cerrados
-  // REGLA DE NEGOCIO: Un periodo se cierra 7 días después de terminar
+  // REGLA DE NEGOCIO: Un periodo se cierra 5 días después de terminar
   const hoy = new Date();
   const añoActual = hoy.getFullYear();
   const mesActual = hoy.getMonth() + 1; // 1-12
-  
-  // Función para determinar si un mes está cerrado (más de 7 días después del fin del mes)
+
+  // Función para determinar si un mes está cerrado (más de 5 días después del fin del mes)
   const esMesCerrado = (mesStr: string): boolean => {
     // mesStr formato: "YYYY-MM"
     if (!mesStr || typeof mesStr !== "string" || !mesStr.includes("-")) return false;
     const [año, mes] = mesStr.split('-').map(Number);
     // Último día del mes
     const ultimoDiaMes = new Date(año, mes, 0); // mes sin restar 1 da el último día del mes anterior
-    // Fecha de cierre = último día del mes + 7 días
+    // Fecha de cierre = último día del mes + 5 días
     const fechaCierre = new Date(ultimoDiaMes);
-    fechaCierre.setDate(fechaCierre.getDate() + 7);
+    fechaCierre.setDate(fechaCierre.getDate() + 5);
     // El mes está cerrado si ya pasó la fecha de cierre
     return hoy > fechaCierre;
   };
