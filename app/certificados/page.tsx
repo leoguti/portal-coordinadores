@@ -28,14 +28,25 @@ export default function CertificadosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Paso 1 – búsqueda
+  // ── Paso 1: búsqueda ──────────────────────────────────────
   const [cedula, setCedula] = useState("");
   const [buscando, setBuscando] = useState(false);
-  const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
+  const [noEncontrado, setNoEncontrado] = useState(false);
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [seleccionada, setSeleccionada] = useState<Ubicacion | null>(null);
 
-  // Paso 2 – datos del certificado
+  // ── Crear generador ───────────────────────────────────────
+  const [creando, setCreando] = useState(false);
+  const [mostrarFormGenerador, setMostrarFormGenerador] = useState(false);
+  const [errorCrear, setErrorCrear] = useState<string | null>(null);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevaDireccion, setNuevaDireccion] = useState("");
+  const [nuevoCultivo, setNuevoCultivo] = useState("");
+  const [nuevoMovil, setNuevoMovil] = useState("");
+  const [nuevoEmail, setNuevoEmail] = useState("");
+  const [nuevoMunicipio, setNuevoMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+
+  // ── Paso 2: datos del certificado ─────────────────────────
   const [fechaDevolucion, setFechaDevolucion] = useState("");
   const [rigidos, setRigidos] = useState("");
   const [flexibles, setFlexibles] = useState("");
@@ -46,12 +57,11 @@ export default function CertificadosPage() {
   const [municipioDevolucion, setMunicipioDevolucion] = useState<{ id: string; mundep: string } | null>(null);
   const [observaciones, setObservaciones] = useState("");
 
-  // Resultado
+  // ── Resultado ─────────────────────────────────────────────
   const [generando, setGenerando] = useState(false);
   const [errorGenerar, setErrorGenerar] = useState<string | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
 
-  // Fechas permitidas
   const hoy = new Date().toISOString().split("T")[0];
   const hace120 = new Date();
   hace120.setDate(hace120.getDate() - 120);
@@ -70,20 +80,23 @@ export default function CertificadosPage() {
   }
   if (!session) return null;
 
+  // ── Handlers ──────────────────────────────────────────────
+
   async function buscarGenerador(e: React.FormEvent) {
     e.preventDefault();
     if (!cedula.trim()) return;
     setBuscando(true);
-    setErrorBusqueda(null);
+    setNoEncontrado(false);
     setUbicaciones([]);
     setSeleccionada(null);
+    setMostrarFormGenerador(false);
 
     const res = await fetch(`/api/certificados/generador?cedula=${encodeURIComponent(cedula.trim())}`);
     const data = await res.json();
     setBuscando(false);
 
     if (!res.ok || !data.found) {
-      setErrorBusqueda("No se encontró ningún generador con esa cédula/NIT.");
+      setNoEncontrado(true);
       return;
     }
 
@@ -92,6 +105,40 @@ export default function CertificadosPage() {
     } else {
       setUbicaciones(data.ubicaciones);
     }
+  }
+
+  async function crearGenerador(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nuevoMunicipio) return;
+    setCreando(true);
+    setErrorCrear(null);
+
+    const res = await fetch("/api/certificados/generador", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cedula: cedula.trim(),
+        nombre: nuevoNombre,
+        direccion: nuevaDireccion,
+        cultivo: nuevoCultivo,
+        municipioId: nuevoMunicipio.id,
+        movil: nuevoMovil,
+        email: nuevoEmail,
+      }),
+    });
+
+    const data = await res.json();
+    setCreando(false);
+
+    if (!res.ok) {
+      setErrorCrear(data.error || "Error creando el generador");
+      return;
+    }
+
+    // Generador creado → seleccionarlo automáticamente
+    setSeleccionada(data);
+    setMostrarFormGenerador(false);
+    setNoEncontrado(false);
   }
 
   async function generarCertificado(e: React.FormEvent) {
@@ -129,38 +176,30 @@ export default function CertificadosPage() {
   }
 
   function reiniciar() {
-    setCedula("");
-    setUbicaciones([]);
-    setSeleccionada(null);
-    setFechaDevolucion("");
-    setRigidos("");
-    setFlexibles("");
-    setMetalicos("");
-    setEmbalaje("");
-    setTriplelavado("PENDIENTE");
-    setLugardevolucion("");
-    setMunicipioDevolucion(null);
-    setObservaciones("");
-    setResultado(null);
-    setErrorGenerar(null);
-    setErrorBusqueda(null);
+    setCedula(""); setUbicaciones([]); setSeleccionada(null);
+    setNoEncontrado(false); setMostrarFormGenerador(false);
+    setNuevoNombre(""); setNuevaDireccion(""); setNuevoCultivo("");
+    setNuevoMovil(""); setNuevoEmail(""); setNuevoMunicipio(null);
+    setFechaDevolucion(""); setRigidos(""); setFlexibles("");
+    setMetalicos(""); setEmbalaje(""); setTriplelavado("PENDIENTE");
+    setLugardevolucion(""); setMunicipioDevolucion(null);
+    setObservaciones(""); setResultado(null);
+    setErrorGenerar(null); setErrorCrear(null);
   }
 
-  // ── RESULTADO ──────────────────────────────────────────────
+  // ── RESULTADO ─────────────────────────────────────────────
   if (resultado) {
     return (
       <AuthenticatedLayout>
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Certificado generado
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Certificado generado</h2>
             <p className="text-gray-600 mb-1">
               Consecutivo: <span className="font-bold text-green-700 text-xl">#{resultado.consecutivo}</span>
             </p>
             <p className="text-gray-500 text-sm mb-6">
-              El PDF fue generado y el email enviado al generador y coordinador.
+              PDF generado y email enviado al generador y coordinador.
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               <a
@@ -189,24 +228,22 @@ export default function CertificadosPage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Generar certificado</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Certificado de devolución de envases vacíos de plaguicidas
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Certificado de devolución de envases vacíos de plaguicidas</p>
         </div>
 
-        {/* ── PASO 1: BUSCAR GENERADOR ─────────────────────── */}
+        {/* ── PASO 1: BUSCAR GENERADOR ───────────────────── */}
         <div className="bg-white rounded-lg shadow p-6 mb-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
             1. Generador
           </h2>
 
-          {!seleccionada ? (
+          {!seleccionada && !mostrarFormGenerador && (
             <>
-              <form onSubmit={buscarGenerador} className="flex gap-2 mb-4">
+              <form onSubmit={buscarGenerador} className="flex gap-2 mb-3">
                 <input
                   type="text"
                   value={cedula}
-                  onChange={(e) => setCedula(e.target.value)}
+                  onChange={(e) => { setCedula(e.target.value); setNoEncontrado(false); }}
                   placeholder="Cédula o NIT del generador"
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   disabled={buscando}
@@ -220,10 +257,22 @@ export default function CertificadosPage() {
                 </button>
               </form>
 
-              {errorBusqueda && (
-                <p className="text-red-600 text-sm">{errorBusqueda}</p>
+              {/* No encontrado */}
+              {noEncontrado && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                  <p className="text-sm text-amber-800 mb-2">
+                    No se encontró ningún generador con cédula/NIT <strong>{cedula}</strong>.
+                  </p>
+                  <button
+                    onClick={() => setMostrarFormGenerador(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-4 py-2 rounded-lg"
+                  >
+                    + Crear nuevo generador
+                  </button>
+                </div>
               )}
 
+              {/* Múltiples fincas */}
               {ubicaciones.length > 1 && (
                 <div>
                   <p className="text-sm text-gray-600 mb-2">
@@ -244,7 +293,122 @@ export default function CertificadosPage() {
                 </div>
               )}
             </>
-          ) : (
+          )}
+
+          {/* ── FORMULARIO CREAR GENERADOR ──────────────── */}
+          {mostrarFormGenerador && (
+            <form onSubmit={crearGenerador} className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Nuevo generador — Cédula/NIT: <span className="font-bold">{cedula}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setMostrarFormGenerador(false); setNoEncontrado(true); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline"
+                >
+                  Cancelar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Nombre completo / Razón social <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Dirección de la finca <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevaDireccion}
+                    onChange={(e) => setNuevaDireccion(e.target.value)}
+                    required
+                    placeholder="Ej. Vereda El Rosal, km 3 vía..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Municipio <span className="text-red-500">*</span>
+                  </label>
+                  <MunicipioSearch
+                    value={nuevoMunicipio}
+                    onChange={setNuevoMunicipio}
+                    placeholder="Buscar municipio..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Cultivo principal <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoCultivo}
+                    onChange={(e) => setNuevoCultivo(e.target.value)}
+                    required
+                    placeholder="Ej. Arroz, Café, Maíz..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Teléfono móvil <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoMovil}
+                      onChange={(e) => setNuevoMovil(e.target.value)}
+                      required
+                      placeholder="3XXXXXXXXX"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={nuevoEmail}
+                      onChange={(e) => setNuevoEmail(e.target.value)}
+                      placeholder="Opcional"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {errorCrear && (
+                <p className="text-red-600 text-sm">{errorCrear}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={creando || !nuevoMunicipio}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2 rounded-lg text-sm"
+              >
+                {creando ? "Creando generador..." : "Crear generador y continuar"}
+              </button>
+            </form>
+          )}
+
+          {/* Generador seleccionado */}
+          {seleccionada && (
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-semibold text-gray-900">{seleccionada.nombre}</p>
@@ -253,7 +417,7 @@ export default function CertificadosPage() {
                 <p className="text-sm text-gray-500">{seleccionada.municipio} · {seleccionada.cultivo}</p>
               </div>
               <button
-                onClick={() => { setSeleccionada(null); setUbicaciones([]); }}
+                onClick={() => { setSeleccionada(null); setUbicaciones([]); setNoEncontrado(false); }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap"
               >
                 Cambiar
@@ -262,7 +426,7 @@ export default function CertificadosPage() {
           )}
         </div>
 
-        {/* ── PASO 2: DATOS DEL CERTIFICADO ───────────────── */}
+        {/* ── PASO 2: DATOS DEL CERTIFICADO ─────────────── */}
         {seleccionada && (
           <form onSubmit={generarCertificado}>
             <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-5">
@@ -322,7 +486,7 @@ export default function CertificadosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Triple lavado <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   {(["SI", "NO", "PENDIENTE"] as const).map((v) => (
                     <label key={v} className="flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -381,7 +545,6 @@ export default function CertificadosPage() {
               </div>
             </div>
 
-            {/* ── GENERAR ─────────────────────────────────────── */}
             {errorGenerar && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm text-red-700">
                 {errorGenerar}
@@ -398,7 +561,7 @@ export default function CertificadosPage() {
 
             {generando && (
               <p className="text-center text-xs text-gray-400 mt-2">
-                Esto puede tomar unos segundos — generando PDF y enviando email...
+                Generando PDF y enviando email... esto puede tomar unos segundos.
               </p>
             )}
           </form>

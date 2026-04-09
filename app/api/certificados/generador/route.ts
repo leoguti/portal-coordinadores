@@ -55,3 +55,79 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
+
+/**
+ * POST /api/certificados/generador
+ *
+ * Crea un nuevo generador (ubicación) en Airtable.
+ * Requiere sesión NextAuth.
+ */
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const apiKey = process.env.AIRTABLE_API_KEY!;
+  const baseId = process.env.AIRTABLE_BASE_ID!;
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+
+  const { cedula, nombre, direccion, cultivo, municipioId, movil, email } = body;
+
+  if (!cedula || !nombre || !direccion || !cultivo || !municipioId || !movil) {
+    return NextResponse.json(
+      { error: "Faltan campos requeridos: cedula, nombre, direccion, cultivo, municipioId, movil" },
+      { status: 400 }
+    );
+  }
+
+  const fields: Record<string, unknown> = {
+    cedulagenerador: String(cedula).trim(),
+    nombregenerador: String(nombre).trim(),
+    direcciongenerador: String(direccion).trim(),
+    cultivogenerador: String(cultivo).trim(),
+    movilgenerador: String(movil).trim(),
+    tipogenerador: "AGRICOLA",
+    CODIGOMUN: [municipioId],
+  };
+  if (email) fields.emailgenerador = String(email).trim();
+
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/ubicaciones`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields, typecast: true }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[generador/POST] Airtable error:", err);
+      return NextResponse.json({ error: "Error creando generador en Airtable" }, { status: 500 });
+    }
+
+    const data = await res.json();
+    const r = data;
+    return NextResponse.json({
+      id: r.id,
+      nombre: r.fields.nombregenerador || "",
+      cedula: r.fields.cedulagenerador || "",
+      direccion: r.fields.direcciongenerador || "",
+      municipio: r.fields.municipiogenerador?.[0] || "",
+      cultivo: r.fields.cultivogenerador || "",
+      email: r.fields.emailgenerador || "",
+      movil: r.fields.movilgenerador || "",
+      tipo: r.fields.tipogenerador || "",
+    }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}
