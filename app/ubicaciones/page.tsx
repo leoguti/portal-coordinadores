@@ -29,6 +29,7 @@ export default function UbicacionesPage() {
   const [q, setQ] = useState("");
   const [inputQ, setInputQ] = useState("");
   const [sort, setSort] = useState<"conteo" | "nombre" | "municipio">("conteo");
+  const [sinCertificado, setSinCertificado] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -72,7 +73,10 @@ export default function UbicacionesPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Generadores</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Ubicaciones registradas · {ubicaciones.length} resultados
+              Ubicaciones registradas ·{" "}
+              {sinCertificado
+                ? `${ubicaciones.filter((u) => u.conteo_certificados === 0).length} sin certificado`
+                : `${ubicaciones.length} resultados`}
             </p>
           </div>
         </div>
@@ -95,6 +99,16 @@ export default function UbicacionesPage() {
             <option value="nombre">Ordenar: nombre A-Z</option>
             <option value="municipio">Ordenar: municipio A-Z</option>
           </select>
+          <button
+            onClick={() => setSinCertificado((v) => !v)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+              sinCertificado
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            Sin certificados
+          </button>
         </div>
 
         {/* Error */}
@@ -105,11 +119,19 @@ export default function UbicacionesPage() {
         {/* Tabla */}
         {loading ? (
           <div className="text-center py-16 text-gray-400 text-sm">Cargando...</div>
-        ) : ubicaciones.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">
-            {q ? "Sin resultados para la búsqueda." : "No hay generadores registrados."}
-          </div>
-        ) : (
+        ) : (() => {
+          const visibles = sinCertificado
+            ? ubicaciones.filter((u) => u.conteo_certificados === 0)
+            : ubicaciones;
+          return visibles.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-sm">
+              {sinCertificado
+                ? "Todas las ubicaciones tienen al menos un certificado."
+                : q
+                ? "Sin resultados para la búsqueda."
+                : "No hay generadores registrados."}
+            </div>
+          ) : (
           <div className="bg-white rounded-xl shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -125,7 +147,7 @@ export default function UbicacionesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {ubicaciones.map((u) => (
+                  {visibles.map((u) => (
                     <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-900">{u.nombre || "—"}</td>
                       <td className="px-4 py-3 text-gray-600 font-mono">{u.cedula || "—"}</td>
@@ -159,7 +181,8 @@ export default function UbicacionesPage() {
               </table>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     </AuthenticatedLayout>
   );
