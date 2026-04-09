@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getPersonaEvaluadaByTelefono,
-  findMunicipioByName,
   createPersonaEvaluada,
   createEvaluacion,
 } from "@/lib/airtable";
@@ -19,7 +18,6 @@ export const maxDuration = 60;
  *   telefono: string,          // Número WhatsApp del participante
  *   nombre?: string,           // Solo si es persona nueva
  *   documento?: string,        // Solo si es persona nueva
- *   municipio?: string,        // Nombre del municipio (texto), solo si es nueva
  *   respuestaP1: "A"|"B"|"C"|"D",
  *   respuestaP2: "A"|"B"|"C"|"D",
  *   respuestaP3: "A"|"B"|"C"|"D",
@@ -32,7 +30,6 @@ export async function POST(req: NextRequest) {
     telefono?: string;
     nombre?: string;
     documento?: string;
-    municipio?: string;
     respuestaP1?: string;
     respuestaP2?: string;
     respuestaP3?: string;
@@ -62,26 +59,12 @@ export async function POST(req: NextRequest) {
   if (personaExistente) {
     personaId = personaExistente.id;
   } else {
-    // Persona nueva — crear con los datos disponibles (nombre/documento opcionales)
-    const { nombre, documento, municipio } = body;
-
-    // Resolver municipio: TextIt envía el record ID directamente desde el sub-flujo
-    // Si empieza con "rec" ya es un ID de Airtable, usarlo directo.
-    // Si no, intentar buscar por nombre (fallback).
-    let municipioId: string | null = null;
-    if (municipio) {
-      if (municipio.startsWith("rec")) {
-        municipioId = municipio;
-      } else {
-        municipioId = await findMunicipioByName(municipio);
-      }
-    }
+    const { nombre, documento } = body;
 
     personaId = await createPersonaEvaluada({
       nombre: nombre || "",
       documento: documento || "",
       telefono: telefonoNorm,
-      municipioId,
     });
     if (!personaId) {
       return NextResponse.json({ error: "Error creando persona evaluada" }, { status: 500 });

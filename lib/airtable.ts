@@ -3984,7 +3984,6 @@ export async function createPersonaEvaluada(params: {
   nombre: string;
   documento: string;
   telefono: string;
-  municipioId: string | null;
 }): Promise<string | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -3995,9 +3994,6 @@ export async function createPersonaEvaluada(params: {
     Documento: params.documento,
     Telefono: params.telefono,
   };
-  if (params.municipioId) {
-    fields["EMunicipio"] = [params.municipioId];
-  }
 
   try {
     const res = await fetch(`https://api.airtable.com/v0/${baseId}/tbl5paHosldxyyNBW`, {
