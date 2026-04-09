@@ -36,6 +36,11 @@ export async function GET(req: NextRequest) {
   const data = await res.json();
   const fields = data.fields || {};
 
+  // Validar que el registro sea realmente una actividad
+  if (!fields["Nombre de la Actividad"] && !fields["Fecha"]) {
+    return NextResponse.json({ encontrada: false, error: "Actividad no encontrada" }, { status: 200 });
+  }
+
   // Si viene telefono, verificar si ya evaluó esta actividad
   let yaEvaluo = false;
   if (telefono) {
