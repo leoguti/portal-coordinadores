@@ -15,7 +15,7 @@ const navItems = [
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Generadores", href: "/ubicaciones", icon: "🌱", roles: ["Administrador", "Supervisor"] },
+  { name: "Generadores", href: "/ubicaciones", icon: "🌱", roles: ["Coordinador", "Administrador", "Supervisor"] },
 ];
 
 export default function Sidebar() {
