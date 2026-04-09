@@ -67,7 +67,11 @@ export async function POST(req: NextRequest) {
       telefono: telefonoNorm,
     });
     if (!personaId) {
-      return NextResponse.json({ error: "Error creando persona evaluada" }, { status: 500 });
+      return NextResponse.json({
+        ok: false,
+        error: "Error creando persona evaluada",
+        mensaje: "Hubo un problema al registrar tus datos. Por favor intenta de nuevo o comunícate con el coordinador de la actividad.",
+      }, { status: 500 });
     }
   }
 
@@ -82,8 +86,12 @@ export async function POST(req: NextRequest) {
   });
 
   if (!evaluacionId) {
-    return NextResponse.json({ error: "Error creando evaluación" }, { status: 500 });
+    return NextResponse.json({
+      ok: false,
+      error: "Error creando evaluación",
+      mensaje: "Tus respuestas fueron recibidas pero no pudimos guardarlas. Por favor comunícate con el coordinador de la actividad.",
+    }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, evaluacionId, personaId });
+  return NextResponse.json({ ok: true, evaluacionId, personaId, mensaje: "ok" });
 }
