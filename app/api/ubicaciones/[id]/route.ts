@@ -8,14 +8,14 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const apiKey = process.env.AIRTABLE_API_KEY!;
   const baseId = process.env.AIRTABLE_BASE_ID!;
 
@@ -55,14 +55,14 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const apiKey = process.env.AIRTABLE_API_KEY!;
   const baseId = process.env.AIRTABLE_BASE_ID!;
 
