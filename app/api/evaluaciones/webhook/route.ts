@@ -65,10 +65,16 @@ export async function POST(req: NextRequest) {
     // Persona nueva — crear con los datos disponibles (nombre/documento opcionales)
     const { nombre, documento, municipio } = body;
 
-    // Buscar municipio en Airtable si se proveyó
+    // Resolver municipio: TextIt envía el record ID directamente desde el sub-flujo
+    // Si empieza con "rec" ya es un ID de Airtable, usarlo directo.
+    // Si no, intentar buscar por nombre (fallback).
     let municipioId: string | null = null;
     if (municipio) {
-      municipioId = await findMunicipioByName(municipio);
+      if (municipio.startsWith("rec")) {
+        municipioId = municipio;
+      } else {
+        municipioId = await findMunicipioByName(municipio);
+      }
     }
 
     personaId = await createPersonaEvaluada({
