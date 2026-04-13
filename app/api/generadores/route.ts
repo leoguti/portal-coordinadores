@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         "nombregenerador",
         "cedulagenerador",
         "direcciongenerador",
-        "municipiogenerador",
+        "mundep",
         "cultivogenerador",
         "movilgenerador",
         "emailgenerador",
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
             nombregenerador?: string;
             cedulagenerador?: string;
             direcciongenerador?: string;
-            municipiogenerador?: string;
+            mundep?: string[];
             cultivogenerador?: string;
             movilgenerador?: string;
             emailgenerador?: string;
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           nombre: r.fields.nombregenerador || "Sin nombre",
           cedula: r.fields.cedulagenerador || "",
           direccion: r.fields.direcciongenerador || "",
-          municipio: r.fields.municipiogenerador || "",
+          municipio: r.fields.mundep?.[0] || "",
           cultivo: r.fields.cultivogenerador || "",
           movil: r.fields.movilgenerador || "",
           email: r.fields.emailgenerador || "",

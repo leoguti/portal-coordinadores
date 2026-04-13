@@ -29,7 +29,7 @@ export async function GET(
   return NextResponse.json({
     ...raw,
     codigomunId: raw.fields?.CODIGOMUN?.[0] || null,
-    mundep: raw.fields?.mundep?.[0] || raw.fields?.municipiogenerador || "",
+    mundep: raw.fields?.mundep?.[0] || "",
   });
 }
 

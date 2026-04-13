@@ -12,13 +12,14 @@ interface Generador {
     nombregenerador?: string;
     cedulagenerador?: string;
     direcciongenerador?: string;
-    municipiogenerador?: string;
+    mundep?: string[];
     cultivogenerador?: string;
     movilgenerador?: string;
     emailgenerador?: string;
     tipogenerador?: string;
     conteo_certificados?: number;
   };
+  mundep?: string;
 }
 
 interface Certificado {
@@ -129,7 +130,7 @@ export default function GeneradorDetailPage() {
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Dirección / Finca" value={f.direcciongenerador} />
-            <Field label="Municipio" value={f.municipiogenerador} />
+            <Field label="Municipio" value={generador.mundep || f.mundep?.[0]} />
             <Field label="Cultivo" value={f.cultivogenerador} />
             <Field label="Tipo" value={f.tipogenerador} />
             <Field label="Móvil" value={f.movilgenerador} />
