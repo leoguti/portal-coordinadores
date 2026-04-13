@@ -3,6 +3,21 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { Client } from "pg";
 
+// Normaliza tildes y caracteres especiales del español
+function norm(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quitar diacríticos
+    .toLowerCase();
+}
+
+// Expresión SQL que normaliza una columna igual que norm() en JS
+// Cubre tildes del español + ñ/Ñ
+const NORM_SQL = (col: string) =>
+  `LOWER(TRANSLATE(${col},
+    'áàäâãÁÀÄÂÃéèëêÉÈËÊíìïîÍÌÏÎóòöôõÓÒÖÔÕúùüûÚÙÜÛñÑ',
+    'aaaaaaaaaaeeeeeeeeiiiiiiiiooooooooooUUUUUUUUnn'))`;
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
@@ -16,10 +31,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = req.nextUrl;
-  const q = searchParams.get("q")?.trim() || "";
+  const q = norm(searchParams.get("q")?.trim() || "");
   const ano = searchParams.get("ano")?.trim() || "";
-  const municipio = searchParams.get("municipio")?.trim() || "";
-  const coordinador = searchParams.get("coordinador")?.trim() || "";
+  const municipio = norm(searchParams.get("municipio")?.trim() || "");
+  const coordinador = norm(searchParams.get("coordinador")?.trim() || "");
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
   const limit = 50;
   const offset = (page - 1) * limit;
@@ -40,7 +55,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (q) {
-      conditions.push(`(nombregenerador ILIKE $${p} OR cedulagenerador ILIKE $${p + 1} OR CAST(consecutivo AS TEXT) = $${p + 2})`);
+      // Busca insensible a mayúsculas Y tildes
+      conditions.push(
+        `(${NORM_SQL("nombregenerador")} ILIKE $${p}` +
+        ` OR ${NORM_SQL("cedulagenerador")} ILIKE $${p + 1}` +
+        ` OR CAST(consecutivo AS TEXT) = $${p + 2})`
+      );
       params.push(`%${q}%`, `%${q}%`, q);
       p += 3;
     }
@@ -50,13 +70,13 @@ export async function GET(req: NextRequest) {
       p++;
     }
     if (municipio) {
-      conditions.push(`municipiodevolucion ILIKE $${p}`);
+      conditions.push(`${NORM_SQL("municipiodevolucion")} ILIKE $${p}`);
       params.push(`%${municipio}%`);
       p++;
     }
     // Solo admin puede filtrar por coordinador
     if (isAdmin && coordinador) {
-      conditions.push(`nombrecoordinador ILIKE $${p}`);
+      conditions.push(`${NORM_SQL("nombrecoordinador")} ILIKE $${p}`);
       params.push(`%${coordinador}%`);
       p++;
     }
@@ -89,6 +109,12 @@ export async function GET(req: NextRequest) {
       pages: Math.ceil(total / limit),
       results: dataRes.rows,
     });
+  } catch (e) {
+    console.error("certificados-historicos error:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Error interno" },
+      { status: 500 }
+    );
   } finally {
     await pg.end();
   }
