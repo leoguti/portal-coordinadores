@@ -5,12 +5,12 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import MunicipioSearch from "@/components/MunicipioSearch";
 
 interface FormData {
   nombregenerador: string;
   cedulagenerador: string;
   direcciongenerador: string;
-  municipiogenerador: string;
   cultivogenerador: string;
   movilgenerador: string;
   emailgenerador: string;
@@ -29,12 +29,13 @@ export default function EditarGeneradorPage() {
     nombregenerador: "",
     cedulagenerador: "",
     direcciongenerador: "",
-    municipiogenerador: "",
     cultivogenerador: "",
     movilgenerador: "",
     emailgenerador: "",
     tipogenerador: "AGRICOLA",
   });
+
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,14 +54,17 @@ export default function EditarGeneradorPage() {
           nombregenerador: f.nombregenerador || "",
           cedulagenerador: f.cedulagenerador || "",
           direcciongenerador: f.direcciongenerador || "",
-          municipiogenerador: f.municipiogenerador || "",
           cultivogenerador: f.cultivogenerador || "",
           movilgenerador: f.movilgenerador || "",
           emailgenerador: f.emailgenerador || "",
           tipogenerador: f.tipogenerador || "AGRICOLA",
         });
+        // Precargar municipio si tiene CODIGOMUN
+        if (data.codigomunId && data.mundep) {
+          setMunicipio({ id: data.codigomunId, mundep: data.mundep });
+        }
       })
-      .catch(() => setError("No se pudo cargar el generador"))
+      .catch(() => setError("No se pudo cargar la finca"))
       .finally(() => setLoading(false));
   }, [id, status]);
 
@@ -76,7 +80,10 @@ export default function EditarGeneradorPage() {
       const res = await fetch(`/api/generadores/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          municipioId: municipio?.id || null,
+        }),
       });
       if (!res.ok) throw new Error("Error al guardar");
       router.push(`/generadores/${id}`);
@@ -97,15 +104,14 @@ export default function EditarGeneradorPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="max-w-2xl mx-auto">
-        {/* Breadcrumb */}
+      <div className="max-w-2xl mx-auto p-6">
         <div className="mb-6">
           <Link href={`/generadores/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
             ← Volver al detalle
           </Link>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h1 className="text-lg font-bold text-gray-900 mb-6">Editar finca</h1>
 
           {error && (
@@ -116,6 +122,7 @@ export default function EditarGeneradorPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
                 <input
@@ -126,6 +133,7 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Cédula / NIT</label>
                 <input
@@ -135,8 +143,9 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Dirección / Finca</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Dirección / Nombre finca</label>
                 <input
                   name="direcciongenerador"
                   value={form.direcciongenerador}
@@ -144,15 +153,16 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Municipio</label>
-                <input
-                  name="municipiogenerador"
-                  value={form.municipiogenerador}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                <label className="block text-xs font-medium text-gray-600 mb-1">Municipio *</label>
+                <MunicipioSearch
+                  value={municipio}
+                  onChange={setMunicipio}
+                  placeholder="Buscar municipio..."
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Cultivo</label>
                 <input
@@ -162,6 +172,7 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
                 <select
@@ -170,11 +181,10 @@ export default function EditarGeneradorPage() {
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  {TIPOS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Móvil</label>
                 <input
@@ -184,6 +194,7 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                 <input
@@ -194,13 +205,14 @@ export default function EditarGeneradorPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="px-5 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50 transition-colors"
               >
                 {saving ? "Guardando..." : "Guardar cambios"}
               </button>

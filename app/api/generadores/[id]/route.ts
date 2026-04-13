@@ -25,8 +25,12 @@ export async function GET(
     return NextResponse.json({ error: "Generador no encontrado" }, { status: 404 });
   }
 
-  const data = await res.json();
-  return NextResponse.json(data);
+  const raw = await res.json();
+  return NextResponse.json({
+    ...raw,
+    codigomunId: raw.fields?.CODIGOMUN?.[0] || null,
+    mundep: raw.fields?.mundep?.[0] || raw.fields?.municipiogenerador || "",
+  });
 }
 
 export async function PATCH(
@@ -41,21 +45,21 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  // Solo campos editables
-  const fields: Record<string, string> = {};
-  const allowed = [
+  const fields: Record<string, unknown> = {};
+  const textFields = [
     "nombregenerador",
     "cedulagenerador",
     "direcciongenerador",
-    "municipiogenerador",
     "cultivogenerador",
     "movilgenerador",
     "emailgenerador",
     "tipogenerador",
   ];
-  for (const key of allowed) {
+  for (const key of textFields) {
     if (body[key] !== undefined) fields[key] = body[key];
   }
+  // Municipio como linked record a MUNICIPIOS
+  if (body.municipioId) fields.CODIGOMUN = [body.municipioId];
 
   const res = await fetch(
     `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/ubicaciones/${id}`,
