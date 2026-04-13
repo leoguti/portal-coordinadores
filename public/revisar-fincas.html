@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Revisión de Fincas — CampoLimpio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f7f5;
+      color: #1a2e1a;
+      line-height: 1.6;
+    }
+
+    header {
+      background: #042726;
+      color: white;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header img { height: 48px; }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header p { font-size: 0.9rem; color: #9dcfca; margin-top: 2px; }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+
+    .alert {
+      background: #fff8e1;
+      border-left: 5px solid #f59e0b;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+    .alert h2 { font-size: 1.15rem; color: #92400e; margin-bottom: 8px; }
+    .alert p { color: #78350f; font-size: 0.95rem; }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #042726;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card h2 .num {
+      background: #042726;
+      color: white;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+    .step .icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+    .step p { font-size: 0.95rem; color: #374151; }
+    .step p strong { color: #042726; }
+
+    .url-box {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .url-box span { font-size: 0.85rem; color: #166534; font-weight: 600; flex-shrink: 0; }
+    .url-box a {
+      color: #15803d;
+      font-size: 0.9rem;
+      word-break: break-all;
+      font-weight: 500;
+    }
+
+    .bad-examples {
+      background: #fef2f2;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0;
+    }
+    .bad-examples p { font-size: 0.88rem; color: #991b1b; margin-bottom: 4px; }
+    .bad-examples .ex { font-family: monospace; background: #fee2e2; padding: 2px 7px; border-radius: 4px; font-size: 0.85rem; }
+
+    .good-examples {
+      background: #f0fdf4;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0;
+    }
+    .good-examples p { font-size: 0.88rem; color: #166534; margin-bottom: 4px; }
+    .good-examples .ex { font-family: monospace; background: #dcfce7; padding: 2px 7px; border-radius: 4px; font-size: 0.85rem; }
+
+    .why {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 14px;
+    }
+    .why p { font-size: 0.9rem; color: #1e40af; }
+
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+    .fields-table th {
+      background: #f3f4f6;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.8rem;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .fields-table td {
+      padding: 10px 12px;
+      border-top: 1px solid #f3f4f6;
+      color: #374151;
+    }
+    .fields-table tr:hover td { background: #fafafa; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.required { background: #fee2e2; color: #dc2626; }
+    .badge.optional { background: #f3f4f6; color: #6b7280; }
+
+    .cta {
+      background: #042726;
+      color: white;
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      margin-top: 28px;
+    }
+    .cta h2 { font-size: 1.2rem; margin-bottom: 8px; }
+    .cta p { color: #9dcfca; font-size: 0.9rem; margin-bottom: 20px; }
+    .cta a {
+      display: inline-block;
+      background: #00d084;
+      color: #042726;
+      font-weight: 700;
+      padding: 12px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: opacity 0.2s;
+    }
+    .cta a:hover { opacity: 0.9; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #9ca3af;
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Revisión de Fincas — Tarea importante</h1>
+    <p>Portal CampoLimpio · Coordinadores de campo</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ALERTA PRINCIPAL -->
+  <div class="alert">
+    <h2>⚠️ ¿Por qué necesitamos tu ayuda?</h2>
+    <p>
+      Hemos detectado que muchas fincas en el sistema tienen información incorrecta o incompleta —
+      especialmente el <strong>municipio</strong> y la <strong>dirección</strong>.
+      Esto afecta los reportes y los certificados que generamos. Necesitamos que cada coordinador
+      revise las fincas de sus agricultores y corrija los datos que estén mal.
+    </p>
+  </div>
+
+  <!-- PASO 1 -->
+  <div class="card">
+    <h2><span class="num">1</span> Entra a la sección de Fincas</h2>
+    <div class="step">
+      <div class="icon">🌐</div>
+      <p>Ingresa al portal con tu usuario y ve a <strong>"Fincas"</strong> en el menú lateral izquierdo.</p>
+    </div>
+    <div class="url-box">
+      <span>🔗 URL:</span>
+      <a href="https://portal.campolimpio.org/generadores" target="_blank">https://portal.campolimpio.org/generadores</a>
+    </div>
+    <div class="step">
+      <div class="icon">🔍</div>
+      <p>Verás la lista de todas las fincas vinculadas a tus certificados, ordenadas por nombre. Puedes buscar por nombre o cédula.</p>
+    </div>
+  </div>
+
+  <!-- PASO 2 -->
+  <div class="card">
+    <h2><span class="num">2</span> Qué debes revisar en cada finca</h2>
+
+    <table class="fields-table">
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Qué debe decir</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Nombre del generador</strong></td>
+          <td>Nombre completo o razón social del agricultor</td>
+          <td><span class="badge required">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><strong>Cédula / NIT</strong></td>
+          <td>Solo números, sin puntos ni guiones</td>
+          <td><span class="badge required">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><strong>Dirección / Nombre finca</strong></td>
+          <td>Nombre de la finca o dirección real (ej: "Finca La Esperanza")</td>
+          <td><span class="badge required">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><strong>Municipio</strong></td>
+          <td>Solo el nombre del municipio donde está la finca</td>
+          <td><span class="badge required">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><strong>Cultivo</strong></td>
+          <td>Tipo de cultivo (ej: flores, café, aguacate, ganadería)</td>
+          <td><span class="badge optional">Importante</span></td>
+        </tr>
+        <tr>
+          <td><strong>Móvil</strong></td>
+          <td>Número de celular del agricultor</td>
+          <td><span class="badge optional">Importante</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Ejemplos malos -->
+    <div class="bad-examples">
+      <p><strong>🚫 Ejemplos de datos INCORRECTOS que hemos encontrado:</strong></p>
+      <p>Municipio: <span class="ex">aguacate</span> &nbsp; <span class="ex">0</span> &nbsp; <span class="ex">3104985204</span> &nbsp; <span class="ex">CAFÉ</span></p>
+      <p style="margin-top:6px">Dirección: <span class="ex">no tiene</span> &nbsp; <span class="ex">.</span> &nbsp; <span class="ex">casa</span></p>
+    </div>
+
+    <!-- Ejemplos buenos -->
+    <div class="good-examples">
+      <p><strong>✅ Así deben verse los datos CORRECTOS:</strong></p>
+      <p>Municipio: <span class="ex">Sonsón</span> &nbsp; <span class="ex">Carepa</span> &nbsp; <span class="ex">Facatativá</span></p>
+      <p style="margin-top:6px">Dirección: <span class="ex">Finca La Esperanza</span> &nbsp; <span class="ex">Finca El Porvenir km 3 vía Carepa</span></p>
+    </div>
+  </div>
+
+  <!-- PASO 3 -->
+  <div class="card">
+    <h2><span class="num">3</span> Cómo editar una finca</h2>
+    <div class="step">
+      <div class="icon">1️⃣</div>
+      <p>En la lista de fincas, haz clic en el botón <strong>"Editar"</strong> que aparece al final de cada fila.</p>
+    </div>
+    <div class="step">
+      <div class="icon">2️⃣</div>
+      <p>Corrige los campos que estén mal o vacíos.</p>
+    </div>
+    <div class="step">
+      <div class="icon">3️⃣</div>
+      <p>Haz clic en <strong>"Guardar cambios"</strong>. ¡Listo!</p>
+    </div>
+    <div class="url-box">
+      <span>🔗 Editar finca:</span>
+      <a href="https://portal.campolimpio.org/generadores" target="_blank">https://portal.campolimpio.org/generadores</a>
+      <span style="color:#6b7280; font-size:0.8rem">→ busca la finca → botón Editar</span>
+    </div>
+  </div>
+
+  <!-- PASO 4 — También puedes ver el detalle -->
+  <div class="card">
+    <h2><span class="num">4</span> Ver los certificados de cada finca</h2>
+    <div class="step">
+      <div class="icon">📜</div>
+      <p>Si haces clic en el <strong>nombre</strong> de una finca (no en "Editar"), puedes ver todos los certificados que se han generado para esa finca, con fecha, municipio de devolución y enlace al PDF.</p>
+    </div>
+    <div class="why">
+      <p>💡 Esto te ayuda a verificar que los certificados de cada agricultor están correctamente asignados a su finca.</p>
+    </div>
+  </div>
+
+  <!-- POR QUÉ IMPORTA -->
+  <div class="card">
+    <h2><span class="num">5</span> ¿Por qué es importante hacer esto?</h2>
+    <div class="step">
+      <div class="icon">📊</div>
+      <p>Los <strong>reportes de recolección</strong> por municipio dependen de que el municipio de cada finca esté bien escrito. Si dice "aguacate" en vez de "Sonsón", ese certificado no aparece en el reporte correcto.</p>
+    </div>
+    <div class="step">
+      <div class="icon">📜</div>
+      <p>Los <strong>certificados PDF</strong> que se envían a los agricultores toman la información de la finca. Si la dirección o el municipio están mal, el certificado queda mal.</p>
+    </div>
+    <div class="step">
+      <div class="icon">🤝</div>
+      <p>CampoLimpio usa estos datos para <strong>rendir cuentas</strong> ante entidades. Datos limpios = información confiable.</p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <h2>¡Empieza ahora!</h2>
+    <p>Solo toma unos minutos revisar tus fincas. Cada corrección cuenta.</p>
+    <a href="https://portal.campolimpio.org/generadores" target="_blank">Ir a mis Fincas →</a>
+  </div>
+
+</div>
+
+<footer>
+  Portal CampoLimpio &nbsp;·&nbsp; Si tienes dudas, contacta a tu coordinador regional
+</footer>
+
+</body>
+</html>
