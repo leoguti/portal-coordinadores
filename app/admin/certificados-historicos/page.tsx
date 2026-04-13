@@ -47,6 +47,7 @@ export default function CertificadosHistoricosPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -63,10 +64,21 @@ export default function CertificadosHistoricosPage() {
       if (coordinador) params.set("coordinador", coordinador);
       params.set("page", String(p));
 
-      const res = await fetch(`/api/admin/certificados-historicos?${params}`);
-      const json = await res.json();
-      setData(json);
-      setPage(p);
+      try {
+        const res = await fetch(`/api/admin/certificados-historicos?${params}`);
+        const json = await res.json();
+        if (!res.ok) {
+          setError(json.error || `Error ${res.status}`);
+          setData(null);
+        } else {
+          setError(null);
+          setData(json);
+        }
+        setPage(p);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error de conexión");
+        setData(null);
+      }
       setLoading(false);
     },
     [q, ano, municipio, coordinador]
@@ -161,6 +173,13 @@ export default function CertificadosHistoricosPage() {
             </button>
           </div>
         </form>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-700">
+            Error: {error}
+          </div>
+        )}
 
         {/* Resultados */}
         {!searched && (
