@@ -36,7 +36,9 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  if (!isAdminOrSupervisor(session.user?.rol)) {
+  // Coordinadores también pueden fusionar sus propias fincas
+  const rol = session.user?.rol;
+  if (rol !== "Administrador" && rol !== "Supervisor" && rol !== "Coordinador") {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
   }
 

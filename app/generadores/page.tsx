@@ -162,7 +162,7 @@ export default function GeneradoresPage() {
     );
   }
 
-  const esAdmin = session.user?.rol === "Administrador" || session.user?.rol === "Supervisor";
+  const true = session.user?.rol === "Administrador" || session.user?.rol === "Supervisor";
   const { grupos, orden } = agrupar(generadores);
   const totalDuplicados = orden.filter((k) => (grupos.get(k)?.members.length ?? 0) >= 2).length;
 
@@ -173,7 +173,7 @@ export default function GeneradoresPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Fincas</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {esAdmin ? "Todas las fincas registradas" : "Fincas vinculadas a tus certificados"}
+              {true ? "Todas las fincas registradas" : "Fincas vinculadas a tus certificados"}
             </p>
           </div>
           {!loading && (
@@ -213,7 +213,7 @@ export default function GeneradoresPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {esAdmin && <th className="w-24 px-3 py-3 text-xs text-gray-400 font-medium text-center">Eliminar</th>}
+                  {true && <th className="w-24 px-3 py-3 text-xs text-gray-400 font-medium text-center">Eliminar</th>}
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Cédula / NIT</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Municipio</th>
@@ -234,7 +234,7 @@ export default function GeneradoresPage() {
                         className="border-t border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => router.push(`/generadores/${g.id}`)}
                       >
-                        {esAdmin && <td className="px-3" />}
+                        {true && <td className="px-3" />}
                         <td className="px-4 py-3 font-medium text-green-700">{g.nombre}</td>
                         <td className="px-4 py-3 text-gray-600 font-mono text-xs">{g.cedula || "—"}</td>
                         <td className="px-4 py-3 text-gray-600">{g.municipio || "—"}</td>
@@ -262,7 +262,7 @@ export default function GeneradoresPage() {
                       className="border-t border-amber-200 bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors select-none"
                       onClick={() => toggleExpand(key)}
                     >
-                      {esAdmin && (
+                      {true && (
                         <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                           {estado === "done" ? (
                             <span className="text-green-600 text-xs">✓</span>
@@ -287,7 +287,7 @@ export default function GeneradoresPage() {
                           <span className="text-xs text-amber-700">
                             NIT {grupo.prefix}* · {grupo.members.length} registros
                           </span>
-                          {isOpen && esAdmin && (
+                          {isOpen && true && (
                             <span className="text-xs text-gray-500 ml-2">
                               — Marca con ☑ los que quieres eliminar, luego pulsa Fusionar
                             </span>
@@ -312,7 +312,7 @@ export default function GeneradoresPage() {
                               key={m.id}
                               className={`border-t border-amber-100 transition-colors ${isChecked ? "bg-red-50" : "bg-green-50"}`}
                             >
-                              {esAdmin && (
+                              {true && (
                                 <td className="px-3 py-2.5 text-center">
                                   <input
                                     type="checkbox"
@@ -332,10 +332,10 @@ export default function GeneradoresPage() {
                                   >
                                     {m.nombre}
                                   </Link>
-                                  {esAdmin && isPrincipal && (
+                                  {true && isPrincipal && (
                                     <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">queda</span>
                                   )}
-                                  {esAdmin && isChecked && (
+                                  {true && isChecked && (
                                     <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">se elimina</span>
                                   )}
                                 </div>
