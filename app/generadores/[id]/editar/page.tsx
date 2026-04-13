@@ -106,7 +106,7 @@ export default function EditarGeneradorPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-lg font-bold text-gray-900 mb-6">Editar generador</h1>
+          <h1 className="text-lg font-bold text-gray-900 mb-6">Editar finca</h1>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">

@@ -66,11 +66,11 @@ export default function GeneradoresPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Generadores</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Fincas</h1>
             <p className="text-sm text-gray-500 mt-1">
               {esAdmin
-                ? "Todos los generadores registrados"
-                : "Generadores vinculados a tus certificados"}
+                ? "Todas las fincas registradas"
+                : "Fincas vinculadas a tus certificados"}
             </p>
           </div>
           <div className="text-sm text-gray-400">
@@ -101,7 +101,7 @@ export default function GeneradoresPage() {
         ) : generadores.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-400 text-lg">
-              {search ? "Sin resultados para tu búsqueda" : "No tienes generadores registrados"}
+              {search ? "Sin resultados para tu búsqueda" : "No tienes fincas registradas"}
             </p>
           </div>
         ) : (

@@ -87,7 +87,7 @@ export default function GeneradorDetailPage() {
         {/* Breadcrumb */}
         <div className="mb-6 flex items-center justify-between">
           <Link href="/generadores" className="text-sm text-gray-500 hover:text-gray-700">
-            ← Generadores
+            ← Fincas
           </Link>
           <Link
             href={`/generadores/${id}/editar`}
@@ -114,7 +114,7 @@ export default function GeneradorDetailPage() {
 
         {/* Datos */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Datos del generador</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Datos de la finca</h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <Field label="Nombre" value={f.nombregenerador} />
             <Field label="Cédula / NIT" value={f.cedulagenerador} />
