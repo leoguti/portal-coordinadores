@@ -15,7 +15,7 @@ const navItems = [
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Fincas", href: "/generadores", icon: "🌿", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
+  { name: "Generación de Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Histórico Certificados", href: "/certificados-historicos", icon: "🗂️", roles: ["Coordinador"] },
   { name: "Histórico Certificados", href: "/admin/certificados-historicos", icon: "🗂️", roles: ["Administrador", "Supervisor"] },
 ];
