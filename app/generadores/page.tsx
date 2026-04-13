@@ -213,7 +213,7 @@ export default function GeneradoresPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {esAdmin && <th className="w-8 px-3 py-3" />}
+                  {esAdmin && <th className="w-24 px-3 py-3 text-xs text-gray-400 font-medium text-center">Eliminar</th>}
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Cédula / NIT</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Municipio</th>
@@ -287,6 +287,11 @@ export default function GeneradoresPage() {
                           <span className="text-xs text-amber-700">
                             NIT {grupo.prefix}* · {grupo.members.length} registros
                           </span>
+                          {isOpen && esAdmin && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              — Marca con ☑ los que quieres eliminar, luego pulsa Fusionar
+                            </span>
+                          )}
                           {estado?.startsWith("error") && (
                             <span className="text-xs text-red-600 ml-2">{estado}</span>
                           )}
