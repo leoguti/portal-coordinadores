@@ -38,10 +38,33 @@ export default function GeneradoresPage() {
       params.set("sort", "cedula");
       const res = await fetch(`/api/generadores?${params}`);
       const data = await res.json();
-      // Sort client-side by cedula so same NIT appears together
-      const lista: Generador[] = (data.generadores || []).sort((a: Generador, b: Generador) =>
-        (a.cedula || "").localeCompare(b.cedula || "")
+      // Agrupar por prefijo NIT (sin último dígito), luego ordenar grupos por nombre,
+      // dentro de cada grupo también por nombre — así el mismo NIT queda junto y todo va A→Z
+      const raw: Generador[] = data.generadores || [];
+
+      function nitPrefix(cedula: string) {
+        const d = cedula.replace(/\D/g, "");
+        return d.length >= 5 ? d.slice(0, -1) : cedula;
+      }
+
+      const byPrefix = new Map<string, Generador[]>();
+      for (const g of raw) {
+        const key = g.cedula ? nitPrefix(g.cedula) : `__${g.id}`;
+        if (!byPrefix.has(key)) byPrefix.set(key, []);
+        byPrefix.get(key)!.push(g);
+      }
+
+      // Ordenar cada grupo internamente por nombre
+      for (const members of byPrefix.values()) {
+        members.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      }
+
+      // Ordenar grupos por el nombre del primer miembro (A→Z)
+      const grupos = [...byPrefix.values()].sort((a, b) =>
+        a[0].nombre.localeCompare(b[0].nombre, "es")
       );
+
+      const lista: Generador[] = grupos.flat();
       setGeneradores(lista);
     } catch {
       setGeneradores([]);
@@ -115,7 +138,7 @@ export default function GeneradoresPage() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Fincas</h1>
-            <p className="text-sm text-gray-500 mt-1">Ordenadas por NIT/cédula</p>
+            <p className="text-sm text-gray-500 mt-1">Ordenadas por nombre A→Z, mismo NIT agrupado</p>
           </div>
           {!loading && (
             <span className="text-sm text-gray-400">
