@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import type { Generador } from "@/app/api/generadores/route";
 
@@ -117,8 +118,14 @@ export default function GeneradoresPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {generadores.map((g) => (
-                  <tr key={g.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900">{g.nombre}</td>
+                  <tr
+                    key={g.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/generadores/${g.id}`)}
+                  >
+                    <td className="px-4 py-3 font-medium text-green-700 hover:underline">
+                      {g.nombre}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{g.cedula || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{g.municipio || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{g.cultivo || "—"}</td>
