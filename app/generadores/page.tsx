@@ -239,6 +239,7 @@ export default function GeneradoresPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Dirección</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Municipio</th>
                   <th className="text-center px-4 py-3 font-medium text-gray-600">Certs</th>
+                  <th className="w-16 px-3 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -272,6 +273,15 @@ export default function GeneradoresPage() {
                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${g.conteo_certificados > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                           {g.conteo_certificados}
                         </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Link
+                          href={`/generadores/${g.id}/editar`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-gray-400 hover:text-gray-700 border border-gray-200 hover:border-gray-400 px-2 py-1 rounded transition-colors"
+                        >
+                          Editar
+                        </Link>
                       </td>
                     </tr>
                   );
