@@ -76,6 +76,17 @@ function EditPanel({
   const [generadorTipo, setGeneradorTipo] = useState(item.original.tipo || "AGRICOLA");
   const [saving, setSaving] = useState(false);
   const [showCultivos, setShowCultivos] = useState(false);
+  const [certificados, setCertificados] = useState<any[]>([]);
+  const [loadingCerts, setLoadingCerts] = useState(true);
+
+  // Cargar certificados de la ubicacion
+  useEffect(() => {
+    fetch(`/api/generadores/${item.ubicacionId}/certificados`)
+      .then((r) => r.json())
+      .then((d) => setCertificados(d.certificados || []))
+      .catch(() => setCertificados([]))
+      .finally(() => setLoadingCerts(false));
+  }, [item.ubicacionId]);
 
   // Pre-cargar municipio si ya tiene uno
   useEffect(() => {
@@ -233,6 +244,52 @@ function EditPanel({
 
           </div>
         </div>
+      </div>
+
+      {/* Certificados */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          Certificados ({loadingCerts ? "..." : certificados.length})
+        </h3>
+        {loadingCerts ? (
+          <div className="text-sm text-gray-400">Cargando...</div>
+        ) : certificados.length === 0 ? (
+          <div className="text-sm text-gray-400">Sin certificados</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left py-1 pr-3">#</th>
+                  <th className="text-left py-1 pr-3">Fecha</th>
+                  <th className="text-left py-1 pr-3">Municipio devolución</th>
+                  <th className="text-center py-1 pr-3">Total</th>
+                  <th className="text-center py-1">PDF</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {certificados.map((c: any, i: number) => (
+                  <tr key={i} className="text-gray-600">
+                    <td className="py-1 pr-3 font-mono">{c.consecutivo ?? "—"}</td>
+                    <td className="py-1 pr-3 whitespace-nowrap">
+                      {c.fechadevolucion
+                        ? new Date(c.fechadevolucion).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
+                        : "—"}
+                    </td>
+                    <td className="py-1 pr-3 max-w-[160px] truncate">{c.municipiodevolucion || "—"}</td>
+                    <td className="py-1 pr-3 text-center font-semibold">{c.total ?? 0}</td>
+                    <td className="py-1 text-center">
+                      {c.certificadopdf_r2_url ? (
+                        <a href={c.certificadopdf_r2_url} target="_blank" rel="noopener noreferrer"
+                          className="text-green-700 hover:text-green-900 font-medium">PDF</a>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Acciones */}
