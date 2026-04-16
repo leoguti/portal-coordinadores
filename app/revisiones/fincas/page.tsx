@@ -293,48 +293,58 @@ function EditPanel({
 
       {/* Certificados */}
       <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-          Certificados ({loadingCerts ? "..." : certificados.length})
-        </p>
-        {loadingCerts ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
-        ) : certificados.length === 0 ? (
-          <p className="text-sm text-gray-400">Sin certificados</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-gray-400 border-b border-gray-100">
-                  <th className="text-left py-1 pr-3">#</th>
-                  <th className="text-left py-1 pr-3">Fecha</th>
-                  <th className="text-left py-1 pr-3">Municipio devolución</th>
-                  <th className="text-center py-1 pr-3">Total</th>
-                  <th className="text-center py-1">PDF</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {certificados.map((c: any, i: number) => (
-                  <tr key={i} className="text-gray-600">
-                    <td className="py-1 pr-3 font-mono">{c.consecutivo ?? "—"}</td>
-                    <td className="py-1 pr-3 whitespace-nowrap">
-                      {c.fechadevolucion
-                        ? new Date(c.fechadevolucion).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
-                        : "—"}
-                    </td>
-                    <td className="py-1 pr-3 max-w-[160px] truncate">{c.municipiodevolucion || "—"}</td>
-                    <td className="py-1 pr-3 text-center font-semibold">{c.total ?? 0}</td>
-                    <td className="py-1 text-center">
-                      {c.certificadopdf_r2_url ? (
-                        <a href={c.certificadopdf_r2_url} target="_blank" rel="noopener noreferrer"
-                          className="text-green-700 hover:text-green-900 font-medium">PDF</a>
-                      ) : <span className="text-gray-300">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {(() => {
+          const sorted = [...certificados].sort((a: any, b: any) => {
+            const aDate = a.fechadevolucion ? new Date(a.fechadevolucion).getTime() : 0;
+            const bDate = b.fechadevolucion ? new Date(b.fechadevolucion).getTime() : 0;
+            return bDate - aDate;
+          });
+          const recent = sorted.slice(0, 5);
+          return (
+            <>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Certificados {loadingCerts ? "" : `(${certificados.length}${certificados.length > 5 ? ` — mostrando los 5 más recientes` : ""})`}
+              </p>
+              {loadingCerts ? (
+                <p className="text-sm text-gray-400">Cargando...</p>
+              ) : certificados.length === 0 ? (
+                <p className="text-sm text-gray-400">Sin certificados</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-gray-400 border-b border-gray-100">
+                        <th className="text-left py-1 pr-3">#</th>
+                        <th className="text-left py-1 pr-3">Fecha</th>
+                        <th className="text-left py-1 pr-3">Municipio devolución</th>
+                        <th className="text-center py-1">PDF</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {recent.map((c: any, i: number) => (
+                        <tr key={i} className="text-gray-600">
+                          <td className="py-1 pr-3 font-mono">{c.consecutivo ?? "—"}</td>
+                          <td className="py-1 pr-3 whitespace-nowrap">
+                            {c.fechadevolucion
+                              ? new Date(c.fechadevolucion).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" })
+                              : "—"}
+                          </td>
+                          <td className="py-1 pr-3 max-w-[160px] truncate">{c.municipiodevolucion || "—"}</td>
+                          <td className="py-1 text-center">
+                            {c.certificadopdf_r2_url ? (
+                              <a href={c.certificadopdf_r2_url} target="_blank" rel="noopener noreferrer"
+                                className="text-green-700 hover:text-green-900 font-medium">PDF</a>
+                            ) : <span className="text-gray-300">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Acciones */}
