@@ -67,90 +67,209 @@ function FlagBadge({ notas }: { notas: string }) {
   );
 }
 
-// ─── MergeModal ───────────────────────────────────────────────────────────────
+// ─── Data completeness score ──────────────────────────────────────────────────
 
-function MergeModal({
-  finca,
-  candidates,
+function completenessScore(f: FincaItem): number {
+  let score = 0;
+  if (f.finca?.nombre) score++;
+  if (f.finca?.municipioId || f.original.municipio) score++;
+  if ((f.finca?.cultivoIds || []).length > 0) score++;
+  if (f.finca?.movil || f.original.movil) score++;
+  if (f.finca?.email || f.original.email) score++;
+  if (f.finca?.revisado) score += 2; // marcado como revisado pesa más
+  return score;
+}
+
+// ─── CompareMergeModal ────────────────────────────────────────────────────────
+
+function CompareMergeModal({
+  a,
+  b,
   onConfirm,
   onClose,
 }: {
-  finca: FincaItem;
-  candidates: FincaItem[];
+  a: FincaItem;
+  b: FincaItem;
   onConfirm: (survivorFincaId: string, deleteFincaId: string) => Promise<void>;
   onClose: () => void;
 }) {
-  const [selected, setSelected] = useState<string>(candidates[0]?.fincaId || "");
-  const [keepCurrent, setKeepCurrent] = useState(true);
+  // Preselecciona la de mayor completitud
+  const scoreA = completenessScore(a);
+  const scoreB = completenessScore(b);
+  const [survivorId, setSurvivorId] = useState<string>(
+    scoreB > scoreA ? (b.fincaId || "") : (a.fincaId || "")
+  );
   const [loading, setLoading] = useState(false);
 
-  const survivorId = keepCurrent ? finca.fincaId! : selected;
-  const deleteId = keepCurrent ? selected : finca.fincaId!;
-
   const handleConfirm = async () => {
-    if (!survivorId || !deleteId) return;
+    if (!survivorId) return;
+    const deleteId = survivorId === a.fincaId ? b.fincaId : a.fincaId;
+    if (!deleteId) return;
     setLoading(true);
     await onConfirm(survivorId, deleteId);
     setLoading(false);
   };
 
+  const renderCol = (f: FincaItem, score: number) => {
+    const isSurvivor = survivorId === f.fincaId;
+    return (
+      <div
+        onClick={() => setSurvivorId(f.fincaId!)}
+        className={`cursor-pointer rounded-lg border-2 p-3 transition-colors ${
+          isSurvivor ? "border-green-500 bg-green-50" : "border-gray-200 bg-white hover:bg-gray-50"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-gray-100">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSurvivor ? "border-green-500" : "border-gray-300"}`}>
+              {isSurvivor && <div className="w-2 h-2 rounded-full bg-green-500" />}
+            </div>
+            <span className={`text-xs font-semibold uppercase ${isSurvivor ? "text-green-700" : "text-gray-400"}`}>
+              {isSurvivor ? "Conservar esta" : "Elegir"}
+            </span>
+          </label>
+          <span className="text-xs text-gray-400">{score}/7 datos</span>
+        </div>
+        <dl className="space-y-1.5 text-sm">
+          <div>
+            <dt className="text-xs text-gray-400">Nombre / Dirección</dt>
+            <dd className="text-gray-800">{f.finca?.nombre || f.original.direccion || <span className="text-gray-300 italic">—</span>}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400">Municipio</dt>
+            <dd className="text-gray-800">{f.original.municipio || <span className="text-gray-300 italic">—</span>}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400">Cultivos</dt>
+            <dd className="text-gray-800">{(f.finca?.cultivoIds || []).length} seleccionados</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400">Móvil</dt>
+            <dd className="text-gray-800 font-mono">{f.finca?.movil || f.original.movil || <span className="text-gray-300 italic">—</span>}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400">Email</dt>
+            <dd className="text-gray-800 truncate">{f.finca?.email || f.original.email || <span className="text-gray-300 italic">—</span>}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400">Estado</dt>
+            <dd>{f.finca?.revisado ? <span className="text-green-700">✓ revisada</span> : <span className="text-gray-400">pendiente</span>}</dd>
+          </div>
+        </dl>
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
-        <h2 className="text-base font-bold text-gray-900 mb-1">Fusionar fincas</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+        <h2 className="text-base font-bold text-gray-900 mb-1">Comparar y fusionar fincas</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Las ubicaciones de la finca eliminada pasarán a la finca que conserves. La otra se borrará permanentemente.
+          Elige cuál finca conservar. La otra se eliminará permanentemente y sus ubicaciones (con certificados) pasarán a la seleccionada.
         </p>
 
-        {/* Finca actual */}
-        <div
-          className={`rounded-lg border-2 p-3 mb-2 cursor-pointer transition-colors ${keepCurrent ? "border-green-500 bg-green-50" : "border-gray-200 bg-gray-50"}`}
-          onClick={() => setKeepCurrent(true)}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${keepCurrent ? "border-green-500" : "border-gray-300"}`}>
-              {keepCurrent && <div className="w-2 h-2 rounded-full bg-green-500" />}
-            </div>
-            <span className="text-xs font-semibold text-green-700 uppercase">Conservar esta</span>
-          </div>
-          <p className="text-sm font-medium text-gray-800 ml-6">{finca.finca?.nombre || finca.original.direccion || "Sin nombre"}</p>
-          <p className="text-xs text-gray-500 ml-6">{finca.original.municipio || "Sin municipio"}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          {renderCol(a, scoreA)}
+          {renderCol(b, scoreB)}
         </div>
 
-        {/* Candidatas */}
-        <div className="space-y-2 mb-4">
-          {candidates.map((c) => {
-            const isSelected = selected === c.fincaId;
-            return (
-              <div
-                key={c.fincaId}
-                className={`rounded-lg border-2 p-3 cursor-pointer transition-colors ${!keepCurrent && isSelected ? "border-green-500 bg-green-50" : "border-gray-200 bg-gray-50"}`}
-                onClick={() => { setSelected(c.fincaId!); setKeepCurrent(false); }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${!keepCurrent && isSelected ? "border-green-500" : "border-gray-300"}`}>
-                    {!keepCurrent && isSelected && <div className="w-2 h-2 rounded-full bg-green-500" />}
-                  </div>
-                  <span className="text-xs font-semibold text-gray-500 uppercase">Conservar esta</span>
-                </div>
-                <p className="text-sm font-medium text-gray-800 ml-6">{c.finca?.nombre || c.original.direccion || "Sin nombre"}</p>
-                <p className="text-xs text-gray-500 ml-6">{c.original.municipio || "Sin municipio"}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 mb-4">
-          Se eliminará permanentemente la finca no seleccionada. Esta acción no se puede deshacer.
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 mb-4">
+          Hemos preseleccionado la finca con más datos completos. Revísala antes de confirmar.
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={handleConfirm}
-            disabled={loading || !selected}
-            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
+            disabled={loading || !survivorId}
+            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
           >
             {loading ? "Fusionando..." : "Confirmar fusión"}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DeleteFincaModal ─────────────────────────────────────────────────────────
+
+function DeleteFincaModal({
+  finca,
+  siblings,
+  onConfirm,
+  onClose,
+}: {
+  finca: FincaItem;
+  siblings: FincaItem[]; // otras fincas del mismo generador
+  onConfirm: (survivorFincaId: string, deleteFincaId: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [target, setTarget] = useState<string>(siblings[0]?.fincaId || "");
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!target || !finca.fincaId) return;
+    setLoading(true);
+    await onConfirm(target, finca.fincaId);
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h2 className="text-base font-bold text-gray-900 mb-1">Eliminar finca</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Vas a eliminar esta finca. Sus ubicaciones (con los certificados asociados) deben moverse a otra finca del mismo generador.
+        </p>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+          <p className="text-xs text-gray-400 uppercase mb-1">A eliminar</p>
+          <p className="text-sm font-medium text-gray-800">{finca.finca?.nombre || finca.original.direccion || "Sin nombre"}</p>
+          <p className="text-xs text-gray-500">{finca.original.municipio || "Sin municipio"}</p>
+        </div>
+
+        {siblings.length === 0 ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 mb-4">
+            Este generador solo tiene esta finca. No hay dónde mover los certificados. Primero debes crear o asignar otra finca a este generador.
+          </div>
+        ) : (
+          <>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Mover ubicaciones y certificados a:</label>
+            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              {siblings.map((s) => {
+                const isSelected = target === s.fincaId;
+                return (
+                  <div
+                    key={s.fincaId}
+                    onClick={() => setTarget(s.fincaId!)}
+                    className={`rounded-lg border-2 p-2.5 cursor-pointer transition-colors ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? "border-green-500" : "border-gray-300"}`}>
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-800 truncate">{s.finca?.nombre || s.original.direccion || "Sin nombre"}</p>
+                        <p className="text-xs text-gray-500">{s.original.municipio || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleConfirm}
+            disabled={loading || !target || siblings.length === 0}
+            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+          >
+            {loading ? "Eliminando..." : "Eliminar y mover"}
           </button>
           <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50">
             Cancelar
@@ -372,28 +491,46 @@ function FincaRow({
   cultivos,
   isExpanded,
   onToggle,
-  canMerge,
-  onMergeClick,
+  showSelection,
+  isSelected,
+  onToggleSelect,
+  onDelete,
   onSave,
 }: {
   item: FincaItem;
   cultivos: Cultivo[];
   isExpanded: boolean;
   onToggle: () => void;
-  canMerge: boolean;
-  onMergeClick: () => void;
+  showSelection: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onDelete: () => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
 }) {
   const revisado = item.finca?.revisado;
   const tieneProblemas = item.finca?.notas && item.finca.notas.length > 0;
 
   return (
-    <div className={`border-l-2 ml-4 ${revisado ? "border-green-300" : tieneProblemas ? "border-amber-300" : "border-gray-200"}`}>
+    <div className={`border-l-2 ml-4 ${isSelected ? "border-blue-400 bg-blue-50/40" : revisado ? "border-green-300" : tieneProblemas ? "border-amber-300" : "border-gray-200"}`}>
       <div
         className={`flex items-start justify-between gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${isExpanded ? "bg-gray-50" : ""}`}
         onClick={onToggle}
       >
         <div className="flex items-start gap-2 min-w-0">
+          {showSelection && item.fincaId && (
+            <label
+              className="mt-0.5 flex-shrink-0 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => {}}
+                className="accent-blue-600 w-4 h-4 cursor-pointer"
+                title="Marcar para comparar con otra finca"
+              />
+            </label>
+          )}
           <span className="mt-0.5 flex-shrink-0 text-sm">
             {revisado ? "✓" : tieneProblemas ? "⚠" : "○"}
           </span>
@@ -417,16 +554,20 @@ function FincaRow({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {canMerge && (
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {item.fincaId && (
             <button
-              onClick={onMergeClick}
-              className="text-xs px-2 py-1 rounded border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors"
+              onClick={onDelete}
+              className="text-xs p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Eliminar esta finca (moviendo sus certificados a otra)"
             >
-              Fusionar
+              🗑️
             </button>
           )}
-          <span className="text-gray-400 text-sm" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+          <span
+            className="text-gray-400 text-sm px-1 cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          >
             {isExpanded ? "▲" : "▼"}
           </span>
         </div>
@@ -513,9 +654,11 @@ function GeneradorRow({
   expandedFinca,
   onFincaToggle,
   onSave,
-  onMerge,
   onMergeGenerador,
   onGeneradorSaved,
+  onDeleteFinca,
+  selectedFincaIds,
+  onToggleFincaSelection,
   duplicadosNit,
   search,
 }: {
@@ -524,9 +667,11 @@ function GeneradorRow({
   expandedFinca: string | null;
   onFincaToggle: (id: string) => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
-  onMerge: (finca: FincaItem, candidates: FincaItem[]) => void;
   onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
   onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => void;
+  onDeleteFinca: (finca: FincaItem, siblings: FincaItem[]) => void;
+  selectedFincaIds: Set<string>;
+  onToggleFincaSelection: (fincaId: string, grupoId: string | null) => void;
   duplicadosNit: GeneradorGrupo[];
   search: string;
 }) {
@@ -630,23 +775,24 @@ function GeneradorRow({
       {/* Fincas del generador */}
       {expanded && (
         <div className="divide-y divide-gray-50 bg-gray-50/50 px-2 pb-2 pt-1">
-          {visibleFincas.map((finca) => (
-            <FincaRow
-              key={finca.fincaId || finca.ubicacionId}
-              item={finca}
-              cultivos={cultivos}
-              isExpanded={expandedFinca === (finca.fincaId || finca.ubicacionId)}
-              onToggle={() => onFincaToggle(finca.fincaId || finca.ubicacionId)}
-              canMerge={grupo.fincas.length > 1 && !!finca.fincaId}
-              onMergeClick={() =>
-                onMerge(
-                  finca,
-                  grupo.fincas.filter((f) => f.fincaId !== finca.fincaId && !!f.fincaId)
-                )
-              }
-              onSave={onSave}
-            />
-          ))}
+          {visibleFincas.map((finca) => {
+            const fid = finca.fincaId || finca.ubicacionId;
+            const siblings = grupo.fincas.filter((f) => f.fincaId !== finca.fincaId && !!f.fincaId);
+            return (
+              <FincaRow
+                key={fid}
+                item={finca}
+                cultivos={cultivos}
+                isExpanded={expandedFinca === fid}
+                onToggle={() => onFincaToggle(fid)}
+                showSelection={grupo.fincas.length > 1}
+                isSelected={!!finca.fincaId && selectedFincaIds.has(finca.fincaId)}
+                onToggleSelect={() => finca.fincaId && onToggleFincaSelection(finca.fincaId, grupo.generadorId)}
+                onDelete={() => onDeleteFinca(finca, siblings)}
+                onSave={onSave}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -757,8 +903,12 @@ export default function RevisionFincasPage() {
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
   const [totalRevisadas, setTotalRevisadas] = useState(0);
-  const [mergeData, setMergeData] = useState<{ finca: FincaItem; candidates: FincaItem[] } | null>(null);
+  const [compareData, setCompareData] = useState<{ a: FincaItem; b: FincaItem } | null>(null);
+  const [deleteData, setDeleteData] = useState<{ finca: FincaItem; siblings: FincaItem[] } | null>(null);
   const [mergeGenData, setMergeGenData] = useState<{ grupo: GeneradorGrupo; candidates: GeneradorGrupo[] } | null>(null);
+  // Selección para fusionar (hasta 2 fincas del mismo generador)
+  const [selectedFincaIds, setSelectedFincaIds] = useState<Set<string>>(new Set());
+  const [selectionGeneradorId, setSelectionGeneradorId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -812,10 +962,55 @@ export default function RevisionFincasPage() {
       body: JSON.stringify({ survivorFincaId, deleteFincaId }),
     });
     if (res.ok) {
-      setMergeData(null);
+      setCompareData(null);
+      setDeleteData(null);
+      setSelectedFincaIds(new Set());
+      setSelectionGeneradorId(null);
       loadData();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Error al fusionar");
     }
   }, [loadData]);
+
+  const toggleFincaSelection = useCallback((fincaId: string, grupoId: string | null) => {
+    setSelectedFincaIds((prev) => {
+      // Si selecciona de otro generador → resetea
+      if (selectionGeneradorId && selectionGeneradorId !== grupoId) {
+        setSelectionGeneradorId(grupoId);
+        return new Set([fincaId]);
+      }
+      const next = new Set(prev);
+      if (next.has(fincaId)) {
+        next.delete(fincaId);
+        if (next.size === 0) setSelectionGeneradorId(null);
+      } else {
+        if (next.size >= 2) return prev; // Máximo 2
+        next.add(fincaId);
+        if (!selectionGeneradorId) setSelectionGeneradorId(grupoId);
+      }
+      return next;
+    });
+  }, [selectionGeneradorId]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedFincaIds(new Set());
+    setSelectionGeneradorId(null);
+  }, []);
+
+  const openCompareFromSelection = useCallback(() => {
+    if (selectedFincaIds.size !== 2) return;
+    const ids = Array.from(selectedFincaIds);
+    let a: FincaItem | null = null;
+    let b: FincaItem | null = null;
+    for (const g of grupos) {
+      for (const f of g.fincas) {
+        if (f.fincaId === ids[0]) a = f;
+        if (f.fincaId === ids[1]) b = f;
+      }
+    }
+    if (a && b) setCompareData({ a, b });
+  }, [selectedFincaIds, grupos]);
 
   const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => {
     setGrupos((prev) =>
@@ -971,9 +1166,11 @@ export default function RevisionFincasPage() {
                 expandedFinca={expandedFinca}
                 onFincaToggle={(id) => setExpandedFinca(expandedFinca === id ? null : id)}
                 onSave={handleSave}
-                onMerge={(finca, candidates) => setMergeData({ finca, candidates })}
                 onMergeGenerador={(g, candidates) => setMergeGenData({ grupo: g, candidates })}
                 onGeneradorSaved={handleGeneradorSaved}
+                onDeleteFinca={(finca, siblings) => setDeleteData({ finca, siblings })}
+                selectedFincaIds={selectedFincaIds}
+                onToggleFincaSelection={toggleFincaSelection}
                 duplicadosNit={getDuplicadosFor(grupo)}
                 search={search}
               />
@@ -982,13 +1179,50 @@ export default function RevisionFincasPage() {
         )}
       </div>
 
-      {/* Modal fusión finca */}
-      {mergeData && (
-        <MergeModal
-          finca={mergeData.finca}
-          candidates={mergeData.candidates}
+      {/* Barra flotante de selección */}
+      {selectedFincaIds.size > 0 && !compareData && !deleteData && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 shadow-xl rounded-full px-5 py-3 flex items-center gap-4 max-w-[92vw]">
+          <span className="text-sm text-gray-700">
+            {selectedFincaIds.size === 1 ? (
+              <>Selecciona <b>otra finca</b> del mismo generador para compararlas</>
+            ) : (
+              <>2 fincas seleccionadas — ¿son la misma?</>
+            )}
+          </span>
+          {selectedFincaIds.size === 2 && (
+            <button
+              onClick={openCompareFromSelection}
+              className="text-sm px-4 py-1.5 bg-[#042726] text-white rounded-full hover:bg-[#032120] font-medium"
+            >
+              Comparar y fusionar
+            </button>
+          )}
+          <button
+            onClick={clearSelection}
+            className="text-sm text-gray-400 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Modal comparación lado a lado (2 fincas) */}
+      {compareData && (
+        <CompareMergeModal
+          a={compareData.a}
+          b={compareData.b}
           onConfirm={handleMerge}
-          onClose={() => setMergeData(null)}
+          onClose={() => setCompareData(null)}
+        />
+      )}
+
+      {/* Modal eliminar finca (reasigna certificados) */}
+      {deleteData && (
+        <DeleteFincaModal
+          finca={deleteData.finca}
+          siblings={deleteData.siblings}
+          onConfirm={handleMerge}
+          onClose={() => setDeleteData(null)}
         />
       )}
 
