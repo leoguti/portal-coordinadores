@@ -461,6 +461,8 @@ function GeneradorRow({
   onFincaToggle,
   onSave,
   onMerge,
+  onMergeGenerador,
+  duplicadosNit,
   search,
 }: {
   grupo: GeneradorGrupo;
@@ -469,6 +471,8 @@ function GeneradorRow({
   onFincaToggle: (id: string) => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
   onMerge: (finca: FincaItem, candidates: FincaItem[]) => void;
+  onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
+  duplicadosNit: GeneradorGrupo[];
   search: string;
 }) {
   const [expanded, setExpanded] = useState(grupo.revisadas < grupo.totalFincas);
@@ -489,12 +493,12 @@ function GeneradorRow({
   if (search && visibleFincas.length === 0) return null;
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${allDone ? "border-green-200" : "border-gray-200"}`}>
+    <div className={`rounded-xl border overflow-hidden ${allDone ? "border-green-200" : duplicadosNit.length > 0 ? "border-red-200" : "border-gray-200"}`}>
       {/* Cabecera generador */}
-      <button
+      <div
         onClick={() => setExpanded(!expanded)}
-        className={`w-full text-left px-4 py-3 transition-colors flex items-center justify-between gap-3 ${
-          allDone ? "bg-green-50 hover:bg-green-100" : "bg-white hover:bg-gray-50"
+        className={`cursor-pointer px-4 py-3 transition-colors flex items-center justify-between gap-3 ${
+          allDone ? "bg-green-50 hover:bg-green-100" : duplicadosNit.length > 0 ? "bg-red-50/60 hover:bg-red-50" : "bg-white hover:bg-gray-50"
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -507,18 +511,32 @@ function GeneradorRow({
             <p className="font-semibold text-gray-900 text-sm truncate">
               {grupo.generador?.nombre || <span className="text-gray-400 italic font-normal">Sin generador vinculado</span>}
             </p>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {grupo.generador?.nit && (
                 <span className="text-xs text-gray-400 font-mono">{grupo.generador.nit}</span>
               )}
               {grupo.generador?.tipo && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{grupo.generador.tipo}</span>
               )}
+              {duplicadosNit.length > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                  NIT repetido en {duplicadosNit.length + 1} generadores
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          {duplicadosNit.length > 0 && grupo.generadorId && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onMergeGenerador(grupo, duplicadosNit); }}
+              className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-100 bg-white transition-colors font-medium"
+              title="Este NIT aparece en otros generadores — fúsionalos"
+            >
+              Fusionar generador
+            </button>
+          )}
           <div className="hidden sm:flex items-center gap-2">
             <div className="w-20 bg-gray-100 rounded-full h-1.5">
               <div
@@ -530,7 +548,7 @@ function GeneradorRow({
           </div>
           <span className="text-gray-400 text-sm">{expanded ? "▲" : "▼"}</span>
         </div>
-      </button>
+      </div>
 
       {/* Fincas del generador */}
       {expanded && (
@@ -558,6 +576,96 @@ function GeneradorRow({
   );
 }
 
+// ─── GeneradorMergeModal ──────────────────────────────────────────────────────
+
+function GeneradorMergeModal({
+  grupo,
+  candidates,
+  onConfirm,
+  onClose,
+}: {
+  grupo: GeneradorGrupo;
+  candidates: GeneradorGrupo[];
+  onConfirm: (survivorGeneradorId: string, deleteGeneradorId: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(grupo.generadorId);
+  const [loading, setLoading] = useState(false);
+
+  const allGroups = [grupo, ...candidates];
+
+  const handleConfirm = async () => {
+    if (!selectedId) return;
+    // Fusiona los demás uno a uno hacia el sobreviviente
+    const toDelete = allGroups.filter((g) => g.generadorId !== selectedId && g.generadorId);
+    setLoading(true);
+    for (const g of toDelete) {
+      await onConfirm(selectedId, g.generadorId!);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-base font-bold text-gray-900 mb-1">Fusionar generadores duplicados</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Estos {allGroups.length} generadores comparten el mismo NIT base. Elige cuál conservar — las fincas de los otros se reasignarán y los duplicados se eliminarán.
+        </p>
+
+        <div className="space-y-2 mb-4">
+          {allGroups.map((g) => {
+            const isSelected = selectedId === g.generadorId;
+            return (
+              <div
+                key={g.generadorId}
+                onClick={() => setSelectedId(g.generadorId)}
+                className={`rounded-lg border-2 p-3 cursor-pointer transition-colors ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"}`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 flex-shrink-0 ${isSelected ? "border-green-500" : "border-gray-300"}`}>
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{g.generador?.nombre || "Sin nombre"}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-gray-500 font-mono">NIT: {g.generador?.nit || "—"}</span>
+                      {g.generador?.tipo && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">{g.generador.tipo}</span>
+                      )}
+                      <span className="text-xs text-gray-500">{g.totalFincas} {g.totalFincas === 1 ? "finca" : "fincas"}</span>
+                    </div>
+                    {isSelected && (
+                      <p className="text-xs text-green-700 mt-1 font-medium">Este se conserva</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 mb-4">
+          Los otros {allGroups.length - 1} generadores se eliminarán. Sus fincas se reasignarán al que conservas. Esta acción no se puede deshacer.
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleConfirm}
+            disabled={loading || !selectedId}
+            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+          >
+            {loading ? "Fusionando..." : `Fusionar ${allGroups.length - 1} duplicado${allGroups.length - 1 === 1 ? "" : "s"}`}
+          </button>
+          <button onClick={onClose} disabled={loading} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RevisionFincasPage() {
@@ -568,11 +676,12 @@ export default function RevisionFincasPage() {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas">("pendientes");
+  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados">("pendientes");
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
   const [totalRevisadas, setTotalRevisadas] = useState(0);
   const [mergeData, setMergeData] = useState<{ finca: FincaItem; candidates: FincaItem[] } | null>(null);
+  const [mergeGenData, setMergeGenData] = useState<{ grupo: GeneradorGrupo; candidates: GeneradorGrupo[] } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -631,11 +740,53 @@ export default function RevisionFincasPage() {
     }
   }, [loadData]);
 
+  const handleMergeGenerador = useCallback(async (survivorGeneradorId: string, deleteGeneradorId: string) => {
+    const res = await fetch("/api/revisiones/generadores/merge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ survivorGeneradorId, deleteGeneradorId }),
+    });
+    if (res.ok) {
+      setMergeGenData(null);
+      loadData();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Error al fusionar generador");
+    }
+  }, [loadData]);
+
+  // Detección de NITs duplicados (prefijo sin último dígito — estándar NIT Colombia)
+  const nitPrefix = (nit: string) => {
+    const d = (nit || "").replace(/\D/g, "");
+    return d.length >= 5 ? d.slice(0, -1) : "";
+  };
+
+  const duplicadosMap = new Map<string, GeneradorGrupo[]>();
+  for (const g of grupos) {
+    const key = nitPrefix(g.generador?.nit || "");
+    if (!key || !g.generadorId) continue;
+    if (!duplicadosMap.has(key)) duplicadosMap.set(key, []);
+    duplicadosMap.get(key)!.push(g);
+  }
+
+  const getDuplicadosFor = (grupo: GeneradorGrupo): GeneradorGrupo[] => {
+    const key = nitPrefix(grupo.generador?.nit || "");
+    if (!key) return [];
+    const all = duplicadosMap.get(key) || [];
+    if (all.length <= 1) return [];
+    return all.filter((g) => g.generadorId !== grupo.generadorId);
+  };
+
+  const totalGeneradoresConDuplicados = Array.from(duplicadosMap.values())
+    .filter((arr) => arr.length > 1)
+    .reduce((sum, arr) => sum + arr.length, 0);
+
   const pct = totalFincas > 0 ? Math.round((totalRevisadas / totalFincas) * 100) : 0;
 
   const gruposFiltrados = grupos.filter((g) => {
     if (filtro === "pendientes") return g.revisadas < g.totalFincas;
     if (filtro === "revisadas") return g.revisadas === g.totalFincas;
+    if (filtro === "duplicados") return getDuplicadosFor(g).length > 0;
     return true;
   });
 
@@ -670,17 +821,40 @@ export default function RevisionFincasPage() {
           </div>
         </div>
 
+        {/* Banner de duplicados */}
+        {totalGeneradoresConDuplicados > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
+            <span className="text-red-600 text-lg flex-shrink-0">⚠</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800">
+                {totalGeneradoresConDuplicados} generadores con NIT duplicado detectados
+              </p>
+              <p className="text-xs text-red-700 mt-0.5">
+                Son generadores distintos que comparten el mismo NIT base (sin dígito de verificación). Úsalos con el filtro "Duplicados" y fusionalos uno a uno.
+              </p>
+            </div>
+            <button
+              onClick={() => setFiltro("duplicados")}
+              className="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex-shrink-0"
+            >
+              Ver duplicados
+            </button>
+          </div>
+        )}
+
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-            {(["pendientes", "todas", "revisadas"] as const).map((f) => {
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm flex-wrap">
+            {(["pendientes", "duplicados", "todas", "revisadas"] as const).map((f) => {
+              if (f === "duplicados" && totalGeneradoresConDuplicados === 0) return null;
               const label =
                 f === "pendientes" ? `Pendientes (${grupos.filter((g) => g.revisadas < g.totalFincas).length})` :
                 f === "revisadas" ? `Completos (${grupos.filter((g) => g.revisadas === g.totalFincas).length})` :
+                f === "duplicados" ? `Duplicados (${totalGeneradoresConDuplicados})` :
                 "Todos";
               return (
                 <button key={f} onClick={() => setFiltro(f)}
-                  className={`px-4 py-2 ${filtro === f ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-4 py-2 ${filtro === f ? (f === "duplicados" ? "bg-red-600 text-white" : "bg-[#042726] text-white") : "bg-white text-gray-600 hover:bg-gray-50"}`}>
                   {label}
                 </button>
               );
@@ -711,6 +885,8 @@ export default function RevisionFincasPage() {
                 onFincaToggle={(id) => setExpandedFinca(expandedFinca === id ? null : id)}
                 onSave={handleSave}
                 onMerge={(finca, candidates) => setMergeData({ finca, candidates })}
+                onMergeGenerador={(g, candidates) => setMergeGenData({ grupo: g, candidates })}
+                duplicadosNit={getDuplicadosFor(grupo)}
                 search={search}
               />
             ))}
@@ -718,13 +894,23 @@ export default function RevisionFincasPage() {
         )}
       </div>
 
-      {/* Modal fusión */}
+      {/* Modal fusión finca */}
       {mergeData && (
         <MergeModal
           finca={mergeData.finca}
           candidates={mergeData.candidates}
           onConfirm={handleMerge}
           onClose={() => setMergeData(null)}
+        />
+      )}
+
+      {/* Modal fusión generador */}
+      {mergeGenData && (
+        <GeneradorMergeModal
+          grupo={mergeGenData.grupo}
+          candidates={mergeGenData.candidates}
+          onConfirm={handleMergeGenerador}
+          onClose={() => setMergeGenData(null)}
         />
       )}
     </AuthenticatedLayout>
