@@ -179,9 +179,6 @@ function EditPanel({
   const [selectedCultivos, setSelectedCultivos] = useState<string[]>(item.finca?.cultivoIds || []);
   const [movil, setMovil] = useState(item.finca?.movil || item.original.movil || "");
   const [email, setEmail] = useState(item.finca?.email || item.original.email || "");
-  const [generadorNombre, setGeneradorNombre] = useState(item.original.nombre || "");
-  const [generadorNit, setGeneradorNit] = useState(item.original.nit || "");
-  const [generadorTipo, setGeneradorTipo] = useState(item.original.tipo || "AGRICOLA");
   const [saving, setSaving] = useState(false);
   const [showCultivos, setShowCultivos] = useState(false);
   const [certificados, setCertificados] = useState<any[]>([]);
@@ -216,10 +213,6 @@ function EditPanel({
       cultivoIds: selectedCultivos,
       movil,
       email,
-      generadorId: item.finca?.generadorId,
-      generadorNombre,
-      generadorNit,
-      generadorTipo,
       marcarRevisado,
     });
     setSaving(false);
@@ -242,29 +235,13 @@ function EditPanel({
           </div>
         </div>
 
-        {/* Derecha: editable */}
+        {/* Derecha: editable — solo datos de la finca */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Nueva estructura (editar)</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Datos de la finca</p>
+          <p className="text-xs text-gray-400 mb-3 italic">
+            Los datos del generador (nombre, NIT, tipo) se editan desde el encabezado del grupo.
+          </p>
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Generador — Nombre</label>
-              <input value={generadorNombre} onChange={(e) => setGeneradorNombre(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula</label>
-                <input value={generadorNit} onChange={(e) => setGeneradorNit(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                <select value={generadorTipo} onChange={(e) => setGeneradorTipo(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Nombre / Dirección finca</label>
               <input value={nombre} onChange={(e) => setNombre(e.target.value)}
@@ -452,6 +429,72 @@ function FincaRow({
   );
 }
 
+// ─── GeneradorEditForm ────────────────────────────────────────────────────────
+
+function GeneradorEditForm({
+  grupo,
+  onSaved,
+  onCancel,
+}: {
+  grupo: GeneradorGrupo;
+  onSaved: (fields: { nombre: string; nit: string; tipo: string }) => void;
+  onCancel: () => void;
+}) {
+  const [nombre, setNombre] = useState(grupo.generador?.nombre || "");
+  const [nit, setNit] = useState(grupo.generador?.nit || "");
+  const [tipo, setTipo] = useState(grupo.generador?.tipo || "AGRICOLA");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!grupo.generadorId) return;
+    setSaving(true);
+    const res = await fetch(`/api/revisiones/generadores/${grupo.generadorId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, nit, tipo }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      onSaved({ nombre, nit, tipo });
+    } else {
+      alert("Error al guardar generador");
+    }
+  };
+
+  return (
+    <div className="bg-white border-b border-gray-100 px-4 py-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del generador</label>
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="mb-3">
+        <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula</label>
+        <input value={nit} onChange={(e) => setNit(e.target.value)}
+          className="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={handleSave} disabled={saving}
+          className="px-4 py-1.5 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50">
+          {saving ? "Guardando..." : "Guardar generador"}
+        </button>
+        <button onClick={onCancel} className="px-4 py-1.5 text-gray-500 text-sm hover:text-gray-700">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── GeneradorRow ─────────────────────────────────────────────────────────────
 
 function GeneradorRow({
@@ -462,6 +505,7 @@ function GeneradorRow({
   onSave,
   onMerge,
   onMergeGenerador,
+  onGeneradorSaved,
   duplicadosNit,
   search,
 }: {
@@ -472,10 +516,12 @@ function GeneradorRow({
   onSave: (fincaId: string, data: any) => Promise<void>;
   onMerge: (finca: FincaItem, candidates: FincaItem[]) => void;
   onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
+  onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => void;
   duplicadosNit: GeneradorGrupo[];
   search: string;
 }) {
   const [expanded, setExpanded] = useState(grupo.revisadas < grupo.totalFincas);
+  const [editingGen, setEditingGen] = useState(false);
   const pct = grupo.totalFincas > 0 ? Math.round((grupo.revisadas / grupo.totalFincas) * 100) : 0;
   const allDone = grupo.revisadas === grupo.totalFincas && grupo.totalFincas > 0;
 
@@ -528,6 +574,15 @@ function GeneradorRow({
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          {grupo.generadorId && !editingGen && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditingGen(true); setExpanded(true); }}
+              className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 bg-white transition-colors"
+              title="Editar datos del generador"
+            >
+              Editar
+            </button>
+          )}
           {duplicadosNit.length > 0 && grupo.generadorId && (
             <button
               onClick={(e) => { e.stopPropagation(); onMergeGenerador(grupo, duplicadosNit); }}
@@ -549,6 +604,18 @@ function GeneradorRow({
           <span className="text-gray-400 text-sm">{expanded ? "▲" : "▼"}</span>
         </div>
       </div>
+
+      {/* Edit form del generador (inline) */}
+      {editingGen && grupo.generadorId && (
+        <GeneradorEditForm
+          grupo={grupo}
+          onSaved={(fields) => {
+            onGeneradorSaved(grupo.generadorId!, fields);
+            setEditingGen(false);
+          }}
+          onCancel={() => setEditingGen(false)}
+        />
+      )}
 
       {/* Fincas del generador */}
       {expanded && (
@@ -740,6 +807,16 @@ export default function RevisionFincasPage() {
     }
   }, [loadData]);
 
+  const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => {
+    setGrupos((prev) =>
+      prev.map((g) =>
+        g.generadorId === grupoId
+          ? { ...g, generador: { nombre: fields.nombre, nit: fields.nit, tipo: fields.tipo } }
+          : g
+      )
+    );
+  }, []);
+
   const handleMergeGenerador = useCallback(async (survivorGeneradorId: string, deleteGeneradorId: string) => {
     const res = await fetch("/api/revisiones/generadores/merge", {
       method: "POST",
@@ -886,6 +963,7 @@ export default function RevisionFincasPage() {
                 onSave={handleSave}
                 onMerge={(finca, candidates) => setMergeData({ finca, candidates })}
                 onMergeGenerador={(g, candidates) => setMergeGenData({ grupo: g, candidates })}
+                onGeneradorSaved={handleGeneradorSaved}
                 duplicadosNit={getDuplicadosFor(grupo)}
                 search={search}
               />
