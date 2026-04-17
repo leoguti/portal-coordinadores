@@ -28,6 +28,7 @@ interface FincaItem {
     cultivoIds: string[];
     movil: string;
     email: string;
+    coordinadorAsignadoId: string | null;
     revisado: boolean;
     notas: string;
   } | null;
@@ -286,11 +287,13 @@ function EditPanel({
   item,
   cultivos,
   onSave,
+  onReassigned,
   onClose,
 }: {
   item: FincaItem;
   cultivos: Cultivo[];
   onSave: (fincaId: string, data: any) => Promise<void>;
+  onReassigned: (fincaId: string) => void;
   onClose: () => void;
 }) {
   const [nombre, setNombre] = useState(item.finca?.nombre || item.original.direccion || "");
@@ -480,6 +483,109 @@ function EditPanel({
           Cancelar
         </button>
       </div>
+
+      {/* Reasignar a otro coordinador */}
+      <ReassignSection
+        fincaId={item.fincaId || ""}
+        currentCoordinadorId={item.finca?.coordinadorAsignadoId || null}
+        onReassigned={onReassigned}
+      />
+    </div>
+  );
+}
+
+// ─── ReassignSection ──────────────────────────────────────────────────────────
+
+function ReassignSection({
+  fincaId,
+  currentCoordinadorId,
+  onReassigned,
+}: {
+  fincaId: string;
+  currentCoordinadorId: string | null;
+  onReassigned: (fincaId: string) => void;
+}) {
+  const [coordinadores, setCoordinadores] = useState<{ id: string; name: string }[]>([]);
+  const [target, setTarget] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/coordinadores?onlyCoordinadores=true")
+      .then((r) => r.json())
+      .then((d) => setCoordinadores((d.coordinadores || []).filter((c: any) => c.id !== currentCoordinadorId)))
+      .catch(() => setCoordinadores([]));
+  }, [currentCoordinadorId]);
+
+  const handleReassign = async () => {
+    if (!target || !fincaId) return;
+    setLoading(true);
+    const res = await fetch(`/api/revisiones/fincas/${fincaId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coordinadorAsignadoId: target }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      onReassigned(fincaId);
+    } else {
+      alert("Error al reasignar");
+    }
+  };
+
+  const selectedName = coordinadores.find((c) => c.id === target)?.name || "";
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+        Esta finca no es mía
+      </p>
+      <p className="text-xs text-gray-500 mb-2">
+        Mueve esta finca a otro coordinador. No cambia los certificados ni el historial.
+      </p>
+      {!confirming ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Seleccionar coordinador…</option>
+            {coordinadores.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => target && setConfirming(true)}
+            disabled={!target}
+            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Reasignar
+          </button>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+          <p className="text-sm text-amber-900">
+            ¿Confirmas mover esta finca a <b>{selectedName}</b>? Dejará de aparecer en tu lista.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleReassign}
+              disabled={loading}
+              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg disabled:opacity-50"
+            >
+              {loading ? "Moviendo..." : "Confirmar"}
+            </button>
+            <button
+              onClick={() => setConfirming(false)}
+              disabled={loading}
+              className="px-4 py-1.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -496,6 +602,7 @@ function FincaRow({
   onToggleSelect,
   onDelete,
   onSave,
+  onReassigned,
 }: {
   item: FincaItem;
   cultivos: Cultivo[];
@@ -506,6 +613,7 @@ function FincaRow({
   onToggleSelect: () => void;
   onDelete: () => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
+  onReassigned: (fincaId: string) => void;
 }) {
   const revisado = item.finca?.revisado;
   const tieneProblemas = item.finca?.notas && item.finca.notas.length > 0;
@@ -574,7 +682,7 @@ function FincaRow({
       </div>
 
       {isExpanded && item.fincaId && (
-        <EditPanel item={item} cultivos={cultivos} onSave={onSave} onClose={onToggle} />
+        <EditPanel item={item} cultivos={cultivos} onSave={onSave} onReassigned={onReassigned} onClose={onToggle} />
       )}
     </div>
   );
@@ -657,6 +765,7 @@ function GeneradorRow({
   onMergeGenerador,
   onGeneradorSaved,
   onDeleteFinca,
+  onReassigned,
   selectedFincaIds,
   onToggleFincaSelection,
   duplicadosNit,
@@ -670,6 +779,7 @@ function GeneradorRow({
   onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
   onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => void;
   onDeleteFinca: (finca: FincaItem, siblings: FincaItem[]) => void;
+  onReassigned: (fincaId: string) => void;
   selectedFincaIds: Set<string>;
   onToggleFincaSelection: (fincaId: string, grupoId: string | null) => void;
   duplicadosNit: GeneradorGrupo[];
@@ -790,6 +900,7 @@ function GeneradorRow({
                 onToggleSelect={() => finca.fincaId && onToggleFincaSelection(finca.fincaId, grupo.generadorId)}
                 onDelete={() => onDeleteFinca(finca, siblings)}
                 onSave={onSave}
+                onReassigned={onReassigned}
               />
             );
           })}
@@ -1012,6 +1123,21 @@ export default function RevisionFincasPage() {
     if (a && b) setCompareData({ a, b });
   }, [selectedFincaIds, grupos]);
 
+  const handleReassigned = useCallback((fincaId: string) => {
+    // La finca se movió a otro coordinador — la quitamos de la vista actual
+    setGrupos((prev) =>
+      prev
+        .map((g) => {
+          const filtered = g.fincas.filter((f) => f.fincaId !== fincaId);
+          const revisadas = filtered.filter((f) => f.finca?.revisado).length;
+          return { ...g, fincas: filtered, totalFincas: filtered.length, revisadas };
+        })
+        .filter((g) => g.fincas.length > 0)
+    );
+    setTotalFincas((n) => Math.max(0, n - 1));
+    setExpandedFinca(null);
+  }, []);
+
   const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => {
     setGrupos((prev) =>
       prev.map((g) =>
@@ -1169,6 +1295,7 @@ export default function RevisionFincasPage() {
                 onMergeGenerador={(g, candidates) => setMergeGenData({ grupo: g, candidates })}
                 onGeneradorSaved={handleGeneradorSaved}
                 onDeleteFinca={(finca, siblings) => setDeleteData({ finca, siblings })}
+                onReassigned={handleReassigned}
                 selectedFincaIds={selectedFincaIds}
                 onToggleFincaSelection={toggleFincaSelection}
                 duplicadosNit={getDuplicadosFor(grupo)}

@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
 
 /**
  * GET /api/coordinadores
- * Get list of active coordinadores (excludes "Desactivado" role)
- * Admin/Supervisor access
+ * - Default: all active (excludes "Desactivado")
+ * - ?onlyCoordinadores=true: only role "Coordinador" (for reassignment dropdown)
+ * Any authenticated user can list; sensitive fields are not exposed.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -19,14 +20,6 @@ export async function GET() {
       );
     }
 
-    // Solo administradores y supervisores pueden ver la lista completa
-    if (!isAdminOrSupervisor(session.user.rol)) {
-      return NextResponse.json(
-        { error: "Acceso denegado" },
-        { status: 403 }
-      );
-    }
-
     const apiKey = process.env.AIRTABLE_API_KEY;
     const baseId = process.env.AIRTABLE_BASE_ID;
 
@@ -34,7 +27,14 @@ export async function GET() {
       throw new Error("Credenciales de Airtable no configuradas");
     }
 
-    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent("{Rol} != 'Desactivado'")}&sort[0][field]=Name&sort[0][direction]=asc`;
+    const onlyCoordinadores = req.nextUrl.searchParams.get("onlyCoordinadores") === "true";
+    // Si no es admin/supervisor, fuerza solo Coordinadores
+    const effectiveOnlyCoord = onlyCoordinadores || !isAdminOrSupervisor(session.user.rol);
+    const formula = effectiveOnlyCoord
+      ? "{Rol} = 'Coordinador'"
+      : "{Rol} != 'Desactivado'";
+
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Name&sort[0][direction]=asc`;
 
     const response = await fetch(url, {
       headers: {
@@ -53,7 +53,7 @@ export async function GET() {
     const coordinadores = data.records.map((record: any) => ({
       id: record.id,
       name: record.fields.Name || "Sin nombre",
-      email: record.fields.Email,
+      email: record.fields.email,
       rol: record.fields.Rol, // Uppercase R to match Airtable
     }));
 

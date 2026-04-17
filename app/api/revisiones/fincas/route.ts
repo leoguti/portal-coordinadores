@@ -22,61 +22,68 @@ export async function GET(request: NextRequest) {
 
   const isAdmin = isAdminOrSupervisor(session.user.rol);
   const coordinadorId = session.user.coordinatorRecordId;
+  const CHUNK = 30;
 
-  // 1. Fetch ubicaciones del coordinador
-  const fields = [
+  // 1. Fetch FINCAS asignadas al coordinador (o todas si es admin)
+  const fFields = [
+    "nombre", "generador", "municipio", "cultivos", "movil", "email",
+    "revisado", "notas_migracion", "coordinador_asignado",
+  ];
+  const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
+  const fincaFilter = isAdmin
+    ? "TRUE()"
+    : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_asignado}, ','))`;
+
+  const fincas: any[] = [];
+  let offset = "";
+  do {
+    const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
+    const data = await airtableGet(url);
+    if (data.error) return NextResponse.json({ error: "Error Airtable" }, { status: 500 });
+    fincas.push(...data.records);
+    offset = data.offset || "";
+  } while (offset);
+
+  if (fincas.length === 0) {
+    return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
+  }
+
+  const fincaIds = fincas.map((f) => f.id);
+  const fincaMap = new Map<string, any>();
+  for (const f of fincas) fincaMap.set(f.id, f);
+
+  // 2. Fetch ubicaciones vinculadas a esas FINCAS
+  const ubicaciones: any[] = [];
+  const uFields = [
     "nombregenerador", "cedulagenerador", "direcciongenerador",
     "mundep", "cultivogenerador", "movilgenerador", "emailgenerador",
     "tipogenerador", "finca",
   ];
-  const fp = fields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  const filter = isAdmin
-    ? "TRUE()"
-    : `FIND('${coordinadorId}', ARRAYJOIN({coordinadores}, ','))`;
-
-  const ubicaciones: any[] = [];
-  let offset = "";
-  do {
-    const url = `https://api.airtable.com/v0/${BASE}/ubicaciones?filterByFormula=${encodeURIComponent(filter)}&${fp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
-    const data = await airtableGet(url);
-    if (data.error) return NextResponse.json({ error: "Error Airtable" }, { status: 500 });
-    ubicaciones.push(...data.records);
-    offset = data.offset || "";
-  } while (offset);
-
-  // 2. IDs de FINCAS vinculadas (deduplicadas)
-  const fincaIdsSet = new Set<string>();
-  for (const u of ubicaciones) {
-    for (const id of (u.fields.finca || [])) fincaIdsSet.add(id);
-  }
-  const fincaIds = Array.from(fincaIdsSet);
-
-  if (fincaIds.length === 0) {
-    return NextResponse.json({ grupos: [], totalFincas: 0 });
-  }
-
-  // 3. Fetch FINCAS en batches de 30
-  const fincaMap = new Map<string, any>();
-  const CHUNK = 30;
+  const ufp = uFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
   for (let i = 0; i < fincaIds.length; i += CHUNK) {
     const chunk = fincaIds.slice(i, i + CHUNK);
-    const formula = `OR(${chunk.map((id: string) => `RECORD_ID()='${id}'`).join(",")})`;
-    const fFields = ["nombre", "generador", "municipio", "cultivos", "movil", "email", "revisado", "notas_migracion"];
-    const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-    const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(formula)}&${ffp}&pageSize=100`;
-    const data = await airtableGet(url);
-    for (const r of data.records) fincaMap.set(r.id, r);
+    // FIND() in ARRAYJOIN because finca is a linked record (array of IDs)
+    const formula = `OR(${chunk.map((id: string) => `FIND('${id}', ARRAYJOIN({finca}, ','))`).join(",")})`;
+    const url = `https://api.airtable.com/v0/${BASE}/ubicaciones?filterByFormula=${encodeURIComponent(formula)}&${ufp}&pageSize=100`;
+    let uOffset = "";
+    do {
+      const u = `${url}${uOffset ? "&offset=" + uOffset : ""}`;
+      const data = await airtableGet(u);
+      if (data.error) return NextResponse.json({ error: "Error Airtable" }, { status: 500 });
+      ubicaciones.push(...data.records);
+      uOffset = data.offset || "";
+    } while (uOffset);
   }
 
-  // 4. IDs de GENERADORES (deduplicados)
+  // 3. IDs de GENERADORES
   const generadorIdsSet = new Set<string>();
-  for (const finca of fincaMap.values()) {
-    const gId = finca.fields.generador?.[0];
+  for (const f of fincas) {
+    const gId = f.fields.generador?.[0];
     if (gId) generadorIdsSet.add(gId);
   }
   const generadorIds = Array.from(generadorIdsSet);
 
-  // 5. Fetch GENERADORES en batches de 30
+  // 4. Fetch GENERADORES
   const generadorMap = new Map<string, any>();
   for (let i = 0; i < generadorIds.length; i += CHUNK) {
     const chunk = generadorIds.slice(i, i + CHUNK);
@@ -88,7 +95,7 @@ export async function GET(request: NextRequest) {
     for (const r of data.records) generadorMap.set(r.id, r);
   }
 
-  // 6. Construir items combinando ubicacion + finca
+  // 5. Construir items por ubicacion (con datos de su finca asignada)
   const items = ubicaciones.map((u) => {
     const fincaId = u.fields.finca?.[0] || null;
     const finca = fincaId ? fincaMap.get(fincaId) : null;
@@ -115,14 +122,14 @@ export async function GET(request: NextRequest) {
         cultivoIds: finca.fields.cultivos || [],
         movil: finca.fields.movil || "",
         email: finca.fields.email || "",
+        coordinadorAsignadoId: finca.fields.coordinador_asignado?.[0] || null,
         revisado,
         notas,
       } : null,
     };
   });
 
-  // 7. Agrupar por GENERADOR
-  // Clave: generadorId (o "sin-generador" si no tiene)
+  // 6. Agrupar por GENERADOR
   const gruposMap = new Map<string, {
     generadorId: string | null;
     generador: { nombre: string; nit: string; tipo: string } | null;
@@ -146,9 +153,8 @@ export async function GET(request: NextRequest) {
     gruposMap.get(gId)!.fincas.push(item);
   }
 
-  // 8. Ordenar grupos y fincas dentro de cada grupo
+  // 7. Ordenar
   const grupos = Array.from(gruposMap.values()).map((g) => {
-    // Ordenar fincas: con problemas primero, luego no revisadas, luego revisadas
     g.fincas.sort((a, b) => {
       const aRev = a.finca?.revisado || false;
       const bRev = b.finca?.revisado || false;
@@ -163,7 +169,6 @@ export async function GET(request: NextRequest) {
     return { ...g, totalFincas, revisadas };
   });
 
-  // Ordenar grupos: los que tienen fincas sin revisar primero
   grupos.sort((a, b) => {
     const aPct = a.totalFincas > 0 ? a.revisadas / a.totalFincas : 1;
     const bPct = b.totalFincas > 0 ? b.revisadas / b.totalFincas : 1;
