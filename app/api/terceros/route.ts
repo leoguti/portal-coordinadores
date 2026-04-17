@@ -166,6 +166,8 @@ export async function GET(request: Request) {
           tipoPersona: r.fields.tipo_persona || "",
           cedulaPdf: (r.fields.cedula_pdf || []).length,
           certificadoCamaraPdf: (r.fields.certificado_camara_pdf || []).length,
+          rutPdf: (r.fields.rut_pdf || []).length,
+          certificacionBancariaPdf: (r.fields.certificacion_bancaria_pdf || []).length,
           completo: completitud.completo,
           faltantes: completitud.faltantes,
           nitInvalido: completitud.nitInvalido,

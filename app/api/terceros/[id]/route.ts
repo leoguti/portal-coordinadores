@@ -70,6 +70,12 @@ export async function PATCH(
   if (body.certificadoCamaraPdf !== undefined) {
     fields.certificado_camara_pdf = body.certificadoCamaraPdf;
   }
+  if (body.rutPdf !== undefined) {
+    fields.rut_pdf = body.rutPdf;
+  }
+  if (body.certificacionBancariaPdf !== undefined) {
+    fields.certificacion_bancaria_pdf = body.certificacionBancariaPdf;
+  }
 
   const res = await fetch(`https://api.airtable.com/v0/${BASE}/Terceros/${id}`, {
     method: "PATCH",

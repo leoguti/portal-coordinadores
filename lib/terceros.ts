@@ -17,6 +17,8 @@ export interface TerceroFields {
   tipo_persona?: "Natural" | "Jurídica";
   cedula_pdf?: any[]; // attachments
   certificado_camara_pdf?: any[]; // attachments
+  rut_pdf?: any[]; // attachments — obligatorio para todos
+  certificacion_bancaria_pdf?: any[]; // attachments — obligatorio para pagos
 }
 
 export interface CompletitudResult {
@@ -49,6 +51,14 @@ export function evaluarCompletitud(fields: TerceroFields): CompletitudResult {
   } else if (fields.tipo_persona === "Jurídica") {
     const camara = fields.certificado_camara_pdf || [];
     if (camara.length === 0) faltantes.push("Certificado Cámara de Comercio");
+  }
+
+  // Documentos obligatorios para todos los terceros
+  if ((fields.rut_pdf || []).length === 0) {
+    faltantes.push("RUT");
+  }
+  if ((fields.certificacion_bancaria_pdf || []).length === 0) {
+    faltantes.push("Certificación bancaria");
   }
 
   // Validación dígito verificador del NIT (solo jurídicas)

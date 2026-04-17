@@ -34,10 +34,12 @@ export default function TerceroEditPage() {
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [cedulaPdf, setCedulaPdf] = useState<Attachment[]>([]);
   const [certificadoCamaraPdf, setCertificadoCamaraPdf] = useState<Attachment[]>([]);
+  const [rutPdf, setRutPdf] = useState<Attachment[]>([]);
+  const [certificacionBancariaPdf, setCertificacionBancariaPdf] = useState<Attachment[]>([]);
   const [faltantes, setFaltantes] = useState<string[]>([]);
   const [nitInvalido, setNitInvalido] = useState(false);
   const [completo, setCompleto] = useState(false);
-  const [uploading, setUploading] = useState<"cedula" | "camara" | null>(null);
+  const [uploading, setUploading] = useState<"cedula" | "camara" | "rut" | "bancaria" | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -61,6 +63,8 @@ export default function TerceroEditPage() {
     else setMunicipio(null);
     setCedulaPdf(f.cedula_pdf || []);
     setCertificadoCamaraPdf(f.certificado_camara_pdf || []);
+    setRutPdf(f.rut_pdf || []);
+    setCertificacionBancariaPdf(f.certificacion_bancaria_pdf || []);
     setFaltantes(data.completitud?.faltantes || []);
     setNitInvalido(data.completitud?.nitInvalido || false);
     setCompleto(data.completitud?.completo || false);
@@ -99,9 +103,13 @@ export default function TerceroEditPage() {
     }
   };
 
-  const handleUpload = async (field: "cedula" | "camara", file: File) => {
+  const handleUpload = async (field: "cedula" | "camara" | "rut" | "bancaria", file: File) => {
     setUploading(field);
-    const fieldName = field === "cedula" ? "cedula_pdf" : "certificado_camara_pdf";
+    const fieldName =
+      field === "cedula" ? "cedula_pdf" :
+      field === "camara" ? "certificado_camara_pdf" :
+      field === "rut" ? "rut_pdf" :
+      "certificacion_bancaria_pdf";
     const formData = new FormData();
     formData.append("file", file);
     formData.append("recordId", id);
@@ -248,6 +256,62 @@ export default function TerceroEditPage() {
         {/* Documentos */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-bold text-gray-900">Documentos</h2>
+
+          {/* RUT — obligatorio para todos */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                RUT <span className="text-amber-600">(obligatorio)</span>
+              </span>
+              <span className="text-xs text-gray-400">{rutPdf.length} archivo(s)</span>
+            </div>
+            {rutPdf.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {rutPdf.map((a, i) => (
+                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
+                    📎 {a.filename}
+                  </a>
+                ))}
+              </div>
+            )}
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              onChange={(e) => e.target.files?.[0] && handleUpload("rut", e.target.files[0])}
+              disabled={uploading === "rut"}
+              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
+            />
+            {uploading === "rut" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
+          </div>
+
+          {/* Certificación bancaria — obligatoria */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Certificación bancaria <span className="text-amber-600">(obligatoria para pagos)</span>
+              </span>
+              <span className="text-xs text-gray-400">{certificacionBancariaPdf.length} archivo(s)</span>
+            </div>
+            {certificacionBancariaPdf.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {certificacionBancariaPdf.map((a, i) => (
+                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
+                    📎 {a.filename}
+                  </a>
+                ))}
+              </div>
+            )}
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              onChange={(e) => e.target.files?.[0] && handleUpload("bancaria", e.target.files[0])}
+              disabled={uploading === "bancaria"}
+              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
+            />
+            {uploading === "bancaria" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
+          </div>
 
           {/* Cédula (Natural) */}
           <div className={`rounded-lg border p-3 ${tipoPersona === "Natural" ? "bg-amber-50 border-amber-200" : "border-gray-200"}`}>

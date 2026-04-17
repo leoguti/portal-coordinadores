@@ -36,9 +36,19 @@ Se aprobó migrar la tabla `ubicaciones` (legacy) a una nueva estructura normali
 - Teléfono
 - Correo electrónico
 - Tipo de persona (Natural / Jurídica)
-- Documento adjunto:
+- Documento de identidad según tipo:
   - Persona natural → cédula escaneada
   - Persona jurídica → certificado de cámara de comercio
+- **RUT** (DIAN) — obligatorio para todos
+- **Certificación bancaria** — obligatoria para realizar pagos
+
+### Pendiente — planillas de seguridad social mensuales
+- Cada mes se debe adjuntar una planilla de aportes a SS
+- Mecánica distinta (no es un documento único; hay uno por mes)
+- Pendiente definir:
+  - ¿Campo por mes en Terceros o tabla separada `PlanillasSS`?
+  - ¿Se bloquea OS si no hay planilla del mes correspondiente?
+  - ¿Quién la sube (tercero, coordinador, admin)?
 
 ### Validaciones técnicas
 - **NIT empresas**: validar dígito verificador (algoritmo Colombia, sin costo)
