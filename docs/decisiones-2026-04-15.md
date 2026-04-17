@@ -43,12 +43,14 @@ Se aprobó migrar la tabla `ubicaciones` (legacy) a una nueva estructura normali
 - **Certificación bancaria** — obligatoria para realizar pagos
 
 ### Pendiente — planillas de seguridad social mensuales
-- Cada mes se debe adjuntar una planilla de aportes a SS
+- **Aplica solo a Personas Naturales** (independientes). Las Jurídicas no requieren planilla en nuestro sistema — tienen nómina propia.
+- Cada mes el natural debe adjuntar su planilla de aportes a SS
 - Mecánica distinta (no es un documento único; hay uno por mes)
 - Pendiente definir:
-  - ¿Campo por mes en Terceros o tabla separada `PlanillasSS`?
-  - ¿Se bloquea OS si no hay planilla del mes correspondiente?
-  - ¿Quién la sube (tercero, coordinador, admin)?
+  - Diseño: tabla nueva `PlanillasSS` con `tercero`, `mes` (YYYY-MM), `archivo`, `subido_por`, `monto`
+  - ¿Se bloquea OS si no hay planilla del mes correspondiente o solo warning al inicio?
+  - ¿Se valida el mes anterior al pago, o el mes de la OS?
+  - Fase 1: la sube el coordinador responsable. Fase 4: la sube el propio tercero desde su portal.
 
 ### Validaciones técnicas
 - **NIT empresas**: validar dígito verificador (algoritmo Colombia, sin costo)
