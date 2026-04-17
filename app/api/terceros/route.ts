@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { evaluarCompletitud } from "@/lib/terceros";
 
 interface TerceroRecord {
   id: string;
@@ -127,15 +128,56 @@ async function getTercerosCache(): Promise<CachedTercero[]> {
  */
 export async function GET(request: Request) {
   try {
-    // Verificar autenticación
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Obtener parámetro de búsqueda
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
+    const all = searchParams.get("all") === "true";
+
+    // Modo admin: listar todos con datos de completitud
+    if (all) {
+      const apiKey = process.env.AIRTABLE_API_KEY!;
+      const baseId = process.env.AIRTABLE_BASE_ID!;
+      const records: any[] = [];
+      let offset: string | undefined;
+      do {
+        const url = `https://api.airtable.com/v0/${baseId}/Terceros?pageSize=100${offset ? `&offset=${offset}` : ""}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" });
+        const data = await res.json();
+        records.push(...(data.records || []));
+        offset = data.offset;
+      } while (offset);
+
+      const terceros = records.map((r: any) => {
+        const completitud = evaluarCompletitud(r.fields);
+        return {
+          id: r.id,
+          razonSocial: r.fields.RazonSocial || "",
+          nit: r.fields.NIT || "",
+          direccion: r.fields.Direccion || "",
+          movil: r.fields.Movil || null,
+          correo: r.fields["Correo Electrónico"] || "",
+          municipioId: r.fields.Municipio?.[0] || null,
+          municipioDepartamento: r.fields["Municipio-Departamento"]?.[0] || "",
+          tipo: r.fields.Tipo || [],
+          tipoPersona: r.fields.tipo_persona || "",
+          cedulaPdf: (r.fields.cedula_pdf || []).length,
+          certificadoCamaraPdf: (r.fields.certificado_camara_pdf || []).length,
+          completo: completitud.completo,
+          faltantes: completitud.faltantes,
+          nitInvalido: completitud.nitInvalido,
+        };
+      });
+
+      return NextResponse.json({
+        terceros,
+        total: terceros.length,
+        completos: terceros.filter((t: any) => t.completo).length,
+      });
+    }
 
     if (!search || search.length < 2) {
       return NextResponse.json({ terceros: [] });

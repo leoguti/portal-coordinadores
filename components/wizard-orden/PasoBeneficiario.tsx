@@ -2,6 +2,7 @@
 
 import TerceroSearch from "@/components/TerceroSearch";
 import BeneficiarioForm from "@/components/BeneficiarioForm";
+import TerceroCompletitudWarning from "@/components/TerceroCompletitudWarning";
 import {
   getFechaMinimaPermitida,
   getFechaMaximaPermitida,
@@ -108,6 +109,7 @@ export default function PasoBeneficiario({
           required
           placeholder="Buscar tercero..."
         />
+        {beneficiario && <TerceroCompletitudWarning terceroId={beneficiario.id} mode="error" />}
       </div>
 
       {/* Datos del beneficiario */}

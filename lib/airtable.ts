@@ -965,6 +965,23 @@ export async function createOrdenServicio(
   try {
     console.log("Creating Orden de Servicio...");
 
+    // ─── Validación: Tercero debe estar completo ─────────────────────────────
+    const terceroRes = await fetch(
+      `https://api.airtable.com/v0/${baseId}/Terceros/${params.beneficiarioRecordId}`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
+    );
+    if (!terceroRes.ok) {
+      throw new Error("No se pudo verificar el tercero beneficiario");
+    }
+    const terceroRec = await terceroRes.json();
+    const { evaluarCompletitud } = await import("./terceros");
+    const completitud = evaluarCompletitud(terceroRec.fields || {});
+    if (!completitud.completo) {
+      throw new Error(
+        `El tercero "${terceroRec.fields?.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`
+      );
+    }
+
     // Step 1: Create the Orden record
     const ordenUrl = `https://api.airtable.com/v0/${baseId}/Ordenes`;
 

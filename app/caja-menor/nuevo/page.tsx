@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
+import TerceroCompletitudWarning from "@/components/TerceroCompletitudWarning";
 import { getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
 
 interface Tercero {
@@ -386,6 +387,7 @@ export default function NuevoGastoCajaMenorPage() {
                 {beneficiario.direccion && ` | Dir: ${beneficiario.direccion}`}
               </p>
             )}
+            {beneficiario && <TerceroCompletitudWarning terceroId={beneficiario.id} />}
           </div>
 
           {/* Rubro */}
