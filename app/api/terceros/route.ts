@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { evaluarCompletitud } from "@/lib/terceros";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 interface TerceroRecord {
   id: string;
@@ -141,10 +142,18 @@ export async function GET(request: Request) {
     if (all) {
       const apiKey = process.env.AIRTABLE_API_KEY!;
       const baseId = process.env.AIRTABLE_BASE_ID!;
+
+      const isAdmin = isAdminOrSupervisor(session.user.rol);
+      const coordinadorId = session.user.coordinatorRecordId;
+      // Filtro: coordinador ve solo los suyos (via lookup coordinador_responsable_id), admin ve todo
+      const filter = isAdmin
+        ? ""
+        : `&filterByFormula=${encodeURIComponent(`FIND('${coordinadorId}', ARRAYJOIN({coordinador_responsable_id}, ',')) > 0`)}`;
+
       const records: any[] = [];
       let offset: string | undefined;
       do {
-        const url = `https://api.airtable.com/v0/${baseId}/Terceros?pageSize=100${offset ? `&offset=${offset}` : ""}`;
+        const url = `https://api.airtable.com/v0/${baseId}/Terceros?pageSize=100${filter}${offset ? `&offset=${offset}` : ""}`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" });
         const data = await res.json();
         records.push(...(data.records || []));
@@ -168,6 +177,7 @@ export async function GET(request: Request) {
           certificadoCamaraPdf: (r.fields.certificado_camara_pdf || []).length,
           rutPdf: (r.fields.rut_pdf || []).length,
           certificacionBancariaPdf: (r.fields.certificacion_bancaria_pdf || []).length,
+          coordinadorResponsableId: r.fields.coordinador_responsable?.[0] || null,
           completo: completitud.completo,
           faltantes: completitud.faltantes,
           nitInvalido: completitud.nitInvalido,
@@ -178,6 +188,7 @@ export async function GET(request: Request) {
         terceros,
         total: terceros.length,
         completos: terceros.filter((t: any) => t.completo).length,
+        isAdmin,
       });
     }
 

@@ -76,6 +76,9 @@ export async function PATCH(
   if (body.certificacionBancariaPdf !== undefined) {
     fields.certificacion_bancaria_pdf = body.certificacionBancariaPdf;
   }
+  if (body.coordinadorResponsableId !== undefined) {
+    fields.coordinador_responsable = body.coordinadorResponsableId ? [body.coordinadorResponsableId] : [];
+  }
 
   const res = await fetch(`https://api.airtable.com/v0/${BASE}/Terceros/${id}`, {
     method: "PATCH",

@@ -370,7 +370,110 @@ export default function TerceroEditPage() {
           </div>
         </div>
 
+        {/* Reasignación de coordinador responsable */}
+        <ReasignarCoordinador terceroId={id} />
+
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+function ReasignarCoordinador({ terceroId }: { terceroId: string }) {
+  const [current, setCurrent] = useState<{ id: string; name: string } | null>(null);
+  const [list, setList] = useState<{ id: string; name: string }[]>([]);
+  const [target, setTarget] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const [tRes, cRes] = await Promise.all([
+      fetch(`/api/terceros/${terceroId}`),
+      fetch(`/api/coordinadores?onlyCoordinadores=true`),
+    ]);
+    const tData = await tRes.json();
+    const cData = await cRes.json();
+    const cid = tData.fields?.coordinador_responsable?.[0] || null;
+    const coords = cData.coordinadores || [];
+    if (cid) {
+      const found = coords.find((c: any) => c.id === cid);
+      setCurrent(found ? { id: found.id, name: found.name } : { id: cid, name: "(coordinador no encontrado)" });
+    } else {
+      setCurrent(null);
+    }
+    setList(coords);
+  };
+
+  useEffect(() => { load(); }, [terceroId]);
+
+  const handleReassign = async () => {
+    if (!target) return;
+    setSaving(true);
+    const res = await fetch(`/api/terceros/${terceroId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coordinadorResponsableId: target }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setConfirming(false);
+      setTarget("");
+      load();
+    } else {
+      alert("Error al reasignar");
+    }
+  };
+
+  const targetName = list.find((c) => c.id === target)?.name || "";
+  const others = list.filter((c) => c.id !== current?.id);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 className="text-sm font-bold text-gray-900 mb-1">Coordinador responsable</h2>
+      <p className="text-xs text-gray-500 mb-3">
+        Este coordinador es quien mantiene los datos y documentos al día.
+      </p>
+
+      {current ? (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3">
+          <p className="text-sm text-gray-800">{current.name}</p>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          <p className="text-sm text-amber-800">Sin coordinador asignado</p>
+        </div>
+      )}
+
+      {!confirming ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={target} onChange={(e) => setTarget(e.target.value)}
+            className="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Seleccionar coordinador…</option>
+            {others.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <button
+            onClick={() => target && setConfirming(true)}
+            disabled={!target}
+            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            Reasignar
+          </button>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+          <p className="text-sm text-amber-900">
+            ¿Confirmas pasar este tercero a <b>{targetName}</b>? Dejarás de verlo en tu lista.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={handleReassign} disabled={saving}
+              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg disabled:opacity-50">
+              {saving ? "Reasignando..." : "Confirmar"}
+            </button>
+            <button onClick={() => setConfirming(false)} disabled={saving}
+              className="px-4 py-1.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

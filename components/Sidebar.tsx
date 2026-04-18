@@ -13,7 +13,7 @@ const navItems = [
   { name: "Saldos Centros", href: "/saldos-centros", icon: "⚖️", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Saldos Coordinador", href: "/saldos-coordinador", icon: "👤", roles: ["Administrador", "Supervisor"] },
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Terceros", href: "/terceros", icon: "🏢", roles: ["Administrador", "Supervisor"] },
+  { name: "Terceros", href: "/terceros", icon: "🏢", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Revisión Fincas", href: "/revisiones/fincas", icon: "✅", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Generación de Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
