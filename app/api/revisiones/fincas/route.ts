@@ -14,6 +14,8 @@ async function airtableGet(url: string) {
   return res.json();
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.coordinatorRecordId) {
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
   const isAdmin = isAdminOrSupervisor(session.user.rol);
   const coordinadorId = session.user.coordinatorRecordId;
   const CHUNK = 30;
+  const debug = request.nextUrl.searchParams.get("debug") === "1";
 
   // 1. Fetch FINCAS asignadas al coordinador (o todas si es admin)
   // Filtra contra el campo formula `coordinador_id` que expone el RECORD_ID
@@ -36,15 +39,35 @@ export async function GET(request: NextRequest) {
     ? "TRUE()"
     : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
 
+  if (debug) {
+    return NextResponse.json({
+      debug: true,
+      coordinadorId,
+      isAdmin,
+      fincaFilter,
+      // Prueba real del filtro
+      testUrl: `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&fields[]=nombre&pageSize=3`,
+    });
+  }
+
   const fincas: any[] = [];
   let offset = "";
+  let firstResponseDebug: any = null;
   do {
     const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
     const data = await airtableGet(url);
-    if (data.error) return NextResponse.json({ error: "Error Airtable" }, { status: 500 });
+    if (!firstResponseDebug) {
+      firstResponseDebug = { hasError: !!data.error, errorType: data.error?.type, recordCount: data.records?.length ?? null };
+    }
+    if (data.error) {
+      console.error("[revisiones/fincas] Airtable error:", data.error);
+      return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
+    }
     fincas.push(...data.records);
     offset = data.offset || "";
   } while (offset);
+
+  console.log(`[revisiones/fincas] coord=${coordinadorId} isAdmin=${isAdmin} filter=${fincaFilter} → ${fincas.length} fincas | firstResp=${JSON.stringify(firstResponseDebug)}`);
 
   if (fincas.length === 0) {
     return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
