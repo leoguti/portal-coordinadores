@@ -22,21 +22,19 @@ export async function GET(request: NextRequest) {
 
   const isAdmin = isAdminOrSupervisor(session.user.rol);
   const coordinadorId = session.user.coordinatorRecordId;
-  const coordinadorName = session.user.name || "";
   const CHUNK = 30;
 
   // 1. Fetch FINCAS asignadas al coordinador (o todas si es admin)
-  // Nota: coordinador_asignado es multipleRecordLinks — Airtable resuelve al
-  // campo primario (Name), no al ID. Por eso filtramos por nombre.
+  // Filtra contra el campo formula `coordinador_id` que expone el RECORD_ID
+  // del coordinador_asignado como texto (más estable que filtrar por Name).
   const fFields = [
     "nombre", "generador", "municipio", "cultivos", "movil", "email",
     "revisado", "notas_migracion", "coordinador_asignado",
   ];
   const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  const safeName = coordinadorName.replace(/'/g, "\\'");
   const fincaFilter = isAdmin
     ? "TRUE()"
-    : `ARRAYJOIN({coordinador_asignado}) = '${safeName}'`;
+    : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
 
   const fincas: any[] = [];
   let offset = "";
