@@ -162,6 +162,8 @@ export async function GET(request: Request) {
 
       const terceros = records.map((r: any) => {
         const completitud = evaluarCompletitud(r.fields);
+        const ordenesCount = (r.fields.Ordenes || []).length;
+        const cajaMenorCount = (r.fields.GastosCajaMenor || []).length;
         return {
           id: r.id,
           razonSocial: r.fields.RazonSocial || "",
@@ -178,6 +180,9 @@ export async function GET(request: Request) {
           rutPdf: (r.fields.rut_pdf || []).length,
           certificacionBancariaPdf: (r.fields.certificacion_bancaria_pdf || []).length,
           coordinadorResponsableId: r.fields.coordinador_responsable?.[0] || null,
+          ordenesCount,
+          cajaMenorCount,
+          enUso: ordenesCount > 0 || cajaMenorCount > 0,
           completo: completitud.completo,
           faltantes: completitud.faltantes,
           nitInvalido: completitud.nitInvalido,

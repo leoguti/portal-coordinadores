@@ -17,17 +17,24 @@ interface Tercero {
   tipoPersona: string;
   cedulaPdf: number;
   certificadoCamaraPdf: number;
+  ordenesCount: number;
+  cajaMenorCount: number;
+  enUso: boolean;
   completo: boolean;
   faltantes: string[];
   nitInvalido: boolean;
 }
 
+type FiltroUso = "con_os" | "con_caja" | "en_uso" | "sin_uso" | "todos";
+
 export default function TercerosPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [terceros, setTerceros] = useState<Tercero[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState<"incompletos" | "todos" | "completos">("incompletos");
+  const [isAdminView, setIsAdminView] = useState(false);
+  const [filtroCompletitud, setFiltroCompletitud] = useState<"incompletos" | "todos" | "completos">("incompletos");
+  const [filtroUso, setFiltroUso] = useState<FiltroUso>("con_os");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -40,13 +47,23 @@ export default function TercerosPage() {
       .then((r) => r.json())
       .then((d) => {
         setTerceros(d.terceros || []);
+        setIsAdminView(!!d.isAdmin);
+        // Admin: default "con_os" (filtrar ruido). Coordinador: "todos" porque ya ve solo los suyos
+        if (!d.isAdmin) setFiltroUso("todos");
         setLoading(false);
       });
   }, [status]);
 
   const visibles = terceros.filter((t) => {
-    if (filtro === "incompletos" && t.completo) return false;
-    if (filtro === "completos" && !t.completo) return false;
+    // Filtro de uso
+    if (filtroUso === "con_os" && t.ordenesCount === 0) return false;
+    if (filtroUso === "con_caja" && t.cajaMenorCount === 0) return false;
+    if (filtroUso === "en_uso" && !t.enUso) return false;
+    if (filtroUso === "sin_uso" && t.enUso) return false;
+    // Filtro de completitud
+    if (filtroCompletitud === "incompletos" && t.completo) return false;
+    if (filtroCompletitud === "completos" && !t.completo) return false;
+    // Búsqueda
     if (search) {
       const s = search.toLowerCase();
       return (
@@ -58,8 +75,22 @@ export default function TercerosPage() {
     return true;
   });
 
-  const total = terceros.length;
-  const completos = terceros.filter((t) => t.completo).length;
+  // Conteos del filtro de USO (aplicados sobre el universo completo)
+  const totalConOs = terceros.filter((t) => t.ordenesCount > 0).length;
+  const totalConCaja = terceros.filter((t) => t.cajaMenorCount > 0).length;
+  const totalEnUso = terceros.filter((t) => t.enUso).length;
+  const totalSinUso = terceros.filter((t) => !t.enUso).length;
+
+  // Aplicamos el filtro de uso para el sub-universo (después filtramos completitud)
+  const enUnivUso = terceros.filter((t) => {
+    if (filtroUso === "con_os") return t.ordenesCount > 0;
+    if (filtroUso === "con_caja") return t.cajaMenorCount > 0;
+    if (filtroUso === "en_uso") return t.enUso;
+    if (filtroUso === "sin_uso") return !t.enUso;
+    return true;
+  });
+  const total = enUnivUso.length;
+  const completos = enUnivUso.filter((t) => t.completo).length;
   const incompletos = total - completos;
   const pct = total > 0 ? Math.round((completos / total) * 100) : 0;
 
@@ -94,7 +125,28 @@ export default function TercerosPage() {
           </div>
         </div>
 
-        {/* Filtros */}
+        {/* Filtro de uso */}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Uso</p>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm flex-wrap">
+            {(["con_os", "con_caja", "en_uso", "sin_uso", "todos"] as const).map((f) => {
+              const label =
+                f === "con_os" ? `Con OS (${totalConOs})` :
+                f === "con_caja" ? `Con Caja Menor (${totalConCaja})` :
+                f === "en_uso" ? `En uso (${totalEnUso})` :
+                f === "sin_uso" ? `Sin uso (${totalSinUso})` :
+                `Todos (${terceros.length})`;
+              return (
+                <button key={f} onClick={() => setFiltroUso(f)}
+                  className={`px-3 py-2 ${filtroUso === f ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Filtro completitud + búsqueda */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
             {(["incompletos", "todos", "completos"] as const).map((f) => {
@@ -103,8 +155,8 @@ export default function TercerosPage() {
                 f === "completos" ? `Completos (${completos})` :
                 `Todos (${total})`;
               return (
-                <button key={f} onClick={() => setFiltro(f)}
-                  className={`px-4 py-2 capitalize ${filtro === f ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                <button key={f} onClick={() => setFiltroCompletitud(f)}
+                  className={`px-4 py-2 capitalize ${filtroCompletitud === f ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
                   {label}
                 </button>
               );
@@ -123,7 +175,7 @@ export default function TercerosPage() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {visibles.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-12">
-              {filtro === "incompletos" ? "Todos los terceros están completos" : "Sin resultados"}
+              {filtroCompletitud === "incompletos" ? "Todos los terceros están completos" : "Sin resultados"}
             </p>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -152,6 +204,16 @@ export default function TercerosPage() {
                           <span className="text-xs text-gray-400">{t.municipioDepartamento}</span>
                         )}
                         {t.correo && <span className="text-xs text-gray-400 truncate">{t.correo}</span>}
+                        {t.ordenesCount > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">
+                            {t.ordenesCount} OS
+                          </span>
+                        )}
+                        {t.cajaMenorCount > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
+                            {t.cajaMenorCount} CM
+                          </span>
+                        )}
                       </div>
                       {!t.completo && t.faltantes.length > 0 && (
                         <div className="ml-5 mt-1 flex flex-wrap gap-1">
