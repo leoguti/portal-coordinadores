@@ -8,10 +8,6 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
 
 const TIPOS_PERSONA = ["Natural", "Jurídica"];
-const TIPOS_CLASIFICACION = [
-  "Centro de Acopio", "Transportador", "Gestor", "Arrendador",
-  "Alcadia", "Gobernacion", "Corporacion Autónoma", "Agremiación"
-];
 
 interface Attachment { id?: string; url: string; filename: string; size?: number }
 
@@ -30,7 +26,6 @@ export default function TerceroEditPage() {
   const [movil, setMovil] = useState<string>("");
   const [correo, setCorreo] = useState("");
   const [observaciones, setObservaciones] = useState("");
-  const [tipo, setTipo] = useState<string[]>([]);
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [cedulaPdf, setCedulaPdf] = useState<Attachment[]>([]);
   const [certificadoCamaraPdf, setCertificadoCamaraPdf] = useState<Attachment[]>([]);
@@ -57,7 +52,6 @@ export default function TerceroEditPage() {
     setMovil(f.Movil?.toString() || "");
     setCorreo(f["Correo Electrónico"] || "");
     setObservaciones(f.Observaciones || "");
-    setTipo(f.Tipo || []);
     const mundep = f["Municipio-Departamento"]?.[0];
     if (f.Municipio?.[0] && mundep) setMunicipio({ id: f.Municipio[0], mundep });
     else setMunicipio(null);
@@ -88,7 +82,6 @@ export default function TerceroEditPage() {
         movil: movil ? Number(movil) : null,
         correo,
         observaciones,
-        tipo,
         municipioId: municipio?.id || null,
       }),
     });
@@ -123,10 +116,6 @@ export default function TerceroEditPage() {
     } else {
       alert("Error al subir el documento");
     }
-  };
-
-  const toggleTipo = (t: string) => {
-    setTipo((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
   if (status === "loading" || loading) {
@@ -224,18 +213,6 @@ export default function TerceroEditPage() {
                 type="email" value={correo} onChange={(e) => setCorreo(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">Clasificación del tercero (opcional)</label>
-            <div className="flex flex-wrap gap-2">
-              {TIPOS_CLASIFICACION.map((t) => (
-                <label key={t} className={`text-xs px-3 py-1.5 rounded-full cursor-pointer border ${tipo.includes(t) ? "bg-[#042726] text-white border-[#042726]" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}>
-                  <input type="checkbox" checked={tipo.includes(t)} onChange={() => toggleTipo(t)} className="hidden" />
-                  {t}
-                </label>
-              ))}
             </div>
           </div>
 

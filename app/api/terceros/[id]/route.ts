@@ -61,9 +61,6 @@ export async function PATCH(
   if (body.municipioId !== undefined) {
     fields.Municipio = body.municipioId ? [body.municipioId] : [];
   }
-  if (body.tipo !== undefined) {
-    fields.Tipo = Array.isArray(body.tipo) ? body.tipo : [body.tipo];
-  }
   if (body.cedulaPdf !== undefined) {
     fields.cedula_pdf = body.cedulaPdf;
   }

@@ -173,7 +173,6 @@ export async function GET(request: Request) {
           correo: r.fields["Correo Electrónico"] || "",
           municipioId: r.fields.Municipio?.[0] || null,
           municipioDepartamento: r.fields["Municipio-Departamento"]?.[0] || "",
-          tipo: r.fields.Tipo || [],
           tipoPersona: r.fields.tipo_persona || "",
           cedulaPdf: (r.fields.cedula_pdf || []).length,
           certificadoCamaraPdf: (r.fields.certificado_camara_pdf || []).length,
