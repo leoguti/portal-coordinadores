@@ -40,13 +40,25 @@ export async function GET(request: NextRequest) {
     : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
 
   if (debug) {
+    // Ejecutar el filtro en vivo y devolver la respuesta de Airtable
+    const testUrl = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&fields[]=nombre&pageSize=3`;
+    const res = await fetch(testUrl, {
+      headers: { Authorization: `Bearer ${KEY}` },
+      cache: "no-store",
+    });
+    const json = await res.json();
     return NextResponse.json({
       debug: true,
       coordinadorId,
       isAdmin,
       fincaFilter,
-      // Prueba real del filtro
-      testUrl: `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&fields[]=nombre&pageSize=3`,
+      baseId: BASE,
+      keyFirst4: (KEY || "").slice(0, 4),
+      keyLength: (KEY || "").length,
+      airtableStatus: res.status,
+      airtableError: json.error || null,
+      airtableRecordCount: (json.records || []).length,
+      airtableFirstRecord: json.records?.[0] || null,
     });
   }
 
