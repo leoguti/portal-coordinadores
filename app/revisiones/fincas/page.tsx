@@ -1000,6 +1000,181 @@ function GeneradorMergeModal({
   );
 }
 
+// ─── CreateFincaModal ─────────────────────────────────────────────────────────
+
+const TIPOS_GEN = ["AGRICOLA", "PECUARIO", "FLORICULTOR", "OTRO"];
+
+function CreateFincaModal({
+  cultivos,
+  onCreated,
+  onClose,
+}: {
+  cultivos: Cultivo[];
+  onCreated: () => void;
+  onClose: () => void;
+}) {
+  const [generadorNombre, setGeneradorNombre] = useState("");
+  const [generadorNit, setGeneradorNit] = useState("");
+  const [generadorTipo, setGeneradorTipo] = useState("AGRICOLA");
+  const [nombre, setNombre] = useState("");
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [selectedCultivos, setSelectedCultivos] = useState<string[]>([]);
+  const [showCultivos, setShowCultivos] = useState(false);
+  const [movil, setMovil] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const toggleCultivo = (id: string) => {
+    setSelectedCultivos((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  };
+
+  const handleSave = async () => {
+    setError("");
+    if (!generadorNombre || !generadorNit) {
+      setError("Nombre y NIT del generador son obligatorios");
+      return;
+    }
+    if (!nombre) {
+      setError("Nombre/dirección de la finca es obligatorio");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/revisiones/fincas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        generadorNombre,
+        generadorNit,
+        generadorTipo,
+        nombre,
+        municipioId: municipio?.id || null,
+        cultivoIds: selectedCultivos,
+        movil,
+        email,
+      }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      onCreated();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setError(err.error || "Error al crear la finca");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <h2 className="text-base font-bold text-gray-900 mb-1">Agregar finca nueva</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Se creará el generador y la finca. La finca queda asignada a ti como responsable.
+        </p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 mb-4">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Generador */}
+          <div className="rounded-lg border border-gray-200 p-3 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Generador</p>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                <input value={generadorNombre} onChange={(e) => setGeneradorNombre(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula *</label>
+                  <input value={generadorNit} onChange={(e) => setGeneradorNit(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                  <select value={generadorTipo} onChange={(e) => setGeneradorTipo(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    {TIPOS_GEN.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Finca */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Finca</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre / Dirección *</label>
+                <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Ej: Finca La Esperanza - Vereda El Rosal"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Municipio</label>
+                <MunicipioSearch value={municipio} onChange={setMunicipio} placeholder="Buscar municipio..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Cultivos ({selectedCultivos.length} seleccionados)
+                </label>
+                <button type="button" onClick={() => setShowCultivos(!showCultivos)}
+                  className="w-full text-left border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                  {selectedCultivos.length === 0
+                    ? "Seleccionar cultivos..."
+                    : cultivos.filter((c) => selectedCultivos.includes(c.id)).map((c) => c.nombre).join(", ")}
+                </button>
+                {showCultivos && (
+                  <div className="mt-1 border border-gray-200 rounded-lg bg-white shadow-sm max-h-48 overflow-y-auto p-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      {cultivos.map((c) => (
+                        <label key={c.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer text-sm">
+                          <input type="checkbox" checked={selectedCultivos.includes(c.id)}
+                            onChange={() => toggleCultivo(c.id)} className="accent-green-600" />
+                          {c.nombre}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Móvil</label>
+                  <input value={movil} onChange={(e) => setMovil(e.target.value.replace(/\D/g, ""))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-5 pt-4 border-t border-gray-100">
+          <button onClick={handleSave} disabled={saving}
+            className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg disabled:opacity-50">
+            {saving ? "Creando..." : "Crear finca"}
+          </button>
+          <button onClick={onClose} disabled={saving}
+            className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RevisionFincasPage() {
@@ -1017,6 +1192,7 @@ export default function RevisionFincasPage() {
   const [compareData, setCompareData] = useState<{ a: FincaItem; b: FincaItem } | null>(null);
   const [deleteData, setDeleteData] = useState<{ finca: FincaItem; siblings: FincaItem[] } | null>(null);
   const [mergeGenData, setMergeGenData] = useState<{ grupo: GeneradorGrupo; candidates: GeneradorGrupo[] } | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   // Selección para fusionar (hasta 2 fincas del mismo generador)
   const [selectedFincaIds, setSelectedFincaIds] = useState<Set<string>>(new Set());
   const [selectionGeneradorId, setSelectionGeneradorId] = useState<string | null>(null);
@@ -1211,11 +1387,19 @@ export default function RevisionFincasPage() {
       <div className="max-w-4xl mx-auto p-6 space-y-5">
 
         {/* Header */}
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Revisión de Fincas</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Verifica los datos de cada generador y sus fincas. Fusiona duplicados cuando sea necesario.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Revisión de Fincas</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Verifica los datos de cada generador y sus fincas. Fusiona duplicados cuando sea necesario.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex-shrink-0 px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            + Agregar finca
+          </button>
         </div>
 
         {/* Progreso global */}
@@ -1360,6 +1544,15 @@ export default function RevisionFincasPage() {
           candidates={mergeGenData.candidates}
           onConfirm={handleMergeGenerador}
           onClose={() => setMergeGenData(null)}
+        />
+      )}
+
+      {/* Modal crear finca nueva */}
+      {showCreate && (
+        <CreateFincaModal
+          cultivos={cultivos}
+          onCreated={() => { setShowCreate(false); loadData(); }}
+          onClose={() => setShowCreate(false)}
         />
       )}
     </AuthenticatedLayout>

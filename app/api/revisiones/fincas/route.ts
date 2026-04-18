@@ -16,6 +16,67 @@ async function airtableGet(url: string) {
 
 export const dynamic = "force-dynamic";
 
+// POST /api/revisiones/fincas
+// Crea un GENERADOR (si no viene generadorId) y una FINCA nueva asignada al
+// coordinador actual.
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.coordinatorRecordId) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  const coordinadorId = session.user.coordinatorRecordId;
+  const body = await req.json();
+
+  // 1. Resolver generador: si viene generadorId, usarlo; si no, crear uno
+  let generadorId: string | null = body.generadorId || null;
+  if (!generadorId) {
+    const genFields: Record<string, unknown> = {
+      nombre: body.generadorNombre || "",
+      nit: body.generadorNit || "",
+      tipo: body.generadorTipo || "AGRICOLA",
+    };
+    if (!genFields.nombre || !genFields.nit) {
+      return NextResponse.json({ error: "Nombre y NIT del generador son obligatorios" }, { status: 400 });
+    }
+    const genRes = await fetch(`https://api.airtable.com/v0/${BASE}/GENERADORES`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: genFields }),
+    });
+    if (!genRes.ok) {
+      const err = await genRes.text();
+      console.error("[fincas/create generador]", err);
+      return NextResponse.json({ error: "Error al crear generador", detail: err }, { status: 500 });
+    }
+    const genData = await genRes.json();
+    generadorId = genData.id;
+  }
+
+  // 2. Crear FINCA
+  const fincaFields: Record<string, unknown> = {
+    nombre: body.nombre || "",
+    generador: [generadorId],
+    coordinador_asignado: [coordinadorId],
+  };
+  if (body.municipioId) fincaFields.municipio = [body.municipioId];
+  if (Array.isArray(body.cultivoIds) && body.cultivoIds.length > 0) fincaFields.cultivos = body.cultivoIds;
+  if (body.movil) fincaFields.movil = body.movil;
+  if (body.email) fincaFields.email = body.email;
+
+  const fincaRes = await fetch(`https://api.airtable.com/v0/${BASE}/FINCAS`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: fincaFields }),
+  });
+  if (!fincaRes.ok) {
+    const err = await fincaRes.text();
+    console.error("[fincas/create]", err);
+    return NextResponse.json({ error: "Error al crear finca", detail: err }, { status: 500 });
+  }
+  const fincaData = await fincaRes.json();
+  return NextResponse.json({ id: fincaData.id, generadorId });
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.coordinatorRecordId) {
