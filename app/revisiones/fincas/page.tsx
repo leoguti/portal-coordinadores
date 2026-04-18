@@ -1004,6 +1004,13 @@ function GeneradorMergeModal({
 
 const TIPOS_GEN = ["AGRICOLA", "PECUARIO", "FLORICULTOR", "OTRO"];
 
+interface GeneradorSearchResult {
+  id: string;
+  nombre: string;
+  nit: string;
+  tipo: string;
+}
+
 function CreateFincaModal({
   cultivos,
   onCreated,
@@ -1013,9 +1020,19 @@ function CreateFincaModal({
   onCreated: () => void;
   onClose: () => void;
 }) {
+  // Modo de generador: buscar existente o crear nuevo
+  const [genMode, setGenMode] = useState<"buscar" | "crear">("buscar");
+  const [genSearch, setGenSearch] = useState("");
+  const [genResults, setGenResults] = useState<GeneradorSearchResult[]>([]);
+  const [genSelected, setGenSelected] = useState<GeneradorSearchResult | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
+
+  // Campos para crear nuevo generador
   const [generadorNombre, setGeneradorNombre] = useState("");
   const [generadorNit, setGeneradorNit] = useState("");
   const [generadorTipo, setGeneradorTipo] = useState("AGRICOLA");
+
+  // Campos de la finca
   const [nombre, setNombre] = useState("");
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [selectedCultivos, setSelectedCultivos] = useState<string[]>([]);
@@ -1025,36 +1042,71 @@ function CreateFincaModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Debounced búsqueda de generadores
+  useEffect(() => {
+    if (genMode !== "buscar" || genSearch.trim().length < 2) {
+      setGenResults([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setGenLoading(true);
+      const res = await fetch(`/api/revisiones/generadores/buscar?q=${encodeURIComponent(genSearch.trim())}`);
+      const data = await res.json();
+      setGenResults(data.generadores || []);
+      setGenLoading(false);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [genSearch, genMode]);
+
   const toggleCultivo = (id: string) => {
     setSelectedCultivos((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
   };
 
+  const validar = (): string | null => {
+    // Generador
+    if (genMode === "buscar") {
+      if (!genSelected) return "Selecciona un generador o crea uno nuevo";
+    } else {
+      if (!generadorNombre.trim()) return "Nombre del generador es obligatorio";
+      if (!generadorNit.trim()) return "NIT/Cédula del generador es obligatorio";
+    }
+    // Finca — todos los campos obligatorios
+    if (!nombre.trim()) return "Nombre/dirección de la finca es obligatorio";
+    if (!municipio) return "Municipio es obligatorio";
+    if (selectedCultivos.length === 0) return "Al menos un cultivo es obligatorio";
+    if (!movil.trim()) return "Móvil es obligatorio";
+    if (!email.trim()) return "Email es obligatorio";
+    if (!/\S+@\S+\.\S+/.test(email)) return "Email no tiene un formato válido";
+    return null;
+  };
+
   const handleSave = async () => {
     setError("");
-    if (!generadorNombre || !generadorNit) {
-      setError("Nombre y NIT del generador son obligatorios");
-      return;
-    }
-    if (!nombre) {
-      setError("Nombre/dirección de la finca es obligatorio");
-      return;
-    }
+    const errMsg = validar();
+    if (errMsg) { setError(errMsg); return; }
+
     setSaving(true);
+    const payload: any = {
+      nombre,
+      municipioId: municipio?.id || null,
+      cultivoIds: selectedCultivos,
+      movil,
+      email,
+    };
+    if (genMode === "buscar" && genSelected) {
+      payload.generadorId = genSelected.id;
+    } else {
+      payload.generadorNombre = generadorNombre;
+      payload.generadorNit = generadorNit;
+      payload.generadorTipo = generadorTipo;
+    }
+
     const res = await fetch("/api/revisiones/fincas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        generadorNombre,
-        generadorNit,
-        generadorTipo,
-        nombre,
-        municipioId: municipio?.id || null,
-        cultivoIds: selectedCultivos,
-        movil,
-        email,
-      }),
+      body: JSON.stringify(payload),
     });
     setSaving(false);
     if (res.ok) {
@@ -1082,28 +1134,90 @@ function CreateFincaModal({
         <div className="space-y-4">
           {/* Generador */}
           <div className="rounded-lg border border-gray-200 p-3 bg-gray-50">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Generador</p>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
-                <input value={generadorNombre} onChange={(e) => setGeneradorNombre(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula *</label>
-                  <input value={generadorNit} onChange={(e) => setGeneradorNit(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                  <select value={generadorTipo} onChange={(e) => setGeneradorTipo(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                    {TIPOS_GEN.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase">Generador *</p>
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                <button type="button"
+                  onClick={() => { setGenMode("buscar"); setGenSelected(null); setError(""); }}
+                  className={`px-3 py-1 ${genMode === "buscar" ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-100"}`}>
+                  Buscar existente
+                </button>
+                <button type="button"
+                  onClick={() => { setGenMode("crear"); setGenSelected(null); setError(""); }}
+                  className={`px-3 py-1 ${genMode === "crear" ? "bg-[#042726] text-white" : "bg-white text-gray-600 hover:bg-gray-100"}`}>
+                  Crear nuevo
+                </button>
               </div>
             </div>
+
+            {genMode === "buscar" ? (
+              <div>
+                {genSelected ? (
+                  <div className="rounded-lg border-2 border-green-500 bg-green-50 p-3 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{genSelected.nombre}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-500 font-mono">{genSelected.nit}</span>
+                        {genSelected.tipo && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">{genSelected.tipo}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={() => { setGenSelected(null); setGenSearch(""); }}
+                      className="text-xs text-gray-500 hover:text-gray-700 flex-shrink-0">Cambiar</button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      value={genSearch}
+                      onChange={(e) => setGenSearch(e.target.value)}
+                      placeholder="Buscar por NIT o nombre..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {genLoading && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
+                    {genResults.length > 0 && (
+                      <div className="mt-2 border border-gray-200 rounded-lg bg-white max-h-48 overflow-y-auto divide-y divide-gray-50">
+                        {genResults.map((g) => (
+                          <button key={g.id} type="button" onClick={() => setGenSelected(g)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50">
+                            <p className="text-sm text-gray-800 truncate">{g.nombre}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-400 font-mono">{g.nit}</span>
+                              {g.tipo && <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{g.tipo}</span>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!genLoading && genSearch.trim().length >= 2 && genResults.length === 0 && (
+                      <p className="text-xs text-gray-400 mt-1">Sin resultados. Usa "Crear nuevo" si no existe.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                  <input value={generadorNombre} onChange={(e) => setGeneradorNombre(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula *</label>
+                    <input value={generadorNit} onChange={(e) => setGeneradorNit(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                    <select value={generadorTipo} onChange={(e) => setGeneradorTipo(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                      {TIPOS_GEN.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Finca */}
@@ -1117,12 +1231,12 @@ function CreateFincaModal({
                   className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Municipio</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Municipio *</label>
                 <MunicipioSearch value={municipio} onChange={setMunicipio} placeholder="Buscar municipio..." />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Cultivos ({selectedCultivos.length} seleccionados)
+                  Cultivos * ({selectedCultivos.length} seleccionados)
                 </label>
                 <button type="button" onClick={() => setShowCultivos(!showCultivos)}
                   className="w-full text-left border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
@@ -1146,12 +1260,12 @@ function CreateFincaModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Móvil</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Móvil *</label>
                   <input value={movil} onChange={(e) => setMovil(e.target.value.replace(/\D/g, ""))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
