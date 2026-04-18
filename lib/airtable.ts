@@ -1013,6 +1013,26 @@ export async function createOrdenServicio(
       }
     }
 
+    // ─── Auto-asignar coordinador_responsable si el tercero no tiene ─────────
+    const tieneResponsable = (terceroFields.coordinador_responsable || []).length > 0;
+    if (!tieneResponsable && params.coordinatorRecordId) {
+      console.log(`[terceros] auto-asignando coordinador_responsable=${params.coordinatorRecordId} al tercero ${params.beneficiarioRecordId}`);
+      const assignRes = await fetch(
+        `https://api.airtable.com/v0/${baseId}/Terceros/${params.beneficiarioRecordId}`,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fields: { coordinador_responsable: [params.coordinatorRecordId] },
+          }),
+        }
+      );
+      if (!assignRes.ok) {
+        console.warn("[terceros] no se pudo auto-asignar coordinador_responsable:", await assignRes.text());
+        // No bloqueamos la creación de OS por esto — se registra y sigue
+      }
+    }
+
     // Step 1: Create the Orden record
     const ordenUrl = `https://api.airtable.com/v0/${baseId}/Ordenes`;
 
