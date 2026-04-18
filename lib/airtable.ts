@@ -974,12 +974,43 @@ export async function createOrdenServicio(
       throw new Error("No se pudo verificar el tercero beneficiario");
     }
     const terceroRec = await terceroRes.json();
+    const terceroFields = terceroRec.fields || {};
     const { evaluarCompletitud } = await import("./terceros");
-    const completitud = evaluarCompletitud(terceroRec.fields || {});
+    const completitud = evaluarCompletitud(terceroFields);
     if (!completitud.completo) {
       throw new Error(
-        `El tercero "${terceroRec.fields?.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`
+        `El tercero "${terceroFields.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`
       );
+    }
+
+    // ─── Validación: Planilla de SS del mes (solo Personas Naturales) ────────
+    if (terceroFields.tipo_persona === "Natural") {
+      // Mes del pago ≈ mes de la fecha_pedido (formato YYYY-MM)
+      const fechaStr = params.fechaPedido || new Date().toISOString().slice(0, 10);
+      const mesPeriodo = fechaStr.slice(0, 7);
+
+      const planillasUrl = `https://api.airtable.com/v0/${baseId}/PlanillasSS?filterByFormula=${encodeURIComponent(
+        `{mes_periodo} = '${mesPeriodo}'`
+      )}&pageSize=100`;
+      const planillasRes = await fetch(planillasUrl, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (planillasRes.ok) {
+        const planillasData = await planillasRes.json();
+        const valida = (planillasData.records || []).find(
+          (r: any) =>
+            (r.fields.tercero || []).includes(params.beneficiarioRecordId) &&
+            (r.fields.archivo || []).length > 0
+        );
+        if (!valida) {
+          throw new Error(
+            `"${terceroFields.RazonSocial}" es Persona Natural y no tiene planilla de Seguridad Social (con archivo PDF) para el mes ${mesPeriodo}. Súbela en el perfil del tercero antes de crear la OS.`
+          );
+        }
+      } else {
+        console.warn("[planillas] error consultando PlanillasSS, se permite OS:", await planillasRes.text());
+      }
     }
 
     // Step 1: Create the Orden record

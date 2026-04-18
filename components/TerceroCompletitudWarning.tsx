@@ -9,68 +9,89 @@ interface Completitud {
   nitInvalido: boolean;
 }
 
+interface PlanillaCheck {
+  mes: string;
+  ok: boolean;
+  aplica: boolean;
+}
+
 /**
- * Muestra un banner informativo sobre el estado de completitud del tercero.
- * Por defecto es warning (no bloquea). Pasar `mode="error"` para bloqueo visual.
+ * Muestra un banner informativo sobre el estado de completitud del tercero
+ * y, opcionalmente, si tiene la planilla de SS del mes correspondiente.
  */
 export default function TerceroCompletitudWarning({
   terceroId,
   mode = "warning",
+  fechaReferencia,
 }: {
   terceroId: string;
   mode?: "warning" | "error";
+  fechaReferencia?: string; // YYYY-MM-DD — si viene, chequea planilla
 }) {
   const [completitud, setCompletitud] = useState<Completitud | null>(null);
+  const [planilla, setPlanilla] = useState<PlanillaCheck | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!terceroId) return;
     setLoading(true);
-    fetch(`/api/terceros/${terceroId}`)
+    const mesParam = fechaReferencia && /^\d{4}-\d{2}/.test(fechaReferencia)
+      ? `?mesPlanilla=${fechaReferencia.slice(0, 7)}`
+      : "";
+    fetch(`/api/terceros/${terceroId}${mesParam}`)
       .then((r) => r.json())
-      .then((d) => setCompletitud(d.completitud || null))
+      .then((d) => {
+        setCompletitud(d.completitud || null);
+        setPlanilla(d.planillaCheck || null);
+      })
       .finally(() => setLoading(false));
-  }, [terceroId]);
+  }, [terceroId, fechaReferencia]);
 
   if (loading) return null;
-  if (!completitud || completitud.completo) return null;
+
+  const incompleto = completitud && !completitud.completo;
+  const faltaPlanilla = planilla && planilla.aplica && !planilla.ok;
+
+  if (!incompleto && !faltaPlanilla) return null;
 
   const isError = mode === "error";
+  const bgColor = isError ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800";
+  const badgeColor = isError ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700";
+  const linkColor = isError ? "text-red-700" : "text-amber-700";
 
   return (
-    <div
-      className={`mt-2 rounded-lg p-3 border text-sm ${
-        isError
-          ? "bg-red-50 border-red-200 text-red-800"
-          : "bg-amber-50 border-amber-200 text-amber-800"
-      }`}
-    >
+    <div className={`mt-2 rounded-lg p-3 border text-sm ${bgColor}`}>
       <div className="flex items-start gap-2">
         <span className="text-base flex-shrink-0">⚠</span>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium">
-            {isError ? "Este tercero no puede usarse: falta información" : "Este tercero tiene datos incompletos"}
-          </p>
-          <div className="flex flex-wrap gap-1 mt-1.5">
-            {completitud.faltantes.map((f) => (
-              <span
-                key={f}
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  isError ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {f}
-              </span>
-            ))}
-          </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          {incompleto && (
+            <div>
+              <p className="font-medium">
+                {isError ? "Este tercero no puede usarse: falta información" : "Este tercero tiene datos incompletos"}
+              </p>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {completitud!.faltantes.map((f) => (
+                  <span key={f} className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>{f}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {faltaPlanilla && (
+            <div>
+              <p className="font-medium">
+                Falta planilla de Seguridad Social del mes {planilla!.mes}
+              </p>
+              <p className="text-xs mt-1">
+                Este tercero es Persona Natural. Debe tener planilla del mes del pago para poder crear la OS.
+              </p>
+            </div>
+          )}
           <Link
             href={`/terceros/${terceroId}`}
             target="_blank"
-            className={`inline-block mt-2 text-xs font-medium underline hover:no-underline ${
-              isError ? "text-red-700" : "text-amber-700"
-            }`}
+            className={`inline-block text-xs font-medium underline hover:no-underline ${linkColor}`}
           >
-            Completar datos del tercero →
+            {faltaPlanilla ? "Subir planilla / completar datos →" : "Completar datos del tercero →"}
           </Link>
         </div>
       </div>

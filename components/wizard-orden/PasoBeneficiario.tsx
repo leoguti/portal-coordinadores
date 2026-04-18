@@ -109,7 +109,13 @@ export default function PasoBeneficiario({
           required
           placeholder="Buscar tercero..."
         />
-        {beneficiario && <TerceroCompletitudWarning terceroId={beneficiario.id} mode="error" />}
+        {beneficiario && (
+          <TerceroCompletitudWarning
+            terceroId={beneficiario.id}
+            mode="error"
+            fechaReferencia={fechaPedido}
+          />
+        )}
       </div>
 
       {/* Datos del beneficiario */}

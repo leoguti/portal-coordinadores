@@ -347,6 +347,9 @@ export default function TerceroEditPage() {
           </div>
         </div>
 
+        {/* Planillas de seguridad social (solo naturales) */}
+        {tipoPersona === "Natural" && <PlanillasSS terceroId={id} />}
+
         {/* Reasignación de coordinador responsable */}
         <ReasignarCoordinador terceroId={id} />
 
@@ -449,6 +452,184 @@ function ReasignarCoordinador({ terceroId }: { terceroId: string }) {
               Cancelar
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PlanillasSS ──────────────────────────────────────────────────────────────
+
+interface Planilla {
+  id: string;
+  mesPeriodo: string;
+  archivo: Attachment[];
+  montoAportado: number | null;
+}
+
+function PlanillasSS({ terceroId }: { terceroId: string }) {
+  const [planillas, setPlanillas] = useState<Planilla[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [mesNuevo, setMesNuevo] = useState("");
+  const [montoNuevo, setMontoNuevo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const res = await fetch(`/api/planillas-ss?terceroId=${terceroId}`);
+    const data = await res.json();
+    setPlanillas(data.planillas || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [terceroId]);
+
+  const handleCreate = async () => {
+    if (!mesNuevo) { alert("Selecciona el mes"); return; }
+    setSaving(true);
+    const res = await fetch("/api/planillas-ss", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        terceroId,
+        mesPeriodo: mesNuevo,
+        montoAportado: montoNuevo || undefined,
+      }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setMesNuevo("");
+      setMontoNuevo("");
+      setShowAdd(false);
+      await load();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Error al crear planilla");
+    }
+  };
+
+  const handleUpload = async (planillaId: string, file: File) => {
+    setUploading(planillaId);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("recordId", planillaId);
+    formData.append("fieldName", "archivo");
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    setUploading(null);
+    if (res.ok) await load();
+    else alert("Error al subir archivo");
+  };
+
+  const handleDelete = async (planillaId: string) => {
+    if (!confirm("¿Eliminar esta planilla?")) return;
+    const res = await fetch(`/api/planillas-ss/${planillaId}`, { method: "DELETE" });
+    if (res.ok) await load();
+    else alert("Error al eliminar");
+  };
+
+  // Generar últimos 12 meses como opciones
+  const opciones: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    opciones.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  const formatMes = (m: string) => {
+    if (!/^\d{4}-\d{2}$/.test(m)) return m;
+    const [y, mm] = m.split("-").map(Number);
+    const d = new Date(y, mm - 1, 1);
+    return d.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-sm font-bold text-gray-900">Planillas de Seguridad Social</h2>
+        <button
+          onClick={() => setShowAdd(!showAdd)}
+          className="text-xs px-3 py-1.5 bg-[#042726] text-white rounded-lg hover:bg-[#032120]"
+        >
+          {showAdd ? "Cancelar" : "+ Agregar"}
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 mb-3">
+        Aporte mensual obligatorio para personas naturales. Sin planilla del mes de la OS, no se puede crear la orden.
+      </p>
+
+      {showAdd && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Mes del período *</label>
+              <select value={mesNuevo} onChange={(e) => setMesNuevo(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm">
+                <option value="">Seleccionar...</option>
+                {opciones.map((o) => <option key={o} value={o}>{formatMes(o)}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-500 mb-1">Monto aportado (opcional)</label>
+              <input
+                type="number"
+                value={montoNuevo}
+                onChange={(e) => setMontoNuevo(e.target.value)}
+                placeholder="0"
+                className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+              />
+            </div>
+          </div>
+          <button onClick={handleCreate} disabled={saving || !mesNuevo}
+            className="px-3 py-1.5 bg-[#00d084] hover:bg-[#00a868] text-white text-xs rounded-lg disabled:opacity-50">
+            {saving ? "Creando..." : "Crear planilla"}
+          </button>
+          <p className="text-xs text-gray-400 mt-2">
+            Después de crear, sube el PDF en la fila correspondiente.
+          </p>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-gray-400">Cargando...</p>
+      ) : planillas.length === 0 ? (
+        <p className="text-sm text-gray-400">Sin planillas registradas</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {planillas.map((p) => (
+            <div key={p.id} className="py-2 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-800 capitalize">{formatMes(p.mesPeriodo)}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {p.archivo.length > 0 ? (
+                    p.archivo.map((a, i) => (
+                      <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-green-700 hover:text-green-900 font-medium">
+                        📎 Ver PDF
+                      </a>
+                    ))
+                  ) : (
+                    <span className="text-xs text-amber-600">⚠ Sin archivo</span>
+                  )}
+                  {p.montoAportado != null && (
+                    <span className="text-xs text-gray-500">${p.montoAportado.toLocaleString("es-CO")}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <label className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">
+                  {uploading === p.id ? "..." : p.archivo.length > 0 ? "Reemplazar" : "Subir PDF"}
+                  <input type="file" accept=".pdf,image/*" className="hidden"
+                    onChange={(e) => e.target.files?.[0] && handleUpload(p.id, e.target.files[0])} />
+                </label>
+                <button onClick={() => handleDelete(p.id)}
+                  className="text-xs text-red-500 hover:text-red-700">
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

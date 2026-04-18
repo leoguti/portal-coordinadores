@@ -7,7 +7,7 @@ const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
@@ -22,10 +22,31 @@ export async function GET(
   const rec = await res.json();
   const completitud = evaluarCompletitud(rec.fields);
 
+  // Si se pide chequear planilla para un mes específico (solo aplica a naturales)
+  let planillaCheck: { mes: string; ok: boolean; aplica: boolean } | null = null;
+  const mesParam = req.nextUrl.searchParams.get("mesPlanilla");
+  if (mesParam && /^\d{4}-\d{2}$/.test(mesParam)) {
+    const esNatural = rec.fields.tipo_persona === "Natural";
+    if (!esNatural) {
+      planillaCheck = { mes: mesParam, ok: true, aplica: false };
+    } else {
+      const pRes = await fetch(
+        `https://api.airtable.com/v0/${BASE}/PlanillasSS?filterByFormula=${encodeURIComponent(`{mes_periodo} = '${mesParam}'`)}&pageSize=100`,
+        { headers: { Authorization: `Bearer ${KEY}` }, cache: "no-store" }
+      );
+      const pData = await pRes.json();
+      const ok = (pData.records || []).some(
+        (r: any) => (r.fields.tercero || []).includes(id) && (r.fields.archivo || []).length > 0
+      );
+      planillaCheck = { mes: mesParam, ok, aplica: true };
+    }
+  }
+
   return NextResponse.json({
     id: rec.id,
     fields: rec.fields,
     completitud,
+    planillaCheck,
   });
 }
 
