@@ -25,97 +25,72 @@ export async function GET(request: NextRequest) {
   const isAdmin = isAdminOrSupervisor(session.user.rol);
   const coordinadorId = session.user.coordinatorRecordId;
   const CHUNK = 30;
-  const debug = request.nextUrl.searchParams.get("debug") === "1";
 
-  // 1. Fetch FINCAS asignadas al coordinador (o todas si es admin)
-  // Filtra contra el campo formula `coordinador_id` que expone el RECORD_ID
-  // del coordinador_asignado como texto (más estable que filtrar por Name).
-  const fFields = [
-    "nombre", "generador", "municipio", "cultivos", "movil", "email",
-    "revisado", "notas_migracion", "coordinador_asignado",
-  ];
-  const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  const fincaFilter = isAdmin
-    ? "TRUE()"
-    : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
-
-  if (debug) {
-    // Exacta misma URL que la ruta real
-    const fullUrl = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100`;
-    const res = await fetch(fullUrl, {
-      headers: { Authorization: `Bearer ${KEY}` },
-      cache: "no-store",
-    });
-    const json = await res.json();
-    return NextResponse.json({
-      debug: true,
-      coordinadorId,
-      isAdmin,
-      fincaFilter,
-      fullUrl,
-      keyFirst4: (KEY || "").slice(0, 4),
-      airtableStatus: res.status,
-      airtableError: json.error || null,
-      airtableRecordCount: (json.records || []).length,
-      airtableHasOffset: !!json.offset,
-      airtableFirstRecord: json.records?.[0] || null,
-    });
-  }
-
-  const fincas: any[] = [];
-  let offset = "";
-  let firstResponseDebug: any = null;
-  do {
-    const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
-    const data = await airtableGet(url);
-    if (!firstResponseDebug) {
-      firstResponseDebug = { hasError: !!data.error, errorType: data.error?.type, recordCount: data.records?.length ?? null };
-    }
-    if (data.error) {
-      console.error("[revisiones/fincas] Airtable error:", data.error);
-      return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
-    }
-    fincas.push(...data.records);
-    offset = data.offset || "";
-  } while (offset);
-
-  console.log(`[revisiones/fincas] coord=${coordinadorId} isAdmin=${isAdmin} filter=${fincaFilter} → ${fincas.length} fincas | firstResp=${JSON.stringify(firstResponseDebug)}`);
-
-  if (fincas.length === 0) {
-    return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
-  }
-
-  const fincaIds = fincas.map((f) => f.id);
-  const fincaMap = new Map<string, any>();
-  for (const f of fincas) fincaMap.set(f.id, f);
-
-  // 2. Fetch ubicaciones vinculadas a esas FINCAS
-  const ubicaciones: any[] = [];
+  // 1. Fetch UBICACIONES del coordinador vía el rollup de certificados (way que
+  // ya funcionaba). Esto resuelve el problema de que Airtable interpreta
+  // ARRAYJOIN({linkedField}) como el campo primario, no el ID.
   const uFields = [
     "nombregenerador", "cedulagenerador", "direcciongenerador",
     "mundep", "cultivogenerador", "movilgenerador", "emailgenerador",
     "tipogenerador", "finca",
   ];
   const ufp = uFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  for (let i = 0; i < fincaIds.length; i += CHUNK) {
-    const chunk = fincaIds.slice(i, i + CHUNK);
-    // FIND() in ARRAYJOIN because finca is a linked record (array of IDs)
-    const formula = `OR(${chunk.map((id: string) => `FIND('${id}', ARRAYJOIN({finca}, ','))`).join(",")})`;
-    const url = `https://api.airtable.com/v0/${BASE}/ubicaciones?filterByFormula=${encodeURIComponent(formula)}&${ufp}&pageSize=100`;
-    let uOffset = "";
-    do {
-      const u = `${url}${uOffset ? "&offset=" + uOffset : ""}`;
-      const data = await airtableGet(u);
-      if (data.error) return NextResponse.json({ error: "Error Airtable" }, { status: 500 });
-      ubicaciones.push(...data.records);
-      uOffset = data.offset || "";
-    } while (uOffset);
+  const ubiFilter = isAdmin
+    ? "TRUE()"
+    : `FIND('${coordinadorId}', ARRAYJOIN({coordinadores}, ','))`;
+
+  const ubicaciones: any[] = [];
+  let offset = "";
+  do {
+    const url = `https://api.airtable.com/v0/${BASE}/ubicaciones?filterByFormula=${encodeURIComponent(ubiFilter)}&${ufp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
+    const data = await airtableGet(url);
+    if (data.error) return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
+    ubicaciones.push(...data.records);
+    offset = data.offset || "";
+  } while (offset);
+
+  // 2. IDs de FINCAS vinculadas
+  const fincaIdsSet = new Set<string>();
+  for (const u of ubicaciones) {
+    for (const id of (u.fields.finca || [])) fincaIdsSet.add(id);
+  }
+  const fincaIds = Array.from(fincaIdsSet);
+
+  if (fincaIds.length === 0) {
+    return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
   }
 
-  // 3. IDs de GENERADORES
+  // 3. Fetch FINCAS (con coordinador_asignado para respetar reasignaciones)
+  const fincaMap = new Map<string, any>();
+  const fFields = [
+    "nombre", "generador", "municipio", "cultivos", "movil", "email",
+    "revisado", "notas_migracion", "coordinador_asignado", "coordinador_id",
+  ];
+  const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
+  for (let i = 0; i < fincaIds.length; i += CHUNK) {
+    const chunk = fincaIds.slice(i, i + CHUNK);
+    const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+    const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(formula)}&${ffp}&pageSize=100`;
+    const data = await airtableGet(url);
+    for (const r of data.records) fincaMap.set(r.id, r);
+  }
+
+  // 3.5. Cross-check coordinador_asignado: si una finca tiene asignado OTRO
+  // coordinador, la excluimos de mi vista (respetando reasignaciones).
+  // Si el campo está vacío o soy admin, no filtra nada.
+  if (!isAdmin) {
+    for (const [id, finca] of fincaMap) {
+      const asignadoId = finca.fields.coordinador_id?.[0];
+      if (asignadoId && asignadoId !== coordinadorId) {
+        fincaMap.delete(id);
+      }
+    }
+  }
+
+  // 4. IDs de GENERADORES (ya filtradas las fincas)
   const generadorIdsSet = new Set<string>();
-  for (const f of fincas) {
-    const gId = f.fields.generador?.[0];
+  for (const finca of fincaMap.values()) {
+    const gId = finca.fields.generador?.[0];
     if (gId) generadorIdsSet.add(gId);
   }
   const generadorIds = Array.from(generadorIdsSet);
@@ -132,8 +107,14 @@ export async function GET(request: NextRequest) {
     for (const r of data.records) generadorMap.set(r.id, r);
   }
 
-  // 5. Construir items por ubicacion (con datos de su finca asignada)
-  const items = ubicaciones.map((u) => {
+  // 5. Construir items por ubicacion — solo los cuya finca quedó en fincaMap
+  // (las fincas reasignadas a otro coordinador ya se excluyeron en el paso 3.5)
+  const items = ubicaciones
+    .filter((u) => {
+      const fid = u.fields.finca?.[0];
+      return fid && fincaMap.has(fid);
+    })
+    .map((u) => {
     const fincaId = u.fields.finca?.[0] || null;
     const finca = fincaId ? fincaMap.get(fincaId) : null;
     const notas = finca?.fields?.notas_migracion || "";
