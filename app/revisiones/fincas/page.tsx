@@ -1185,7 +1185,7 @@ export default function RevisionFincasPage() {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados">("pendientes");
+  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos" | "multiples">("pendientes");
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
   const [totalRevisadas, setTotalRevisadas] = useState(0);
@@ -1367,12 +1367,31 @@ export default function RevisionFincasPage() {
 
   const pct = totalFincas > 0 ? Math.round((totalRevisadas / totalFincas) * 100) : 0;
 
+  // Una finca es "incompleta" si le falta municipio, cultivos, móvil o email
+  const fincaIncompleta = (item: FincaItem): boolean => {
+    const f = item.finca;
+    if (!f) return true;
+    if (!f.municipioId) return true;
+    if ((f.cultivoIds || []).length === 0) return true;
+    if (!f.movil && !item.original.movil) return true;
+    if (!f.email && !item.original.email) return true;
+    return false;
+  };
+
+  const grupoTieneIncompletas = (g: GeneradorGrupo): boolean =>
+    g.fincas.some(fincaIncompleta);
+
   const gruposFiltrados = grupos.filter((g) => {
     if (filtro === "pendientes") return g.revisadas < g.totalFincas;
     if (filtro === "revisadas") return g.revisadas === g.totalFincas;
     if (filtro === "duplicados") return getDuplicadosFor(g).length > 0;
+    if (filtro === "incompletos") return grupoTieneIncompletas(g);
+    if (filtro === "multiples") return g.totalFincas >= 2;
     return true;
   });
+
+  const totalIncompletos = grupos.filter(grupoTieneIncompletas).length;
+  const totalMultiples = grupos.filter((g) => g.totalFincas >= 2).length;
 
   if (status === "loading" || loading) {
     return (
@@ -1437,16 +1456,25 @@ export default function RevisionFincasPage() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm flex-wrap">
-            {(["pendientes", "duplicados", "todas", "revisadas"] as const).map((f) => {
+            {(["pendientes", "incompletos", "multiples", "duplicados", "todas", "revisadas"] as const).map((f) => {
               if (f === "duplicados" && totalGeneradoresConDuplicados === 0) return null;
+              if (f === "multiples" && totalMultiples === 0) return null;
               const label =
                 f === "pendientes" ? `Pendientes (${grupos.filter((g) => g.revisadas < g.totalFincas).length})` :
                 f === "revisadas" ? `Completos (${grupos.filter((g) => g.revisadas === g.totalFincas).length})` :
                 f === "duplicados" ? `Duplicados (${totalGeneradoresConDuplicados})` :
+                f === "incompletos" ? `Incompletos (${totalIncompletos})` :
+                f === "multiples" ? `≥2 fincas (${totalMultiples})` :
                 "Todos";
+              const isActive = filtro === f;
+              const activeClass =
+                f === "duplicados" ? "bg-red-600 text-white" :
+                f === "incompletos" ? "bg-amber-600 text-white" :
+                f === "multiples" ? "bg-blue-600 text-white" :
+                "bg-[#042726] text-white";
               return (
                 <button key={f} onClick={() => setFiltro(f)}
-                  className={`px-4 py-2 ${filtro === f ? (f === "duplicados" ? "bg-red-600 text-white" : "bg-[#042726] text-white") : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-4 py-2 ${isActive ? activeClass : "bg-white text-gray-600 hover:bg-gray-50"}`}>
                   {label}
                 </button>
               );
