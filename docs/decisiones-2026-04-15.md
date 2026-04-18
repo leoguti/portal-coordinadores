@@ -1,6 +1,6 @@
 # Decisiones de Producto — 2026-04-15
 
-Última actualización: 2026-04-17
+Última actualización: 2026-04-18
 
 ## 1. Nueva estructura de datos: Generadores y Fincas ✅ (implementado)
 
@@ -18,21 +18,27 @@ Se aprobó migrar la tabla `ubicaciones` (legacy) a una nueva estructura normali
 - Campo `finca` en `ubicaciones` enlaza cada registro viejo con su FINCA nueva
 - Municipio siempre como linked record a MUNICIPIOS (no texto libre)
 
-### Flujo de revisión
-- Script automático migra ubicaciones → GENERADORES + FINCAS
-- Cada coordinador revisa y verifica sus propias fincas en el portal
-- Por cada FINCA: verificar NIT, municipio, cultivos y datos
-- Campo `revisado` + `revisado_por` (linked a Coordinadores)
-- Orden de revisión: problemáticos primero, luego el resto
-- Jerarquía en UI: cabecera generador → fincas anidadas (acordeón)
-- Merge de duplicados por NIT (fincas y generadores)
-- Campo `coordinador_asignado` en FINCAS para asignación manual independiente de los certificados (ya en producción)
+### Estado actual (implementado)
+- ✅ Migración ubicaciones → GENERADORES + FINCAS + CULTIVOS
+- ✅ Dedup de generadores por NIT (1487 fusionados, 0 duplicados restantes)
+- ✅ Interfaz jerárquica `/revisiones/fincas` (generador → fincas anidadas)
+- ✅ Merge de fincas duplicadas + eliminar con reasignación de ubicaciones
+- ✅ Botón "+ Agregar finca" con búsqueda o creación inline de generador
+- ✅ Filtros: Pendientes, Incompletos, ≥2 fincas, Duplicados, Todos, Revisadas
+- ✅ Campo `coordinador_asignado` en FINCAS (asignación manual, independiente del rollup de certificados)
+- ✅ Botón "Esta finca no es mía" → mueve a otro coordinador sin tocar certificados
+- ✅ Campo lookup `coordinador_id` en FINCAS para filtrar por ID (workaround al bug de Airtable linked fields en fórmulas)
+
+### Lecciones aprendidas (importantes)
+- Airtable resuelve `multipleRecordLinks` en fórmulas al **campo primario** del registro enlazado, NO al ID. `FIND('recXXX', ARRAYJOIN({linkedField}, ','))` nunca matchea.
+- Workaround: crear campo formula o lookup que exponga `RECORD_ID()` como texto, filtrar contra ese.
+- El Metadata API **no permite crear** campos de tipo `formula`, `multipleLookupValues`, `createdTime`, `multipleCollaborators`. Hay que crearlos manualmente en la UI de Airtable.
 
 ---
 
 ## 2. Validación de Terceros — Plan por Fases
 
-### Fase 0 ✅ (ya en producción)
+### Fase 0 ✅ (en producción)
 Campos obligatorios para un Tercero válido:
 - Nombre / Razón Social
 - Cédula o NIT
@@ -48,43 +54,63 @@ Campos obligatorios para un Tercero válido:
 - **Certificación bancaria** — obligatoria para pagos
 
 Validación técnica:
-- **NIT jurídicas**: dígito verificador DIAN (algoritmo local sin costo)
+- **NIT jurídicas**: dígito verificador DIAN (algoritmo local sin costo, `lib/nit.ts`)
 - **Cédulas naturales**: no hay API pública gratuita en Colombia. Opciones de pago disponibles: Verifik, Didit. Por ahora: documento escaneado como respaldo obligatorio
 
 Bloqueo de operaciones:
 - **Orden de Servicio**: bloqueo duro (server-side) si el tercero está incompleto
 - **Caja Menor**: warning (no bloquea, solo avisa con lista de faltantes y link a completar)
 
+Limpieza: campo `Tipo` (clasificación descriptiva con valores Centro de Acopio / Transportador / Gestor / etc.) eliminado por no tener uso real en el código.
+
 Implementación: `lib/nit.ts`, `lib/terceros.ts`, `/terceros`, `/terceros/[id]`, `components/TerceroCompletitudWarning.tsx`, bloqueo en `createOrdenServicio`.
 
 ---
 
-### Fase 1 — Dueño del tercero (próximo)
+### Fase 1 ✅ (en producción) — Dueño del tercero
+
 Cada tercero tiene un **coordinador_responsable** que lo mantiene al día.
 
-- Campo nuevo `coordinador_responsable` en Terceros (link a Coordinadores)
-- Script backfill: coordinador que más OS ha hecho con ese tercero (patrón aplicado a FINCAS)
-- UI en `/terceros`: filtro "mis terceros" vs "todos" (admins ven todo)
-- Botón "Reasignar a otro coordinador" como en fincas
+- Campo `coordinador_responsable` en Terceros (multipleRecordLinks → Coordinadores)
+- Campo lookup `coordinador_responsable_id` (expone el RECORD_ID para filtrar)
+- Script backfill `scripts/asignar-coordinador-tercero.js`: asigna al coordinador con más Órdenes de Servicio con ese tercero. 38/218 asignados inicialmente (el resto sin OS previas, quedan sin asignar)
+- **Auto-asignación** al crear OS: si el tercero no tiene `coordinador_responsable`, se asigna automáticamente al coordinador que crea la orden (cierra el gap para los 180 inicialmente sin OS)
+- API: filtra `/api/terceros?all=true` por `coordinador_responsable_id` (coordinador ve solo los suyos, admin ve todo)
+- UI: botón "Reasignar a otro coordinador" en `/terceros/[id]`
+- Sidebar: "Terceros" ahora visible para rol Coordinador (antes solo admin)
 
-Estimado: ~1 día.
+Filtros adicionales en `/terceros`:
+- **Uso**: Con OS (default admin) / Con Caja Menor / En uso / Sin uso / Todos
+- **Completitud**: Incompletos (default) / Completos / Todos
+- Badges en cada fila: `N OS` (azul), `N CM` (morado)
 
 ---
 
-### Fase 2 — Planillas de seguridad social mensuales
+### Fase 2 ✅ (en producción) — Planillas de Seguridad Social mensuales
 
 **Aplica solo a Personas Naturales** (independientes). Las Jurídicas no requieren — manejan nómina propia.
 
-- Tabla nueva `PlanillasSS` en Airtable: `tercero` (link), `mes` (YYYY-MM), `archivo` (attachment), `subido_por` (link coordinador), `fecha_subida`, `monto_aportado`
-- UI: por cada tercero natural, calendario de planillas subidas vs pendientes
-- Validación: **se verifica contra el mes del pago** (no mes de la OS)
-- Quién sube: coordinador responsable (Fase 1). En Fase 4 lo hará el propio tercero.
+Schema:
+- Tabla nueva `PlanillasSS`: `tercero` (link), `mes_periodo` (YYYY-MM), `archivo` (attachment PDF), `subido_por` (link Coordinadores), `monto_aportado` (currency opcional), `fecha_subida` (date)
 
-**Pendiente decidir:** ¿bloqueo duro o solo warning al inicio, mientras el equipo se pone al día?
+API:
+- `GET /api/planillas-ss?terceroId=xxx` — lista ordenada por mes desc
+- `POST /api/planillas-ss` — crea registro (archivo se sube después vía `/api/upload`)
+- `DELETE /api/planillas-ss/[id]`
+- `GET /api/terceros/[id]?mesPlanilla=YYYY-MM` — chequea si hay planilla válida del mes (extensión del endpoint existente)
+
+UI:
+- En `/terceros/[id]`, si `tipo_persona === "Natural"`: bloque "Planillas de Seguridad Social" con selector de mes (últimos 12), monto opcional, subida/reemplazo/borrado de PDF por fila
+- `TerceroCompletitudWarning` acepta prop `fechaReferencia` y muestra banner si falta planilla del mes
+- `PasoBeneficiario` del wizard de OS pasa `fechaPedido` al warning
+
+**Bloqueo (duro)**: `createOrdenServicio` rechaza la OS si el beneficiario es Natural y no tiene planilla con archivo PDF para el mes de la `Fecha de pedido` (proxy del mes del pago).
+
+**Decisión confirmada**: mes de pago = mes de la `Fecha de pedido` de la OS.
 
 ---
 
-### Fase 3 — Vencimientos de documentos (después de Fase 2)
+### Fase 3 ⏳ — Vencimientos de documentos
 
 Los documentos no son eternos. Propuesta aprobada:
 
@@ -95,11 +121,13 @@ Los documentos no son eternos. Propuesta aprobada:
   - RUT: cuando cambia algo
 - Lista "vencidos / por vencer" en `/terceros`
 
+**Pendiente decidir**: ¿bloqueo OS si doc vencido, solo warning, o solo bloquear después de un umbral alto (ej: >120 días)?
+
 ---
 
-### Fase 4 — Portal público para terceros (postergado)
+### Fase 4 ⏳ — Portal público para terceros
 
-Cuando las Fases 1-3 estén estables y funcionando:
+Cuando las Fases 1-3 estén estables:
 
 - Login separado por email del tercero (OTP)
 - Acceso solo a su propio registro
@@ -107,35 +135,36 @@ Cuando las Fases 1-3 estén estables y funcionando:
 - Coordinador deja de subir, solo revisa
 - Reduce drásticamente carga operativa del coordinador
 
+**Pendientes**:
+- ¿Cómo se comunica/transmite la información a los terceros antes del lanzamiento?
+- ¿Qué tipo de capacitación/tutorial se necesita?
+
 ---
 
-### Fase 5 — Dashboards y alertas
+### Fase 5 ⏳ — Dashboards y alertas
 
 - % de terceros completos por coordinador
+- Terceros sin responsable asignado
 - Planillas SS al día vs atrasadas
 - Documentos por vencer
+- Actividad reciente (OS por tercero)
 - Alertas email/WhatsApp al coordinador responsable cuando algo falta
 
 ---
 
-### Orden confirmado
-**Fase 0 ✅ → Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5**
-
-### Preguntas pendientes
-- Fase 2: ¿bloqueo o warning si no hay planilla del mes del pago?
-- Fase 4: ¿cómo se transmite la info/instrucciones a los terceros antes del lanzamiento?
-- Fase 4: ¿qué tipo de capacitación/tutorial se necesita?
+### Orden actual
+**Fase 0 ✅ → Fase 1 ✅ → Fase 2 ✅ → Fase 3 ⏳ → Fase 4 ⏳ → Fase 5 ⏳**
 
 ---
 
-## 3. Cajas Menores — Ampliación de campos
+## 3. Cajas Menores — Ampliación de campos ⏳
 
 - Se acordó ampliar los campos de información registrados
 - Campos específicos a definir con el equipo (pendiente)
 
 ---
 
-## 4. IA para análisis de facturas
+## 4. IA para análisis de facturas ⏳
 
 - Usar Claude API para extraer datos de facturas escaneadas
 - Datos a extraer: proveedor, NIT, fecha, monto, concepto
@@ -144,3 +173,15 @@ Cuando las Fases 1-3 estén estables y funcionando:
   - Evaluar costo de API (~$3/millón tokens, económico)
   - Definir campos específicos a extraer
 - **Pregunta pendiente**: ¿qué datos específicos se necesitan de cada factura?
+
+---
+
+## Scripts de mantenimiento creados
+
+En `scripts/`:
+- `migrar-fincas.js` — migra ubicaciones → GENERADORES + FINCAS (one-shot, ejecutado)
+- `fusionar-generadores-duplicados.js` — dedup por prefijo NIT (ejecutado: 1487 fusionados)
+- `asignar-coordinador-finca.js` — backfill coordinador_asignado por finca según certificados (ejecutado: 4269 asignados)
+- `asignar-coordinador-tercero.js` — backfill coordinador_responsable por tercero según OS (ejecutado: 38 asignados)
+
+Todos con `--dry` para preview antes de aplicar.
