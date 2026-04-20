@@ -90,24 +90,27 @@ export async function GET(request: Request) {
     );
     const movimientos = kardexYear.length;
 
-    // Saldo acumulado al fin del año seleccionado — misma lógica que /saldos-centros,
-    // pero sumando todos los centros. Filtra por fechakardex, no por AÑO.
-    const saldoInicialCentros = centrosAcopio.reduce(
-      (sum, c) => sum + (c.fields.SaldoInicialTotal || 0),
-      0
-    );
+    // Saldo acumulado al fin del año seleccionado — MISMA lógica que /saldos-centros:
+    // PER CENTRO: saldoAcumulado = SaldoInicialTotal + entradas_centro_hasta_fin - salidas_centro_hasta_fin
+    // Kardex sin link a centro se ignora (igual que /saldos-centros).
     const finAñoStr = `${yearStr}-12-31`;
-    const kardexHastaFinAño = allKardex.filter((k) => {
-      const f = k.fields.fechakardex;
-      return typeof f === "string" && f <= finAñoStr;
-    });
-    const entradasAcumHastaFinAño = kardexHastaFinAño
-      .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
-      .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
-    const salidasAcumHastaFinAño = kardexHastaFinAño
-      .filter((k) => k.fields.TipoMovimiento === "SALIDA")
-      .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
-    const saldoFinAño = saldoInicialCentros + entradasAcumHastaFinAño - salidasAcumHastaFinAño;
+    let saldoFinAño = 0;
+    for (const centro of centrosAcopio) {
+      const centroId = centro.id;
+      const saldoInicialCentro = centro.fields.SaldoInicialTotal || 0;
+      const kardexCentroHastaFin = allKardex.filter((k) => {
+        if (!k.fields.CentrodeAcopio?.includes(centroId)) return false;
+        const f = k.fields.fechakardex;
+        return typeof f === "string" && f <= finAñoStr;
+      });
+      const entradasC = kardexCentroHastaFin
+        .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
+        .reduce((s, k) => s + Math.abs(k.fields.Total || 0), 0);
+      const salidasC = kardexCentroHastaFin
+        .filter((k) => k.fields.TipoMovimiento === "SALIDA")
+        .reduce((s, k) => s + Math.abs(k.fields.Total || 0), 0);
+      saldoFinAño += saldoInicialCentro + entradasC - salidasC;
+    }
     // Saldo inicial = saldo al inicio del año = saldo fin año - (entradas_año - salidas_año)
     const saldoInicial = saldoFinAño - (entradasKg - salidasKg);
 
