@@ -90,20 +90,26 @@ export async function GET(request: Request) {
     );
     const movimientos = kardexYear.length;
 
-    // Saldo inicial al comenzar el año seleccionado:
-    //   = SUM(centros.SaldoInicialTotal) + SUM(entradas_años_anteriores - salidas_años_anteriores)
-    // Misma lógica que usa la página /saldos-centros
+    // Saldo acumulado al fin del año seleccionado — misma lógica que /saldos-centros,
+    // pero sumando todos los centros. Filtra por fechakardex, no por AÑO.
     const saldoInicialCentros = centrosAcopio.reduce(
       (sum, c) => sum + (c.fields.SaldoInicialTotal || 0),
       0
     );
-    const entradasAnteriores = kardexAntesDelAño
+    const finAñoStr = `${yearStr}-12-31`;
+    const kardexHastaFinAño = allKardex.filter((k) => {
+      const f = k.fields.fechakardex;
+      return typeof f === "string" && f <= finAñoStr;
+    });
+    const entradasAcumHastaFinAño = kardexHastaFinAño
       .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
       .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
-    const salidasAnteriores = kardexAntesDelAño
+    const salidasAcumHastaFinAño = kardexHastaFinAño
       .filter((k) => k.fields.TipoMovimiento === "SALIDA")
       .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
-    const saldoInicial = saldoInicialCentros + entradasAnteriores - salidasAnteriores;
+    const saldoFinAño = saldoInicialCentros + entradasAcumHastaFinAño - salidasAcumHastaFinAño;
+    // Saldo inicial = saldo al inicio del año = saldo fin año - (entradas_año - salidas_año)
+    const saldoInicial = saldoFinAño - (entradasKg - salidasKg);
 
     // Previous year for deltas (same period: up to current month)
     const currentMonth = new Date().getMonth() + 1;
@@ -363,7 +369,7 @@ export async function GET(request: Request) {
       kpis: {
         entradasKg: Math.round(entradasKg),
         salidasKg: Math.round(salidasKg),
-        saldoKg: Math.round(saldoInicial + entradasKg - salidasKg),
+        saldoKg: Math.round(saldoFinAño),
         saldoInicialKg: Math.round(saldoInicial),
         movimientos,
         deltaEntradas: delta(entradasKg, prevEntradas),
