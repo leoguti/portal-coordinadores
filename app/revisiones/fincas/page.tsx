@@ -828,18 +828,12 @@ function GeneradorEditForm({
               }`} />
           </div>
         )}
-        {isJuridica && dvEsperado !== null && (
-          <div className="text-xs text-gray-500 pb-2">
-            {dv === "" ? (
-              <button type="button"
-                onClick={() => setDv(String(dvEsperado))}
-                className="text-blue-600 hover:text-blue-800 underline">
-                Usar {dvEsperado}
-              </button>
-            ) : dvValido ? (
-              <span className="text-green-600">✓ correcto</span>
+        {isJuridica && dv !== "" && dvEsperado !== null && (
+          <div className="text-xs pb-2">
+            {dvValido ? (
+              <span className="text-green-600">✓ válido</span>
             ) : (
-              <span className="text-red-600">esperado: {dvEsperado}</span>
+              <span className="text-red-600">DV incorrecto</span>
             )}
           </div>
         )}
@@ -1408,6 +1402,7 @@ export default function RevisionFincasPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos" | "multiples">("pendientes");
+  const [filtroPersona, setFiltroPersona] = useState<"todos" | "Natural" | "Juridica" | "sin-clasificar">("todos");
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
   const [totalRevisadas, setTotalRevisadas] = useState(0);
@@ -1604,6 +1599,12 @@ export default function RevisionFincasPage() {
     g.fincas.some(fincaIncompleta);
 
   const gruposFiltrados = grupos.filter((g) => {
+    // Filtro por tipopersona
+    const tp = g.generador?.tipopersona || "";
+    if (filtroPersona === "Natural" && tp !== "Natural") return false;
+    if (filtroPersona === "Juridica" && tp !== "Juridica") return false;
+    if (filtroPersona === "sin-clasificar" && tp !== "") return false;
+
     if (filtro === "pendientes") return g.revisadas < g.totalFincas;
     if (filtro === "revisadas") return g.revisadas === g.totalFincas;
     if (filtro === "duplicados") return getDuplicadosFor(g).length > 0;
@@ -1614,6 +1615,9 @@ export default function RevisionFincasPage() {
 
   const totalIncompletos = grupos.filter(grupoTieneIncompletas).length;
   const totalMultiples = grupos.filter((g) => g.totalFincas >= 2).length;
+  const totalNatural = grupos.filter((g) => g.generador?.tipopersona === "Natural").length;
+  const totalJuridica = grupos.filter((g) => g.generador?.tipopersona === "Juridica").length;
+  const totalSinClasificar = grupos.filter((g) => !g.generador?.tipopersona).length;
 
   if (status === "loading" || loading) {
     return (
@@ -1702,6 +1706,16 @@ export default function RevisionFincasPage() {
               );
             })}
           </div>
+          <select
+            value={filtroPersona}
+            onChange={(e) => setFiltroPersona(e.target.value as typeof filtroPersona)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="todos">Todos los tipos ({grupos.length})</option>
+            <option value="Natural">Natural ({totalNatural})</option>
+            <option value="Juridica">Jurídica ({totalJuridica})</option>
+            <option value="sin-clasificar">Sin clasificar ({totalSinClasificar})</option>
+          </select>
           <input
             type="text"
             placeholder="Buscar por nombre, NIT o dirección..."
