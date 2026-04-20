@@ -7,6 +7,7 @@ import {
   listAllActividades,
   getAllMetas,
   getAllCoordinadoresActivos,
+  getCentrosAcopio,
 } from "@/lib/airtable";
 
 const MATERIALES = [
@@ -52,12 +53,13 @@ export async function GET(request: Request) {
     const prevYearStr = String(year - 1);
 
     // Fetch only what we need
-    const [allKardex, allActividades, allMetas, coordinadoresActivos] =
+    const [allKardex, allActividades, allMetas, coordinadoresActivos, centrosAcopio] =
       await Promise.all([
         getAllKardex(),
         listAllActividades(),
         getAllMetas(year),
         getAllCoordinadoresActivos(),
+        getCentrosAcopio(),
       ]);
 
     const kardexYear = allKardex.filter((k) => k.fields.AÑO === yearStr);
@@ -88,16 +90,20 @@ export async function GET(request: Request) {
     );
     const movimientos = kardexYear.length;
 
-    // Saldo inicial = acumulado de años anteriores (entradas - salidas)
+    // Saldo inicial al comenzar el año seleccionado:
+    //   = SUM(centros.SaldoInicialTotal) + SUM(entradas_años_anteriores - salidas_años_anteriores)
+    // Misma lógica que usa la página /saldos-centros
+    const saldoInicialCentros = centrosAcopio.reduce(
+      (sum, c) => sum + (c.fields.SaldoInicialTotal || 0),
+      0
+    );
     const entradasAnteriores = kardexAntesDelAño
       .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
-      .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
-    const salidasAnteriores = Math.abs(
-      kardexAntesDelAño
-        .filter((k) => k.fields.TipoMovimiento === "SALIDA")
-        .reduce((sum, k) => sum + (k.fields.Total || 0), 0)
-    );
-    const saldoInicial = entradasAnteriores - salidasAnteriores;
+      .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
+    const salidasAnteriores = kardexAntesDelAño
+      .filter((k) => k.fields.TipoMovimiento === "SALIDA")
+      .reduce((sum, k) => sum + Math.abs(k.fields.Total || 0), 0);
+    const saldoInicial = saldoInicialCentros + entradasAnteriores - salidasAnteriores;
 
     // Previous year for deltas (same period: up to current month)
     const currentMonth = new Date().getMonth() + 1;
