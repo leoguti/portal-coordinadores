@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
     // Search using case-insensitive FIND function
     // Filter by Tipo = 'Gestor' AND search in RazonSocial
-    const filterFormula = `AND({Tipo}='Gestor', FIND(LOWER("${search.toLowerCase()}"), LOWER({RazonSocial})))`;
+    const filterFormula = `AND({es_gestor}=TRUE(), FIND(LOWER("${search.toLowerCase()}"), LOWER({RazonSocial})))`;
     const url = `https://api.airtable.com/v0/${baseId}/Terceros?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=RazonSocial&sort[0][direction]=asc&maxRecords=20`;
 
     const response = await fetch(url, {

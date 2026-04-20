@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     // Get all Gestores
-    const filterFormula = "{Tipo}='Gestor'";
+    const filterFormula = "{es_gestor}=TRUE()";
     const url = `https://api.airtable.com/v0/${baseId}/Terceros?filterByFormula=${encodeURIComponent(filterFormula)}&sort[0][field]=RazonSocial&sort[0][direction]=asc`;
 
     const response = await fetch(url, {
