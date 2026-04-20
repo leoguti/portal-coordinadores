@@ -193,6 +193,7 @@ export async function GET(request: NextRequest) {
         municipioId: finca.fields.municipio?.[0] || null,
         cultivoIds: finca.fields.cultivos || [],
         movil: finca.fields.movil || "",
+        fijo: finca.fields.fijo || "",
         email: finca.fields.email || "",
         coordinadorAsignadoId: finca.fields.coordinador_asignado?.[0] || null,
         revisado,

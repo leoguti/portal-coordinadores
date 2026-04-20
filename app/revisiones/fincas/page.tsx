@@ -27,6 +27,7 @@ interface FincaItem {
     municipioId: string | null;
     cultivoIds: string[];
     movil: string;
+    fijo: string;
     email: string;
     coordinadorAsignadoId: string | null;
     revisado: boolean;
@@ -300,6 +301,7 @@ function EditPanel({
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [selectedCultivos, setSelectedCultivos] = useState<string[]>(item.finca?.cultivoIds || []);
   const [movil, setMovil] = useState(item.finca?.movil || item.original.movil || "");
+  const [fijo, setFijo] = useState(item.finca?.fijo || "");
   const [email, setEmail] = useState(item.finca?.email || item.original.email || "");
   const [saving, setSaving] = useState(false);
   const [showCultivos, setShowCultivos] = useState(false);
@@ -334,11 +336,20 @@ function EditPanel({
       municipioId: municipio?.id || null,
       cultivoIds: selectedCultivos,
       movil,
+      fijo,
       email,
       marcarRevisado,
     });
     setSaving(false);
   };
+
+  // Campos requeridos para marcar como revisado
+  const missing: string[] = [];
+  if (!nombre.trim()) missing.push("nombre/dirección");
+  if (!municipio?.id) missing.push("municipio");
+  if (selectedCultivos.length === 0) missing.push("cultivo");
+  if (!movil.trim() && !fijo.trim()) missing.push("móvil o fijo");
+  const isComplete = missing.length === 0;
 
   return (
     <div className="bg-white px-4 py-4">
@@ -404,10 +415,15 @@ function EditPanel({
                   className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Email finca</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono fijo</label>
+                <input value={fijo} onChange={(e) => setFijo(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Email finca</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
           </div>
         </div>
@@ -470,9 +486,13 @@ function EditPanel({
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
-        <button onClick={() => handleSave(true)} disabled={saving}
-          className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50">
+      <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 items-center">
+        <button
+          onClick={() => handleSave(true)}
+          disabled={saving || !isComplete}
+          title={!isComplete ? `Faltan: ${missing.join(", ")}` : ""}
+          className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           {saving ? "Guardando..." : "Guardar y marcar revisado"}
         </button>
         <button onClick={() => handleSave(false)} disabled={saving}
@@ -482,6 +502,11 @@ function EditPanel({
         <button onClick={onClose} className="px-4 py-2 text-gray-400 text-sm hover:text-gray-600">
           Cancelar
         </button>
+        {!isComplete && (
+          <span className="text-xs text-amber-600 ml-auto">
+            Faltan: {missing.join(", ")}
+          </span>
+        )}
       </div>
 
       {/* Reasignar a otro coordinador */}

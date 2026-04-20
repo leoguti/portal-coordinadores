@@ -24,6 +24,7 @@ export async function PATCH(
   if (body.municipioId !== undefined) fincaFields.municipio = body.municipioId ? [body.municipioId] : [];
   if (body.cultivoIds !== undefined) fincaFields.cultivos = body.cultivoIds;
   if (body.movil !== undefined) fincaFields.movil = body.movil;
+  if (body.fijo !== undefined) fincaFields.fijo = body.fijo;
   if (body.email !== undefined) fincaFields.email = body.email;
   if (body.coordinadorAsignadoId !== undefined) {
     fincaFields.coordinador_asignado = body.coordinadorAsignadoId ? [body.coordinadorAsignadoId] : [];
