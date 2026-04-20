@@ -49,6 +49,7 @@ interface Stats {
     entradasKg: number;
     salidasKg: number;
     saldoKg: number;
+    saldoInicialKg: number;
     movimientos: number;
     deltaEntradas: number | null;
     deltaSalidas: number | null;
@@ -484,8 +485,17 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Saldo</p>
-          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.saldoKg)}</p>
-          <p className="text-xs text-gray-500">kg neto</p>
+          <p className={`text-2xl font-bold ${stats.kpis.saldoKg < 0 ? "text-red-600" : "text-gray-900"}`}>
+            {fmt(stats.kpis.saldoKg)}
+          </p>
+          <p className="text-xs text-gray-500">
+            kg neto
+            {stats.kpis.saldoInicialKg !== 0 && (
+              <span className="ml-1 text-gray-400">
+                (saldo inicial: {fmt(stats.kpis.saldoInicialKg)})
+              </span>
+            )}
+          </p>
         </div>
       </div>
 

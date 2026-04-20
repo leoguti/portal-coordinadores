@@ -64,6 +64,11 @@ export async function GET(request: Request) {
     const kardexPrevYear = allKardex.filter(
       (k) => k.fields.AÑO === prevYearStr
     );
+    // Acumulado de años anteriores al seleccionado (saldo inicial)
+    const kardexAntesDelAño = allKardex.filter((k) => {
+      const a = parseInt(k.fields.AÑO || "0", 10);
+      return a > 0 && a < year;
+    });
     const actividadesYear = allActividades.filter(
       (a) => a.fields.Año === yearStr
     );
@@ -82,6 +87,17 @@ export async function GET(request: Request) {
         .reduce((sum, k) => sum + (k.fields.Total || 0), 0)
     );
     const movimientos = kardexYear.length;
+
+    // Saldo inicial = acumulado de años anteriores (entradas - salidas)
+    const entradasAnteriores = kardexAntesDelAño
+      .filter((k) => k.fields.TipoMovimiento === "ENTRADA")
+      .reduce((sum, k) => sum + (k.fields.Total || 0), 0);
+    const salidasAnteriores = Math.abs(
+      kardexAntesDelAño
+        .filter((k) => k.fields.TipoMovimiento === "SALIDA")
+        .reduce((sum, k) => sum + (k.fields.Total || 0), 0)
+    );
+    const saldoInicial = entradasAnteriores - salidasAnteriores;
 
     // Previous year for deltas (same period: up to current month)
     const currentMonth = new Date().getMonth() + 1;
@@ -341,7 +357,8 @@ export async function GET(request: Request) {
       kpis: {
         entradasKg: Math.round(entradasKg),
         salidasKg: Math.round(salidasKg),
-        saldoKg: Math.round(entradasKg - salidasKg),
+        saldoKg: Math.round(saldoInicial + entradasKg - salidasKg),
+        saldoInicialKg: Math.round(saldoInicial),
         movimientos,
         deltaEntradas: delta(entradasKg, prevEntradas),
         deltaSalidas: delta(salidasKg, prevSalidas),
