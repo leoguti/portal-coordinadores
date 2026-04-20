@@ -7,7 +7,7 @@
 
 const PESOS = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
 
-function calcularDigitoVerificador(base: string): number {
+export function calcularDigitoVerificador(base: string): number {
   const digitos = base.replace(/\D/g, "").split("").reverse();
   let suma = 0;
   for (let i = 0; i < digitos.length && i < PESOS.length; i++) {

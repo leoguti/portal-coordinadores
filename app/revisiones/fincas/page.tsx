@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
+import { calcularDigitoVerificador } from "@/lib/nit";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ interface FincaItem {
 
 interface GeneradorGrupo {
   generadorId: string | null;
-  generador: { nombre: string; nit: string; tipo: string } | null;
+  generador: { nombre: string; nit: string; tipo: string; tipopersona: string } | null;
   fincas: FincaItem[];
   totalFincas: number;
   revisadas: number;
@@ -721,25 +722,53 @@ function GeneradorEditForm({
   onCancel,
 }: {
   grupo: GeneradorGrupo;
-  onSaved: (fields: { nombre: string; nit: string; tipo: string }) => void;
+  onSaved: (fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => void;
   onCancel: () => void;
 }) {
+  // Parse NIT existente: si trae "9001234-5" separar; si trae "90012345" dejar como base
+  const existingNit = grupo.generador?.nit || "";
+  const parseNit = (raw: string): { base: string; dv: string } => {
+    const clean = raw.replace(/[^\d-]/g, "");
+    if (clean.includes("-")) {
+      const [b, d] = clean.split("-");
+      return { base: b || "", dv: d || "" };
+    }
+    return { base: clean, dv: "" };
+  };
+  const initial = parseNit(existingNit);
+
   const [nombre, setNombre] = useState(grupo.generador?.nombre || "");
-  const [nit, setNit] = useState(grupo.generador?.nit || "");
   const [tipo, setTipo] = useState(grupo.generador?.tipo || "AGRICOLA");
+  const [tipopersona, setTipopersona] = useState(grupo.generador?.tipopersona || "Natural");
+  const [nitBase, setNitBase] = useState(initial.base);
+  const [dv, setDv] = useState(initial.dv);
   const [saving, setSaving] = useState(false);
 
+  const isJuridica = tipopersona === "Juridica";
+  const baseSoloDigitos = nitBase.replace(/\D/g, "");
+  const dvEsperado = baseSoloDigitos.length >= 8 ? calcularDigitoVerificador(baseSoloDigitos) : null;
+  const dvNumber = dv === "" ? null : parseInt(dv, 10);
+  const dvValido = !isJuridica || (dvNumber !== null && !isNaN(dvNumber) && dvNumber === dvEsperado);
+
+  // Campos requeridos
+  const missing: string[] = [];
+  if (!nombre.trim()) missing.push("nombre");
+  if (!baseSoloDigitos) missing.push("NIT/Cédula");
+  if (isJuridica && !dvValido) missing.push("DV válido");
+  const puedeGuardar = missing.length === 0;
+
   const handleSave = async () => {
-    if (!grupo.generadorId) return;
+    if (!grupo.generadorId || !puedeGuardar) return;
+    const nitFinal = isJuridica ? `${baseSoloDigitos}-${dv}` : baseSoloDigitos;
     setSaving(true);
     const res = await fetch(`/api/revisiones/generadores/${grupo.generadorId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, nit, tipo }),
+      body: JSON.stringify({ nombre, nit: nitFinal, tipo, tipopersona }),
     });
     setSaving(false);
     if (res.ok) {
-      onSaved({ nombre, nit, tipo });
+      onSaved({ nombre, nit: nitFinal, tipo, tipopersona });
     } else {
       alert("Error al guardar generador");
     }
@@ -754,26 +783,80 @@ function GeneradorEditForm({
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Tipo actividad</label>
           <select value={tipo} onChange={(e) => setTipo(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
             {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       </div>
+
       <div className="mb-3">
-        <label className="block text-xs font-medium text-gray-500 mb-1">NIT / Cédula</label>
-        <input value={nit} onChange={(e) => setNit(e.target.value)}
-          className="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+        <label className="block text-xs font-medium text-gray-500 mb-1">Persona</label>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="radio" checked={tipopersona === "Natural"}
+              onChange={() => setTipopersona("Natural")} className="accent-green-600" />
+            Natural (cédula)
+          </label>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="radio" checked={tipopersona === "Juridica"}
+              onChange={() => setTipopersona("Juridica")} className="accent-green-600" />
+            Jurídica (NIT con DV)
+          </label>
+        </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={handleSave} disabled={saving}
-          className="px-4 py-1.5 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50">
+
+      <div className="mb-3 flex gap-2 items-end flex-wrap">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            {isJuridica ? "NIT (sin DV)" : "Cédula"}
+          </label>
+          <input value={nitBase} onChange={(e) => setNitBase(e.target.value)}
+            placeholder={isJuridica ? "900123456" : "12345678"}
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+        {isJuridica && (
+          <div className="w-24">
+            <label className="block text-xs font-medium text-gray-500 mb-1">DV</label>
+            <input value={dv} onChange={(e) => setDv(e.target.value.replace(/\D/g, "").slice(0, 1))}
+              placeholder="?"
+              className={`w-full border rounded-lg px-3 py-1.5 text-sm font-mono text-center focus:outline-none focus:ring-2 ${
+                dv === "" ? "border-gray-300 focus:ring-green-500"
+                  : dvValido ? "border-green-400 bg-green-50 focus:ring-green-500"
+                  : "border-red-400 bg-red-50 focus:ring-red-500"
+              }`} />
+          </div>
+        )}
+        {isJuridica && dvEsperado !== null && (
+          <div className="text-xs text-gray-500 pb-2">
+            {dv === "" ? (
+              <button type="button"
+                onClick={() => setDv(String(dvEsperado))}
+                className="text-blue-600 hover:text-blue-800 underline">
+                Usar {dvEsperado}
+              </button>
+            ) : dvValido ? (
+              <span className="text-green-600">✓ correcto</span>
+            ) : (
+              <span className="text-red-600">esperado: {dvEsperado}</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2 items-center">
+        <button onClick={handleSave} disabled={saving || !puedeGuardar}
+          title={!puedeGuardar ? `Faltan: ${missing.join(", ")}` : ""}
+          className="px-4 py-1.5 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-40 disabled:cursor-not-allowed">
           {saving ? "Guardando..." : "Guardar generador"}
         </button>
         <button onClick={onCancel} className="px-4 py-1.5 text-gray-500 text-sm hover:text-gray-700">
           Cancelar
         </button>
+        {!puedeGuardar && (
+          <span className="text-xs text-amber-600 ml-2">Faltan: {missing.join(", ")}</span>
+        )}
       </div>
     </div>
   );
@@ -802,7 +885,7 @@ function GeneradorRow({
   onFincaToggle: (id: string) => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
   onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
-  onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => void;
+  onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => void;
   onDeleteFinca: (finca: FincaItem, siblings: FincaItem[]) => void;
   onReassigned: (fincaId: string) => void;
   selectedFincaIds: Set<string>;
@@ -1453,11 +1536,11 @@ export default function RevisionFincasPage() {
     setExpandedFinca(null);
   }, []);
 
-  const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string }) => {
+  const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => {
     setGrupos((prev) =>
       prev.map((g) =>
         g.generadorId === grupoId
-          ? { ...g, generador: { nombre: fields.nombre, nit: fields.nit, tipo: fields.tipo } }
+          ? { ...g, generador: { nombre: fields.nombre, nit: fields.nit, tipo: fields.tipo, tipopersona: fields.tipopersona } }
           : g
       )
     );

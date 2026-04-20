@@ -23,6 +23,7 @@ export async function PATCH(
   if (body.nombre !== undefined) fields.nombre = body.nombre;
   if (body.nit !== undefined) fields.nit = body.nit;
   if (body.tipo !== undefined) fields.tipo = body.tipo;
+  if (body.tipopersona !== undefined) fields.tipopersona = body.tipopersona;
 
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "Sin campos para actualizar" }, { status: 400 });

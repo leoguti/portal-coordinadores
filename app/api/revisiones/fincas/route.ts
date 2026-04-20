@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
   // 6. Agrupar por GENERADOR
   const gruposMap = new Map<string, {
     generadorId: string | null;
-    generador: { nombre: string; nit: string; tipo: string } | null;
+    generador: { nombre: string; nit: string; tipo: string; tipopersona: string } | null;
     fincas: typeof items;
   }>();
 
@@ -219,6 +219,7 @@ export async function GET(request: NextRequest) {
           nombre: genRecord.fields.nombre || "",
           nit: genRecord.fields.nit || "",
           tipo: genRecord.fields.tipo || "",
+          tipopersona: genRecord.fields.tipopersona || "",
         } : null,
         fincas: [],
       });
