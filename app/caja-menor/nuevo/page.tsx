@@ -23,6 +23,7 @@ interface RubroOption {
   tipo: string;
   requiereTrayecto: boolean;
   requiereNoches: boolean;
+  requiereHora: boolean;
 }
 
 interface KardexDisponible {
@@ -91,6 +92,7 @@ export default function NuevoGastoCajaMenorPage() {
   const rubroSeleccionado = rubros.find((r) => r.id === rubroId);
   const requiereTrayecto = !!rubroSeleccionado?.requiereTrayecto;
   const requiereNoches = !!rubroSeleccionado?.requiereNoches;
+  const requiereHora = !!rubroSeleccionado?.requiereHora;
 
   // Kardex Caja Menor
   const [kardexDisponibles, setKardexDisponibles] = useState<KardexDisponible[]>([]);
@@ -106,12 +108,13 @@ export default function NuevoGastoCajaMenorPage() {
         if (res.ok) {
           const data = await res.json();
           setRubros(
-            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string[] | string; requiere_trayecto?: boolean; requiere_noches?: boolean } }) => ({
+            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string[] | string; requiere_trayecto?: boolean; requiere_noches?: boolean; requiere_hora?: boolean } }) => ({
               id: r.id,
               nombre: r.fields.Nombre || "",
               tipo: (Array.isArray(r.fields.Tipo) ? r.fields.Tipo[0] : r.fields.Tipo) || "Servicio",
               requiereTrayecto: !!r.fields.requiere_trayecto,
               requiereNoches: !!r.fields.requiere_noches,
+              requiereHora: !!r.fields.requiere_hora,
             }))
           );
         }
@@ -216,6 +219,10 @@ export default function NuevoGastoCajaMenorPage() {
     }
     if (requiereNoches && (!noches || parseInt(noches) <= 0)) {
       setError("Este rubro requiere indicar el número de noches");
+      return;
+    }
+    if (requiereHora && !hora.trim()) {
+      setError("Este rubro requiere indicar la hora");
       return;
     }
 
@@ -498,12 +505,18 @@ export default function NuevoGastoCajaMenorPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hora <span className="text-gray-400 font-normal">(opcional)</span>
+                Hora{" "}
+                {requiereHora ? (
+                  <span className="text-red-500">*</span>
+                ) : (
+                  <span className="text-gray-400 font-normal">(opcional)</span>
+                )}
               </label>
               <input
                 type="time"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
+                required={requiereHora}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
               />
             </div>

@@ -35,6 +35,7 @@ interface RubroFields {
   Activo?: boolean;
   requiere_trayecto?: boolean;
   requiere_noches?: boolean;
+  requiere_hora?: boolean;
 }
 
 interface ActividadFields {
