@@ -193,15 +193,31 @@ export default function GastoDetallePage() {
       noches?: number;
       tipo_soporte?: string;
       numero_soporte?: string;
-      "mundep (from municipio)"?: string[];
-      "mundep (from municipio_destino)"?: string[];
     };
     const muniId = f.municipio?.[0];
-    const muniName = f["mundep (from municipio)"]?.[0];
-    setEditMunicipio(muniId ? { id: muniId, mundep: muniName || muniId } : null);
     const muniDestId = f.municipio_destino?.[0];
-    const muniDestName = f["mundep (from municipio_destino)"]?.[0];
-    setEditMunicipioDestino(muniDestId ? { id: muniDestId, mundep: muniDestName || muniDestId } : null);
+    // Set temporalmente con ID, luego resuelve nombres con el endpoint
+    setEditMunicipio(muniId ? { id: muniId, mundep: "..." } : null);
+    setEditMunicipioDestino(muniDestId ? { id: muniDestId, mundep: "..." } : null);
+
+    const idsToFetch = [muniId, muniDestId].filter(Boolean) as string[];
+    if (idsToFetch.length > 0) {
+      fetch("/api/municipios/por-ids", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: idsToFetch }),
+      })
+        .then((r) => r.json())
+        .then((d: { municipios?: Array<{ id: string; mundep: string }> }) => {
+          const byId = new Map((d.municipios || []).map((m) => [m.id, m.mundep]));
+          if (muniId) setEditMunicipio({ id: muniId, mundep: byId.get(muniId) || muniId });
+          if (muniDestId) setEditMunicipioDestino({ id: muniDestId, mundep: byId.get(muniDestId) || muniDestId });
+        })
+        .catch(() => {
+          // Si falla, los campos quedan con los IDs
+        });
+    }
+
     setEditHora(f.hora || "");
     setEditNoches(f.noches !== undefined ? String(f.noches) : "");
     setEditTipoSoporte((f.tipo_soporte as "" | "Factura" | "Documento Equivalente") || "");
