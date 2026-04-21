@@ -43,31 +43,24 @@ function seccionPara(
   return "otros";
 }
 
-// Fetch auxiliar para traer campos extra del gasto (municipio, etc.)
-async function fetchGastosConExtras(coordinadorId: string, mes: string) {
-  const filter = `AND(FIND('${coordinadorId}', ARRAYJOIN({idcoordinador}, ','))>0, {MesLegalizacion}='${mes}')`;
-  const url = `https://api.airtable.com/v0/${BASE}/GastosCajaMenor?pageSize=100&filterByFormula=${encodeURIComponent(filter)}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${KEY}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return new Map();
-  const data = (await res.json()) as {
-    records: Array<{
-      id: string;
-      fields: {
-        hora?: string;
-        noches?: number;
-        tipo_soporte?: string;
-        numero_soporte?: string;
-        "mundep (from municipio)"?: string[];
-        "mundep (from municipio_destino)"?: string[];
-      };
-    }>;
-  };
-  const m = new Map<string, (typeof data.records)[number]["fields"]>();
-  for (const r of data.records || []) m.set(r.id, r.fields);
-  return m;
+// Resuelve IDs de MUNICIPIOS → mundep (Airtable API no permite crear lookups)
+async function fetchMundepByIds(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return out;
+  // Batches de 100 para no exceder la longitud de la fórmula
+  for (let i = 0; i < unique.length; i += 50) {
+    const chunk = unique.slice(i, i + 50);
+    const or = chunk.map((id) => `RECORD_ID()='${id}'`).join(",");
+    const url = `https://api.airtable.com/v0/${BASE}/MUNICIPIOS?filterByFormula=${encodeURIComponent(`OR(${or})`)}&fields%5B%5D=mundep&pageSize=100`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${KEY}` }, cache: "no-store" });
+    if (!res.ok) continue;
+    const data = (await res.json()) as { records: Array<{ id: string; fields: { mundep?: string } }> };
+    for (const r of data.records || []) {
+      if (r.fields.mundep) out.set(r.id, r.fields.mundep);
+    }
+  }
+  return out;
 }
 
 export async function GET(req: NextRequest) {
@@ -94,12 +87,11 @@ export async function GET(req: NextRequest) {
 
   try {
     // 1. Cargar datos con los MISMOS helpers de /caja-menor
-    const [allGastos, reembolsos, saldoInicialCoord, rubros, gastosExtras] = await Promise.all([
+    const [allGastos, reembolsos, saldoInicialCoord, rubros] = await Promise.all([
       getAllGastosCajaMenor(),
       getReembolsosCajaMenor(coordinadorParam),
       getSaldoInicialCajaMenor(coordinadorParam),
       getRubros(),
-      fetchGastosConExtras(coordinadorParam, mes),
     ]);
 
     // Mapa de rubros por ID
@@ -168,35 +160,50 @@ export async function GET(req: NextRequest) {
                               reembolsosDelMes[0]?.fields?.NombreCoordinador?.[0] ||
                               "Coordinador";
 
-    // 7. Agrupar gastos en 4 secciones
+    // 7. Resolver IDs de municipios → nombres (mundep)
+    const municipioIds: string[] = [];
+    for (const g of gastosDelMes) {
+      const mIds = (g.fields as { municipio?: string[] }).municipio || [];
+      const mDestIds = (g.fields as { municipio_destino?: string[] }).municipio_destino || [];
+      municipioIds.push(...mIds, ...mDestIds);
+    }
+    const mundepById = await fetchMundepByIds(municipioIds);
+
+    // 8. Agrupar gastos en 4 secciones
     type Row = LegalizacionMensualPDFProps["secciones"][number]["gastos"][number];
     const buckets: Record<Seccion, Row[]> = { transporte: [], alimentacion: [], hospedaje: [], otros: [] };
 
     for (const g of gastosDelMes) {
-      const f = g.fields;
+      const f = g.fields as GastoCajaMenor["fields"] & {
+        municipio?: string[];
+        municipio_destino?: string[];
+        hora?: string;
+        noches?: number;
+        tipo_soporte?: string;
+        numero_soporte?: string;
+      };
       const rubroId = f.Rubro?.[0];
       const rubroFields = rubroId ? rubrosById.get(rubroId) : undefined;
       const rubroNombre = rubroFields?.Nombre || "Sin rubro";
       const seccion = seccionPara(rubroNombre, rubroFields);
 
-      const extras = gastosExtras.get(g.id) || {};
-      const muni = extras["mundep (from municipio)"]?.[0];
-      const muniDest = extras["mundep (from municipio_destino)"]?.[0];
+      const muniId = f.municipio?.[0];
+      const muniDestId = f.municipio_destino?.[0];
 
       buckets[seccion].push({
         numeroGasto: f.NumeroGasto,
         fecha: f.Fecha,
-        hora: extras.hora,
-        noches: extras.noches,
+        hora: f.hora,
+        noches: f.noches,
         descripcion: f.Observaciones,
         rubroNombre,
         beneficiario: f.RazonSocial?.[0],
-        municipio: muni,
-        municipioDestino: muniDest,
+        municipio: muniId ? mundepById.get(muniId) : undefined,
+        municipioDestino: muniDestId ? mundepById.get(muniDestId) : undefined,
         valor: calcValorNeto(g),
         estado: f.Estado || "Pendiente",
-        tipoSoporte: extras.tipo_soporte,
-        numeroSoporte: extras.numero_soporte,
+        tipoSoporte: f.tipo_soporte,
+        numeroSoporte: f.numero_soporte,
       });
     }
 
