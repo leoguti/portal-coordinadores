@@ -164,13 +164,19 @@ export async function DELETE(
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    // Solo se pueden eliminar gastos Pendiente
-    if (gasto.fields.Estado !== "Pendiente") {
-      return NextResponse.json({ error: "Solo se pueden eliminar gastos pendientes" }, { status: 400 });
+    // Se pueden eliminar gastos Pendiente (coordinador borra antes de aprobación)
+    // o Rechazado (coordinador descarta sin corregir)
+    const estado = gasto.fields.Estado;
+    if (estado !== "Pendiente" && estado !== "Rechazado") {
+      return NextResponse.json(
+        { error: "Solo se pueden eliminar gastos pendientes o rechazados" },
+        { status: 400 }
+      );
     }
 
-    // Verificar regla de 7 dias
-    if (gasto.fields.Fecha && !puedeModificarFecha(gasto.fields.Fecha)) {
+    // Regla de 7 días solo aplica a Pendiente. Rechazados se pueden borrar
+    // siempre que sean del mes actual o recientes (misma política).
+    if (estado === "Pendiente" && gasto.fields.Fecha && !puedeModificarFecha(gasto.fields.Fecha)) {
       return NextResponse.json({ error: "El gasto esta fuera del periodo modificable (regla 7 dias)" }, { status: 400 });
     }
 

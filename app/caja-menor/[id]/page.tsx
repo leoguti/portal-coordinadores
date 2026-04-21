@@ -571,14 +571,38 @@ export default function GastoDetallePage() {
         {canCorrect && !editMode && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700 mb-3">
-              Este gasto fue rechazado. Puedes corregirlo y reenviarlo para revision.
+              Este gasto fue rechazado. Puedes corregirlo y reenviarlo, o eliminarlo si ya no aplica.
             </p>
-            <button
-              onClick={enterEditMode}
-              className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium text-sm"
-            >
-              Corregir y Reenviar
-            </button>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={enterEditMode}
+                className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium text-sm"
+              >
+                Corregir y Reenviar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm("¿Eliminar este gasto rechazado? No se podrá recuperar.")) return;
+                  setActionLoading(true);
+                  try {
+                    const res = await fetch(`/api/caja-menor/${gastoId}`, { method: "DELETE" });
+                    if (res.ok) {
+                      router.push("/caja-menor");
+                    } else {
+                      const d = await res.json();
+                      setActionMessage({ type: "error", text: d.error || "Error al eliminar" });
+                    }
+                  } catch {
+                    setActionMessage({ type: "error", text: "Error al eliminar" });
+                  }
+                  setActionLoading(false);
+                }}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         )}
 
