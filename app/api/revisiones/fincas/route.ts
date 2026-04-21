@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
   for (let i = 0; i < generadorIds.length; i += CHUNK) {
     const chunk = generadorIds.slice(i, i + CHUNK);
     const formula = `OR(${chunk.map((id: string) => `RECORD_ID()='${id}'`).join(",")})`;
-    const gFields = ["nombre", "nit", "tipo"];
+    const gFields = ["nombre", "nit", "tipo", "tipopersona"];
     const gfp = gFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
     const url = `https://api.airtable.com/v0/${BASE}/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&${gfp}&pageSize=100`;
     const data = await airtableGet(url);

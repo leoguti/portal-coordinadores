@@ -287,12 +287,14 @@ function DeleteFincaModal({
 
 function EditPanel({
   item,
+  generador,
   cultivos,
   onSave,
   onReassigned,
   onClose,
 }: {
   item: FincaItem;
+  generador: GeneradorGrupo["generador"];
   cultivos: Cultivo[];
   onSave: (fincaId: string, data: any) => Promise<void>;
   onReassigned: (fincaId: string) => void;
@@ -350,6 +352,7 @@ function EditPanel({
   if (!municipio?.id) missing.push("municipio");
   if (selectedCultivos.length === 0) missing.push("cultivo");
   if (!movil.trim() && !fijo.trim()) missing.push("móvil o fijo");
+  if (!generador?.tipopersona) missing.push("tipo persona del generador");
   const isComplete = missing.length === 0;
 
   return (
@@ -620,6 +623,7 @@ function ReassignSection({
 
 function FincaRow({
   item,
+  generador,
   cultivos,
   isExpanded,
   onToggle,
@@ -631,6 +635,7 @@ function FincaRow({
   onReassigned,
 }: {
   item: FincaItem;
+  generador: GeneradorGrupo["generador"];
   cultivos: Cultivo[];
   isExpanded: boolean;
   onToggle: () => void;
@@ -708,7 +713,7 @@ function FincaRow({
       </div>
 
       {isExpanded && item.fincaId && (
-        <EditPanel item={item} cultivos={cultivos} onSave={onSave} onReassigned={onReassigned} onClose={onToggle} />
+        <EditPanel item={item} generador={generador} cultivos={cultivos} onSave={onSave} onReassigned={onReassigned} onClose={onToggle} />
       )}
     </div>
   );
@@ -994,6 +999,7 @@ function GeneradorRow({
               <FincaRow
                 key={fid}
                 item={finca}
+                generador={grupo.generador}
                 cultivos={cultivos}
                 isExpanded={expandedFinca === fid}
                 onToggle={() => onFincaToggle(fid)}
@@ -1595,8 +1601,11 @@ export default function RevisionFincasPage() {
     return false;
   };
 
-  const grupoTieneIncompletas = (g: GeneradorGrupo): boolean =>
-    g.fincas.some(fincaIncompleta);
+  const grupoTieneIncompletas = (g: GeneradorGrupo): boolean => {
+    // Generador sin clasificar (Natural/Jurídica) también es incompleto
+    if (!g.generador?.tipopersona) return true;
+    return g.fincas.some(fincaIncompleta);
+  };
 
   const gruposFiltrados = grupos.filter((g) => {
     // Filtro por tipopersona
