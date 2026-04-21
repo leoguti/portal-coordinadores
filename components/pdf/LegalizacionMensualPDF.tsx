@@ -247,7 +247,7 @@ function SeccionTable({ seccion, mostrarTrayecto, ciudadHeader, horaHeader, rubr
             </Text>
             <Text style={[s.tableCell, { width: widths.ciudad, fontSize: 7 }]}>
               {g.municipio || "—"}
-              {mostrarTrayecto && g.municipioDestino ? ` → ${g.municipioDestino}` : ""}
+              {mostrarTrayecto && g.municipioDestino ? ` -> ${g.municipioDestino}` : ""}
             </Text>
             <Text style={[s.tableCell, { width: widths.valor, textAlign: "right", fontFamily: "Courier" }]}>
               {fmtCOP(g.valor)}

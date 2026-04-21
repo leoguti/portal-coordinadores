@@ -150,12 +150,6 @@ export async function GET(req: NextRequest) {
       .filter((g) => (g.fields.Fecha || "").substring(0, 7) === mes)
       .sort((a, b) => (a.fields.Fecha || "").localeCompare(b.fields.Fecha || ""));
 
-    // DEBUG: ver qué campos trae cada gasto
-    for (const g of gastosDelMes) {
-      console.log(`[pdf-mes] gasto ${g.id} fields:`, Object.keys(g.fields).join(", "));
-      console.log(`[pdf-mes] hora=${(g.fields as Record<string, unknown>).hora}, tipo_soporte=${(g.fields as Record<string, unknown>).tipo_soporte}, numero_soporte=${(g.fields as Record<string, unknown>).numero_soporte}, municipio=${JSON.stringify((g.fields as Record<string, unknown>).municipio)}`);
-    }
-
     // 5. Reembolsos del mes
     const reembolsosDelMes = reembolsosCoord
       .filter((r) => (r.fields.Fecha || "").substring(0, 7) === mes)
