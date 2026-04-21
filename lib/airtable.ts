@@ -287,6 +287,16 @@ interface GastoCajaMenorFields {
   Kardex?: string[]; // Linked to Kardex records (optional)
   PorcentajeIVA?: number;
   MontoIVA?: number;
+  // Campos de legalización mensual
+  municipio?: string[];
+  "mundep (from municipio)"?: string[];
+  municipio_destino?: string[];
+  "mundep (from municipio_destino)"?: string[];
+  hora?: string;
+  noches?: number;
+  tipo_soporte?: string;
+  numero_soporte?: string;
+  LegalizacionesMensuales?: string[];
 }
 
 export interface GastoCajaMenor {
