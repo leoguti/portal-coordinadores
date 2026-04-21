@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
-import { MemoryAdapter } from "@/lib/memory-adapter";
+import { NeonAdapter } from "@/lib/neon-adapter";
 import { getCoordinatorByEmail } from "@/lib/airtable";
 
 /**
@@ -110,7 +110,7 @@ function html({ url, host, email }: { url: string; host: string; email: string }
  */
 export const authOptions: NextAuthOptions = {
   // Use in-memory adapter for verification tokens
-  adapter: MemoryAdapter(),
+  adapter: NeonAdapter(),
   
   providers: [
     EmailProvider({
