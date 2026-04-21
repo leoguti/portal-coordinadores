@@ -54,101 +54,44 @@ export default function CajaMenorPage() {
   // Descarga de facturas
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
 
-  // Legalizaciones mensuales
-  interface Legalizacion {
-    id: string;
-    fields: {
-      coordinador?: string[];
-      mes_reporte?: string;
-      estado?: string;
-      rechazado_motivo?: string;
-      pdf_r2_url?: string;
-    };
-  }
-  const [legalizaciones, setLegalizaciones] = useState<Legalizacion[]>([]);
-  const [legAccionando, setLegAccionando] = useState<string | null>(null);
-  const [legError, setLegError] = useState<string | null>(null);
-  const [rechazarModal, setRechazarModal] = useState<{ id: string; motivo: string } | null>(null);
+  // Descarga PDF mensual
+  const [generandoPDF, setGenerandoPDF] = useState<string | null>(null);
 
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const canWrite = isAdmin(session?.user?.rol);
 
-  // Coordinador "objetivo" para el estado de legalización:
-  // - Admin/Supervisor sin filtro: undefined (no se muestra estado por mes, son varios)
-  // - Admin/Supervisor con filtro de coordinador: ese coordinador
-  // - Coordinador: él mismo
+  // Coordinador "objetivo" para el PDF mensual:
+  //   - Coordinador logueado: él mismo
+  //   - Admin/Supervisor con filtro de coordinador: ese coordinador
+  //   - Admin/Supervisor sin filtro: ninguno (son varios, no tiene sentido un PDF único)
   const coordinadorObjetivoId: string | undefined = canViewAll
     ? filtroCoordinador || undefined
     : session?.user?.coordinatorRecordId;
 
-  // Busca la legalización para un mes dado del coordinador objetivo
-  const findLegalizacion = (mes: string): Legalizacion | undefined => {
-    if (!coordinadorObjetivoId) return undefined;
-    return legalizaciones.find(
-      (l) =>
-        l.fields.mes_reporte === mes &&
-        l.fields.coordinador?.[0] === coordinadorObjetivoId
-    );
-  };
-
-  const handleLegalizacionAccion = async (
-    mes: string,
-    accion: "enviar" | "aprobar" | "rechazar" | "reabrir" | "pagar",
-    motivo?: string
-  ) => {
+  const handleDescargarPDFMes = async (mes: string) => {
     if (!coordinadorObjetivoId) return;
-    setLegAccionando(mes);
-    setLegError(null);
-
+    setGenerandoPDF(mes);
     try {
-      const existente = findLegalizacion(mes);
-      let legId = existente?.id;
-
-      // Si no existe, crear primero (solo para acción "enviar")
-      if (!legId && accion === "enviar") {
-        const resCrear = await fetch("/api/legalizaciones", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mes_reporte: mes }),
-        });
-        const dataCrear = await resCrear.json();
-        if (!resCrear.ok && resCrear.status !== 409) {
-          setLegError(dataCrear.error || "Error creando legalización");
-          setLegAccionando(null);
-          return;
-        }
-        legId = dataCrear.legalizacion?.id || dataCrear.existeId;
-      }
-
-      if (!legId) {
-        setLegError("Legalización no encontrada");
-        setLegAccionando(null);
-        return;
-      }
-
-      const res = await fetch(`/api/legalizaciones/${legId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion, motivo }),
-      });
-      const data = await res.json();
+      const res = await fetch(`/api/caja-menor/pdf-mes?mes=${mes}&coordinador=${coordinadorObjetivoId}`);
       if (!res.ok) {
-        setLegError(data.error || "Error");
-        setLegAccionando(null);
+        alert("No se pudo generar el PDF");
+        setGenerandoPDF(null);
         return;
       }
-
-      // Recargar legalizaciones
-      const resLeg = await fetch("/api/legalizaciones");
-      if (resLeg.ok) {
-        const { legalizaciones: legs } = await resLeg.json();
-        setLegalizaciones(legs || []);
-      }
-      setRechazarModal(null);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `legalizacion-${mes}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (e) {
-      setLegError(e instanceof Error ? e.message : "Error");
+      console.error(e);
+      alert("Error descargando el PDF");
     }
-    setLegAccionando(null);
+    setGenerandoPDF(null);
   };
 
   useEffect(() => {
@@ -220,16 +163,6 @@ export default function CajaMenorPage() {
           // No es critico si falla
         }
 
-        // Cargar legalizaciones
-        try {
-          const resLeg = await fetch("/api/legalizaciones");
-          if (resLeg.ok) {
-            const { legalizaciones: legs } = await resLeg.json();
-            setLegalizaciones(legs || []);
-          }
-        } catch {
-          // No es critico
-        }
       } catch (err) {
         console.error("Error loading gastos:", err);
         setError("Error al cargar los gastos. Por favor intenta de nuevo.");
@@ -920,30 +853,6 @@ export default function CajaMenorPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                           <span className="font-bold text-gray-900 capitalize text-lg">{formatMesNombre(mes)}</span>
-
-                          {/* Badge de estado legalización */}
-                          {(() => {
-                            const leg = findLegalizacion(mes);
-                            if (!leg) return null;
-                            const estado = leg.fields.estado || "";
-                            const color =
-                              estado === "aprobado" ? "bg-green-100 text-green-700" :
-                              estado === "pendiente_aprobacion" ? "bg-yellow-100 text-yellow-800" :
-                              estado === "rechazado" ? "bg-red-100 text-red-700" :
-                              estado === "pagado" ? "bg-blue-100 text-blue-700" :
-                              "bg-gray-100 text-gray-700";
-                            const label =
-                              estado === "aprobado" ? "Aprobado" :
-                              estado === "pendiente_aprobacion" ? "Pendiente" :
-                              estado === "rechazado" ? "Rechazado" :
-                              estado === "pagado" ? "Pagado" :
-                              estado;
-                            return (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
-                                {label}
-                              </span>
-                            );
-                          })()}
                         </div>
                         <div className="flex items-center gap-3 text-sm">
                           {resumen.cantReemb > 0 && (
@@ -964,83 +873,28 @@ export default function CajaMenorPage() {
                         </div>
                       </button>
 
-                      {/* Barra de acciones de legalización */}
-                      {coordinadorObjetivoId && (() => {
-                        const leg = findLegalizacion(mes);
-                        const estado = leg?.fields.estado;
-                        const esDueno = coordinadorObjetivoId === session?.user?.coordinatorRecordId;
-                        const esAdmin = canViewAll;
-                        const accionando = legAccionando === mes;
-
-                        // Determinar qué botones mostrar
-                        const puedeEnviar = esDueno && (!leg || estado === "rechazado");
-                        const puedeAprobar = esAdmin && estado === "pendiente_aprobacion";
-                        const puedeRechazar = esAdmin && estado === "pendiente_aprobacion";
-                        const puedePagar = esAdmin && estado === "aprobado";
-                        const pdfUrl = leg?.fields.pdf_r2_url;
-
-                        if (!puedeEnviar && !puedeAprobar && !puedeRechazar && !puedePagar && !pdfUrl && estado !== "rechazado") {
-                          return null;
-                        }
-
-                        return (
-                          <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-white border-b border-gray-200">
-                            {estado === "rechazado" && leg?.fields.rechazado_motivo && (
-                              <span className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
-                                <strong>Motivo:</strong> {leg.fields.rechazado_motivo}
-                              </span>
+                      {/* Botón PDF mensual */}
+                      {coordinadorObjetivoId && (
+                        <div className="flex justify-end px-4 py-2 bg-white border-b border-gray-200">
+                          <button
+                            onClick={() => handleDescargarPDFMes(mes)}
+                            disabled={generandoPDF === mes}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[#042726] hover:bg-[#032120] text-white text-xs font-medium rounded transition-colors disabled:opacity-50"
+                          >
+                            {generandoPDF === mes ? (
+                              <>
+                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generando...
+                              </>
+                            ) : (
+                              <>📄 Descargar PDF del mes</>
                             )}
-                            {puedeEnviar && (
-                              <button
-                                onClick={() => handleLegalizacionAccion(mes, "enviar")}
-                                disabled={accionando}
-                                className="px-3 py-1.5 bg-[#042726] hover:bg-[#032120] text-white text-xs font-medium rounded disabled:opacity-50"
-                              >
-                                {accionando ? "Enviando..." : estado === "rechazado" ? "Reenviar a aprobación" : "Enviar a aprobación"}
-                              </button>
-                            )}
-                            {puedeAprobar && (
-                              <button
-                                onClick={() => handleLegalizacionAccion(mes, "aprobar")}
-                                disabled={accionando}
-                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded disabled:opacity-50"
-                              >
-                                Aprobar legalización
-                              </button>
-                            )}
-                            {puedeRechazar && (
-                              <button
-                                onClick={() => setRechazarModal({ id: leg!.id, motivo: "" })}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded"
-                              >
-                                Rechazar
-                              </button>
-                            )}
-                            {puedePagar && (
-                              <button
-                                onClick={() => handleLegalizacionAccion(mes, "pagar")}
-                                disabled={accionando}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded disabled:opacity-50"
-                              >
-                                Marcar pagado
-                              </button>
-                            )}
-                            {pdfUrl && (
-                              <a
-                                href={pdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded"
-                              >
-                                Descargar PDF
-                              </a>
-                            )}
-                            {legError && legAccionando === null && (
-                              <span className="text-xs text-red-600">{legError}</span>
-                            )}
-                          </div>
-                        );
-                      })()}
+                          </button>
+                        </div>
+                      )}
 
                       {expandido && (
                         <div className="p-4 space-y-4">
@@ -1335,42 +1189,6 @@ export default function CajaMenorPage() {
         </div>
       )}
 
-      {/* Modal rechazar legalización */}
-      {rechazarModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Rechazar legalización</h3>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-            <textarea
-              value={rechazarModal.motivo}
-              onChange={(e) => setRechazarModal({ ...rechazarModal, motivo: e.target.value })}
-              rows={4}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Indica el motivo para que el coordinador pueda corregir..."
-            />
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => {
-                  const leg = legalizaciones.find((l) => l.id === rechazarModal.id);
-                  if (leg && leg.fields.mes_reporte) {
-                    handleLegalizacionAccion(leg.fields.mes_reporte, "rechazar", rechazarModal.motivo);
-                  }
-                }}
-                disabled={!rechazarModal.motivo.trim() || legAccionando !== null}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-              >
-                Rechazar
-              </button>
-              <button
-                onClick={() => setRechazarModal(null)}
-                className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AuthenticatedLayout>
   );
 }
