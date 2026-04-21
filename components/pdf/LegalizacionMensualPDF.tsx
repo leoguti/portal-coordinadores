@@ -32,27 +32,27 @@ export interface LegalizacionMensualPDFProps {
 }
 
 const s = StyleSheet.create({
-  page: { padding: 30, fontSize: 9, fontFamily: "Helvetica" },
+  page: { padding: 25, fontSize: 8.5, fontFamily: "Helvetica" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
     borderBottom: "2 solid #042726",
     paddingBottom: 8,
   },
-  logo: { width: 100, height: 34 },
-  title: { fontSize: 14, fontWeight: "bold", color: "#042726" },
-  subtitle: { fontSize: 11, color: "#00d084", marginTop: 2 },
-  version: { fontSize: 8, color: "#666" },
+  logo: { width: 90, height: 30 },
+  title: { fontSize: 13, fontWeight: "bold", color: "#042726" },
+  subtitle: { fontSize: 10, color: "#00d084", marginTop: 2 },
+  version: { fontSize: 7, color: "#666" },
 
   infoBox: {
-    marginBottom: 12,
+    marginBottom: 10,
     backgroundColor: "#f5f7f5",
-    padding: 8,
-    borderRadius: 4,
+    padding: 6,
+    borderRadius: 3,
   },
-  infoRow: { flexDirection: "row", marginBottom: 3 },
+  infoRow: { flexDirection: "row", marginBottom: 2 },
   infoLabel: { fontWeight: "bold", color: "#042726", width: 110 },
   infoValue: { color: "#1a2e1a" },
 
@@ -60,14 +60,14 @@ const s = StyleSheet.create({
     backgroundColor: "#042726",
     color: "white",
     padding: 5,
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 10,
     fontWeight: "bold",
     textTransform: "uppercase",
   },
   sectionDesc: {
     backgroundColor: "#f0f4f0",
-    padding: 4,
+    padding: 3,
     fontSize: 7,
     color: "#444",
     fontStyle: "italic",
@@ -82,16 +82,16 @@ const s = StyleSheet.create({
     borderColor: "#042726",
     paddingVertical: 3,
   },
-  tableHeaderCell: { fontSize: 7.5, fontWeight: "bold", color: "#042726", paddingHorizontal: 3 },
+  tableHeaderCell: { fontSize: 7, fontWeight: "bold", color: "#042726", paddingHorizontal: 3 },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 0.5,
     borderColor: "#d0d0d0",
     paddingVertical: 3,
-    minHeight: 18,
+    minHeight: 16,
   },
   tableRowAlt: { backgroundColor: "#fafafa" },
-  tableCell: { fontSize: 8, paddingHorizontal: 3, color: "#222" },
+  tableCell: { fontSize: 7.5, paddingHorizontal: 3, color: "#222" },
 
   totalRow: {
     flexDirection: "row",
@@ -104,7 +104,7 @@ const s = StyleSheet.create({
   totalValue: { fontWeight: "bold", color: "#00d084" },
 
   totalGeneral: {
-    marginTop: 15,
+    marginTop: 12,
     padding: 8,
     backgroundColor: "#042726",
     flexDirection: "row",
@@ -116,9 +116,9 @@ const s = StyleSheet.create({
 
   footer: {
     position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
+    bottom: 15,
+    left: 25,
+    right: 25,
     fontSize: 7,
     color: "#999",
     textAlign: "center",
@@ -144,119 +144,69 @@ const mesLegible = (ym: string) => {
   return d.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
 };
 
-function SeccionTransporte({ seccion }: { seccion: Seccion }) {
+// Widths: 8 columnas iguales al Excel para Transporte/Alimentacion/Otros
+// 4% | 9% | 7% | 32% | 17% | 12% | 10% | 9% = 100%
+// Para Hospedaje, la columna 3 pasa de "Hora" a "# Noches"
+const widths = {
+  item: "4%",
+  fecha: "9%",
+  horaOrNoches: "7%",
+  descripcion: "32%",
+  ciudad: "17%",
+  valor: "12%",
+  tipoSoporte: "10%",
+  numeroSoporte: "9%",
+} as const;
+
+function SeccionTable({ seccion, mostrarTrayecto, ciudadHeader, horaHeader, rubroInline }: {
+  seccion: Seccion;
+  mostrarTrayecto: boolean;
+  ciudadHeader: string;
+  horaHeader: string;   // "Hora" o "# Noches" o "—"
+  rubroInline: boolean; // muestra rubro como prefijo en la descripción
+}) {
   return (
     <>
       <Text style={s.sectionHeader}>{seccion.titulo}</Text>
       {seccion.descripcion && <Text style={s.sectionDesc}>{seccion.descripcion}</Text>}
       <View style={s.table}>
         <View style={s.tableHeader}>
-          <Text style={[s.tableHeaderCell, { width: "5%" }]}>#</Text>
-          <Text style={[s.tableHeaderCell, { width: "10%" }]}>Fecha</Text>
-          <Text style={[s.tableHeaderCell, { width: "8%" }]}>Hora</Text>
-          <Text style={[s.tableHeaderCell, { width: "17%" }]}>Rubro</Text>
-          <Text style={[s.tableHeaderCell, { width: "19%" }]}>Descripción</Text>
-          <Text style={[s.tableHeaderCell, { width: "16%" }]}>Trayecto</Text>
-          <Text style={[s.tableHeaderCell, { width: "13%", textAlign: "right" }]}>Valor</Text>
-          <Text style={[s.tableHeaderCell, { width: "12%" }]}>Soporte</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.item }]}>#</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.fecha }]}>Fecha</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.horaOrNoches }]}>{horaHeader}</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.descripcion }]}>Descripción detallada</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.ciudad }]}>{ciudadHeader}</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.valor, textAlign: "right" }]}>Valor</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.tipoSoporte }]}>Tipo soporte</Text>
+          <Text style={[s.tableHeaderCell, { width: widths.numeroSoporte }]}>N° soporte</Text>
         </View>
         {seccion.gastos.map((g, i) => (
           <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
-            <Text style={[s.tableCell, { width: "5%" }]}>{i + 1}</Text>
-            <Text style={[s.tableCell, { width: "10%" }]}>{fmtFecha(g.fecha)}</Text>
-            <Text style={[s.tableCell, { width: "8%" }]}>{g.hora || "—"}</Text>
-            <Text style={[s.tableCell, { width: "17%" }]}>{g.rubroNombre || "—"}</Text>
-            <Text style={[s.tableCell, { width: "19%" }]}>{g.descripcion || "—"}</Text>
-            <Text style={[s.tableCell, { width: "16%" }]}>
+            <Text style={[s.tableCell, { width: widths.item }]}>{i + 1}</Text>
+            <Text style={[s.tableCell, { width: widths.fecha }]}>{fmtFecha(g.fecha)}</Text>
+            <Text style={[s.tableCell, { width: widths.horaOrNoches, textAlign: "center" }]}>
+              {horaHeader === "# Noches"
+                ? (g.noches ?? "—")
+                : horaHeader === "Hora"
+                  ? (g.hora || "—")
+                  : "—"}
+            </Text>
+            <Text style={[s.tableCell, { width: widths.descripcion }]}>
+              {rubroInline && g.rubroNombre ? `[${g.rubroNombre}] ` : ""}
+              {g.descripcion || "—"}
+            </Text>
+            <Text style={[s.tableCell, { width: widths.ciudad }]}>
               {g.municipio || "—"}
-              {g.municipioDestino ? ` → ${g.municipioDestino}` : ""}
+              {mostrarTrayecto && g.municipioDestino ? ` → ${g.municipioDestino}` : ""}
             </Text>
-            <Text style={[s.tableCell, { width: "13%", textAlign: "right", fontFamily: "Courier" }]}>
+            <Text style={[s.tableCell, { width: widths.valor, textAlign: "right", fontFamily: "Courier" }]}>
               {fmtCOP(g.valor)}
             </Text>
-            <Text style={[s.tableCell, { width: "12%", fontSize: 7 }]}>
-              {g.tipoSoporte || ""}{g.numeroSoporte ? `\n#${g.numeroSoporte}` : ""}
+            <Text style={[s.tableCell, { width: widths.tipoSoporte, fontSize: 7 }]}>
+              {g.tipoSoporte || "—"}
             </Text>
-          </View>
-        ))}
-      </View>
-      <View style={s.totalRow}>
-        <Text style={s.totalLabel}>Total</Text>
-        <Text style={[s.totalValue, { fontFamily: "Courier" }]}>{fmtCOP(seccion.total)}</Text>
-      </View>
-    </>
-  );
-}
-
-function SeccionHospedaje({ seccion }: { seccion: Seccion }) {
-  return (
-    <>
-      <Text style={s.sectionHeader}>{seccion.titulo}</Text>
-      {seccion.descripcion && <Text style={s.sectionDesc}>{seccion.descripcion}</Text>}
-      <View style={s.table}>
-        <View style={s.tableHeader}>
-          <Text style={[s.tableHeaderCell, { width: "5%" }]}>#</Text>
-          <Text style={[s.tableHeaderCell, { width: "11%" }]}>Fecha</Text>
-          <Text style={[s.tableHeaderCell, { width: "8%" }]}>Noches</Text>
-          <Text style={[s.tableHeaderCell, { width: "16%" }]}>Rubro</Text>
-          <Text style={[s.tableHeaderCell, { width: "22%" }]}>Descripción</Text>
-          <Text style={[s.tableHeaderCell, { width: "13%" }]}>Municipio</Text>
-          <Text style={[s.tableHeaderCell, { width: "13%", textAlign: "right" }]}>Valor</Text>
-          <Text style={[s.tableHeaderCell, { width: "12%" }]}>Soporte</Text>
-        </View>
-        {seccion.gastos.map((g, i) => (
-          <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
-            <Text style={[s.tableCell, { width: "5%" }]}>{i + 1}</Text>
-            <Text style={[s.tableCell, { width: "11%" }]}>{fmtFecha(g.fecha)}</Text>
-            <Text style={[s.tableCell, { width: "8%", textAlign: "center" }]}>{g.noches ?? "—"}</Text>
-            <Text style={[s.tableCell, { width: "16%" }]}>{g.rubroNombre || "—"}</Text>
-            <Text style={[s.tableCell, { width: "22%" }]}>{g.descripcion || "—"}</Text>
-            <Text style={[s.tableCell, { width: "13%" }]}>{g.municipio || "—"}</Text>
-            <Text style={[s.tableCell, { width: "13%", textAlign: "right", fontFamily: "Courier" }]}>
-              {fmtCOP(g.valor)}
-            </Text>
-            <Text style={[s.tableCell, { width: "12%", fontSize: 7 }]}>
-              {g.tipoSoporte || ""}{g.numeroSoporte ? `\n#${g.numeroSoporte}` : ""}
-            </Text>
-          </View>
-        ))}
-      </View>
-      <View style={s.totalRow}>
-        <Text style={s.totalLabel}>Total</Text>
-        <Text style={[s.totalValue, { fontFamily: "Courier" }]}>{fmtCOP(seccion.total)}</Text>
-      </View>
-    </>
-  );
-}
-
-function SeccionSimple({ seccion }: { seccion: Seccion }) {
-  // Para alimentación, otros: sin hora/noches/trayecto
-  return (
-    <>
-      <Text style={s.sectionHeader}>{seccion.titulo}</Text>
-      {seccion.descripcion && <Text style={s.sectionDesc}>{seccion.descripcion}</Text>}
-      <View style={s.table}>
-        <View style={s.tableHeader}>
-          <Text style={[s.tableHeaderCell, { width: "5%" }]}>#</Text>
-          <Text style={[s.tableHeaderCell, { width: "10%" }]}>Fecha</Text>
-          <Text style={[s.tableHeaderCell, { width: "18%" }]}>Rubro</Text>
-          <Text style={[s.tableHeaderCell, { width: "28%" }]}>Descripción</Text>
-          <Text style={[s.tableHeaderCell, { width: "15%" }]}>Municipio</Text>
-          <Text style={[s.tableHeaderCell, { width: "12%", textAlign: "right" }]}>Valor</Text>
-          <Text style={[s.tableHeaderCell, { width: "12%" }]}>Soporte</Text>
-        </View>
-        {seccion.gastos.map((g, i) => (
-          <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
-            <Text style={[s.tableCell, { width: "5%" }]}>{i + 1}</Text>
-            <Text style={[s.tableCell, { width: "10%" }]}>{fmtFecha(g.fecha)}</Text>
-            <Text style={[s.tableCell, { width: "18%" }]}>{g.rubroNombre || "—"}</Text>
-            <Text style={[s.tableCell, { width: "28%" }]}>{g.descripcion || "—"}</Text>
-            <Text style={[s.tableCell, { width: "15%" }]}>{g.municipio || "—"}</Text>
-            <Text style={[s.tableCell, { width: "12%", textAlign: "right", fontFamily: "Courier" }]}>
-              {fmtCOP(g.valor)}
-            </Text>
-            <Text style={[s.tableCell, { width: "12%", fontSize: 7 }]}>
-              {g.tipoSoporte || ""}{g.numeroSoporte ? `\n#${g.numeroSoporte}` : ""}
+            <Text style={[s.tableCell, { width: widths.numeroSoporte, fontSize: 7, fontFamily: "Courier" }]}>
+              {g.numeroSoporte || "—"}
             </Text>
           </View>
         ))}
@@ -281,7 +231,7 @@ const LegalizacionMensualPDF: React.FC<LegalizacionMensualPDFProps> = ({
         <View style={s.header}>
           <Image src={LOGO_BASE64} style={s.logo} />
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={s.title}>FORMATO PARA LEGALIZACIÓN DE GASTOS</Text>
+            <Text style={s.title}>FORMATO PARA LEGALIZACIÓN DE VIAJES</Text>
             <Text style={s.subtitle}>{mesLegible(mesReporte).toUpperCase()}</Text>
             <Text style={s.version}>Versión 1</Text>
           </View>
@@ -300,13 +250,45 @@ const LegalizacionMensualPDF: React.FC<LegalizacionMensualPDFProps> = ({
 
         {secciones.map((sec, i) => {
           if (sec.gastos.length === 0) return null;
-          if (sec.columnas === "transporte") return <SeccionTransporte key={i} seccion={sec} />;
-          if (sec.columnas === "hospedaje") return <SeccionHospedaje key={i} seccion={sec} />;
-          return <SeccionSimple key={i} seccion={sec} />;
+          if (sec.columnas === "transporte") {
+            return (
+              <SeccionTable
+                key={i}
+                seccion={sec}
+                mostrarTrayecto={true}
+                ciudadHeader="Ciudad o municipio / trayecto"
+                horaHeader="Hora"
+                rubroInline={true}
+              />
+            );
+          }
+          if (sec.columnas === "hospedaje") {
+            return (
+              <SeccionTable
+                key={i}
+                seccion={sec}
+                mostrarTrayecto={false}
+                ciudadHeader="Ciudad o municipio"
+                horaHeader="# Noches"
+                rubroInline={false}
+              />
+            );
+          }
+          // alimentación / otros
+          return (
+            <SeccionTable
+              key={i}
+              seccion={sec}
+              mostrarTrayecto={false}
+              ciudadHeader="Ciudad o municipio"
+              horaHeader="Hora"
+              rubroInline={sec.columnas === "otros"}
+            />
+          );
         })}
 
         <View style={s.totalGeneral}>
-          <Text style={s.totalGeneralLabel}>Total viaje / mes</Text>
+          <Text style={s.totalGeneralLabel}>Total viaje</Text>
           <Text style={s.totalGeneralValue}>{fmtCOP(totalGeneral)}</Text>
         </View>
 
