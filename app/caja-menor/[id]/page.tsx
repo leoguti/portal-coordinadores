@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
+import MunicipioSearch from "@/components/MunicipioSearch";
 import { getGastoCajaMenorById, type GastoCajaMenor } from "@/lib/airtable";
 import { getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
@@ -20,7 +21,10 @@ interface Tercero {
 interface RubroOption {
   id: string;
   nombre: string;
-  tipo: "Transporte" | "Servicio";
+  tipo: string;
+  requiereTrayecto: boolean;
+  requiereNoches: boolean;
+  requiereHora: boolean;
 }
 
 interface KardexVinculado {
@@ -67,6 +71,19 @@ export default function GastoDetallePage() {
   const [editFactura, setEditFactura] = useState<File | null>(null);
   const editFacturaRef = useRef<HTMLInputElement>(null);
 
+  // Campos nuevos de legalización
+  const [editMunicipio, setEditMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [editMunicipioDestino, setEditMunicipioDestino] = useState<{ id: string; mundep: string } | null>(null);
+  const [editHora, setEditHora] = useState("");
+  const [editNoches, setEditNoches] = useState("");
+  const [editTipoSoporte, setEditTipoSoporte] = useState<"" | "Factura" | "Documento Equivalente">("");
+  const [editNumeroSoporte, setEditNumeroSoporte] = useState("");
+
+  const editRubroSeleccionado = rubros.find((r) => r.id === editRubroId);
+  const editRequiereTrayecto = !!editRubroSeleccionado?.requiereTrayecto;
+  const editRequiereNoches = !!editRubroSeleccionado?.requiereNoches;
+  const editRequiereHora = !!editRubroSeleccionado?.requiereHora;
+
   // Kardex vinculados
   const [kardexVinculados, setKardexVinculados] = useState<KardexVinculado[]>([]);
 
@@ -88,10 +105,13 @@ export default function GastoDetallePage() {
         if (res.ok) {
           const data = await res.json();
           setRubros(
-            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string } }) => ({
+            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string[] | string; requiere_trayecto?: boolean; requiere_noches?: boolean; requiere_hora?: boolean } }) => ({
               id: r.id,
               nombre: r.fields.Nombre || "",
-              tipo: r.fields.Tipo?.[0] || "Servicio",
+              tipo: (Array.isArray(r.fields.Tipo) ? r.fields.Tipo[0] : r.fields.Tipo) || "Servicio",
+              requiereTrayecto: !!r.fields.requiere_trayecto,
+              requiereNoches: !!r.fields.requiere_noches,
+              requiereHora: !!r.fields.requiere_hora,
             }))
           );
         }
@@ -164,6 +184,29 @@ export default function GastoDetallePage() {
     setEditPorcentajeIVA(String(gasto.fields.PorcentajeIVA || 19));
     setEditPorcentajeRetencion(String((gasto.fields.PorcentajeRetencion || 0) * 100));
     setEditFactura(null);
+
+    // Precargar campos nuevos de legalización
+    const f = gasto.fields as typeof gasto.fields & {
+      municipio?: string[];
+      municipio_destino?: string[];
+      hora?: string;
+      noches?: number;
+      tipo_soporte?: string;
+      numero_soporte?: string;
+      "mundep (from municipio)"?: string[];
+      "mundep (from municipio_destino)"?: string[];
+    };
+    const muniId = f.municipio?.[0];
+    const muniName = f["mundep (from municipio)"]?.[0];
+    setEditMunicipio(muniId ? { id: muniId, mundep: muniName || muniId } : null);
+    const muniDestId = f.municipio_destino?.[0];
+    const muniDestName = f["mundep (from municipio_destino)"]?.[0];
+    setEditMunicipioDestino(muniDestId ? { id: muniDestId, mundep: muniDestName || muniDestId } : null);
+    setEditHora(f.hora || "");
+    setEditNoches(f.noches !== undefined ? String(f.noches) : "");
+    setEditTipoSoporte((f.tipo_soporte as "" | "Factura" | "Documento Equivalente") || "");
+    setEditNumeroSoporte(f.numero_soporte || "");
+
     setEditMode(true);
     setActionMessage(null);
   }
@@ -171,6 +214,32 @@ export default function GastoDetallePage() {
   async function handleCorregir(e: React.FormEvent) {
     e.preventDefault();
     if (!gasto) return;
+
+    // Validaciones campos nuevos
+    if (!editTipoSoporte) {
+      setActionMessage({ type: "error", text: "Debes seleccionar el tipo de soporte" });
+      return;
+    }
+    if (!editNumeroSoporte.trim()) {
+      setActionMessage({ type: "error", text: "Debes indicar el número del soporte" });
+      return;
+    }
+    if (!editMunicipio?.id) {
+      setActionMessage({ type: "error", text: "Debes seleccionar el municipio" });
+      return;
+    }
+    if (editRequiereTrayecto && !editMunicipioDestino?.id) {
+      setActionMessage({ type: "error", text: "Este rubro requiere municipio de destino" });
+      return;
+    }
+    if (editRequiereNoches && (!editNoches || parseInt(editNoches) <= 0)) {
+      setActionMessage({ type: "error", text: "Este rubro requiere indicar el número de noches" });
+      return;
+    }
+    if (editRequiereHora && !editHora.trim()) {
+      setActionMessage({ type: "error", text: "Este rubro requiere indicar la hora" });
+      return;
+    }
 
     setActionLoading(true);
     setActionMessage(null);
@@ -190,6 +259,12 @@ export default function GastoDetallePage() {
           porcentajeIVA: parseFloat(editPorcentajeIVA) || 0,
           montoIVA: Math.round((parseFloat(editValor) || 0) * (parseFloat(editPorcentajeIVA) || 0) / 100),
           porcentajeRetencion: parseFloat(editPorcentajeRetencion) || 0,
+          municipioId: editMunicipio.id,
+          municipioDestinoId: editRequiereTrayecto ? editMunicipioDestino?.id : null,
+          hora: editHora.trim() || undefined,
+          noches: editRequiereNoches ? parseInt(editNoches) : null,
+          tipoSoporte: editTipoSoporte,
+          numeroSoporte: editNumeroSoporte.trim(),
         }),
       });
 
@@ -545,6 +620,101 @@ export default function GastoDetallePage() {
                   </optgroup>
                 ))}
               </select>
+            </div>
+
+            {/* Municipio */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {editRequiereTrayecto ? "Municipio de origen" : "Municipio"}{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <MunicipioSearch
+                value={editMunicipio}
+                onChange={setEditMunicipio}
+                placeholder="Buscar municipio..."
+              />
+            </div>
+
+            {/* Municipio destino */}
+            {editRequiereTrayecto && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Municipio de destino <span className="text-red-500">*</span>
+                </label>
+                <MunicipioSearch
+                  value={editMunicipioDestino}
+                  onChange={setEditMunicipioDestino}
+                  placeholder="Buscar municipio destino..."
+                />
+              </div>
+            )}
+
+            {/* Hora / Noches */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hora{" "}
+                  {editRequiereHora ? (
+                    <span className="text-red-500">*</span>
+                  ) : (
+                    <span className="text-gray-400 font-normal">(opcional)</span>
+                  )}
+                </label>
+                <input
+                  type="time"
+                  value={editHora}
+                  onChange={(e) => setEditHora(e.target.value)}
+                  required={editRequiereHora}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                />
+              </div>
+              {editRequiereNoches && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    # Noches <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={editNoches}
+                    onChange={(e) => setEditNoches(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Tipo y número de soporte */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de soporte <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editTipoSoporte}
+                  onChange={(e) => setEditTipoSoporte(e.target.value as typeof editTipoSoporte)}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="Factura">Factura</option>
+                  <option value="Documento Equivalente">Documento Equivalente</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  N° del soporte <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editNumeroSoporte}
+                  onChange={(e) => setEditNumeroSoporte(e.target.value)}
+                  placeholder="Ej: 4525"
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+                />
+              </div>
             </div>
 
             <div className="mb-6">

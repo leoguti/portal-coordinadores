@@ -3464,6 +3464,13 @@ export async function updateGastoCajaMenor(
     porcentajeIVA?: number;
     montoIVA?: number;
     facturaUrl?: string;
+    // Campos de legalización mensual
+    municipioId?: string;
+    municipioDestinoId?: string;
+    hora?: string;
+    noches?: number | null;
+    tipoSoporte?: "Factura" | "Documento Equivalente";
+    numeroSoporte?: string;
   }
 ): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -3490,6 +3497,16 @@ export async function updateGastoCajaMenor(
     if (data.porcentajeIVA !== undefined) fields.PorcentajeIVA = data.porcentajeIVA;
     if (data.montoIVA !== undefined) fields.MontoIVA = data.montoIVA;
     if (data.facturaUrl) fields.Factura = [{ url: data.facturaUrl }];
+    if (data.municipioId !== undefined) {
+      fields.municipio = data.municipioId ? [data.municipioId] : [];
+    }
+    if (data.municipioDestinoId !== undefined) {
+      fields.municipio_destino = data.municipioDestinoId ? [data.municipioDestinoId] : [];
+    }
+    if (data.hora !== undefined) fields.hora = data.hora;
+    if (data.noches !== undefined) fields.noches = data.noches;
+    if (data.tipoSoporte !== undefined) fields.tipo_soporte = data.tipoSoporte;
+    if (data.numeroSoporte !== undefined) fields.numero_soporte = data.numeroSoporte;
 
     const response = await fetch(url, {
       method: "PATCH",

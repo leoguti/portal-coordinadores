@@ -114,6 +114,12 @@ export async function PATCH(
         porcentajeIVA: body.porcentajeIVA,
         montoIVA: body.montoIVA,
         facturaUrl: body.facturaUrl,
+        municipioId: body.municipioId,
+        municipioDestinoId: body.municipioDestinoId,
+        hora: body.hora,
+        noches: body.noches,
+        tipoSoporte: body.tipoSoporte,
+        numeroSoporte: body.numeroSoporte,
       });
 
       if (!success) {
