@@ -44,11 +44,23 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { fecha, beneficiarioId, rubroRecordId, observaciones, valor, porcentajeRetencion, porcentajeIVA, montoIVA, facturaUrl, kardexIds } = body;
+    const {
+      fecha, beneficiarioId, rubroRecordId, observaciones,
+      valor, porcentajeRetencion, porcentajeIVA, montoIVA, facturaUrl, kardexIds,
+      // Nuevos campos de legalización mensual
+      municipioId, municipioDestinoId, hora, noches,
+      tipoSoporte, numeroSoporte, legalizacionId,
+    } = body;
 
     // Validaciones
     if (!fecha || !beneficiarioId || !rubroRecordId || valor === undefined) {
       return NextResponse.json({ error: "Faltan campos requeridos (fecha, beneficiarioId, rubroRecordId, valor)" }, { status: 400 });
+    }
+    if (!tipoSoporte || !["Factura", "Documento Equivalente"].includes(tipoSoporte)) {
+      return NextResponse.json({ error: "tipoSoporte requerido (Factura | Documento Equivalente)" }, { status: 400 });
+    }
+    if (!numeroSoporte || !String(numeroSoporte).trim()) {
+      return NextResponse.json({ error: "numeroSoporte requerido" }, { status: 400 });
     }
 
     // Validar regla de 7 dias
@@ -72,6 +84,13 @@ export async function POST(request: Request) {
       montoIVA: montoIVA !== undefined ? montoIVA : undefined,
       facturaUrl,
       kardexIds: Array.isArray(kardexIds) ? kardexIds : undefined,
+      municipioId: municipioId || undefined,
+      municipioDestinoId: municipioDestinoId || undefined,
+      hora: hora || undefined,
+      noches: typeof noches === "number" ? noches : undefined,
+      tipoSoporte,
+      numeroSoporte: String(numeroSoporte).trim(),
+      legalizacionId: legalizacionId || undefined,
     });
 
     if (!gasto) {

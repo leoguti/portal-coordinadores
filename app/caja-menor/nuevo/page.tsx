@@ -7,6 +7,7 @@ import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
 import TerceroCompletitudWarning from "@/components/TerceroCompletitudWarning";
+import MunicipioSearch from "@/components/MunicipioSearch";
 import { getFechaMinimaPermitida, getFechaMaximaPermitida } from "@/lib/dateValidations";
 
 interface Tercero {
@@ -19,7 +20,9 @@ interface Tercero {
 interface RubroOption {
   id: string;
   nombre: string;
-  tipo: "Transporte" | "Servicio";
+  tipo: string;
+  requiereTrayecto: boolean;
+  requiereNoches: boolean;
 }
 
 interface KardexDisponible {
@@ -77,6 +80,18 @@ export default function NuevoGastoCajaMenorPage() {
   const [error, setError] = useState<string | null>(null);
   const facturaInputRef = useRef<HTMLInputElement>(null);
 
+  // Campos nuevos de legalización mensual
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
+  const [municipioDestino, setMunicipioDestino] = useState<{ id: string; mundep: string } | null>(null);
+  const [hora, setHora] = useState("");
+  const [noches, setNoches] = useState("");
+  const [tipoSoporte, setTipoSoporte] = useState<"" | "Factura" | "Documento Equivalente">("");
+  const [numeroSoporte, setNumeroSoporte] = useState("");
+
+  const rubroSeleccionado = rubros.find((r) => r.id === rubroId);
+  const requiereTrayecto = !!rubroSeleccionado?.requiereTrayecto;
+  const requiereNoches = !!rubroSeleccionado?.requiereNoches;
+
   // Kardex Caja Menor
   const [kardexDisponibles, setKardexDisponibles] = useState<KardexDisponible[]>([]);
   const [kardexSeleccionados, setKardexSeleccionados] = useState<string[]>([]);
@@ -91,10 +106,12 @@ export default function NuevoGastoCajaMenorPage() {
         if (res.ok) {
           const data = await res.json();
           setRubros(
-            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string } }) => ({
+            (data.rubros || []).map((r: { id: string; fields: { Nombre?: string; Tipo?: string[] | string; requiere_trayecto?: boolean; requiere_noches?: boolean } }) => ({
               id: r.id,
               nombre: r.fields.Nombre || "",
-              tipo: r.fields.Tipo?.[0] || "Servicio",
+              tipo: (Array.isArray(r.fields.Tipo) ? r.fields.Tipo[0] : r.fields.Tipo) || "Servicio",
+              requiereTrayecto: !!r.fields.requiere_trayecto,
+              requiereNoches: !!r.fields.requiere_noches,
             }))
           );
         }
@@ -181,6 +198,26 @@ export default function NuevoGastoCajaMenorPage() {
       setError("Debes adjuntar la factura o soporte del gasto");
       return;
     }
+    if (!tipoSoporte) {
+      setError("Debes seleccionar el tipo de soporte (Factura o Documento Equivalente)");
+      return;
+    }
+    if (!numeroSoporte.trim()) {
+      setError("Debes indicar el número del soporte");
+      return;
+    }
+    if (!municipio?.id) {
+      setError("Debes seleccionar el municipio");
+      return;
+    }
+    if (requiereTrayecto && !municipioDestino?.id) {
+      setError("Este rubro requiere un trayecto: selecciona el municipio de destino");
+      return;
+    }
+    if (requiereNoches && (!noches || parseInt(noches) <= 0)) {
+      setError("Este rubro requiere indicar el número de noches");
+      return;
+    }
 
     setSaving(true);
 
@@ -199,6 +236,12 @@ export default function NuevoGastoCajaMenorPage() {
           porcentajeIVA: ivaNum,
           montoIVA: Math.round(montoIVA),
           ...(kardexSeleccionados.length > 0 && { kardexIds: kardexSeleccionados }),
+          municipioId: municipio.id,
+          ...(requiereTrayecto && municipioDestino?.id && { municipioDestinoId: municipioDestino.id }),
+          ...(hora.trim() && { hora: hora.trim() }),
+          ...(requiereNoches && { noches: parseInt(noches) }),
+          tipoSoporte,
+          numeroSoporte: numeroSoporte.trim(),
         }),
       });
 
@@ -420,6 +463,97 @@ export default function NuevoGastoCajaMenorPage() {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Municipio */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {requiereTrayecto ? "Municipio de origen" : "Municipio"} <span className="text-red-500">*</span>
+            </label>
+            <MunicipioSearch
+              value={municipio}
+              onChange={setMunicipio}
+              placeholder="Buscar municipio..."
+            />
+          </div>
+
+          {/* Municipio destino (solo si el rubro requiere trayecto) */}
+          {requiereTrayecto && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Municipio de destino <span className="text-red-500">*</span>
+              </label>
+              <MunicipioSearch
+                value={municipioDestino}
+                onChange={setMunicipioDestino}
+                placeholder="Buscar municipio destino..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Este rubro requiere trayecto origen → destino.
+              </p>
+            </div>
+          )}
+
+          {/* Hora y Noches en fila (hora siempre opcional, noches solo si aplica) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hora <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              />
+            </div>
+            {requiereNoches && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  # Noches <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={noches}
+                  onChange={(e) => setNoches(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Tipo y número de soporte */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de soporte <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={tipoSoporte}
+                onChange={(e) => setTipoSoporte(e.target.value as typeof tipoSoporte)}
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Factura">Factura</option>
+                <option value="Documento Equivalente">Documento Equivalente</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                N° del soporte <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={numeroSoporte}
+                onChange={(e) => setNumeroSoporte(e.target.value)}
+                placeholder="Ej: 4525"
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#00d084] focus:border-transparent font-mono"
+              />
+            </div>
           </div>
 
           {/* Observaciones (opcional) */}

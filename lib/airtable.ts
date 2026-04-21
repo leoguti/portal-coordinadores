@@ -33,6 +33,8 @@ interface RubroFields {
   Tipo?: string[];
   RequiereDocumentos?: boolean;
   Activo?: boolean;
+  requiere_trayecto?: boolean;
+  requiere_noches?: boolean;
 }
 
 interface ActividadFields {
@@ -3307,6 +3309,14 @@ export async function createGastoCajaMenor(data: {
   montoIVA?: number;
   facturaUrl?: string;
   kardexIds?: string[];
+  // Campos de legalización mensual
+  municipioId?: string;
+  municipioDestinoId?: string;
+  hora?: string;
+  noches?: number;
+  tipoSoporte?: "Factura" | "Documento Equivalente";
+  numeroSoporte?: string;
+  legalizacionId?: string;
 }): Promise<GastoCajaMenor | null> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -3347,6 +3357,15 @@ export async function createGastoCajaMenor(data: {
     if (data.kardexIds && data.kardexIds.length > 0) {
       fields.Kardex = data.kardexIds;
     }
+
+    // Campos de legalización mensual
+    if (data.municipioId) fields.municipio = [data.municipioId];
+    if (data.municipioDestinoId) fields.municipio_destino = [data.municipioDestinoId];
+    if (data.hora) fields.hora = data.hora;
+    if (data.noches !== undefined) fields.noches = data.noches;
+    if (data.tipoSoporte) fields.tipo_soporte = data.tipoSoporte;
+    if (data.numeroSoporte) fields.numero_soporte = data.numeroSoporte;
+    if (data.legalizacionId) fields.LegalizacionesMensuales = [data.legalizacionId];
 
     const response = await fetch(url, {
       method: "POST",
