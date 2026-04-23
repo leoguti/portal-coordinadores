@@ -136,6 +136,48 @@ async function backupToNeon(
   }
 }
 
+// Escape unescaped control chars inside JSON string literals.
+// TextIt interpolates @results.observaciones raw, so multiline user input
+// produces unescaped \n/\r/\t inside strings that break JSON.parse.
+function sanitizeJsonControlChars(raw: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      out += ch;
+      inString = false;
+      continue;
+    }
+    const code = ch.charCodeAt(0);
+    if (code < 0x20) {
+      if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else out += "\\u" + code.toString(16).padStart(4, "0");
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 // Validate API key from Authorization header
 function validateApiKey(request: NextRequest): boolean {
   if (!CERT_API_KEY) {
@@ -160,7 +202,13 @@ export async function POST(request: NextRequest) {
   let recordId: string | null = null;
 
   try {
-    const body: GenerarRequest = await request.json();
+    const raw = await request.text();
+    let body: GenerarRequest;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      body = JSON.parse(sanitizeJsonControlChars(raw));
+    }
 
     // Basic validation
     if (!body.ubicacionId || !body.coordinadorId || !body.municipioDevolucionId) {
