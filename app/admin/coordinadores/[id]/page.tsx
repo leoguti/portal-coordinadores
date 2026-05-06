@@ -474,8 +474,8 @@ export default function AdminCoordinadorDetallePage() {
         </div>
         )}
 
-        {/* BLOQUE 3: Puntos Logísticos vinculados (no aplica a Administrador) */}
-        {fRol !== "Administrador" && (
+        {/* BLOQUE 3: Puntos Logísticos vinculados (sólo aplica a Coordinador) */}
+        {fRol === "Coordinador" && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
             Puntos logísticos vinculados ({puntos.length})
