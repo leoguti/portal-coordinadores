@@ -860,52 +860,13 @@ export async function getMetasCoordinador(
   coordinatorRecordId: string,
   año: number
 ): Promise<Meta | null> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return null;
-  }
-
-  try {
-    const filterFormula = `AND(
-      FIND("${coordinatorRecordId}", ARRAYJOIN({id_coordinador})),
-      {Año} = ${año}
-    )`;
-
-    const url = `https://api.airtable.com/v0/${baseId}/Metas?filterByFormula=${encodeURIComponent(
-      filterFormula
-    )}&maxRecords=1`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Airtable API error fetching Metas: ${response.status}`,
-        errorText
-      );
-      return null;
-    }
-
-    const data: AirtableResponse<MetaFields> = await response.json();
-
-    if (data.records && data.records.length > 0) {
-      return data.records[0];
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error fetching Metas from Airtable:", error);
-    return null;
-  }
+  // Las metas anuales se calculan sumando los 12 meses de MetasMensuales.
+  const metas = await getMetasAnualesDesdeMensuales(año);
+  return (
+    metas.find(
+      (m) => (m.fields.Coordinador?.[0] || "") === coordinatorRecordId
+    ) || null
+  );
 }
 
 /**
@@ -3891,55 +3852,11 @@ export async function deleteReembolsoCajaMenor(
 }
 
 /**
- * Get all metas (goals) for a given year
- * Returns all records from the Metas table filtered by year
+ * Get all metas (goals) for a given year.
+ * Reads from MetasMensuales (única fuente de verdad) y agrega por coordinador.
  */
 export async function getAllMetas(año: number): Promise<Meta[]> {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error("Airtable credentials not configured");
-    return [];
-  }
-
-  try {
-    const filterFormula = `{Año} = ${año}`;
-    const allMetas: Meta[] = [];
-    let offset: string | undefined;
-
-    do {
-      const params = new URLSearchParams({
-        filterByFormula: filterFormula,
-        pageSize: "100",
-      });
-      if (offset) params.set("offset", offset);
-
-      const url = `https://api.airtable.com/v0/${baseId}/Metas?${params.toString()}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        console.error(`Error fetching all Metas: ${response.status}`);
-        return [];
-      }
-
-      const data: AirtableResponse<MetaFields> = await response.json();
-      allMetas.push(...(data.records || []));
-      offset = data.offset;
-    } while (offset);
-
-    return allMetas;
-  } catch (error) {
-    console.error("Error fetching all Metas:", error);
-    return [];
-  }
+  return getMetasAnualesDesdeMensuales(año);
 }
 
 /**
