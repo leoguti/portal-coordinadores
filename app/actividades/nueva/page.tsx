@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
 import ImageUpload, { ImageFile } from "@/components/ImageUpload";
@@ -31,18 +31,52 @@ export default function NuevaActividadPage() {
   const [documentos, setDocumentos] = useState<ImageFile[]>([]);
   const [evaluaciones, setEvaluaciones] = useState<ImageFile[]>([]);
 
+  // Refs para validación HTML5 nativa de los uploaders
+  const fotoCheckRef = useRef<HTMLInputElement>(null);
+  const docCheckRef = useRef<HTMLInputElement>(null);
+  const evalCheckRef = useRef<HTMLInputElement>(null);
+
   // Conditional logic based on "Tipo de Actividad"
   const isSensibilizacion = tipo === "Sensibilización";
   const isVisitaAcopio = tipo === "Visita acopio";
   const showPerfil = tipo !== "" && !isVisitaAcopio; // Se muestra cuando tipo NO es "Visita acopio"
   const showCultivo = tipo === "Recoleccion"; // Solo cuando es Recolección
   const showCantidadParticipantes = tipo === "Sensibilización"; // Solo cuando es Sensibilización
+  const evaluadasNum = Number(personasEvaluadas) || 0;
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Validación HTML5 nativa para los uploaders (replica el comportamiento
+  // del tooltip del navegador "Por favor, completa este campo").
+  useEffect(() => {
+    fotoCheckRef.current?.setCustomValidity(
+      fotografias.length > 0 ? "" : "Adjunta al menos una fotografía de la actividad"
+    );
+  }, [fotografias.length]);
+
+  useEffect(() => {
+    if (!docCheckRef.current) return;
+    const requiere = isSensibilizacion;
+    docCheckRef.current.setCustomValidity(
+      !requiere || documentos.length > 0
+        ? ""
+        : "Adjunta el Listado de Asistencia"
+    );
+  }, [isSensibilizacion, documentos.length]);
+
+  useEffect(() => {
+    if (!evalCheckRef.current) return;
+    const requiere = isSensibilizacion && evaluadasNum > 0;
+    evalCheckRef.current.setCustomValidity(
+      !requiere || evaluaciones.length > 0
+        ? ""
+        : "Adjunta el soporte de las evaluaciones presenciales"
+    );
+  }, [isSensibilizacion, evaluadasNum, evaluaciones.length]);
 
   if (status === "loading") {
     return (
@@ -484,7 +518,7 @@ export default function NuevaActividadPage() {
             )}
 
             {/* Fotografías - Siempre visible y OBLIGATORIO */}
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fotografías <span className="text-red-500">*</span>
               </label>
@@ -498,10 +532,20 @@ export default function NuevaActividadPage() {
               <p className="text-xs text-gray-500 mt-1">
                 Adjunta al menos una foto que evidencie la actividad realizada.
               </p>
+              <input
+                ref={fotoCheckRef}
+                type="text"
+                value={fotografias.length}
+                onChange={() => {}}
+                required
+                tabIndex={-1}
+                aria-hidden="true"
+                className="absolute left-0 top-8 w-1 h-1 opacity-0 pointer-events-none"
+              />
             </div>
 
             {/* Listado de Asistencia - Obligatorio en Sensibilización */}
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Listado de Asistencia
                 {isSensibilizacion && <span className="text-red-500"> *</span>}
@@ -520,14 +564,23 @@ export default function NuevaActividadPage() {
                   Obligatorio para actividades de sensibilización.
                 </p>
               )}
+              <input
+                ref={docCheckRef}
+                type="text"
+                value={documentos.length}
+                onChange={() => {}}
+                tabIndex={-1}
+                aria-hidden="true"
+                className="absolute left-0 top-8 w-1 h-1 opacity-0 pointer-events-none"
+              />
             </div>
 
             {/* Evaluaciones - Solo Sensibilización; obligatorio si evaluadas > 0 */}
             {isSensibilizacion && (
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Soporte de Evaluaciones presenciales
-                  {Number(personasEvaluadas) > 0 && (
+                  {evaluadasNum > 0 && (
                     <span className="text-red-500"> *</span>
                   )}
                 </label>
@@ -540,10 +593,19 @@ export default function NuevaActividadPage() {
                   acceptPdf
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  {Number(personasEvaluadas) > 0
+                  {evaluadasNum > 0
                     ? "Obligatorio: adjunta los formularios físicos / PDFs de las evaluaciones presenciales."
                     : "Si registras evaluaciones presenciales (>0), aquí debes adjuntar su soporte."}
                 </p>
+                <input
+                  ref={evalCheckRef}
+                  type="text"
+                  value={evaluaciones.length}
+                  onChange={() => {}}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="absolute left-0 top-8 w-1 h-1 opacity-0 pointer-events-none"
+                />
               </div>
             )}
 
