@@ -145,9 +145,34 @@ export default function EditarActividadPage() {
   };
 
   async function handleSubmit(data: ActividadFormData, _fotografias: ImageFile[], _documentos: ImageFile[], _evaluaciones: ImageFile[]) {
-    setSaving(true);
     setError(null);
     setUploadProgress(null);
+
+    // Validar archivos obligatorios (existentes - removidos + nuevos)
+    const finalPhotosCount = (existingPhotos.length - photosToRemove.size) + newPhotos.length;
+    if (finalPhotosCount === 0) {
+      setError("Debes mantener o adjuntar al menos una fotografía de la actividad");
+      return;
+    }
+
+    const isSens = data.tipo === "Sensibilización";
+    if (isSens) {
+      const finalDocsCount = (existingDocs.length - docsToRemove.size) + newDocs.length;
+      if (finalDocsCount === 0) {
+        setError("Debes adjuntar el Listado de Asistencia para actividades de sensibilización");
+        return;
+      }
+      const evaluadasNum = Number(data.personasEvaluadas) || 0;
+      if (evaluadasNum > 0) {
+        const finalEvalsCount = (existingEvals.length - evalsToRemove.size) + newEvals.length;
+        if (finalEvalsCount === 0) {
+          setError("Debes adjuntar el soporte de las evaluaciones presenciales");
+          return;
+        }
+      }
+    }
+
+    setSaving(true);
 
     try {
       // Build the remaining existing photos (excluding removed ones)
@@ -467,8 +492,9 @@ export default function EditarActividadPage() {
           {/* Photo Management Section */}
           <div className="mt-8 pt-8 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Fotografias
+              Fotografias <span className="text-red-500">*</span>
             </h3>
+            <p className="text-xs text-gray-500 mb-4">Obligatorio: al menos una foto.</p>
 
             {/* Existing Photos */}
             {existingPhotos.length > 0 && (
@@ -542,7 +568,15 @@ export default function EditarActividadPage() {
           <div className="mt-8 pt-8 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Listado de Asistencia
+              {actividad.fields.Tipo === "Sensibilización" && (
+                <span className="text-red-500"> *</span>
+              )}
             </h3>
+            {actividad.fields.Tipo === "Sensibilización" && (
+              <p className="text-xs text-gray-500 mb-4">
+                Obligatorio para actividades de sensibilización.
+              </p>
+            )}
 
             {/* Existing Documents */}
             {existingDocs.length > 0 && (

@@ -87,6 +87,25 @@ export default function NuevaActividadPage() {
       }
     }
 
+    // Validar fotografías obligatorias para toda actividad
+    if (fotografias.length === 0) {
+      setError("Debes adjuntar al menos una fotografía de la actividad");
+      return;
+    }
+
+    // Validar listado de asistencia obligatorio en Sensibilización
+    if (isSensibilizacion && documentos.length === 0) {
+      setError("Debes adjuntar el Listado de Asistencia para actividades de sensibilización");
+      return;
+    }
+
+    // Validar soporte de evaluaciones cuando hay evaluaciones presenciales
+    const evaluadasNum = Number(personasEvaluadas) || 0;
+    if (isSensibilizacion && evaluadasNum > 0 && evaluaciones.length === 0) {
+      setError("Debes adjuntar el soporte de las evaluaciones presenciales");
+      return;
+    }
+
     setLoading(true);
     setUploadProgress(null);
 
@@ -464,10 +483,10 @@ export default function NuevaActividadPage() {
               </div>
             )}
 
-            {/* Fotografías - Siempre visible */}
+            {/* Fotografías - Siempre visible y OBLIGATORIO */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fotografías
+                Fotografías <span className="text-red-500">*</span>
               </label>
               <ImageUpload
                 images={fotografias}
@@ -476,12 +495,16 @@ export default function NuevaActividadPage() {
                 maxSizeMB={4}
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Adjunta al menos una foto que evidencie la actividad realizada.
+              </p>
             </div>
 
-            {/* Listado de Asistencia - Siempre visible */}
+            {/* Listado de Asistencia - Obligatorio en Sensibilización */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Listado de Asistencia
+                {isSensibilizacion && <span className="text-red-500"> *</span>}
                 {isVisitaAcopio && <span className="text-amber-600 ml-2">(incluir listas de chequeo)</span>}
               </label>
               <ImageUpload
@@ -492,13 +515,21 @@ export default function NuevaActividadPage() {
                 disabled={loading}
                 acceptPdf
               />
+              {isSensibilizacion && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Obligatorio para actividades de sensibilización.
+                </p>
+              )}
             </div>
 
-            {/* Evaluaciones - Solo Sensibilización */}
+            {/* Evaluaciones - Solo Sensibilización; obligatorio si evaluadas > 0 */}
             {isSensibilizacion && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Evaluaciones
+                  Soporte de Evaluaciones presenciales
+                  {Number(personasEvaluadas) > 0 && (
+                    <span className="text-red-500"> *</span>
+                  )}
                 </label>
                 <ImageUpload
                   images={evaluaciones}
@@ -508,6 +539,11 @@ export default function NuevaActividadPage() {
                   disabled={loading}
                   acceptPdf
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {Number(personasEvaluadas) > 0
+                    ? "Obligatorio: adjunta los formularios físicos / PDFs de las evaluaciones presenciales."
+                    : "Si registras evaluaciones presenciales (>0), aquí debes adjuntar su soporte."}
+                </p>
               </div>
             )}
 
