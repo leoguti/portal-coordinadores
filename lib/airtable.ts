@@ -3943,6 +3943,84 @@ export async function getAllMetas(año: number): Promise<Meta[]> {
 }
 
 /**
+ * Aggregate MetasMensuales for a year into Meta-shaped records (one per coordinator).
+ * Drop-in replacement for getAllMetas: same return type, same fields used.
+ * Sources of truth = MetasMensuales (the annual Metas table is deprecated).
+ */
+export async function getMetasAnualesDesdeMensuales(año: number): Promise<Meta[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const filterFormula = `{Año} = ${año}`;
+    const all: Array<{ id: string; createdTime: string; fields: Record<string, unknown> }> = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error getMetasAnualesDesdeMensuales: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      all.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
+    // Aggregate by coordinator
+    const acc = new Map<
+      string,
+      { rec: number; sen: number; eva: number; firstId: string; firstCreated: string }
+    >();
+    for (const r of all) {
+      const coords = (r.fields.Coordinador as string[]) || [];
+      const cid = coords[0];
+      if (!cid) continue;
+      const cur = acc.get(cid) || {
+        rec: 0,
+        sen: 0,
+        eva: 0,
+        firstId: r.id,
+        firstCreated: r.createdTime,
+      };
+      cur.rec += (r.fields.MetaRecoleccion as number) || 0;
+      cur.sen += (r.fields.MetaSensibilizacion as number) || 0;
+      cur.eva += (r.fields.MetaEvaluaciones as number) || 0;
+      acc.set(cid, cur);
+    }
+
+    const out: Meta[] = [];
+    for (const [cid, v] of acc.entries()) {
+      out.push({
+        id: v.firstId,
+        createdTime: v.firstCreated,
+        fields: {
+          Coordinador: [cid],
+          id_coordinador: [cid],
+          Año: año,
+          MetaRecoleccion: v.rec,
+          MetaSensibilizacion: v.sen,
+          MetaEvaluaciones: v.eva,
+        },
+      });
+    }
+    return out;
+  } catch (error) {
+    console.error("Error getMetasAnualesDesdeMensuales:", error);
+    return [];
+  }
+}
+
+/**
  * Get all monthly metas for a given year + month from MetasMensuales table
  */
 export async function getAllMetasMensuales(

@@ -5,7 +5,7 @@ import { isAdminOrSupervisor } from "@/lib/roles";
 import {
   getAllKardex,
   listAllActividades,
-  getAllMetas,
+  getMetasAnualesDesdeMensuales,
   getAllCoordinadoresActivos,
   getCentrosAcopio,
 } from "@/lib/airtable";
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       await Promise.all([
         getAllKardex(),
         listAllActividades(),
-        getAllMetas(year),
+        getMetasAnualesDesdeMensuales(year),
         getAllCoordinadoresActivos(),
         getCentrosAcopio(),
       ]);
