@@ -365,7 +365,8 @@ export default function AdminCoordinadorDetallePage() {
           </div>
         </form>
 
-        {/* BLOQUE 2: Metas mensuales */}
+        {/* BLOQUE 2: Metas mensuales (sólo aplica a rol Coordinador) */}
+        {fRol === "Coordinador" && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
@@ -471,6 +472,7 @@ export default function AdminCoordinadorDetallePage() {
             </>
           )}
         </div>
+        )}
 
         {/* BLOQUE 3: Puntos Logísticos vinculados */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
