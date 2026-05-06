@@ -7,6 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
+import { puedeEditarActividad, actividadIncompleta } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import JSZip from "jszip";
 
@@ -313,7 +314,9 @@ export default function ActividadesPage() {
 
       const csvRows = actividadesDelMes.map((a) => {
         const f = a.fields;
-        const puedeModificar = f.Fecha ? puedeModificarActividad(f.Fecha) : true;
+        const dentroDePeriodo = f.Fecha ? puedeModificarActividad(f.Fecha) : true;
+        const incompleta = actividadIncompleta(f);
+        const estado = incompleta ? "Incompleta" : dentroDePeriodo ? "Abierta" : "Cerrada";
         return [
           f.Consecutivo,
           f.Fecha,
@@ -326,7 +329,7 @@ export default function ActividadesPage() {
           Array.isArray(f.Modalidad) ? f.Modalidad.join(", ") : f.Modalidad,
           f["Perfil de Asistentes"],
           f["Name (from Coordinador)"]?.[0],
-          puedeModificar ? "Abierta" : "Cerrada",
+          estado,
           f.Fotografias?.length ?? 0,
           f["Listado Asistencia"]?.length ?? 0,
           f["Evaluaciones"]?.length ?? 0,
@@ -874,7 +877,9 @@ export default function ActividadesPage() {
                             {listaActividades.map((actividad) => {
                               const isExpanded = expandedRow === actividad.id;
                               const photoCount = actividad.fields.Fotografias?.length || 0;
-                              const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
+                              const puedeModificar = puedeEditarActividad(actividad.fields);
+                              const incompleta = actividadIncompleta(actividad.fields);
+                              const dentroDePeriodo = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
                               const fechaCreacion = new Date(actividad.createdTime).toLocaleDateString('es-CO', {
                                 year: 'numeric',
                                 month: '2-digit',
@@ -933,7 +938,11 @@ export default function ActividadesPage() {
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
                                           ⚠️ En Curso
                                         </span>
-                                      ) : puedeModificar ? (
+                                      ) : incompleta ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300" title="Faltan archivos obligatorios">
+                                          ⚠️ Incompleta
+                                        </span>
+                                      ) : dentroDePeriodo ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
                                           🔓 Abierta
                                         </span>

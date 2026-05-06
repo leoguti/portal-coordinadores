@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { puedeEditarActividad } from "@/lib/actividadCompleteness";
 import { puedeModificarActividad } from "@/lib/dateValidations";
 
 /**
@@ -129,9 +130,8 @@ export async function PUT(
       );
     }
 
-    // Verificar la regla de los 5 días
-    const fechaActividad = existingActividad.fields?.Fecha;
-    if (fechaActividad && !puedeModificarActividad(fechaActividad)) {
+    // Verificar período de gracia, con excepción para actividades incompletas
+    if (!puedeEditarActividad(existingActividad.fields)) {
       return NextResponse.json(
         { error: "Esta actividad ya no se puede modificar. Han pasado más de 5 días desde el fin del mes de la actividad." },
         { status: 403 }

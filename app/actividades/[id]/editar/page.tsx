@@ -7,7 +7,8 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import ActividadForm, { ActividadFormData } from "@/components/ActividadForm";
 import ImageUpload, { ImageFile } from "@/components/ImageUpload";
 import Link from "next/link";
-import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
+import { getMensajeErrorActividad } from "@/lib/dateValidations";
+import { puedeEditarActividad, actividadIncompleta, getMensajeIncompleta } from "@/lib/actividadCompleteness";
 
 interface AirtableAttachment {
   id: string;
@@ -343,8 +344,9 @@ export default function EditarActividadPage() {
 
   if (!actividad) return null;
 
-  // Verificar si puede modificar la actividad
-  const puedeModificar = actividad.fields.Fecha ? puedeModificarActividad(actividad.fields.Fecha) : true;
+  // Verificar si puede modificar la actividad (con excepción para incompletas)
+  const puedeModificar = puedeEditarActividad(actividad.fields);
+  const esIncompleta = actividadIncompleta(actividad.fields);
 
   // Si no puede modificar, mostrar mensaje y redirigir
   if (!puedeModificar) {
@@ -409,6 +411,23 @@ export default function EditarActividadPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Editar Actividad</h1>
           <p className="text-gray-600">Modificar información de la actividad</p>
         </div>
+
+        {esIncompleta && (
+          <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div className="flex-1">
+                <p className="font-semibold text-amber-900 mb-1">
+                  Actividad incompleta
+                </p>
+                <p className="text-sm text-amber-800">
+                  {getMensajeIncompleta(actividad.fields)}{" "}
+                  Esta actividad sigue editable fuera del período habitual hasta que se completen los archivos faltantes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow p-8">
           {uploadProgress && (

@@ -7,6 +7,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import ConfirmModal from "@/components/ConfirmModal";
 import Link from "next/link";
 import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
+import { puedeEditarActividad, actividadIncompleta, getMensajeIncompleta } from "@/lib/actividadCompleteness";
 
 interface AirtableAttachment {
   id: string;
@@ -176,10 +177,28 @@ export default function ActividadDetailPage() {
               </div>
             </div>
             
+            {/* Banner: Actividad incompleta */}
+            {actividadIncompleta(actividad.fields) && (
+              <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">⚠️</span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-amber-900 mb-1">
+                      Actividad incompleta
+                    </p>
+                    <p className="text-sm text-amber-800">
+                      {getMensajeIncompleta(actividad.fields)} Completa la
+                      información para que la actividad cuente como soportada.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Botones de acción */}
             <div className="flex gap-2">
-              {/* Validar si puede modificar */}
-              {actividad.fields.Fecha && puedeModificarActividad(actividad.fields.Fecha) ? (
+              {/* Validar si puede editar (incluye excepción para incompletas) */}
+              {puedeEditarActividad(actividad.fields) ? (
                 <>
                   {/* Botón Editar */}
                   <Link
@@ -191,17 +210,19 @@ export default function ActividadDetailPage() {
                     </svg>
                     Editar
                   </Link>
-                  
-                  {/* Botón Eliminar */}
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="px-4 py-2 text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Eliminar
-                  </button>
+
+                  {/* Botón Eliminar - sólo si dentro de período (no aplica excepción) */}
+                  {actividad.fields.Fecha && puedeModificarActividad(actividad.fields.Fecha) && (
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="px-4 py-2 text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="w-full p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
