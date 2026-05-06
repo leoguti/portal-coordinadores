@@ -392,9 +392,19 @@ function KardexPageInner() {
   const entradasFiltradas = filteredRecords.filter(r => r.fields.TipoMovimiento === "ENTRADA");
   const salidasFiltradas = filteredRecords.filter(r => r.fields.TipoMovimiento === "SALIDA");
   
+  // Si hay filtro por material, sumar solo la columna de ese material;
+  // si no, sumar el Total consolidado del registro.
+  const kilosDelRegistro = (r: typeof filteredRecords[number]) => {
+    if (tipoMaterial) {
+      const v = r.fields[tipoMaterial as keyof typeof r.fields];
+      return Math.abs(typeof v === "number" ? v : 0);
+    }
+    return Math.abs(r.fields.Total || 0);
+  };
+
   // Calcular totales (IMPORTANTE: salidas vienen negativas, usamos Math.abs para mostrar)
-  const totalEntradas = entradasFiltradas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
-  const totalSalidas = salidasFiltradas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+  const totalEntradas = entradasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+  const totalSalidas = salidasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
   const saldoTotal = totalEntradas - totalSalidas;
 
   // ========== CÁLCULOS DE RESÚMENES ==========
@@ -446,8 +456,8 @@ function KardexPageInner() {
     const entradasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasMes = entradasDelMes.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
-    const totalSalidasMes = salidasDelMes.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalEntradasMes = entradasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalSalidasMes = salidasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
     
     // SALDO: TODO el histórico HASTA el final de este mes
     const [anio, mesNum] = mes.split('-');
@@ -463,8 +473,8 @@ function KardexPageInner() {
     const entradasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
-    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
     
     // DESGLOSE POR TIPO DE MATERIAL (saldo acumulado histórico)
     const materiales = ['Reciclaje', 'Incineracion', 'Flexibles', 'PlasticoContaminado', 'Lonas', 'Carton', 'Metal'] as const;
@@ -504,8 +514,8 @@ function KardexPageInner() {
     const entradasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAnio = entradasDelAnio.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
-    const totalSalidasAnio = salidasDelAnio.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalEntradasAnio = entradasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalSalidasAnio = salidasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
     
     // SALDO: TODO el histórico HASTA el final de este año
     const registrosHastaEsteAnio = filteredRecords.filter(r => {
@@ -517,8 +527,8 @@ function KardexPageInner() {
     const entradasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
-    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + Math.abs(r.fields.Total || 0), 0);
+    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
     
     return {
       año: anio,
