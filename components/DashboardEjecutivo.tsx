@@ -45,6 +45,9 @@ interface CoordSensMeta {
 }
 
 interface Stats {
+  mode?: "anual" | "mensual";
+  monthLabel?: string;
+  month?: number;
   kpis: {
     entradasKg: number;
     salidasKg: number;
@@ -104,10 +107,19 @@ function mesLabel(mesStr: string) {
   return `${MONTH_SHORT[idx]} ${parts[0].slice(2)}`;
 }
 
+const MES_NOMBRES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
 // --- Main Component ---
 export default function DashboardEjecutivo({ userName }: { userName?: string }) {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const [mode, setMode] = useState<"anual" | "mensual">("anual");
   const [year, setYear] = useState(currentYear);
+  const [month, setMonth] = useState(currentMonth);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandRecol, setExpandRecol] = useState(false);
@@ -121,7 +133,11 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
     async function load() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/ejecutivo-stats?year=${year}`);
+        const url =
+          mode === "anual"
+            ? `/api/dashboard/ejecutivo-stats?year=${year}`
+            : `/api/dashboard/ejecutivo-stats-mensual?year=${year}&month=${month}`;
+        const res = await fetch(url);
         if (res.ok) setStats(await res.json());
       } catch (err) {
         console.error("Error loading ejecutivo stats:", err);
@@ -130,7 +146,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
       }
     }
     load();
-  }, [year]);
+  }, [mode, year, month]);
 
   const yearOptions = Array.from(
     { length: currentYear - 2024 + 1 },
@@ -177,6 +193,12 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Dashboard Ejecutivo
+            {mode === "mensual" && stats.monthLabel && (
+              <span className="text-gray-500 font-medium"> · {stats.monthLabel} {year}</span>
+            )}
+            {mode === "anual" && (
+              <span className="text-gray-500 font-medium"> · {year}</span>
+            )}
           </h1>
           <p className="text-sm text-gray-500">
             {userName ? `Hola, ${userName}` : "Panel ejecutivo"} · Actualizado:{" "}
@@ -188,15 +210,53 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             })}
           </p>
         </div>
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
-        >
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Toggle Anual/Mensual */}
+          <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
+            <button
+              onClick={() => setMode("anual")}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                mode === "anual"
+                  ? "bg-[#00d084] text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Anual
+            </button>
+            <button
+              onClick={() => setMode("mensual")}
+              className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                mode === "mensual"
+                  ? "bg-[#00d084] text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Mensual
+            </button>
+          </div>
+
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          {mode === "mensual" && (
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+            >
+              {MES_NOMBRES.map((nombre, i) => (
+                <option key={i + 1} value={i + 1}>{nombre}</option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {/* SECTION 1: Metas */}
@@ -205,7 +265,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Recolección {year}
+              Meta Recolección {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             <span
               className="text-3xl font-bold"
@@ -296,7 +356,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Sensibilización {year}
+              Meta Sensibilización {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             <span
               className="text-3xl font-bold"
@@ -383,7 +443,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Evaluaciones {year}
+              Meta Evaluaciones {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             <span
               className="text-3xl font-bold"
