@@ -4240,30 +4240,45 @@ export async function getMetasMensualesByCoordinadorYAño(
   if (!apiKey || !baseId) return [];
 
   try {
-    const filterFormula = `AND({Año} = ${año}, FIND("${coordinadorId}", ARRAYJOIN({Coordinador})) > 0)`;
-    const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?filterByFormula=${encodeURIComponent(
-      filterFormula
-    )}`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      console.error(`Error getMetasMensualesByCoordinadorYAño: ${res.status}`);
-      return [];
-    }
-    const data = await res.json();
+    // Airtable ARRAYJOIN sobre multipleRecordLinks devuelve los nombres del primary
+    // field, NO los record IDs. Por eso filtramos sólo por año en la API y por
+    // coordinador en JS.
+    const filterFormula = `{Año} = ${año}`;
+    const all: Array<{ id: string; fields: Record<string, unknown> }> = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error getMetasMensualesByCoordinadorYAño: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      all.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
     const byMes = new Map<number, MetaMensualAdmin>();
-    for (const r of data.records || []) {
-      const mes = r.fields.Mes;
+    for (const r of all) {
+      const coords = (r.fields.Coordinador as string[]) || [];
+      if (!coords.includes(coordinadorId)) continue;
+      const mes = r.fields.Mes as number | undefined;
       if (typeof mes !== "number") continue;
       byMes.set(mes, {
         id: r.id,
         año,
         mes,
-        metaRecoleccion: r.fields.MetaRecoleccion || 0,
-        metaSensibilizacion: r.fields.MetaSensibilizacion || 0,
-        metaEvaluaciones: r.fields.MetaEvaluaciones || 0,
+        metaRecoleccion: (r.fields.MetaRecoleccion as number) || 0,
+        metaSensibilizacion: (r.fields.MetaSensibilizacion as number) || 0,
+        metaEvaluaciones: (r.fields.MetaEvaluaciones as number) || 0,
       });
     }
     const out: MetaMensualAdmin[] = [];
@@ -4403,12 +4418,11 @@ export async function getPuntosLogisticosByCoordinador(
   if (!apiKey || !baseId) return [];
 
   try {
-    const filterFormula = `FIND("${coordinadorId}", ARRAYJOIN({Coordinador})) > 0`;
+    // ARRAYJOIN({Coordinador}) devuelve nombres no IDs. Filtramos en JS.
     const all: PuntoLogisticoLite[] = [];
     let offset: string | undefined;
     do {
       const params = new URLSearchParams({
-        filterByFormula: filterFormula,
         pageSize: "100",
         "fields[]": "Nombre",
       });
@@ -4427,12 +4441,14 @@ export async function getPuntosLogisticosByCoordinador(
       }
       const data = await res.json();
       for (const r of data.records || []) {
+        const coords: string[] = r.fields.Coordinador || [];
+        if (!coords.includes(coordinadorId)) continue;
         all.push({
           id: r.id,
           nombre: r.fields.Nombre || "(sin nombre)",
           tipo: r.fields.Tipo || "",
           municipio: r.fields["mundep (from Municipio)"]?.[0] || "",
-          coordinadores: r.fields.Coordinador || [],
+          coordinadores: coords,
         });
       }
       offset = data.offset;
@@ -4457,12 +4473,14 @@ export async function searchPuntosLogisticosNoLink(
   if (!apiKey || !baseId) return [];
 
   try {
-    // Buscar por substring case-insensitive en Nombre, excluir los ya vinculados al coord
+    // Filtramos por nombre en API (eso sí es texto), pero no podemos excluir por
+    // coord-ID en la fórmula (ARRAYJOIN devuelve nombres). Así que sobre-pedimos
+    // y filtramos en JS los ya vinculados.
     const sanitized = q.replace(/"/g, "");
-    const filterFormula = `AND(SEARCH(LOWER("${sanitized}"), LOWER({Nombre})), NOT(FIND("${coordinadorId}", ARRAYJOIN({Coordinador}))))`;
+    const filterFormula = `SEARCH(LOWER("${sanitized}"), LOWER({Nombre}))`;
     const params = new URLSearchParams({
       filterByFormula: filterFormula,
-      maxRecords: String(limit),
+      maxRecords: String(limit * 3),
       "fields[]": "Nombre",
     });
     params.append("fields[]", "Tipo");
@@ -4479,6 +4497,11 @@ export async function searchPuntosLogisticosNoLink(
     }
     const data = await res.json();
     return (data.records || [])
+      .filter((r: { fields: Record<string, unknown> }) => {
+        const coords = (r.fields.Coordinador as string[]) || [];
+        return !coords.includes(coordinadorId);
+      })
+      .slice(0, limit)
       .map((r: { id: string; fields: Record<string, unknown> }) => ({
         id: r.id,
         nombre: (r.fields.Nombre as string) || "(sin nombre)",
