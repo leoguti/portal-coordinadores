@@ -19,6 +19,7 @@ const navItems = [
   { name: "Generación de Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Histórico Certificados", href: "/certificados-historicos", icon: "🗂️", roles: ["Coordinador"] },
   { name: "Histórico Certificados", href: "/admin/certificados-historicos", icon: "🗂️", roles: ["Administrador", "Supervisor"] },
+  { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
 ];
 
 export default function Sidebar() {

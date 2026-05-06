@@ -263,6 +263,22 @@ export interface Meta {
   fields: MetaFields;
 }
 
+interface MetaMensualFields {
+  Periodo?: string;
+  Coordinador?: string[];
+  Año?: number;
+  Mes?: number;
+  MetaRecoleccion?: number;
+  MetaSensibilizacion?: number;
+  MetaEvaluaciones?: number;
+}
+
+export interface MetaMensual {
+  id: string;
+  createdTime: string;
+  fields: MetaMensualFields;
+}
+
 // === Caja Menor Interfaces ===
 
 interface GastoCajaMenorFields {
@@ -3927,6 +3943,60 @@ export async function getAllMetas(año: number): Promise<Meta[]> {
 }
 
 /**
+ * Get all monthly metas for a given year + month from MetasMensuales table
+ */
+export async function getAllMetasMensuales(
+  año: number,
+  mes: number
+): Promise<MetaMensual[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return [];
+  }
+
+  try {
+    const filterFormula = `AND({Año} = ${año}, {Mes} = ${mes})`;
+    const all: MetaMensual[] = [];
+    let offset: string | undefined;
+
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?${params.toString()}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        console.error(`Error fetching MetasMensuales: ${response.status}`);
+        return [];
+      }
+
+      const data: AirtableResponse<MetaMensualFields> = await response.json();
+      all.push(...(data.records || []));
+      offset = data.offset;
+    } while (offset);
+
+    return all;
+  } catch (error) {
+    console.error("Error fetching MetasMensuales:", error);
+    return [];
+  }
+}
+
+/**
  * Count all certificados for a given year (no coordinator filter)
  */
 export async function countAllCertificados(año: number): Promise<number> {
@@ -4024,6 +4094,475 @@ export async function getAllCoordinadoresActivos(): Promise<
   } catch (error) {
     console.error("Error fetching coordinadores activos:", error);
     return [];
+  }
+}
+
+// ============================================================
+// ADMIN COORDINADORES (vista completa)
+// ============================================================
+
+export interface CoordinadorAdmin {
+  id: string;
+  name: string;
+  email: string;
+  rol: string;
+  telefono: string;
+  puntosLogisticosCount: number;
+}
+
+/**
+ * List all coordinadores (including Desactivado) for admin panel.
+ */
+export async function listAllCoordinadoresAdmin(): Promise<CoordinadorAdmin[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const all: CoordinadorAdmin[] = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        pageSize: "100",
+        "sort[0][field]": "Name",
+        "sort[0][direction]": "asc",
+      });
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error listing coordinadores admin: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      for (const r of data.records || []) {
+        all.push({
+          id: r.id,
+          name: r.fields.Name || "Sin nombre",
+          email: r.fields.email || "",
+          rol: r.fields.Rol || "Coordinador",
+          telefono: r.fields.telefono || "",
+          puntosLogisticosCount: (r.fields["Puntos Logisticos"] || []).length,
+        });
+      }
+      offset = data.offset;
+    } while (offset);
+    return all;
+  } catch (error) {
+    console.error("Error listAllCoordinadoresAdmin:", error);
+    return [];
+  }
+}
+
+/**
+ * Get one coordinador with full fields for admin edit.
+ */
+export async function getCoordinadorAdminById(
+  id: string
+): Promise<CoordinadorAdmin | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return null;
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores/${id}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const r = await res.json();
+    return {
+      id: r.id,
+      name: r.fields.Name || "",
+      email: r.fields.email || "",
+      rol: r.fields.Rol || "Coordinador",
+      telefono: r.fields.telefono || "",
+      puntosLogisticosCount: (r.fields["Puntos Logisticos"] || []).length,
+    };
+  } catch (error) {
+    console.error("Error getCoordinadorAdminById:", error);
+    return null;
+  }
+}
+
+/**
+ * Update basic coordinador fields. Only the keys present in `fields` are updated.
+ */
+export async function updateCoordinadorAdmin(
+  id: string,
+  fields: Partial<{ Name: string; email: string; Rol: string; telefono: string }>
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return false;
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores/${id}`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("Error updateCoordinadorAdmin:", error);
+    return false;
+  }
+}
+
+// ============================================================
+// METAS MENSUALES - admin
+// ============================================================
+
+export interface MetaMensualAdmin {
+  id: string | null;
+  año: number;
+  mes: number;
+  metaRecoleccion: number;
+  metaSensibilizacion: number;
+  metaEvaluaciones: number;
+}
+
+/**
+ * Get monthly metas for a coordinador and a given year. Returns 12 entries (rellena con 0 los meses faltantes).
+ */
+export async function getMetasMensualesByCoordinadorYAño(
+  coordinadorId: string,
+  año: number
+): Promise<MetaMensualAdmin[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const filterFormula = `AND({Año} = ${año}, FIND("${coordinadorId}", ARRAYJOIN({Coordinador})) > 0)`;
+    const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?filterByFormula=${encodeURIComponent(
+      filterFormula
+    )}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`Error getMetasMensualesByCoordinadorYAño: ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    const byMes = new Map<number, MetaMensualAdmin>();
+    for (const r of data.records || []) {
+      const mes = r.fields.Mes;
+      if (typeof mes !== "number") continue;
+      byMes.set(mes, {
+        id: r.id,
+        año,
+        mes,
+        metaRecoleccion: r.fields.MetaRecoleccion || 0,
+        metaSensibilizacion: r.fields.MetaSensibilizacion || 0,
+        metaEvaluaciones: r.fields.MetaEvaluaciones || 0,
+      });
+    }
+    const out: MetaMensualAdmin[] = [];
+    for (let m = 1; m <= 12; m++) {
+      out.push(
+        byMes.get(m) || {
+          id: null,
+          año,
+          mes: m,
+          metaRecoleccion: 0,
+          metaSensibilizacion: 0,
+          metaEvaluaciones: 0,
+        }
+      );
+    }
+    return out;
+  } catch (error) {
+    console.error("Error getMetasMensualesByCoordinadorYAño:", error);
+    return [];
+  }
+}
+
+/**
+ * Upsert (create or update) a list of monthly metas for a coordinador and year.
+ * Splits work into create + update batches (max 10 per request per Airtable API).
+ */
+export async function upsertMetasMensuales(
+  coordinadorId: string,
+  año: number,
+  metas: Array<{
+    id: string | null;
+    mes: number;
+    metaRecoleccion: number;
+    metaSensibilizacion: number;
+    metaEvaluaciones: number;
+  }>
+): Promise<{ ok: boolean; created: number; updated: number }> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return { ok: false, created: 0, updated: 0 };
+
+  const periodo = (m: number) => `${año}-${String(m).padStart(2, "0")}`;
+
+  const toUpdate = metas.filter((m) => m.id !== null);
+  const toCreate = metas.filter((m) => m.id === null);
+
+  let created = 0;
+  let updated = 0;
+
+  try {
+    for (let i = 0; i < toUpdate.length; i += 10) {
+      const batch = toUpdate.slice(i, i + 10);
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales`;
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          records: batch.map((m) => ({
+            id: m.id,
+            fields: {
+              Periodo: periodo(m.mes),
+              MetaRecoleccion: m.metaRecoleccion,
+              MetaSensibilizacion: m.metaSensibilizacion,
+              MetaEvaluaciones: m.metaEvaluaciones,
+            },
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error(`Error update metas mensuales: ${res.status} ${txt}`);
+        return { ok: false, created, updated };
+      }
+      updated += batch.length;
+    }
+
+    for (let i = 0; i < toCreate.length; i += 10) {
+      const batch = toCreate.slice(i, i + 10);
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          records: batch.map((m) => ({
+            fields: {
+              Periodo: periodo(m.mes),
+              Coordinador: [coordinadorId],
+              Año: año,
+              Mes: m.mes,
+              MetaRecoleccion: m.metaRecoleccion,
+              MetaSensibilizacion: m.metaSensibilizacion,
+              MetaEvaluaciones: m.metaEvaluaciones,
+            },
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error(`Error create metas mensuales: ${res.status} ${txt}`);
+        return { ok: false, created, updated };
+      }
+      created += batch.length;
+    }
+    return { ok: true, created, updated };
+  } catch (error) {
+    console.error("Error upsertMetasMensuales:", error);
+    return { ok: false, created, updated };
+  }
+}
+
+// ============================================================
+// PUNTOS LOGISTICOS - admin (vínculo con coordinador)
+// ============================================================
+
+export interface PuntoLogisticoLite {
+  id: string;
+  nombre: string;
+  tipo: string;
+  municipio: string;
+  coordinadores: string[];
+}
+
+/**
+ * Get Puntos Logisticos linked to a coordinador.
+ */
+export async function getPuntosLogisticosByCoordinador(
+  coordinadorId: string
+): Promise<PuntoLogisticoLite[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const filterFormula = `FIND("${coordinadorId}", ARRAYJOIN({Coordinador})) > 0`;
+    const all: PuntoLogisticoLite[] = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: filterFormula,
+        pageSize: "100",
+        "fields[]": "Nombre",
+      });
+      params.append("fields[]", "Tipo");
+      params.append("fields[]", "mundep (from Municipio)");
+      params.append("fields[]", "Coordinador");
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/Puntos Logisticos?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error getPuntosLogisticosByCoordinador: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      for (const r of data.records || []) {
+        all.push({
+          id: r.id,
+          nombre: r.fields.Nombre || "(sin nombre)",
+          tipo: r.fields.Tipo || "",
+          municipio: r.fields["mundep (from Municipio)"]?.[0] || "",
+          coordinadores: r.fields.Coordinador || [],
+        });
+      }
+      offset = data.offset;
+    } while (offset);
+    return all.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  } catch (error) {
+    console.error("Error getPuntosLogisticosByCoordinador:", error);
+    return [];
+  }
+}
+
+/**
+ * Search Puntos Logisticos by name (substring, case-insensitive). Excludes those already linked to coordId.
+ */
+export async function searchPuntosLogisticosNoLink(
+  coordinadorId: string,
+  q: string,
+  limit = 20
+): Promise<PuntoLogisticoLite[]> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    // Buscar por substring case-insensitive en Nombre, excluir los ya vinculados al coord
+    const sanitized = q.replace(/"/g, "");
+    const filterFormula = `AND(SEARCH(LOWER("${sanitized}"), LOWER({Nombre})), NOT(FIND("${coordinadorId}", ARRAYJOIN({Coordinador}))))`;
+    const params = new URLSearchParams({
+      filterByFormula: filterFormula,
+      maxRecords: String(limit),
+      "fields[]": "Nombre",
+    });
+    params.append("fields[]", "Tipo");
+    params.append("fields[]", "mundep (from Municipio)");
+    params.append("fields[]", "Coordinador");
+    const url = `https://api.airtable.com/v0/${baseId}/Puntos Logisticos?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`Error searchPuntosLogisticosNoLink: ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    return (data.records || [])
+      .map((r: { id: string; fields: Record<string, unknown> }) => ({
+        id: r.id,
+        nombre: (r.fields.Nombre as string) || "(sin nombre)",
+        tipo: (r.fields.Tipo as string) || "",
+        municipio: (r.fields["mundep (from Municipio)"] as string[])?.[0] || "",
+        coordinadores: (r.fields.Coordinador as string[]) || [],
+      }))
+      .sort((a: PuntoLogisticoLite, b: PuntoLogisticoLite) =>
+        a.nombre.localeCompare(b.nombre)
+      );
+  } catch (error) {
+    console.error("Error searchPuntosLogisticosNoLink:", error);
+    return [];
+  }
+}
+
+/**
+ * Add a coordinador to a Punto Logistico's Coordinador field (idempotent).
+ */
+export async function vincularPuntoLogisticoCoordinador(
+  puntoId: string,
+  coordinadorId: string
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return false;
+  try {
+    const getUrl = `https://api.airtable.com/v0/${baseId}/Puntos Logisticos/${puntoId}`;
+    const getRes = await fetch(getUrl, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!getRes.ok) return false;
+    const punto = await getRes.json();
+    const current: string[] = punto.fields.Coordinador || [];
+    if (current.includes(coordinadorId)) return true;
+    const updated = [...current, coordinadorId];
+    const patchRes = await fetch(getUrl, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields: { Coordinador: updated } }),
+    });
+    return patchRes.ok;
+  } catch (error) {
+    console.error("Error vincularPuntoLogisticoCoordinador:", error);
+    return false;
+  }
+}
+
+/**
+ * Remove a coordinador from a Punto Logistico's Coordinador field.
+ */
+export async function desvincularPuntoLogisticoCoordinador(
+  puntoId: string,
+  coordinadorId: string
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return false;
+  try {
+    const url = `https://api.airtable.com/v0/${baseId}/Puntos Logisticos/${puntoId}`;
+    const getRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!getRes.ok) return false;
+    const punto = await getRes.json();
+    const current: string[] = punto.fields.Coordinador || [];
+    const updated = current.filter((c) => c !== coordinadorId);
+    const patchRes = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields: { Coordinador: updated } }),
+    });
+    return patchRes.ok;
+  } catch (error) {
+    console.error("Error desvincularPuntoLogisticoCoordinador:", error);
+    return false;
   }
 }
 
