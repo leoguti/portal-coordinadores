@@ -98,6 +98,11 @@ export default function ActividadForm({
     return { minDate: min, maxDate: max };
   }, []);
 
+  // Si la fecha inicial (modo edición) está antes del rango permitido, significa que
+  // estamos editando una actividad de un mes ya cerrado (excepción para incompletas).
+  // En ese caso bloqueamos el cambio de fecha y mantenemos la original.
+  const fechaFueraDeRango = !!initialData?.fecha && initialData.fecha < minDate;
+
   // Conditional logic based on "Tipo de Actividad"
   const isSensibilizacion = tipo === "Sensibilización";
   const isVisitaAcopio = tipo === "Visita acopio";
@@ -187,14 +192,24 @@ export default function ActividadForm({
             required
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            min={minDate}
-            max={maxDate}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            min={fechaFueraDeRango ? fecha : minDate}
+            max={fechaFueraDeRango ? fecha : maxDate}
+            readOnly={fechaFueraDeRango}
+            disabled={fechaFueraDeRango}
+            className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              fechaFueraDeRango ? "bg-gray-100 cursor-not-allowed" : ""
+            }`}
           />
-          <p className="mt-1 text-sm text-gray-500">
-            Solo puedes registrar actividades dentro del período de gracia (5 días después del fin de mes).
-            Rango permitido: {new Date(minDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })} - Hoy
-          </p>
+          {fechaFueraDeRango ? (
+            <p className="mt-1 text-sm text-amber-700">
+              La fecha no se puede modificar: esta actividad es de un mes ya cerrado y solo se permite editarla para completar archivos faltantes.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">
+              Solo puedes registrar actividades dentro del período de gracia (5 días después del fin de mes).
+              Rango permitido: {new Date(minDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })} - Hoy
+            </p>
+          )}
         </div>
 
         {/* Nombre */}
