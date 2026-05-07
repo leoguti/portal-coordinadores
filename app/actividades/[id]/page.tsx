@@ -33,6 +33,9 @@ interface Actividad {
     Descripcion?: string;
     Tipo?: string;
     "Cantidad de Participantes"?: number;
+    "Personas Evaluadas"?: number;
+    CantidadEvaluaciones?: number;
+    "Modalidad Evaluacion"?: string;
     Municipio?: string[];
     "mundep (from Municipio)"?: string[];
     Fotografias?: AirtableAttachment[];
@@ -442,12 +445,33 @@ export default function ActividadDetailPage() {
                     <dd className="text-gray-900">{actividad.fields["Cantidad de Participantes"]}</dd>
                   </div>
                 )}
-                {actividad.fields["Personas Evaluadas"] != null && (
-                  <div>
-                    <dt className="font-medium text-gray-500">Evaluadas en papel / presencial</dt>
-                    <dd className="text-gray-900">{actividad.fields["Personas Evaluadas"]}</dd>
-                  </div>
-                )}
+                {actividad.fields.Tipo === "Sensibilización" && (() => {
+                  const papel = actividad.fields["Personas Evaluadas"] || 0;
+                  const wa = actividad.fields.CantidadEvaluaciones || 0;
+                  const total = papel + wa;
+                  return (
+                    <>
+                      {actividad.fields["Modalidad Evaluacion"] && (
+                        <div>
+                          <dt className="font-medium text-gray-500">Modalidad de Evaluación</dt>
+                          <dd className="text-gray-900">{actividad.fields["Modalidad Evaluacion"]}</dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt className="font-medium text-gray-500">Evaluadas en papel / presencial</dt>
+                        <dd className="text-gray-900">{papel}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-gray-500">Evaluadas por WhatsApp</dt>
+                        <dd className="text-gray-900">{wa}</dd>
+                      </div>
+                      <div className="pt-2 border-t border-gray-100">
+                        <dt className="font-medium text-gray-500">Total evaluaciones</dt>
+                        <dd className="text-gray-900 font-semibold">{total}</dd>
+                      </div>
+                    </>
+                  );
+                })()}
                 {actividad.fields.Modalidad && actividad.fields.Modalidad.length > 0 && (
                   <div>
                     <dt className="font-medium text-gray-500">Modalidad</dt>
