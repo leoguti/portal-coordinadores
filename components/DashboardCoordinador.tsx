@@ -16,6 +16,10 @@ import {
 
 // --- Types ---
 interface Stats {
+  mode?: "anual" | "mensual";
+  monthLabel?: string;
+  monthFrom?: number;
+  monthTo?: number;
   kpis: {
     entradasKg: number;
     salidasKg: number;
@@ -94,11 +98,21 @@ const PROCESO_COLORS: Record<string, string> = {
   "Sin proceso": "#d1d5db",
 };
 
+const MES_NOMBRES = [
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
+];
+
 // --- Main Component ---
 export default function DashboardCoordinador() {
   const { data: session } = useSession();
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const [mode, setMode] = useState<"anual" | "mensual">("anual");
   const [year, setYear] = useState(currentYear);
+  const [monthFrom, setMonthFrom] = useState(currentMonth);
+  const [monthTo, setMonthTo] = useState(currentMonth);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInfoProceso, setShowInfoProceso] = useState(false);
@@ -107,7 +121,11 @@ export default function DashboardCoordinador() {
     async function load() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/coordinador-stats?year=${year}`);
+        const url =
+          mode === "anual"
+            ? `/api/dashboard/coordinador-stats?year=${year}`
+            : `/api/dashboard/coordinador-stats-mensual?year=${year}&monthFrom=${monthFrom}&monthTo=${monthTo}`;
+        const res = await fetch(url);
         if (res.ok) setStats(await res.json());
       } catch (err) {
         console.error("Error loading coordinador stats:", err);
@@ -116,7 +134,7 @@ export default function DashboardCoordinador() {
       }
     }
     load();
-  }, [year]);
+  }, [mode, year, monthFrom, monthTo]);
 
   const yearOptions = Array.from(
     { length: currentYear - 2024 + 1 },
@@ -163,6 +181,12 @@ export default function DashboardCoordinador() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             ¡Bienvenido, {session?.user?.name || "Coordinador"}!
+            {mode === "mensual" && stats.monthLabel && (
+              <span className="text-gray-500 font-medium"> · {stats.monthLabel} {year}</span>
+            )}
+            {mode === "anual" && (
+              <span className="text-gray-500 font-medium"> · {year}</span>
+            )}
           </h1>
           <p className="text-sm text-gray-500">
             Actualizado:{" "}
@@ -174,15 +198,74 @@ export default function DashboardCoordinador() {
             })}
           </p>
         </div>
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
-        >
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Toggle Anual / Mensual */}
+          <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
+            <button
+              onClick={() => setMode("anual")}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                mode === "anual"
+                  ? "bg-[#00d084] text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Anual
+            </button>
+            <button
+              onClick={() => setMode("mensual")}
+              className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                mode === "mensual"
+                  ? "bg-[#00d084] text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Mensual
+            </button>
+          </div>
+
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          {mode === "mensual" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Desde</span>
+              <select
+                value={monthFrom}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setMonthFrom(v);
+                  if (v > monthTo) setMonthTo(v);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+              >
+                {MES_NOMBRES.map((nombre, i) => (
+                  <option key={i + 1} value={i + 1}>{nombre}</option>
+                ))}
+              </select>
+              <span className="text-xs text-gray-500">Hasta</span>
+              <select
+                value={monthTo}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setMonthTo(v);
+                  if (v < monthFrom) setMonthFrom(v);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+              >
+                {MES_NOMBRES.map((nombre, i) => (
+                  <option key={i + 1} value={i + 1}>{nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SECTION 1: Alertas */}
@@ -235,7 +318,7 @@ export default function DashboardCoordinador() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Recolección {year}
+              Meta Recolección {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             {stats.metaRecoleccion.configurada ? (
               <span
@@ -280,7 +363,7 @@ export default function DashboardCoordinador() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Sensibilización {year}
+              Meta Sensibilización {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             {stats.metaSensibilizacion.configurada ? (
               <span
@@ -322,7 +405,7 @@ export default function DashboardCoordinador() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Meta Evaluaciones {year}
+              Meta Evaluaciones {mode === "mensual" && stats.monthLabel ? `${stats.monthLabel} ${year}` : year}
             </h2>
             {stats.metaEvaluaciones.configurada ? (
               <span
@@ -364,7 +447,7 @@ export default function DashboardCoordinador() {
               </div>
               <div className="text-xs text-gray-500">
                 <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
-                Reportadas: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.reportadas)}</strong>
+                Presenciales: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.reportadas)}</strong>
                 <span className="ml-3 text-gray-400">Total: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.total)}</strong></span>
               </div>
             </>
