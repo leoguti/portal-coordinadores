@@ -312,6 +312,25 @@ export default function ActividadesPage() {
     return porTipo;
   }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
 
+  // Conteo de actividades incompletas en el rango/filtro actual, con breakdown por tipo
+  const incompletas = React.useMemo(() => {
+    const porTipo: { [tipo: string]: number } = {};
+    let total = 0;
+    actividadesFiltradas.forEach(actividad => {
+      if (!hayFiltrosActivos) {
+        if (!actividad.fields.Fecha) return;
+        const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
+        if (anoActividad !== anoVigente) return;
+      }
+      if (actividadIncompleta(actividad.fields)) {
+        const tipo = actividad.fields.Tipo || 'Sin tipo';
+        porTipo[tipo] = (porTipo[tipo] || 0) + 1;
+        total++;
+      }
+    });
+    return { total, porTipo };
+  }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
+
   // Suma de metas mensuales aplicables al rango/filtro actual
   const metasAplicables = React.useMemo(() => {
     // Si hay filtro de mes específico, sólo ese mes
@@ -771,14 +790,16 @@ export default function ActividadesPage() {
                   return '';
                 })()}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => {
-                  const isSens = tipo === "Sensibilización";
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Tarjeta Sensibilización */}
+                {(() => {
+                  const stats = estadisticasGenerales["Sensibilización"];
+                  if (!stats) return null;
                   const totalEval = stats.evaluadas + stats.evaluadasWA;
-                  const pctSens = isSens && metasAplicables.metaSens > 0
+                  const pctSens = metasAplicables.metaSens > 0
                     ? Math.round((stats.participantes / metasAplicables.metaSens) * 100)
                     : null;
-                  const pctEval = isSens && metasAplicables.metaEval > 0
+                  const pctEval = metasAplicables.metaEval > 0
                     ? Math.round((totalEval / metasAplicables.metaEval) * 100)
                     : null;
                   const colorPct = (p: number | null) => {
@@ -788,9 +809,9 @@ export default function ActividadesPage() {
                     return "text-red-600";
                   };
                   return (
-                    <div key={tipo} className={`bg-white rounded-lg p-4 shadow-sm border ${isSens ? "border-blue-200 lg:col-span-2" : "border-gray-200"}`}>
+                    <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-200 lg:col-span-2">
                       <div className="flex items-start justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-600">{tipo}</span>
+                        <span className="text-sm font-medium text-gray-600">Sensibilización</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                           {stats.count}
                         </span>
@@ -802,63 +823,86 @@ export default function ActividadesPage() {
                           <span className="text-gray-500 text-xs">participantes</span>
                         </div>
                       )}
-                      {isSens && (
-                        <>
-                          <div className="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-gray-100 text-xs">
-                            <div>
-                              <div className="text-gray-500">Eval. papel</div>
-                              <div className="font-semibold text-gray-900">{stats.evaluadas.toLocaleString('es-CO')}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-500">Eval. WhatsApp</div>
-                              <div className="font-semibold text-gray-900">{stats.evaluadasWA.toLocaleString('es-CO')}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-500">Total eval.</div>
-                              <div className="font-bold text-gray-900">{totalEval.toLocaleString('es-CO')}</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">Meta Sensibilización</div>
-                              {metasAplicables.metaSens > 0 ? (
-                                <>
-                                  <div className="flex items-baseline gap-1">
-                                    <span className={`text-lg font-bold ${colorPct(pctSens)}`}>{pctSens}%</span>
-                                    <span className="text-xs text-gray-500">de {metasAplicables.metaSens.toLocaleString('es-CO')}</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                    <div className={`h-1.5 rounded-full ${pctSens! >= 70 ? "bg-green-500" : pctSens! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
-                                         style={{ width: `${Math.min(pctSens!, 100)}%` }} />
-                                  </div>
-                                </>
-                              ) : (
-                                <span className="text-xs text-gray-400">Sin meta</span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">Meta Evaluaciones</div>
-                              {metasAplicables.metaEval > 0 ? (
-                                <>
-                                  <div className="flex items-baseline gap-1">
-                                    <span className={`text-lg font-bold ${colorPct(pctEval)}`}>{pctEval}%</span>
-                                    <span className="text-xs text-gray-500">de {metasAplicables.metaEval.toLocaleString('es-CO')}</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                    <div className={`h-1.5 rounded-full ${pctEval! >= 70 ? "bg-green-500" : pctEval! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
-                                         style={{ width: `${Math.min(pctEval!, 100)}%` }} />
-                                  </div>
-                                </>
-                              ) : (
-                                <span className="text-xs text-gray-400">Sin meta</span>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      <div className="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-gray-100 text-xs">
+                        <div>
+                          <div className="text-gray-500">Eval. papel</div>
+                          <div className="font-semibold text-gray-900">{stats.evaluadas.toLocaleString('es-CO')}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Eval. WhatsApp</div>
+                          <div className="font-semibold text-gray-900">{stats.evaluadasWA.toLocaleString('es-CO')}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">Total eval.</div>
+                          <div className="font-bold text-gray-900">{totalEval.toLocaleString('es-CO')}</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Meta Sensibilización</div>
+                          {metasAplicables.metaSens > 0 ? (
+                            <>
+                              <div className="flex items-baseline gap-1">
+                                <span className={`text-lg font-bold ${colorPct(pctSens)}`}>{pctSens}%</span>
+                                <span className="text-xs text-gray-500">de {metasAplicables.metaSens.toLocaleString('es-CO')}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div className={`h-1.5 rounded-full ${pctSens! >= 70 ? "bg-green-500" : pctSens! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
+                                     style={{ width: `${Math.min(pctSens!, 100)}%` }} />
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sin meta</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Meta Evaluaciones</div>
+                          {metasAplicables.metaEval > 0 ? (
+                            <>
+                              <div className="flex items-baseline gap-1">
+                                <span className={`text-lg font-bold ${colorPct(pctEval)}`}>{pctEval}%</span>
+                                <span className="text-xs text-gray-500">de {metasAplicables.metaEval.toLocaleString('es-CO')}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div className={`h-1.5 rounded-full ${pctEval! >= 70 ? "bg-green-500" : pctEval! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
+                                     style={{ width: `${Math.min(pctEval!, 100)}%` }} />
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sin meta</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
-                })}
+                })()}
+
+                {/* Tarjeta Actividades Incompletas */}
+                <div className={`bg-white rounded-lg p-4 shadow-sm border ${incompletas.total > 0 ? "border-amber-300" : "border-gray-200"}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">⚠️ Actividades incompletas</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${incompletas.total > 0 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"}`}>
+                      {incompletas.total}
+                    </span>
+                  </div>
+                  {incompletas.total === 0 ? (
+                    <p className="text-sm text-gray-500 mt-3">Todas las actividades del período están completas. ✅</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mt-2">Faltan archivos obligatorios (foto, listado o soporte de evaluaciones).</p>
+                      <div className="mt-3 space-y-1.5">
+                        {Object.entries(incompletas.porTipo)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([tipo, n]) => (
+                            <div key={tipo} className="flex items-center justify-between text-xs bg-amber-50 px-2 py-1 rounded border border-amber-100">
+                              <span className="text-gray-700">{tipo}</span>
+                              <span className="font-bold text-amber-800">{n}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
