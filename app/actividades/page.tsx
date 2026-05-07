@@ -61,6 +61,13 @@ export default function ActividadesPage() {
   const [paginaMes, setPaginaMes] = useState(0);
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
 
+  // Metas mensuales (12 meses) según contexto: self / coord filtrado / agregado
+  const [metasMensuales, setMetasMensuales] = useState<Array<{
+    mes: number;
+    metaSensibilizacion: number;
+    metaEvaluaciones: number;
+  }>>([]);
+
   const MESES_POR_PAGINA = 6;
 
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
@@ -245,12 +252,12 @@ export default function ActividadesPage() {
 
   // Calcular resumen de participantes por mes
   const getResumenMes = (actividadesDelMes: Actividad[]) => {
-    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number } } = {};
+    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number; evaluadasWA: number } } = {};
 
     actividadesDelMes.forEach(actividad => {
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
-        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0 };
+        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0 };
       }
       porTipo[tipo].count++;
       if (actividad.fields["Cantidad de Participantes"]) {
@@ -258,6 +265,9 @@ export default function ActividadesPage() {
       }
       if (actividad.fields["Personas Evaluadas"]) {
         porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
+      }
+      if (actividad.fields.CantidadEvaluaciones) {
+        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
       }
     });
 
@@ -268,7 +278,7 @@ export default function ActividadesPage() {
   const anoVigente = new Date().getFullYear();
   const hayFiltrosActivos = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
   const estadisticasGenerales = React.useMemo(() => {
-    const porTipo: { [tipo: string]: { count: number; participantes: number } } = {};
+    const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number; evaluadasWA: number; mesesIncluidos: Set<number> } } = {};
 
     actividadesFiltradas.forEach(actividad => {
       // Sin filtros activos, mostrar solo año vigente (comportamiento por defecto)
@@ -280,16 +290,47 @@ export default function ActividadesPage() {
 
       const tipo = actividad.fields.Tipo || 'Sin tipo';
       if (!porTipo[tipo]) {
-        porTipo[tipo] = { count: 0, participantes: 0 };
+        porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0, mesesIncluidos: new Set<number>() };
       }
       porTipo[tipo].count++;
       if (actividad.fields["Cantidad de Participantes"]) {
         porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
       }
+      if (actividad.fields["Personas Evaluadas"]) {
+        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
+      }
+      if (actividad.fields.CantidadEvaluaciones) {
+        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
+      }
+      // Tracking del mes para filtrar metas correspondientes
+      if (actividad.fields.Fecha) {
+        const m = new Date(actividad.fields.Fecha + 'T00:00:00').getMonth() + 1;
+        porTipo[tipo].mesesIncluidos.add(m);
+      }
     });
 
     return porTipo;
   }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
+
+  // Suma de metas mensuales aplicables al rango/filtro actual
+  const metasAplicables = React.useMemo(() => {
+    // Si hay filtro de mes específico, sólo ese mes
+    let mesesSet: Set<number> | null = null;
+    if (selectedMes) {
+      // selectedMes es nombre del mes; convertir a número
+      const mesIdx = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        .findIndex(m => m.toLowerCase() === selectedMes.toLowerCase());
+      if (mesIdx >= 0) mesesSet = new Set([mesIdx + 1]);
+    }
+    let metaSens = 0;
+    let metaEval = 0;
+    for (const m of metasMensuales) {
+      if (mesesSet && !mesesSet.has(m.mes)) continue;
+      metaSens += m.metaSensibilizacion || 0;
+      metaEval += m.metaEvaluaciones || 0;
+    }
+    return { metaSens, metaEval };
+  }, [metasMensuales, selectedMes]);
 
   async function descargarMes(downloadKey: string, actividadesDelMes: Actividad[], coordName?: string) {
     setDescargandoMes(downloadKey);
@@ -430,6 +471,23 @@ export default function ActividadesPage() {
       }
     }
   }, [status, canViewAll, router]);
+
+  // Fetch metas mensuales según año + coordinador filtrado
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const año = parseInt(selectedAno || String(new Date().getFullYear()));
+    const params = new URLSearchParams({ año: String(año) });
+    if (canViewAll && selectedCoordinador) {
+      params.set("coordinadorId", selectedCoordinador);
+    }
+    fetch(`/api/metas-mensuales?${params.toString()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.metas) setMetasMensuales(d.metas);
+        else setMetasMensuales([]);
+      })
+      .catch(() => setMetasMensuales([]));
+  }, [status, selectedAno, selectedCoordinador, canViewAll]);
 
   async function fetchActividades() {
     try {
@@ -714,23 +772,93 @@ export default function ActividadesPage() {
                 })()}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => (
-                  <div key={tipo} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">{tipo}</span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                        {stats.count}
-                      </span>
-                    </div>
-                    {stats.participantes > 0 && (
-                      <div className="flex items-center gap-1 text-sm text-gray-700 mt-2 pt-2 border-t border-gray-100">
-                        <span>👥</span>
-                        <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
-                        <span className="text-gray-500 text-xs">participantes</span>
+                {Object.entries(estadisticasGenerales).map(([tipo, stats]) => {
+                  const isSens = tipo === "Sensibilización";
+                  const totalEval = stats.evaluadas + stats.evaluadasWA;
+                  const pctSens = isSens && metasAplicables.metaSens > 0
+                    ? Math.round((stats.participantes / metasAplicables.metaSens) * 100)
+                    : null;
+                  const pctEval = isSens && metasAplicables.metaEval > 0
+                    ? Math.round((totalEval / metasAplicables.metaEval) * 100)
+                    : null;
+                  const colorPct = (p: number | null) => {
+                    if (p === null) return "text-gray-500";
+                    if (p >= 70) return "text-green-700";
+                    if (p >= 40) return "text-yellow-600";
+                    return "text-red-600";
+                  };
+                  return (
+                    <div key={tipo} className={`bg-white rounded-lg p-4 shadow-sm border ${isSens ? "border-blue-200 lg:col-span-2" : "border-gray-200"}`}>
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">{tipo}</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                          {stats.count}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {stats.participantes > 0 && (
+                        <div className="flex items-center gap-1 text-sm text-gray-700 mt-2 pt-2 border-t border-gray-100">
+                          <span>👥</span>
+                          <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
+                          <span className="text-gray-500 text-xs">participantes</span>
+                        </div>
+                      )}
+                      {isSens && (
+                        <>
+                          <div className="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-gray-100 text-xs">
+                            <div>
+                              <div className="text-gray-500">Eval. papel</div>
+                              <div className="font-semibold text-gray-900">{stats.evaluadas.toLocaleString('es-CO')}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Eval. WhatsApp</div>
+                              <div className="font-semibold text-gray-900">{stats.evaluadasWA.toLocaleString('es-CO')}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500">Total eval.</div>
+                              <div className="font-bold text-gray-900">{totalEval.toLocaleString('es-CO')}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">Meta Sensibilización</div>
+                              {metasAplicables.metaSens > 0 ? (
+                                <>
+                                  <div className="flex items-baseline gap-1">
+                                    <span className={`text-lg font-bold ${colorPct(pctSens)}`}>{pctSens}%</span>
+                                    <span className="text-xs text-gray-500">de {metasAplicables.metaSens.toLocaleString('es-CO')}</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                    <div className={`h-1.5 rounded-full ${pctSens! >= 70 ? "bg-green-500" : pctSens! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
+                                         style={{ width: `${Math.min(pctSens!, 100)}%` }} />
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-400">Sin meta</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">Meta Evaluaciones</div>
+                              {metasAplicables.metaEval > 0 ? (
+                                <>
+                                  <div className="flex items-baseline gap-1">
+                                    <span className={`text-lg font-bold ${colorPct(pctEval)}`}>{pctEval}%</span>
+                                    <span className="text-xs text-gray-500">de {metasAplicables.metaEval.toLocaleString('es-CO')}</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                    <div className={`h-1.5 rounded-full ${pctEval! >= 70 ? "bg-green-500" : pctEval! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
+                                         style={{ width: `${Math.min(pctEval!, 100)}%` }} />
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-400">Sin meta</span>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -766,8 +894,26 @@ export default function ActividadesPage() {
                           </h2>
                           {/* Resumen compacto por tipo - En columna */}
                           <div className="flex flex-col gap-1.5 mt-2">
-                            {Object.entries(resumenMes).map(([tipo, stats]) => (
-                              <div key={tipo} className="flex items-center gap-2 text-xs">
+                            {Object.entries(resumenMes).map(([tipo, stats]) => {
+                              const isSens = tipo === "Sensibilización";
+                              const totalEval = stats.evaluadas + stats.evaluadasWA;
+                              // Meta del mes específico (de monthKey)
+                              const mesNum = parseInt(monthKey.split('-')[1]);
+                              const metaDelMes = metasMensuales.find(m => m.mes === mesNum);
+                              const pctSens = isSens && metaDelMes && metaDelMes.metaSensibilizacion > 0
+                                ? Math.round((stats.participantes / metaDelMes.metaSensibilizacion) * 100)
+                                : null;
+                              const pctEval = isSens && metaDelMes && metaDelMes.metaEvaluaciones > 0
+                                ? Math.round((totalEval / metaDelMes.metaEvaluaciones) * 100)
+                                : null;
+                              const pctClass = (p: number | null) => {
+                                if (p === null) return "";
+                                if (p >= 70) return "text-green-700 font-semibold";
+                                if (p >= 40) return "text-yellow-700 font-semibold";
+                                return "text-red-600 font-semibold";
+                              };
+                              return (
+                              <div key={tipo} className="flex items-center gap-2 text-xs flex-wrap">
                                 <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-300 min-w-[200px]">
                                   <span className="font-medium text-gray-700">{tipo}:</span>
                                   <span className="font-bold text-blue-600">{stats.count}</span>
@@ -778,11 +924,11 @@ export default function ActividadesPage() {
                                         <span>👥</span>
                                         <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
                                       </span>
-                                      {stats.evaluadas > 0 && (
+                                      {totalEval > 0 && (
                                         <>
                                           <span className="text-gray-400">|</span>
                                           <span className="text-green-600 flex items-center gap-1">
-                                            <span className="font-semibold">{stats.evaluadas.toLocaleString('es-CO')}</span>
+                                            <span className="font-semibold">{totalEval.toLocaleString('es-CO')}</span>
                                             <span className="text-green-500">eval.</span>
                                           </span>
                                         </>
@@ -790,8 +936,23 @@ export default function ActividadesPage() {
                                     </>
                                   )}
                                 </span>
+                                {isSens && pctSens !== null && (
+                                  <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-gray-200">
+                                    <span className="text-gray-500">Sens:</span>
+                                    <span className={pctClass(pctSens)}>{pctSens}%</span>
+                                    <span className="text-gray-400">/{metaDelMes!.metaSensibilizacion}</span>
+                                  </span>
+                                )}
+                                {isSens && pctEval !== null && (
+                                  <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-gray-200">
+                                    <span className="text-gray-500">Eval:</span>
+                                    <span className={pctClass(pctEval)}>{pctEval}%</span>
+                                    <span className="text-gray-400">/{metaDelMes!.metaEvaluaciones}</span>
+                                  </span>
+                                )}
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
