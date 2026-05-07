@@ -119,7 +119,8 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
   const currentMonth = now.getMonth() + 1;
   const [mode, setMode] = useState<"anual" | "mensual">("anual");
   const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState(currentMonth);
+  const [monthFrom, setMonthFrom] = useState(currentMonth);
+  const [monthTo, setMonthTo] = useState(currentMonth);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandRecol, setExpandRecol] = useState(false);
@@ -136,7 +137,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         const url =
           mode === "anual"
             ? `/api/dashboard/ejecutivo-stats?year=${year}`
-            : `/api/dashboard/ejecutivo-stats-mensual?year=${year}&month=${month}`;
+            : `/api/dashboard/ejecutivo-stats-mensual?year=${year}&monthFrom=${monthFrom}&monthTo=${monthTo}`;
         const res = await fetch(url);
         if (res.ok) setStats(await res.json());
       } catch (err) {
@@ -146,7 +147,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
       }
     }
     load();
-  }, [mode, year, month]);
+  }, [mode, year, monthFrom, monthTo]);
 
   const yearOptions = Array.from(
     { length: currentYear - 2024 + 1 },
@@ -246,15 +247,37 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
           </select>
 
           {mode === "mensual" && (
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
-            >
-              {MES_NOMBRES.map((nombre, i) => (
-                <option key={i + 1} value={i + 1}>{nombre}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Desde</span>
+              <select
+                value={monthFrom}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setMonthFrom(v);
+                  // Si Desde > Hasta, ajustar Hasta para mantener rango válido
+                  if (v > monthTo) setMonthTo(v);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+              >
+                {MES_NOMBRES.map((nombre, i) => (
+                  <option key={i + 1} value={i + 1}>{nombre}</option>
+                ))}
+              </select>
+              <span className="text-xs text-gray-500">Hasta</span>
+              <select
+                value={monthTo}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setMonthTo(v);
+                  if (v < monthFrom) setMonthFrom(v);
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:ring-2 focus:ring-[#00d084] focus:border-[#00d084]"
+              >
+                {MES_NOMBRES.map((nombre, i) => (
+                  <option key={i + 1} value={i + 1}>{nombre}</option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       </div>

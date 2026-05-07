@@ -61,39 +61,66 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
-    const month = parseInt(searchParams.get("month") || String(now.getMonth() + 1));
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
-      return NextResponse.json({ error: "month inválido" }, { status: 400 });
+    // Acepta monthFrom/monthTo (rango) o month (mono-mes, compat).
+    const singleMonth = searchParams.get("month");
+    let monthFrom = parseInt(
+      searchParams.get("monthFrom") || singleMonth || String(now.getMonth() + 1)
+    );
+    let monthTo = parseInt(
+      searchParams.get("monthTo") || singleMonth || String(now.getMonth() + 1)
+    );
+    if (
+      !Number.isInteger(monthFrom) || monthFrom < 1 || monthFrom > 12 ||
+      !Number.isInteger(monthTo) || monthTo < 1 || monthTo > 12
+    ) {
+      return NextResponse.json({ error: "monthFrom/monthTo inválidos" }, { status: 400 });
     }
-    const monthStr = String(month).padStart(2, "0");
-    const periodo = `${year}-${monthStr}`;
+    if (monthFrom > monthTo) {
+      // Auto-corrección defensiva
+      [monthFrom, monthTo] = [monthTo, monthFrom];
+    }
+    const periodoFrom = `${year}-${String(monthFrom).padStart(2, "0")}`;
+    const periodoTo = `${year}-${String(monthTo).padStart(2, "0")}`;
 
     // Fechas para cálculos de saldo acumulado
-    const finMes = lastDayStr(year, month); // YYYY-MM-DD
-    const finMesAnterior = lastDayPrevMonthStr(year, month);
-
-    // Mismo mes año anterior (deltas)
-    const periodoPrev = `${year - 1}-${monthStr}`;
+    const finMes = lastDayStr(year, monthTo); // último día del periodo
+    const finMesAnterior = lastDayPrevMonthStr(year, monthFrom); // día antes del periodo
 
     const [
       allKardex,
       allActividades,
-      metasMensuales,
+      metasMensualesAll,
       coordinadoresActivos,
       centrosAcopio,
     ] = await Promise.all([
       getAllKardex(),
       listAllActividades(),
-      getAllMetasMensuales(year, month),
+      // Traer metas de los meses en el rango → concatenar
+      Promise.all(
+        Array.from({ length: monthTo - monthFrom + 1 }, (_, i) =>
+          getAllMetasMensuales(year, monthFrom + i)
+        )
+      ).then((arr) => arr.flat()),
       getAllCoordinadoresActivos(),
       getCentrosAcopio(),
     ]);
+    const metasMensuales = metasMensualesAll;
 
-    const kardexMes = allKardex.filter((k) => k.fields.MES === periodo);
-    const kardexMesPrev = allKardex.filter((k) => k.fields.MES === periodoPrev);
-    const actividadesMes = allActividades.filter(
-      (a) => a.fields.Mes === periodo
-    );
+    // Helpers para filtros por rango (kardex.MES y actividad.Mes son YYYY-MM)
+    const inRange = (mes: string | undefined): boolean =>
+      typeof mes === "string" && mes >= periodoFrom && mes <= periodoTo;
+    const inRangePrevYear = (mes: string | undefined): boolean => {
+      if (typeof mes !== "string") return false;
+      // mismo rango de meses, año anterior
+      return (
+        mes >= `${year - 1}-${String(monthFrom).padStart(2, "0")}` &&
+        mes <= `${year - 1}-${String(monthTo).padStart(2, "0")}`
+      );
+    };
+
+    const kardexMes = allKardex.filter((k) => inRange(k.fields.MES));
+    const kardexMesPrev = allKardex.filter((k) => inRangePrevYear(k.fields.MES));
+    const actividadesMes = allActividades.filter((a) => inRange(a.fields.Mes));
 
     const coordMap = new Map(coordinadoresActivos.map((c) => [c.id, c.name]));
 
@@ -370,11 +397,18 @@ export async function GET(request: Request) {
       return { mes: mesStr, entradas: Math.round(e), salidas: Math.round(s) };
     }).reverse();
 
+    const monthLabel =
+      monthFrom === monthTo
+        ? MES_LABEL[monthFrom - 1]
+        : `${MES_LABEL[monthFrom - 1]} - ${MES_LABEL[monthTo - 1]}`;
+
     return NextResponse.json({
       mode: "mensual",
       year,
-      month,
-      monthLabel: MES_LABEL[month - 1],
+      month: monthFrom === monthTo ? monthFrom : undefined, // legacy si single
+      monthFrom,
+      monthTo,
+      monthLabel,
       kpis: {
         entradasKg: Math.round(entradasKg),
         salidasKg: Math.round(salidasKg),
