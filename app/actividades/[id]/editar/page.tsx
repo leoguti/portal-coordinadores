@@ -36,6 +36,7 @@ interface Actividad {
     Municipio?: string[];
     "mundep (from Municipio)"?: string[];
     "Cantidad de Participantes"?: number;
+    "Personas Evaluadas"?: number;
     Observaciones?: string;
     Fotografias?: AirtableAttachment[];
     "Listado Asistencia"?: AirtableAttachment[];
@@ -90,7 +91,12 @@ export default function EditarActividadPage() {
       setExistingPhotos(data.actividad.fields?.Fotografias || []);
       setExistingDocs(data.actividad.fields?.["Listado Asistencia"] || []);
       setExistingEvals(data.actividad.fields?.["Evaluaciones"] || []);
-      setCurrentModalidadEval(data.actividad.fields?.["Modalidad Evaluacion"] || "");
+      // Inferir modalidad si la actividad antigua no la tiene pero sí registra evaluadas en papel
+      const modalidadGuardada = data.actividad.fields?.["Modalidad Evaluacion"] || "";
+      const evaluadasPapel = data.actividad.fields?.["Personas Evaluadas"] || 0;
+      const modalidadInferida =
+        modalidadGuardada || (evaluadasPapel > 0 ? "Solo manual" : "");
+      setCurrentModalidadEval(modalidadInferida);
     } catch (err) {
       console.error("Error fetching activity:", err);
       setError(err instanceof Error ? err.message : "No se pudo cargar la actividad");
@@ -211,6 +217,7 @@ export default function EditarActividadPage() {
           cultivo: data.cultivo || undefined,
           municipioId: data.municipio?.id,
           cantidadParticipantes: data.cantidadParticipantes ? parseInt(data.cantidadParticipantes) : undefined,
+          personasEvaluadas: data.personasEvaluadas ? parseInt(data.personasEvaluadas) : undefined,
           modalidadEvaluacion: data.modalidadEvaluacion || undefined,
           observaciones: data.observaciones || undefined,
           fotografias: remainingPhotos,
@@ -397,7 +404,10 @@ export default function EditarActividadPage() {
       ? { id: actividad.fields.Municipio[0], mundep: actividad.fields["mundep (from Municipio)"][0] }
       : null,
     cantidadParticipantes: actividad.fields["Cantidad de Participantes"]?.toString() || "",
-    modalidadEvaluacion: actividad.fields["Modalidad Evaluacion"] || "",
+    personasEvaluadas: actividad.fields["Personas Evaluadas"]?.toString() || "",
+    modalidadEvaluacion:
+      actividad.fields["Modalidad Evaluacion"]
+      || (((actividad.fields["Personas Evaluadas"] || 0) > 0) ? "Solo manual" : ""),
     observaciones: actividad.fields.Observaciones || "",
   };
 
