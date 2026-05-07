@@ -185,7 +185,10 @@ export async function GET(request: Request) {
       return Math.round(((actual - prev) / prev) * 100);
     }
 
-    // --- Metas mensuales por coordinador (1 record por coord en MetasMensuales) ---
+    // --- Metas mensuales por coordinador, sumadas en todo el rango ---
+    // Hay un record por coordinador y por mes, así que en un rango de N meses
+    // pueden haber N records por coord. Acumulamos las metas en lugar de
+    // sobrescribir.
     const metaMap = new Map<
       string,
       { rec: number; sen: number; eva: number }
@@ -193,11 +196,11 @@ export async function GET(request: Request) {
     for (const m of metasMensuales) {
       const cid = m.fields.Coordinador?.[0];
       if (!cid) continue;
-      metaMap.set(cid, {
-        rec: m.fields.MetaRecoleccion || 0,
-        sen: m.fields.MetaSensibilizacion || 0,
-        eva: m.fields.MetaEvaluaciones || 0,
-      });
+      const cur = metaMap.get(cid) || { rec: 0, sen: 0, eva: 0 };
+      cur.rec += m.fields.MetaRecoleccion || 0;
+      cur.sen += m.fields.MetaSensibilizacion || 0;
+      cur.eva += m.fields.MetaEvaluaciones || 0;
+      metaMap.set(cid, cur);
     }
 
     // --- Recolección por coordinador (kardex del mes) ---
