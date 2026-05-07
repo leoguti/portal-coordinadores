@@ -491,16 +491,21 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>
-              <span className="inline-block w-2 h-2 rounded-full bg-[#00d084] mr-1" />
-              WhatsApp: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.whatsapp)}</strong>
-              <span className="ml-2 text-gray-400">
-                <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
-                Reportadas: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.reportadas)}</strong>
+          <div className="flex justify-between items-start text-xs text-gray-500 mb-1 gap-3">
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              <span>
+                <span className="inline-block w-2 h-2 rounded-full bg-[#00d084] mr-1" />
+                WhatsApp: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.whatsapp)}</strong>
               </span>
-            </span>
-            <span>Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
+              <span>
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
+                Presenciales: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.reportadas)}</strong>
+              </span>
+              <span>
+                Total: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.total)}</strong>
+              </span>
+            </div>
+            <span className="whitespace-nowrap">Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
           </div>
           <button
             onClick={() => startTransition(() => setExpandEval(!expandEval))}
@@ -516,7 +521,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     <th className="text-left p-2 font-semibold text-gray-600">Coordinador</th>
                     <th className="text-right p-2 font-semibold text-gray-600">Meta</th>
                     <th className="text-right p-2 font-semibold text-gray-600 text-[#00d084]">WA</th>
-                    <th className="text-right p-2 font-semibold text-gray-600 text-blue-500">Rep.</th>
+                    <th className="text-right p-2 font-semibold text-gray-600 text-blue-500" title="Evaluaciones presenciales / en papel">Presenciales</th>
                     <th className="text-right p-2 font-semibold text-gray-600">Total</th>
                     <th className="text-right p-2 font-semibold text-gray-600">%</th>
                     <th className="text-center p-2 w-8"></th>
