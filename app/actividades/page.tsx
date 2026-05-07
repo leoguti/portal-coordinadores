@@ -1032,6 +1032,37 @@ export default function ActividadesPage() {
                                                 </div>
                                               )}
                                             </div>
+
+                                            {/* Bloque de evaluaciones (solo Sensibilización) */}
+                                            {actividad.fields.Tipo === "Sensibilización" && (() => {
+                                              const papel = actividad.fields["Personas Evaluadas"] || 0;
+                                              const wa = actividad.fields.CantidadEvaluaciones || 0;
+                                              const total = papel + wa;
+                                              return (
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-gray-200">
+                                                  {actividad.fields["Modalidad Evaluacion"] && (
+                                                    <div>
+                                                      <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Modalidad Eval.</h4>
+                                                      <p className="text-sm font-medium text-gray-900">
+                                                        {actividad.fields["Modalidad Evaluacion"]}
+                                                      </p>
+                                                    </div>
+                                                  )}
+                                                  <div>
+                                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Eval. en papel</h4>
+                                                    <p className="text-sm font-medium text-gray-900">{papel}</p>
+                                                  </div>
+                                                  <div>
+                                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Eval. WhatsApp</h4>
+                                                    <p className="text-sm font-medium text-gray-900">{wa}</p>
+                                                  </div>
+                                                  <div>
+                                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Total Eval.</h4>
+                                                    <p className="text-sm font-bold text-gray-900">{total}</p>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })()}
                                           </div>
 
                                           {photoCount > 0 && (
