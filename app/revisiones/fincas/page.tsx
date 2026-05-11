@@ -1420,6 +1420,10 @@ export default function RevisionFincasPage() {
   const [selectedFincaIds, setSelectedFincaIds] = useState<Set<string>>(new Set());
   const [selectionGeneradorId, setSelectionGeneradorId] = useState<string | null>(null);
 
+  // Filtro por coordinador (solo admin)
+  const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
+  const [coordinadores, setCoordinadores] = useState<{id: string; name: string}[]>([]);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
@@ -1427,8 +1431,12 @@ export default function RevisionFincasPage() {
   const loadData = useCallback(() => {
     if (status !== "authenticated") return;
     setLoading(true);
+    const params = new URLSearchParams();
+    if (session?.user?.rol && ["Administrador", "Supervisor"].includes(session.user.rol) && selectedCoordinador) {
+      params.set("coordinadorId", selectedCoordinador);
+    }
     Promise.all([
-      fetch("/api/revisiones/fincas").then((r) => r.json()),
+      fetch(`/api/revisiones/fincas?${params.toString()}`).then((r) => r.json()),
       fetch("/api/cultivos").then((r) => r.json()),
     ]).then(([f, c]) => {
       setGrupos(f.grupos || []);
@@ -1437,9 +1445,19 @@ export default function RevisionFincasPage() {
       setCultivos(c.cultivos || []);
       setLoading(false);
     });
-  }, [status]);
+  }, [status, session, selectedCoordinador]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Cargar coordinadores si es admin
+  useEffect(() => {
+    if (session?.user?.rol && ["Administrador", "Supervisor"].includes(session.user.rol)) {
+      fetch("/api/coordinadores?onlyCoordinadores=true")
+        .then((r) => r.json())
+        .then((data) => setCoordinadores(data.coordinadores || []))
+        .catch(() => {});
+    }
+  }, [session?.user?.rol]);
 
   const handleSave = useCallback(async (fincaId: string, data: any) => {
     const res = await fetch(`/api/revisiones/fincas/${fincaId}`, {
@@ -1725,6 +1743,18 @@ export default function RevisionFincasPage() {
             <option value="Juridica">Jurídica ({totalJuridica})</option>
             <option value="sin-clasificar">Sin clasificar ({totalSinClasificar})</option>
           </select>
+          {session?.user?.rol && ["Administrador", "Supervisor"].includes(session.user.rol) && coordinadores.length > 0 && (
+            <select
+              value={selectedCoordinador}
+              onChange={(e) => setSelectedCoordinador(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Todos los coordinadores</option>
+              {coordinadores.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             placeholder="Buscar por nombre, NIT o dirección..."

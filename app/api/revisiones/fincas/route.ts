@@ -87,6 +87,11 @@ export async function GET(request: NextRequest) {
   const coordinadorId = session.user.coordinatorRecordId;
   const CHUNK = 30;
 
+  // Admin puede filtrar por coordinador específico via query param
+  const filtroCoordinadorId = isAdmin
+    ? (request.nextUrl.searchParams.get("coordinadorId") || null)
+    : coordinadorId;
+
   // 1. Fetch FINCAS asignadas al coordinador vía el rollup coordinador_id
   // (expone el RECORD_ID de coordinador_asignado como texto, sí filtrable).
   const fFields = [
@@ -94,9 +99,9 @@ export async function GET(request: NextRequest) {
     "revisado", "notas_migracion", "coordinador_asignado", "ubicaciones",
   ];
   const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  const fincaFilter = isAdmin
+  const fincaFilter = !filtroCoordinadorId
     ? "TRUE()"
-    : `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
+    : `FIND('${filtroCoordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
 
   const fincas: any[] = [];
   let offset = "";
