@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
 
+// ⚠️ Mantenimiento temporal
+const MANTENIMIENTO_FINCAS = true;
+
 interface Ubicacion {
   id: string;
   nombre: string;
@@ -231,7 +234,26 @@ export default function CertificadosPage() {
           <p className="text-gray-500 text-sm mt-1">Certificado de devolución de envases vacíos de plaguicidas</p>
         </div>
 
+        {/* ⚠️ AVISO DE MANTENIMIENTO */}
+        {MANTENIMIENTO_FINCAS && (
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <div className="flex items-start gap-3">
+              <div className="text-red-500 font-bold text-xl">⚠️</div>
+              <div>
+                <h3 className="font-semibold text-red-900">Mantenimiento temporal</h3>
+                <p className="text-sm text-red-800 mt-1">
+                  La generación de certificados está temporalmente desactivada mientras se revisan y ajustan las fincas en el sistema.
+                </p>
+                <p className="text-sm text-red-700 mt-2 font-medium">
+                  Por favor, contacta con el administrador si tienes dudas.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── PASO 1: BUSCAR GENERADOR ───────────────────── */}
+        {!MANTENIMIENTO_FINCAS && (
         <div className="bg-white rounded-lg shadow p-6 mb-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
             1. Generador
@@ -425,9 +447,10 @@ export default function CertificadosPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* ── PASO 2: DATOS DEL CERTIFICADO ─────────────── */}
-        {seleccionada && (
+        {!MANTENIMIENTO_FINCAS && seleccionada && (
           <form onSubmit={generarCertificado}>
             <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-5">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
