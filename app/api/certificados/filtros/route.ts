@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { normalizeTipoGenerador } from "@/lib/certificadosFilters";
 
 export const maxDuration = 60;
 
@@ -20,7 +19,8 @@ interface FiltrosCache {
   cultivos: CultivoOption[];
   coordinadores: CoordinadorOption[];
   departamentos: string[];
-  tiposGenerador: string[];
+  municipios: string[];
+  meses: string[];
   anos: number[];
   loadedAt: number;
 }
@@ -102,17 +102,18 @@ async function loadFiltros(): Promise<FiltrosCache> {
   );
   coordinadores.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
-  // Escaneo de la tabla Certificados para extraer departamentos, tipos y años únicos.
-  // Solo traemos los campos necesarios para minimizar payload.
+  // Escaneo de Certificados para extraer departamentos, municipios, años y meses únicos
   const certParams = new URLSearchParams();
   certParams.append("fields[]", "Departamento");
-  certParams.append("fields[]", "tipogenerador");
+  certParams.append("fields[]", "municipiogenerador");
   certParams.append("fields[]", "ano");
+  certParams.append("fields[]", "fechadevolucion");
   certParams.set("pageSize", "100");
 
   const deptoSet = new Set<string>();
-  const tipoSet = new Set<string>();
+  const muniSet = new Set<string>();
   const anoSet = new Set<number>();
+  const mesSet = new Set<string>();
 
   await fetchAllPaginated<null>(
     `https://api.airtable.com/v0/${baseId}/Certificados`,
@@ -126,32 +127,39 @@ async function loadFiltros(): Promise<FiltrosCache> {
           if (s) deptoSet.add(s);
         }
       }
-      const tip = rec.fields["tipogenerador"];
-      if (Array.isArray(tip)) {
-        for (const t of tip) {
-          const norm = normalizeTipoGenerador(String(t || ""));
-          if (norm) tipoSet.add(norm);
+      const mun = rec.fields["municipiogenerador"];
+      if (Array.isArray(mun)) {
+        for (const m of mun) {
+          const s = String(m || "").trim();
+          if (s) muniSet.add(s);
         }
       }
       const ano = rec.fields["ano"];
-      if (typeof ano === "number" && Number.isFinite(ano)) {
-        anoSet.add(ano);
-      } else if (Array.isArray(ano) && typeof ano[0] === "number") {
-        anoSet.add(ano[0]);
+      let anoNumber: number | null = null;
+      if (typeof ano === "number" && Number.isFinite(ano)) anoNumber = ano;
+      else if (Array.isArray(ano) && typeof ano[0] === "number") anoNumber = ano[0];
+      if (anoNumber !== null) anoSet.add(anoNumber);
+
+      const fecha = rec.fields["fechadevolucion"];
+      const fechaStr = typeof fecha === "string" ? fecha : Array.isArray(fecha) ? String(fecha[0] || "") : "";
+      if (fechaStr && /^\d{4}-\d{2}-\d{2}/.test(fechaStr)) {
+        mesSet.add(fechaStr.slice(0, 7));
       }
       return null;
     }
   );
 
   const departamentos = [...deptoSet].sort((a, b) => a.localeCompare(b, "es"));
-  const tiposGenerador = [...tipoSet].sort();
+  const municipios = [...muniSet].sort((a, b) => a.localeCompare(b, "es"));
   const anos = [...anoSet].sort((a, b) => b - a);
+  const meses = [...mesSet].sort().reverse(); // más reciente primero
 
   return {
     cultivos,
     coordinadores,
     departamentos,
-    tiposGenerador,
+    municipios,
+    meses,
     anos,
     loadedAt: Date.now(),
   };
@@ -190,7 +198,8 @@ export async function GET(request: Request) {
       cultivos: data.cultivos,
       coordinadores: data.coordinadores,
       departamentos: data.departamentos,
-      tiposGenerador: data.tiposGenerador,
+      municipios: data.municipios,
+      meses: data.meses,
       anos: data.anos,
     });
   } catch (error) {

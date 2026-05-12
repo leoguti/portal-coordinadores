@@ -35,14 +35,50 @@ interface FiltrosData {
   cultivos: CultivoOption[];
   coordinadores: CoordinadorOption[];
   departamentos: string[];
-  tiposGenerador: string[];
+  municipios: string[];
+  meses: string[];
   anos: number[];
+}
+
+interface GeneradorOption {
+  id: string;
+  nombre: string;
+  nit: string;
+  tipo: string;
+  tipopersona: string;
+  fincaIds: string[];
+}
+
+interface FincaOption {
+  id: string;
+  nombre: string;
 }
 
 const PAGE_SIZE = 50;
 
 const formatNumber = (n: number) =>
   new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 }).format(n);
+
+const formatMes = (yyyymm: string): string => {
+  const m = yyyymm.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return yyyymm;
+  const meses = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+  const idx = parseInt(m[2], 10) - 1;
+  return `${meses[idx] || m[2]} ${m[1]}`;
+};
 
 export default function ListarCertificadosPage() {
   const { data: session, status } = useSession();
@@ -55,21 +91,21 @@ export default function ListarCertificadosPage() {
     cultivos: [],
     coordinadores: [],
     departamentos: [],
-    tiposGenerador: [],
+    municipios: [],
+    meses: [],
     anos: [],
   });
   const [filtrosLoading, setFiltrosLoading] = useState(true);
 
   // Filtros activos
-  const [q, setQ] = useState("");
-  const [qInput, setQInput] = useState("");
   const [ano, setAno] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [mes, setMes] = useState("");
   const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
-  const [selTipos, setSelTipos] = useState<string[]>([]);
+  const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
   const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
   const [selCoordinadores, setSelCoordinadores] = useState<string[]>([]); // record IDs
+  const [generador, setGenerador] = useState<GeneradorOption | null>(null);
+  const [finca, setFinca] = useState<FincaOption | null>(null);
 
   // Datos
   const [records, setRecords] = useState<CertificadoItem[]>([]);
@@ -84,7 +120,6 @@ export default function ListarCertificadosPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Cargar opciones de filtros
   useEffect(() => {
     if (!session?.user) return;
     let cancel = false;
@@ -106,7 +141,6 @@ export default function ListarCertificadosPage() {
     };
   }, [session]);
 
-  // Mapa idCultivo -> nombre (para enviar nombres al backend)
   const cultivoNombreById = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of filtrosData.cultivos) m.set(c.id, c.nombre);
@@ -118,30 +152,28 @@ export default function ListarCertificadosPage() {
       const params = new URLSearchParams();
       params.set("pageSize", String(PAGE_SIZE));
       if (offset) params.set("offset", offset);
-      if (q.trim()) params.set("q", q.trim());
       if (ano) params.set("ano", ano);
-      if (fechaDesde) params.set("fechaDesde", fechaDesde);
-      if (fechaHasta) params.set("fechaHasta", fechaHasta);
+      if (mes) params.set("mes", mes);
+      if (generador) params.set("generador", generador.id);
+      if (finca) params.set("finca", finca.id);
       for (const d of selDepartamentos) params.append("departamento", d);
-      for (const t of selTipos) params.append("tipo", t);
+      for (const m of selMunicipios) params.append("municipio", m);
       for (const cid of selCultivos) {
         const nombre = cultivoNombreById.get(cid);
         if (nombre) params.append("cultivo", nombre);
       }
-      // Si es coordinador (no admin/supervisor), el backend fuerza su id; aún así
-      // permitimos pasar selección para admins.
       if (canViewAll) {
         for (const c of selCoordinadores) params.append("coordinador", c);
       }
       return params.toString();
     },
     [
-      q,
       ano,
-      fechaDesde,
-      fechaHasta,
+      mes,
+      generador,
+      finca,
       selDepartamentos,
-      selTipos,
+      selMunicipios,
       selCultivos,
       selCoordinadores,
       cultivoNombreById,
@@ -179,9 +211,8 @@ export default function ListarCertificadosPage() {
     [session, buildQuery, nextOffset]
   );
 
-  // Recargar cuando cambian filtros
   const depKeyDepartamentos = selDepartamentos.join(",");
-  const depKeyTipos = selTipos.join(",");
+  const depKeyMunicipios = selMunicipios.join(",");
   const depKeyCultivos = selCultivos.join(",");
   const depKeyCoordinadores = selCoordinadores.join(",");
   const userId = session?.user?.coordinatorRecordId;
@@ -191,12 +222,12 @@ export default function ListarCertificadosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     userId,
-    q,
     ano,
-    fechaDesde,
-    fechaHasta,
+    mes,
+    generador?.id,
+    finca?.id,
     depKeyDepartamentos,
-    depKeyTipos,
+    depKeyMunicipios,
     depKeyCultivos,
     depKeyCoordinadores,
   ]);
@@ -211,24 +242,23 @@ export default function ListarCertificadosPage() {
   };
 
   const clearAllFilters = () => {
-    setQ("");
-    setQInput("");
     setAno("");
-    setFechaDesde("");
-    setFechaHasta("");
+    setMes("");
     setSelDepartamentos([]);
-    setSelTipos([]);
+    setSelMunicipios([]);
     setSelCultivos([]);
     setSelCoordinadores([]);
+    setGenerador(null);
+    setFinca(null);
   };
 
   const hasActiveFilters =
-    q !== "" ||
     ano !== "" ||
-    fechaDesde !== "" ||
-    fechaHasta !== "" ||
+    mes !== "" ||
+    generador !== null ||
+    finca !== null ||
     selDepartamentos.length > 0 ||
-    selTipos.length > 0 ||
+    selMunicipios.length > 0 ||
     selCultivos.length > 0 ||
     selCoordinadores.length > 0;
 
@@ -312,42 +342,24 @@ export default function ListarCertificadosPage() {
 
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Buscar (cédula, nombre, consecutivo)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={qInput}
-                  onChange={(e) => setQInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") setQ(qInput);
-                  }}
-                  placeholder="Ej: 12345, Pérez, 1234"
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-                <button
-                  onClick={() => setQ(qInput)}
-                  className="px-3 py-2 bg-[#00d084] hover:bg-[#00b070] text-white text-sm rounded-md"
-                >
-                  Buscar
-                </button>
-                {q && (
-                  <button
-                    onClick={() => {
-                      setQ("");
-                      setQInput("");
-                    }}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-            </div>
+          {/* Búsqueda: Generador y Finca dependiente */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <GeneradorAutocomplete
+              value={generador}
+              onChange={(g) => {
+                setGenerador(g);
+                setFinca(null);
+              }}
+            />
+            <FincaAutocomplete
+              value={finca}
+              onChange={setFinca}
+              generadorId={generador?.id}
+              disabled={false}
+            />
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Año
@@ -368,22 +380,20 @@ export default function ListarCertificadosPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Rango de fechas (devolución)
+                Mes
               </label>
-              <div className="flex gap-1">
-                <input
-                  type="date"
-                  value={fechaDesde}
-                  onChange={(e) => setFechaDesde(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-2 py-2 text-sm"
-                />
-                <input
-                  type="date"
-                  value={fechaHasta}
-                  onChange={(e) => setFechaHasta(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-2 py-2 text-sm"
-                />
-              </div>
+              <select
+                value={mes}
+                onChange={(e) => setMes(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">Todos</option>
+                {filtrosData.meses.map((m) => (
+                  <option key={m} value={m}>
+                    {m} — {formatMes(m)}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -396,13 +406,15 @@ export default function ListarCertificadosPage() {
                 toggleInArray(selDepartamentos, v, setSelDepartamentos)
               }
               loading={filtrosLoading}
+              searchable
             />
             <MultiSelectChips
-              label="Tipo de generador"
-              options={filtrosData.tiposGenerador.map((t) => ({ id: t, label: t }))}
-              selected={selTipos}
-              onToggle={(v) => toggleInArray(selTipos, v, setSelTipos)}
+              label="Municipio"
+              options={filtrosData.municipios.map((m) => ({ id: m, label: m }))}
+              selected={selMunicipios}
+              onToggle={(v) => toggleInArray(selMunicipios, v, setSelMunicipios)}
               loading={filtrosLoading}
+              searchable
             />
             <MultiSelectChips
               label="Cultivos"
@@ -532,6 +544,256 @@ export default function ListarCertificadosPage() {
     </AuthenticatedLayout>
   );
 }
+
+/* -------------------- Autocomplete Generador -------------------- */
+
+function GeneradorAutocomplete({
+  value,
+  onChange,
+}: {
+  value: GeneradorOption | null;
+  onChange: (g: GeneradorOption | null) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<GeneradorOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/generadores/buscar?q=${encodeURIComponent(q)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.results || []);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Generador
+      </label>
+      {value ? (
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-green-50">
+          <span className="text-sm text-gray-800 flex-1">
+            <span className="font-medium">{value.nombre}</span>
+            {value.nit && <span className="text-xs text-gray-500"> · NIT {value.nit}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setQ("");
+            }}
+            className="text-gray-500 hover:text-red-600 text-sm"
+            aria-label="Quitar generador"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="Buscar por nombre o NIT (mín 2 caracteres)"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          />
+          {open && q.length >= 2 && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {loading ? (
+                <div className="p-2 text-xs text-gray-400">Buscando...</div>
+              ) : results.length === 0 ? (
+                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+              ) : (
+                results.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(g);
+                      setQ("");
+                      setOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="text-sm font-medium text-gray-800">
+                      {g.nombre}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {g.nit && `NIT ${g.nit}`}
+                      {g.tipo && ` · ${g.tipo}`}
+                      {g.fincaIds.length > 0 && ` · ${g.fincaIds.length} finca(s)`}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -------------------- Autocomplete Finca -------------------- */
+
+function FincaAutocomplete({
+  value,
+  onChange,
+  generadorId,
+  disabled,
+}: {
+  value: FincaOption | null;
+  onChange: (f: FincaOption | null) => void;
+  generadorId?: string;
+  disabled: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<FincaOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Si hay generador seleccionado, cargamos sus fincas al inicio (sin q)
+    if (generadorId && !value) {
+      (async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(
+            `/api/fincas/buscar?generador=${encodeURIComponent(generadorId)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setResults(data.results || []);
+          }
+        } catch {
+          setResults([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [generadorId, value]);
+
+  useEffect(() => {
+    if (!generadorId && q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const url = generadorId
+          ? `/api/fincas/buscar?generador=${encodeURIComponent(generadorId)}&q=${encodeURIComponent(q)}`
+          : `/api/fincas/buscar?q=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.results || []);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [q, generadorId]);
+
+  const placeholder = generadorId
+    ? "Selecciona o filtra fincas..."
+    : "Buscar finca por nombre (mín 2 caracteres)";
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Finca
+      </label>
+      {value ? (
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-green-50">
+          <span className="text-sm text-gray-800 flex-1 font-medium">
+            {value.nombre}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setQ("");
+            }}
+            className="text-gray-500 hover:text-red-600 text-sm"
+            aria-label="Quitar finca"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+          />
+          {open && (generadorId || q.length >= 2) && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {loading ? (
+                <div className="p-2 text-xs text-gray-400">Buscando...</div>
+              ) : results.length === 0 ? (
+                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+              ) : (
+                results.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      onChange({ id: f.id, nombre: f.nombre });
+                      setQ("");
+                      setOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="text-sm font-medium text-gray-800">
+                      {f.nombre}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -------------------- MultiSelectChips -------------------- */
 
 interface MultiSelectChipsProps {
   label: string;

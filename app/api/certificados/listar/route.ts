@@ -50,13 +50,51 @@ function buildSelectorParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   for (const f of FIELDS_TO_FETCH) params.append("fields[]", f);
-  // Ordenar por fechadevolucion DESC para que el "load more" sea estable
   params.append("sort[0][field]", "fechadevolucion");
   params.append("sort[0][direction]", "desc");
   params.set("pageSize", String(pageSize));
   if (filterFormula) params.set("filterByFormula", filterFormula);
   if (offset) params.set("offset", offset);
   return params;
+}
+
+async function resolveFincaNombres(
+  apiKey: string,
+  baseId: string,
+  fincaIds: string[]
+): Promise<string[]> {
+  if (fincaIds.length === 0) return [];
+  // Una llamada por finca (son pocas, máx 1 o pocos). Si crece, optimizar con filterByFormula OR.
+  const promises = fincaIds.map(async (id) => {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/FINCAS/${id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const rec = await res.json();
+    const nombre = String(rec.fields?.nombre || "").trim();
+    return nombre || null;
+  });
+  const results = await Promise.all(promises);
+  return results.filter((x): x is string => !!x);
+}
+
+async function resolveFincasDelGenerador(
+  apiKey: string,
+  baseId: string,
+  generadorId: string
+): Promise<string[]> {
+  const res = await fetch(
+    `https://api.airtable.com/v0/${baseId}/GENERADORES/${generadorId}`,
+    {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  const rec = await res.json();
+  const fincaIds = Array.isArray(rec.fields?.FINCAS) ? rec.fields.FINCAS : [];
+  return resolveFincaNombres(apiKey, baseId, fincaIds);
 }
 
 export async function GET(request: Request) {
@@ -81,14 +119,14 @@ export async function GET(request: Request) {
     Math.max(10, parseInt(searchParams.get("pageSize") || "50", 10) || 50)
   );
   const offset = searchParams.get("offset");
-  const q = searchParams.get("q") || "";
   const ano = searchParams.get("ano") || "";
-  const fechaDesde = searchParams.get("fechaDesde") || "";
-  const fechaHasta = searchParams.get("fechaHasta") || "";
+  const mes = searchParams.get("mes") || "";
+  const generadorId = (searchParams.get("generador") || "").trim();
+  const fincaId = (searchParams.get("finca") || "").trim();
 
   const departamentos = searchParams.getAll("departamento");
-  const tiposGenerador = searchParams.getAll("tipo");
-  const cultivoNombres = searchParams.getAll("cultivo"); // ya son nombres
+  const municipios = searchParams.getAll("municipio");
+  const cultivoNombres = searchParams.getAll("cultivo");
   const coordinadorIds = searchParams.getAll("coordinador");
 
   const canViewAll = isAdminOrSupervisor(session.user.rol);
@@ -96,15 +134,37 @@ export async function GET(request: Request) {
     ? undefined
     : session.user.coordinatorRecordId;
 
+  // Resolver finca/generador → nombres de fincas para filterByFormula.
+  // Prioridad: si vienen ambos, la finca específica gana.
+  let fincaNombres: string[] = [];
+  try {
+    if (fincaId) {
+      fincaNombres = await resolveFincaNombres(apiKey, baseId, [fincaId]);
+    } else if (generadorId) {
+      fincaNombres = await resolveFincasDelGenerador(apiKey, baseId, generadorId);
+      // Si el generador no tiene fincas, devolvemos vacío inmediatamente.
+      if (fincaNombres.length === 0) {
+        return NextResponse.json({
+          records: [],
+          pageSize,
+          count: 0,
+          nextOffset: null,
+          hasMore: false,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error resolviendo finca/generador:", err);
+  }
+
   const filterFormula = buildCertificadosFilterFormula({
-    q,
     ano: ano || undefined,
     departamentos,
-    tiposGenerador,
+    municipios,
     cultivoNombres,
     coordinadorIds,
-    fechaDesde: fechaDesde || undefined,
-    fechaHasta: fechaHasta || undefined,
+    fincaNombres,
+    mes: mes || undefined,
     forceCoordinadorId,
   });
 
