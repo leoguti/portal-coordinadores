@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { buildCertificadosFilterFormula } from "@/lib/certificadosFilters";
+import { getCultivosMap } from "@/lib/cultivosCache";
 import { isAdminOrSupervisor } from "@/lib/roles";
 
 export const maxDuration = 60;
@@ -186,11 +187,26 @@ export async function GET(request: Request) {
     }
 
     const data = await res.json();
+
+    // Resolver cultivos linked IDs → nombres
+    let cultivosMap: Map<string, string> = new Map();
+    try {
+      cultivosMap = await getCultivosMap();
+    } catch (err) {
+      console.error("Error cargando cultivos cache:", err);
+    }
+
     const records: CertificadoItem[] = (data.records || []).map(
       (rec: { id: string; fields: Record<string, unknown> }) => {
         const f = rec.fields;
         const pdfAttachments = arr<{ url?: string }>(f["certificadopdf"]);
         const pdfUrl = pdfAttachments[0]?.url || null;
+        const cultivoIds = arr<string>(f["cultivos_certificado"]).map((c) =>
+          String(c)
+        );
+        const cultivos = cultivoIds.map(
+          (id) => cultivosMap.get(id) || id
+        );
         return {
           id: rec.id,
           consecutivo: (f["consecutivo"] as string | number) ?? "",
@@ -199,9 +215,7 @@ export async function GET(request: Request) {
           cedulagenerador: firstString(f["cedulagenerador"]),
           municipiogenerador: firstString(f["municipiogenerador"]),
           departamento: firstString(f["Departamento"]),
-          cultivos: arr<string>(f["cultivos_certificado"]).map((c) =>
-            String(c)
-          ),
+          cultivos,
           coordinador: firstString(f["nombrecoordinador"]),
           total: typeof f["total"] === "number" ? (f["total"] as number) : 0,
           pdfUrl,
