@@ -254,14 +254,17 @@ Diagnóstico sobre base de datos exógena 2025 (679 registros):
 | Categoría | Cantidad |
 |-----------|----------|
 | ✅ Válidos (DV correcto) | 629 |
-| 🚨 Fraudulentos (DV incorrecto) | 2 |
+| ⚠️ Inconsistencias DV/número | 2 |
 | ⚠️ Sin DV | 43 |
 | ❌ Datos corruptos | 5 |
 
-- **CC (Tipo 13):** 0 documentos fraudulentos — el algoritmo único funciona perfectamente
-- **NIT (Tipo 31):** solo 2 documentos con DV incorrecto:
-  - `900339719-4` (debe ser `900339719-8`)
-  - `900638691-7` (debe ser `900638691-3`)
+- **CC (Tipo 13):** 0 inconsistencias — el algoritmo único funciona perfectamente
+- **NIT (Tipo 31):** 2 registros donde el DV no coincide con el número:
+  - `900339719-4` → **error de captura del NÚMERO**. El RUT oficial dice
+    `900399719-4` (un dígito mal tecleado: `33`→`39`). El DV `4` siempre fue
+    correcto; lo que estaba mal era el número de identificación en el Excel.
+  - `900638691-7` → inconsistencia sin resolver (faltó el RUT oficial). Hay 7
+    números a un dígito de distancia que producirían DV=7.
 
 > El alto índice de validación (629/679) se logró únicamente al aplicar el
 > **padding a 15 dígitos**. Sin ese paso, las cédulas (números cortos) fallaban
@@ -277,7 +280,13 @@ Diagnóstico sobre base de datos exógena 2025 (679 registros):
 
 ⚠️ **Contar bien los dígitos:** Una transcripción con un dígito de más o de menos cambia completamente el resultado. Verificar la longitud del número antes de calcular.
 
-⚠️ **Detección de fraude:** Si un documento produce un DV diferente al calculado con este algoritmo (y el número fue transcrito correctamente), el documento es potencialmente fraudulento.
+⚠️ **Una inconsistencia DV/número NO implica fraude.** Cuando el DV reportado no coincide con el DV calculado, hay tres causas posibles, en orden de frecuencia:
+
+1. **Número mal tecleado** (lo más común) — el DV es correcto, pero el número de identificación tiene un error de captura. Caso real confirmado: `900339719` en el Excel era en realidad `900399719` en el RUT oficial; el DV `4` siempre fue correcto.
+2. **DV mal escrito** — el número es correcto, el DV se digitó mal.
+3. **Fraude real** — raro.
+
+Antes de declarar algo "fraudulento", **verificar el número contra el RUT oficial** (casilla 5 = NIT, casilla 6 = DV). Un solo dígito mal capturado en el número produce un DV totalmente distinto y falsos positivos de fraude.
 
 ---
 
