@@ -145,45 +145,51 @@ DV = 0 ✓
 
 ---
 
-### Ejemplo 3: CC 105239718 (Persona Natural)
+### Ejemplo 3: CC 1052397182 (Persona Natural — 10 dígitos)
 
-**Entrada:** `105239718`
+**Entrada:** `1052397182` (Daniel Alfonso Dallos Nuñez)
 
 **Paso 1 - Formato a 15 dígitos:**
 ```
-000000105239718
+000001052397182
 ```
 
 **Paso 2 - Multiplicación por pesos:**
 ```
-Pos  1-6:  0 × (71, 67, 59, 53, 47, 43) =    0
-Pos  7: 1 × 41 =     41
-Pos  8: 0 × 37 =      0
-Pos  9: 5 × 29 =    145
-Pos 10: 2 × 23 =     46
-Pos 11: 3 × 19 =     57
-Pos 12: 9 × 17 =    153
-Pos 13: 7 × 13 =     91
-Pos 14: 1 × 7  =      7
-Pos 15: 8 × 3  =     24
+Pos  1-5:  0 × (71, 67, 59, 53, 47) =    0
+Pos  6: 1 × 43 =     43
+Pos  7: 0 × 41 =      0
+Pos  8: 5 × 37 =    185
+Pos  9: 2 × 29 =     58
+Pos 10: 3 × 23 =     69
+Pos 11: 9 × 19 =    171
+Pos 12: 7 × 17 =    119
+Pos 13: 1 × 13 =     13
+Pos 14: 8 × 7  =     56
+Pos 15: 2 × 3  =      6
        ──────────────────
-       SUMA = 564
+       SUMA = 720
 ```
 
 **Paso 3 - Módulo 11:**
 ```
-564 % 11 = 3
+720 % 11 = 5
 ```
 
 **Paso 4 - Cálculo DV:**
 ```
-residuo = 3 (> 1)
-DV = 11 - 3 = 8
+residuo = 5 (> 1)
+DV = 11 - 5 = 6 ✓
 ```
 
-**Resultado:** `105239718-8` ✅ 
+**Resultado:** `1052397182-6` ✅ VALIDADO
 
-*Nota: Documento anterior mostraba DV=6, se considera **FRAUDULENTO**.*
+> ⚠️ **Lección crítica de este ejemplo:** Es **imprescindible contar correctamente
+> los dígitos** y aplicar el padding a 15. Una transcripción errónea (leer
+> `105239718` de 9 dígitos en vez de `1052397182` de 10) produce un DV
+> completamente distinto (8 en vez de 6) y puede hacer parecer fraudulento un
+> documento legítimo. **El padding a 15 dígitos es lo que permite que el MISMO
+> algoritmo funcione tanto para CC como para NIT** — no existen dos algoritmos.
 
 ---
 
@@ -243,18 +249,35 @@ function calcularDV(numero) {
 
 ## Precisión Confirmada
 
-- **NIT (Tipo 31):** 97.0% de coincidencia en base de datos
-- **CC (Tipo 13):** Requiere validación adicional (posibles errores en datos originales)
+Diagnóstico sobre base de datos exógena 2025 (679 registros):
+
+| Categoría | Cantidad |
+|-----------|----------|
+| ✅ Válidos (DV correcto) | 629 |
+| 🚨 Fraudulentos (DV incorrecto) | 2 |
+| ⚠️ Sin DV | 43 |
+| ❌ Datos corruptos | 5 |
+
+- **CC (Tipo 13):** 0 documentos fraudulentos — el algoritmo único funciona perfectamente
+- **NIT (Tipo 31):** solo 2 documentos con DV incorrecto:
+  - `900339719-4` (debe ser `900339719-8`)
+  - `900638691-7` (debe ser `900638691-3`)
+
+> El alto índice de validación (629/679) se logró únicamente al aplicar el
+> **padding a 15 dígitos**. Sin ese paso, las cédulas (números cortos) fallaban
+> masivamente porque los pesos se desalineaban.
 
 ---
 
 ## Notas Importantes
 
-⚠️ **Un único algoritmo:** No hay algoritmos diferentes para CC vs NIT. El mismo algoritmo aplica a todos.
+⚠️ **Un único algoritmo:** No hay algoritmos diferentes para CC vs NIT. El mismo algoritmo aplica a todos, **siempre que se aplique el padding a 15 dígitos**.
 
-⚠️ **Detección de fraude:** Si un documento produce un DV diferente al calculado con este algoritmo, el documento es potencialmente fraudulento.
+⚠️ **Formato OBLIGATORIO:** Siempre rellenar el número a 15 dígitos con ceros a la izquierda ANTES de aplicar los pesos. Este es el paso más crítico y la causa #1 de cálculos erróneos. Tomar solo los primeros 9 dígitos (error común) desalínea los pesos y produce DVs incorrectos para números cortos como las cédulas.
 
-⚠️ **Formato:** Siempre trabajar con 15 dígitos (rellenar con ceros a la izquierda si es necesario).
+⚠️ **Contar bien los dígitos:** Una transcripción con un dígito de más o de menos cambia completamente el resultado. Verificar la longitud del número antes de calcular.
+
+⚠️ **Detección de fraude:** Si un documento produce un DV diferente al calculado con este algoritmo (y el número fue transcrito correctamente), el documento es potencialmente fraudulento.
 
 ---
 
