@@ -24,9 +24,12 @@ const navItems = [
   // (/certificados) y "Listar Certificados" (/certificados/listar). Ahora
   // /certificados muestra el listado y desde ahí se accede al formulario
   // de generación con el botón "Generar nuevo certificado" → /certificados/generar.
+  // "Certificados" consolida tanto el listado actual (Airtable) como el
+  // histórico de años anteriores (snapshots Postgres+R2) en una sola
+  // entrada, con un tab dentro de /certificados para alternar entre ambos.
+  // Las rutas viejas /certificados-historicos y /admin/certificados-historicos
+  // siguen funcionando como redirects a /certificados?tab=historico.
   { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Histórico Certificados", href: "/certificados-historicos", icon: "🗂️", roles: ["Coordinador"] },
-  { name: "Histórico Certificados", href: "/admin/certificados-historicos", icon: "🗂️", roles: ["Administrador", "Supervisor"] },
   { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
 ];
 

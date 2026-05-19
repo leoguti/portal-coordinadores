@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import HistoricoCertificados from "@/components/HistoricoCertificados";
+
+type Vista = "actual" | "historico";
 
 interface CertificadoItem {
   id: string;
@@ -84,6 +87,13 @@ const formatMes = (yyyymm: string): string => {
 export default function ListarCertificadosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Tab actual: "actual" = listado de Airtable; "historico" = snapshots (Postgres+R2).
+  // Acepta ?tab=historico en la URL para deep links desde los redirects.
+  const [vista, setVista] = useState<Vista>(() =>
+    searchParams.get("tab") === "historico" ? "historico" : "actual"
+  );
 
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const sessionCoordinatorId = session?.user?.coordinatorRecordId;
@@ -302,6 +312,35 @@ export default function ListarCertificadosPage() {
             </Link>
           </div>
         </div>
+
+        {/* Tabs: actual (Airtable) vs histórico (snapshots Postgres+R2) */}
+        <div className="border-b border-gray-200 mb-4 flex gap-1 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setVista("actual")}
+            className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              vista === "actual"
+                ? "border-green-600 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            📋 Listado actual
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista("historico")}
+            className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              vista === "historico"
+                ? "border-green-600 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            🗂️ Histórico (años anteriores)
+          </button>
+        </div>
+
+        {vista === "actual" && (
+        <>
 
         {/* Chips de coordinadores (atajo tipo Kardex) */}
         {canViewAll && filtrosData.coordinadores.length > 0 && (
@@ -550,6 +589,10 @@ export default function ListarCertificadosPage() {
             </button>
           </div>
         </div>
+        </>
+        )}
+
+        {vista === "historico" && <HistoricoCertificados />}
       </div>
     </AuthenticatedLayout>
   );
