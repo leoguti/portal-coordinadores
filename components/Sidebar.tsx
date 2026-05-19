@@ -14,7 +14,11 @@ const navItems = [
   { name: "Saldos Coordinador", href: "/saldos-coordinador", icon: "👤", roles: ["Administrador", "Supervisor"] },
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Terceros", href: "/terceros", icon: "🏢", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Revisión Fincas", href: "/revisiones/fincas", icon: "✅", roles: ["Coordinador", "Administrador", "Supervisor"] },
+  // "Revisión Fincas" oculto en el Sidebar (2026-05-19): la completitud
+  // ahora se exige al momento de generar el certificado (panel rojo +
+  // bloqueo). El código de /revisiones/fincas se conserva en disco por si
+  // se vuelve a habilitar.
+  // { name: "Revisión Fincas", href: "/revisiones/fincas", icon: "✅", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Generación de Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Histórico Certificados", href: "/certificados-historicos", icon: "🗂️", roles: ["Coordinador"] },
