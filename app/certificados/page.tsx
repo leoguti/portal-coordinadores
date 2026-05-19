@@ -25,6 +25,13 @@ export default function CertificadosPage() {
   // ── Paso 1: generador → finca ─────────────────────────────
   const [generador, setGenerador] = useState<GeneradorOption | null>(null);
   const [finca, setFinca] = useState<FincaOption | null>(null);
+  const [fincaInfo, setFincaInfo] = useState<{
+    nombregenerador: string;
+    cedulagenerador: string;
+    municipiogenerador: string;
+    cultivogenerador: string;
+  } | null>(null);
+  const [fincaInfoLoading, setFincaInfoLoading] = useState(false);
 
   // ── Paso 2: datos del certificado ─────────────────────────
   const [fechaDevolucion, setFechaDevolucion] = useState("");
@@ -53,6 +60,34 @@ export default function CertificadosPage() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
+
+  // Al elegir finca, traer los datos que se congelarán (mismo resolver que
+  // /generar) para mostrarlos como información antes de generar.
+  useEffect(() => {
+    if (!finca) {
+      setFincaInfo(null);
+      return;
+    }
+    let cancel = false;
+    setFincaInfoLoading(true);
+    fetch(
+      `/api/certificados/finca-info?fincaId=${encodeURIComponent(finca.id)}`
+    )
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancel) return;
+        setFincaInfo(d && !d.error ? d : null);
+      })
+      .catch(() => {
+        if (!cancel) setFincaInfo(null);
+      })
+      .finally(() => {
+        if (!cancel) setFincaInfoLoading(false);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [finca]);
 
   if (status === "loading") {
     return (
@@ -200,6 +235,54 @@ export default function CertificadosPage() {
             <p className="text-xs text-gray-400">
               Selecciona la finca del generador para continuar.
             </p>
+          )}
+
+          {finca && (
+            <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3">
+              <p className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-2">
+                Datos que se congelan en el certificado
+              </p>
+              {fincaInfoLoading ? (
+                <p className="text-xs text-gray-500">
+                  Cargando datos de la finca...
+                </p>
+              ) : fincaInfo ? (
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
+                  <div>
+                    <dt className="inline text-gray-500">Generador: </dt>
+                    <dd className="inline font-medium">
+                      {fincaInfo.nombregenerador || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="inline text-gray-500">NIT/Cédula: </dt>
+                    <dd className="inline font-medium">
+                      {fincaInfo.cedulagenerador || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="inline text-gray-500">Municipio: </dt>
+                    <dd className="inline font-medium">
+                      {fincaInfo.municipiogenerador || "—"}
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="inline text-gray-500">Cultivo(s): </dt>
+                    <dd className="inline font-medium">
+                      {fincaInfo.cultivogenerador || (
+                        <span className="text-amber-700">
+                          Sin cultivo registrado en la finca
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-xs text-amber-700">
+                  No se pudieron cargar los datos de la finca.
+                </p>
+              )}
+            </div>
           )}
         </div>
 
