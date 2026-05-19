@@ -32,9 +32,7 @@ export default function CertificadosPage() {
   const [flexibles, setFlexibles] = useState("");
   const [metalicos, setMetalicos] = useState("");
   const [embalaje, setEmbalaje] = useState("");
-  const [triplelavado, setTriplelavado] = useState<"SI" | "NO" | "PENDIENTE">(
-    "PENDIENTE"
-  );
+  const [triplelavado, setTriplelavado] = useState<"SI" | "NO" | "">("");
   const [lugardevolucion, setLugardevolucion] = useState("");
   const [municipioDevolucion, setMunicipioDevolucion] = useState<{
     id: string;
@@ -48,9 +46,9 @@ export default function CertificadosPage() {
   const [resultado, setResultado] = useState<Resultado | null>(null);
 
   const hoy = new Date().toISOString().split("T")[0];
-  const hace120 = new Date();
-  hace120.setDate(hace120.getDate() - 120);
-  const minFecha = hace120.toISOString().split("T")[0];
+  const hace90 = new Date();
+  hace90.setDate(hace90.getDate() - 90);
+  const minFecha = hace90.toISOString().split("T")[0];
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -116,7 +114,7 @@ export default function CertificadosPage() {
     setFlexibles("");
     setMetalicos("");
     setEmbalaje("");
-    setTriplelavado("PENDIENTE");
+    setTriplelavado("");
     setLugardevolucion("");
     setMunicipioDevolucion(null);
     setObservaciones("");
@@ -268,7 +266,7 @@ export default function CertificadosPage() {
                   Triple lavado <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-4">
-                  {(["SI", "NO", "PENDIENTE"] as const).map((v) => (
+                  {(["SI", "NO"] as const).map((v) => (
                     <label
                       key={v}
                       className="flex items-center gap-1.5 cursor-pointer"
@@ -343,6 +341,7 @@ export default function CertificadosPage() {
                 !municipioDevolucion ||
                 !lugardevolucion ||
                 !fechaDevolucion ||
+                !triplelavado ||
                 totalKg <= 0
               }
               className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm transition-colors"

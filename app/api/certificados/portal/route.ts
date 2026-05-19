@@ -70,18 +70,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validar fecha: no futura, no más de 120 días atrás
+  // Validar fecha: no futura, no más de 90 días atrás
   const fecha = new Date(fechadevolucion + "T00:00:00");
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-  const hace120 = new Date(hoy);
-  hace120.setDate(hace120.getDate() - 120);
+  const hace90 = new Date(hoy);
+  hace90.setDate(hace90.getDate() - 90);
 
   if (fecha > hoy) {
     return NextResponse.json({ error: "La fecha de devolución no puede ser futura" }, { status: 400 });
   }
-  if (fecha < hace120) {
-    return NextResponse.json({ error: "La fecha de devolución no puede tener más de 120 días de antigüedad" }, { status: 400 });
+  if (fecha < hace90) {
+    return NextResponse.json({ error: "La fecha de devolución no puede tener más de 90 días de antigüedad" }, { status: 400 });
   }
 
   // Validar al menos un material > 0
