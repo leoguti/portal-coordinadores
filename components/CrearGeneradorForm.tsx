@@ -62,6 +62,12 @@ export default function CrearGeneradorForm({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicado, setDuplicado] = useState<GeneradorOption | null>(null);
+  // Tras crear con éxito, mostramos una pantalla de confirmación explícita
+  // (los coordinadores necesitan un aviso contundente antes de continuar).
+  const [creado, setCreado] = useState<{
+    generador: GeneradorOption;
+    finca: FincaOption;
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/cultivos")
@@ -148,7 +154,10 @@ export default function CrearGeneradorForm({
         setError(data.error || "Error creando el generador");
         return;
       }
-      onCreated(data.generador as GeneradorOption, data.finca as FincaOption);
+      setCreado({
+        generador: data.generador as GeneradorOption,
+        finca: data.finca as FincaOption,
+      });
     } catch {
       setError("Error de red creando el generador");
     } finally {
@@ -174,18 +183,62 @@ export default function CrearGeneradorForm({
     <div className="bg-white rounded-lg shadow p-6 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          Crear generador nuevo
+          {creado ? "Generador creado" : "Crear generador nuevo"}
         </h2>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-xs text-gray-400 hover:text-gray-600 underline"
-        >
-          Cancelar
-        </button>
+        {!creado && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            Cancelar
+          </button>
+        )}
       </div>
 
-      {duplicado ? (
+      {creado ? (
+        <div className="text-center py-4">
+          <div className="text-6xl mb-3">✅</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-1">
+            Generador y finca creados con éxito
+          </h3>
+          <p className="text-sm text-gray-600 mb-5">
+            Quedaron registrados en el sistema. Ya puedes generar el
+            certificado.
+          </p>
+          <div className="bg-green-50 border border-green-200 rounded-md text-left px-4 py-3 mb-5">
+            <dl className="grid grid-cols-1 gap-y-1 text-sm text-gray-700">
+              <div>
+                <dt className="inline text-gray-500">Generador: </dt>
+                <dd className="inline font-medium">
+                  {creado.generador.nombre}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline text-gray-500">{docLabel}: </dt>
+                <dd className="inline font-medium">{creado.generador.nit}</dd>
+              </div>
+              <div>
+                <dt className="inline text-gray-500">Finca: </dt>
+                <dd className="inline font-medium">{creado.finca.nombre}</dd>
+              </div>
+              <div>
+                <dt className="inline text-gray-500">Cultivo(s): </dt>
+                <dd className="inline font-medium">
+                  {cultivoSel.map((c) => c.nombre).join(", ") || "—"}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <button
+            type="button"
+            onClick={() => onCreated(creado.generador, creado.finca)}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg text-sm"
+          >
+            Continuar a generar el certificado
+          </button>
+        </div>
+      ) : duplicado ? (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-sm text-amber-900 font-medium mb-1">
             Ya existe un generador con ese NIT/cédula
