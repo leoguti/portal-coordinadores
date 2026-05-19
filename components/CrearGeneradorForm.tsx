@@ -296,7 +296,7 @@ export default function CrearGeneradorForm({
                   onChange={(e) => setGenMovil(e.target.value)}
                   required
                   inputMode="numeric"
-                  placeholder="3001234567"
+                  placeholder="3XXXXXXXXX"
                 />
                 <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
               </div>
@@ -364,6 +364,9 @@ export default function CrearGeneradorForm({
               <label className={labelCls}>
                 Cultivo(s) <span className="text-red-500">*</span>
               </label>
+              <p className="text-[11px] text-gray-500 mb-1">
+                Puedes seleccionar varios cultivos.
+              </p>
               {cultivoSel.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {cultivoSel.map((c) => (
@@ -426,7 +429,7 @@ export default function CrearGeneradorForm({
                   onChange={(e) => setFincaMovil(e.target.value)}
                   required
                   inputMode="numeric"
-                  placeholder="3001234567"
+                  placeholder="3XXXXXXXXX"
                 />
                 <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
               </div>
