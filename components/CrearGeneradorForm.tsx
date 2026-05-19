@@ -13,6 +13,7 @@ import type {
   GeneradorOption,
   FincaOption,
 } from "@/components/GeneradorFincaSelect";
+import { esMovilCOValido, validarDocumento } from "@/lib/validacionesCO";
 
 type Mun = { id: string; mundep: string } | null;
 
@@ -87,6 +88,26 @@ export default function CrearGeneradorForm({
     e.preventDefault();
     setError(null);
     setDuplicado(null);
+
+    // Validación en tiempo de ejecución
+    const docErr = validarDocumento(tipopersona, nit);
+    if (docErr) {
+      setError(docErr);
+      return;
+    }
+    if (!esMovilCOValido(genMovil)) {
+      setError(
+        "El móvil del generador debe ser un celular colombiano (10 dígitos, empieza por 3)"
+      );
+      return;
+    }
+    if (!esMovilCOValido(fincaMovil)) {
+      setError(
+        "El móvil de la finca debe ser un celular colombiano (10 dígitos, empieza por 3)"
+      );
+      return;
+    }
+
     setEnviando(true);
     try {
       const res = await fetch("/api/generadores/crear", {
@@ -133,6 +154,16 @@ export default function CrearGeneradorForm({
   const inputCls =
     "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
   const labelCls = "block text-xs font-medium text-gray-600 mb-1";
+
+  const docLabel =
+    tipopersona === "Natural"
+      ? "Cédula"
+      : tipopersona === "Juridica"
+      ? "NIT"
+      : "NIT / Cédula";
+  const docPlaceholder =
+    tipopersona === "Natural" ? "Ej. 1098765432" : "Ej. 800141506-1";
+  const movilHint = "Celular colombiano: 10 dígitos, empieza por 3";
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-4">
@@ -199,15 +230,18 @@ export default function CrearGeneradorForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>
-                  NIT / Cédula <span className="text-red-500">*</span>
+                  {docLabel} <span className="text-red-500">*</span>
                 </label>
                 <input
                   className={inputCls}
                   value={nit}
                   onChange={(e) => setNit(e.target.value)}
                   required
-                  placeholder="Ej. 800141506-1"
+                  placeholder={docPlaceholder}
                 />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Jurídica → NIT · Natural → cédula
+                </p>
               </div>
               <div>
                 <label className={labelCls}>
@@ -231,7 +265,7 @@ export default function CrearGeneradorForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>
-                  Tipo <span className="text-red-500">*</span>
+                  Tipo de generador <span className="text-red-500">*</span>
                 </label>
                 <select
                   className={inputCls}
@@ -249,15 +283,17 @@ export default function CrearGeneradorForm({
               </div>
               <div>
                 <label className={labelCls}>
-                  Móvil <span className="text-red-500">*</span>
+                  Móvil del generador <span className="text-red-500">*</span>
                 </label>
                 <input
                   className={inputCls}
                   value={genMovil}
                   onChange={(e) => setGenMovil(e.target.value)}
                   required
-                  placeholder="3XXXXXXXXX"
+                  inputMode="numeric"
+                  placeholder="3001234567"
                 />
+                <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
               </div>
             </div>
             <div>
@@ -376,12 +412,18 @@ export default function CrearGeneradorForm({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Móvil finca (opcional)</label>
+                <label className={labelCls}>
+                  Móvil finca <span className="text-red-500">*</span>
+                </label>
                 <input
                   className={inputCls}
                   value={fincaMovil}
                   onChange={(e) => setFincaMovil(e.target.value)}
+                  required
+                  inputMode="numeric"
+                  placeholder="3001234567"
                 />
+                <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
               </div>
               <div>
                 <label className={labelCls}>Email finca (opcional)</label>

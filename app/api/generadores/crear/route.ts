@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import {
+  soloDigitos,
+  esMovilCOValido,
+  validarDocumento,
+} from "@/lib/validacionesCO";
 
 export const maxDuration = 30;
 
@@ -43,10 +48,6 @@ interface Body {
     movil?: string;
     email?: string;
   };
-}
-
-function onlyDigits(v: string): string {
-  return (v || "").replace(/\D/g, "");
 }
 
 export async function POST(req: NextRequest) {
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
   if (!genMovil) faltan.push("móvil del generador");
   if (!fincaNombre) faltan.push("nombre de la finca");
   if (!fincaMunicipioId) faltan.push("municipio de la finca");
+  if (!fincaMovil) faltan.push("móvil de la finca");
   if (cultivoIds.length === 0) faltan.push("al menos un cultivo de la finca");
   if (faltan.length > 0) {
     return NextResponse.json(
@@ -110,13 +112,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const nitDigits = onlyDigits(nit);
-  if (nitDigits.length < 5) {
+  // Formato del documento según tipo de persona (NIT jurídica / cédula natural)
+  const docError = validarDocumento(tipopersona, nit);
+  if (docError) {
+    return NextResponse.json({ error: docError }, { status: 400 });
+  }
+
+  // Móviles colombianos (10 dígitos, empiezan por 3)
+  if (!esMovilCOValido(genMovil)) {
     return NextResponse.json(
-      { error: "El NIT/cédula no parece válido (muy corto)" },
+      { error: "El móvil del generador no es un celular colombiano válido" },
       { status: 400 }
     );
   }
+  if (!esMovilCOValido(fincaMovil)) {
+    return NextResponse.json(
+      { error: "El móvil de la finca no es un celular colombiano válido" },
+      { status: 400 }
+    );
+  }
+
+  const nitDigits = soloDigitos(nit);
 
   // 1. Dedupe por NIT/cédula normalizado (solo dígitos) vía REGEX_REPLACE.
   try {
