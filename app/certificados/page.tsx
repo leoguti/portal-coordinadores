@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +9,17 @@ import { isAdminOrSupervisor } from "@/lib/roles";
 import HistoricoCertificados from "@/components/HistoricoCertificados";
 
 type Vista = "actual" | "historico";
+
+// El export default envuelve en <Suspense> porque el contenido usa
+// useSearchParams() (lee ?tab=historico). Sin esto Next.js falla el
+// build con "useSearchParams() should be wrapped in a suspense boundary".
+export default function CertificadosPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <ListarCertificadosPage />
+    </Suspense>
+  );
+}
 
 interface CertificadoItem {
   id: string;
@@ -84,7 +95,7 @@ const formatMes = (yyyymm: string): string => {
   return `${meses[idx] || m[2]} ${m[1]}`;
 };
 
-export default function ListarCertificadosPage() {
+function ListarCertificadosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
