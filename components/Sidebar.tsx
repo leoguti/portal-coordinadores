@@ -20,10 +20,13 @@ const navItems = [
   // se vuelve a habilitar.
   // { name: "Revisión Fincas", href: "/revisiones/fincas", icon: "✅", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Generación de Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
+  // "Certificados" consolida lo que antes era "Generación de Certificados"
+  // (/certificados) y "Listar Certificados" (/certificados/listar). Ahora
+  // /certificados muestra el listado y desde ahí se accede al formulario
+  // de generación con el botón "Generar nuevo certificado" → /certificados/generar.
+  { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Histórico Certificados", href: "/certificados-historicos", icon: "🗂️", roles: ["Coordinador"] },
   { name: "Histórico Certificados", href: "/admin/certificados-historicos", icon: "🗂️", roles: ["Administrador", "Supervisor"] },
-  { name: "Listar Certificados", href: "/certificados/listar", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
 ];
 

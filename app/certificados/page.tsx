@@ -1,598 +1,912 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import MunicipioSearch from "@/components/MunicipioSearch";
-import {
-  GeneradorAutocomplete,
-  FincaAutocomplete,
-  type GeneradorOption,
-  type FincaOption,
-} from "@/components/GeneradorFincaSelect";
-import CrearGeneradorForm, {
-  type GeneradorFincaInitial,
-} from "@/components/CrearGeneradorForm";
-import AgregarFincaForm from "@/components/AgregarFincaForm";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
-interface Resultado {
-  consecutivo: number;
-  pdfUrl: string;
-  recordId: string;
+interface CertificadoItem {
+  id: string;
+  consecutivo: string | number;
+  fechadevolucion: string;
+  nombregenerador: string;
+  cedulagenerador: string;
+  municipiogenerador: string;
+  departamento: string;
+  cultivos: string[];
+  coordinador: string;
+  total: number;
+  pdfUrl: string | null;
 }
 
-export default function CertificadosPage() {
+interface CultivoOption {
+  id: string;
+  nombre: string;
+}
+
+interface CoordinadorOption {
+  id: string;
+  nombre: string;
+  rol: string;
+}
+
+interface FiltrosData {
+  cultivos: CultivoOption[];
+  coordinadores: CoordinadorOption[];
+  departamentos: string[];
+  municipios: string[];
+  meses: string[];
+  anos: number[];
+}
+
+interface GeneradorOption {
+  id: string;
+  nombre: string;
+  nit: string;
+  tipo: string;
+  tipopersona: string;
+  fincaIds: string[];
+}
+
+interface FincaOption {
+  id: string;
+  nombre: string;
+}
+
+const PAGE_SIZE = 50;
+
+const formatNumber = (n: number) =>
+  new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 }).format(n);
+
+const formatMes = (yyyymm: string): string => {
+  const m = yyyymm.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return yyyymm;
+  const meses = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+  const idx = parseInt(m[2], 10) - 1;
+  return `${meses[idx] || m[2]} ${m[1]}`;
+};
+
+export default function ListarCertificadosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // ── Paso 1: generador → finca ─────────────────────────────
+  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const sessionCoordinatorId = session?.user?.coordinatorRecordId;
+
+  const [filtrosData, setFiltrosData] = useState<FiltrosData>({
+    cultivos: [],
+    coordinadores: [],
+    departamentos: [],
+    municipios: [],
+    meses: [],
+    anos: [],
+  });
+  const [filtrosLoading, setFiltrosLoading] = useState(true);
+
+  // Filtros activos
+  const [ano, setAno] = useState("");
+  const [mes, setMes] = useState("");
+  const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
+  const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
+  const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
+  const [selCoordinadores, setSelCoordinadores] = useState<string[]>([]); // record IDs
   const [generador, setGenerador] = useState<GeneradorOption | null>(null);
   const [finca, setFinca] = useState<FincaOption | null>(null);
-  // fincaInfo trae los datos del panel + raw para pre-cargar el form de
-  // edición + el estado de completitud (para warning rojo y bloqueo).
-  const [fincaInfo, setFincaInfo] = useState<{
-    nombregenerador: string;
-    cedulagenerador: string;
-    municipiogenerador: string;
-    cultivogenerador: string;
-    generador: GeneradorFincaInitial["generador"];
-    finca: GeneradorFincaInitial["finca"];
-    completitud: { complete: boolean; missing: string[] };
-  } | null>(null);
-  const [fincaInfoLoading, setFincaInfoLoading] = useState(false);
-  // Camino no tan feliz: si !== null, se muestra el form de crear generador
-  // (con el texto buscado como prefill del NIT/cédula).
-  const [crearPrefill, setCrearPrefill] = useState<string | null>(null);
-  // Edición: cuando es true, se reemplaza Paso 1 por el form de edición
-  // pre-cargado con los datos actuales del generador y la finca.
-  const [editando, setEditando] = useState(false);
-  // Agregar otra finca al generador actual: si !== null muestra el form
-  // de creación de finca enlazada al generador con ese id.
-  const [agregandoFincaPara, setAgregandoFincaPara] = useState<{
-    id: string;
-    nombre: string;
-  } | null>(null);
 
-  // ── Paso 2: datos del certificado ─────────────────────────
-  const [fechaDevolucion, setFechaDevolucion] = useState("");
-  const [rigidos, setRigidos] = useState("");
-  const [flexibles, setFlexibles] = useState("");
-  const [metalicos, setMetalicos] = useState("");
-  const [embalaje, setEmbalaje] = useState("");
-  const [triplelavado, setTriplelavado] = useState<"SI" | "NO" | "">("");
-  const [lugardevolucion, setLugardevolucion] = useState("");
-  const [municipioDevolucion, setMunicipioDevolucion] = useState<{
-    id: string;
-    mundep: string;
-  } | null>(null);
-  const [observaciones, setObservaciones] = useState("");
+  // Datos
+  const [records, setRecords] = useState<CertificadoItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nextOffset, setNextOffset] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
-  // ── Resultado ─────────────────────────────────────────────
-  const [generando, setGenerando] = useState(false);
-  const [errorGenerar, setErrorGenerar] = useState<string | null>(null);
-  const [resultado, setResultado] = useState<Resultado | null>(null);
-
-  const hoy = new Date().toISOString().split("T")[0];
-  const hace90 = new Date();
-  hace90.setDate(hace90.getDate() - 90);
-  const minFecha = hace90.toISOString().split("T")[0];
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Al elegir finca, traer los datos del generador/finca que quedarán en el
-  // certificado (mismo resolver que /generar) para mostrarlos antes de generar.
   useEffect(() => {
-    if (!finca) {
-      setFincaInfo(null);
-      return;
-    }
+    if (!session?.user) return;
     let cancel = false;
-    setFincaInfoLoading(true);
-    fetch(
-      `/api/certificados/finca-info?fincaId=${encodeURIComponent(finca.id)}`
-    )
-      .then((r) => r.json())
-      .then((d) => {
-        if (cancel) return;
-        setFincaInfo(d && !d.error ? d : null);
-      })
-      .catch(() => {
-        if (!cancel) setFincaInfo(null);
-      })
-      .finally(() => {
-        if (!cancel) setFincaInfoLoading(false);
-      });
+    (async () => {
+      try {
+        setFiltrosLoading(true);
+        const res = await fetch("/api/certificados/filtros");
+        if (!res.ok) throw new Error("Error cargando filtros");
+        const data = (await res.json()) as FiltrosData;
+        if (!cancel) setFiltrosData(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancel) setFiltrosLoading(false);
+      }
+    })();
     return () => {
       cancel = true;
     };
-  }, [finca]);
+  }, [session]);
+
+  const cultivoNombreById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of filtrosData.cultivos) m.set(c.id, c.nombre);
+    return m;
+  }, [filtrosData.cultivos]);
+
+  const buildQuery = useCallback(
+    (offset?: string | null) => {
+      const params = new URLSearchParams();
+      params.set("pageSize", String(PAGE_SIZE));
+      if (offset) params.set("offset", offset);
+      if (ano) params.set("ano", ano);
+      if (mes) params.set("mes", mes);
+      if (generador) params.set("generador", generador.id);
+      if (finca) params.set("finca", finca.id);
+      for (const d of selDepartamentos) params.append("departamento", d);
+      for (const m of selMunicipios) params.append("municipio", m);
+      for (const cid of selCultivos) {
+        const nombre = cultivoNombreById.get(cid);
+        if (nombre) params.append("cultivo", nombre);
+      }
+      if (canViewAll) {
+        for (const c of selCoordinadores) params.append("coordinador", c);
+      }
+      return params.toString();
+    },
+    [
+      ano,
+      mes,
+      generador,
+      finca,
+      selDepartamentos,
+      selMunicipios,
+      selCultivos,
+      selCoordinadores,
+      cultivoNombreById,
+      canViewAll,
+    ]
+  );
+
+  const fetchPage = useCallback(
+    async (mode: "reset" | "append") => {
+      if (!session?.user) return;
+      const seq = ++requestSeqRef.current;
+      try {
+        setLoading(true);
+        setError(null);
+        const queryString = buildQuery(mode === "append" ? nextOffset : null);
+        const res = await fetch(`/api/certificados/listar?${queryString}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Error ${res.status}`);
+        }
+        const data = await res.json();
+        if (requestSeqRef.current !== seq) return;
+        setNextOffset(data.nextOffset || null);
+        setHasMore(Boolean(data.hasMore));
+        setRecords((prev) =>
+          mode === "append" ? [...prev, ...data.records] : data.records
+        );
+      } catch (err) {
+        if (requestSeqRef.current !== seq) return;
+        setError(err instanceof Error ? err.message : "Error cargando datos");
+      } finally {
+        if (requestSeqRef.current === seq) setLoading(false);
+      }
+    },
+    [session, buildQuery, nextOffset]
+  );
+
+  const depKeyDepartamentos = selDepartamentos.join(",");
+  const depKeyMunicipios = selMunicipios.join(",");
+  const depKeyCultivos = selCultivos.join(",");
+  const depKeyCoordinadores = selCoordinadores.join(",");
+  const userId = session?.user?.coordinatorRecordId;
+  useEffect(() => {
+    if (!session?.user) return;
+    fetchPage("reset");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    userId,
+    ano,
+    mes,
+    generador?.id,
+    finca?.id,
+    depKeyDepartamentos,
+    depKeyMunicipios,
+    depKeyCultivos,
+    depKeyCoordinadores,
+  ]);
+
+  const toggleInArray = (
+    arr: string[],
+    value: string,
+    setter: (next: string[]) => void
+  ) => {
+    if (arr.includes(value)) setter(arr.filter((x) => x !== value));
+    else setter([...arr, value]);
+  };
+
+  const clearAllFilters = () => {
+    setAno("");
+    setMes("");
+    setSelDepartamentos([]);
+    setSelMunicipios([]);
+    setSelCultivos([]);
+    setSelCoordinadores([]);
+    setGenerador(null);
+    setFinca(null);
+  };
+
+  const hasActiveFilters =
+    ano !== "" ||
+    mes !== "" ||
+    generador !== null ||
+    finca !== null ||
+    selDepartamentos.length > 0 ||
+    selMunicipios.length > 0 ||
+    selCultivos.length > 0 ||
+    selCoordinadores.length > 0;
 
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
   if (!session) return null;
 
-  const totalKg =
-    Number(rigidos || 0) +
-    Number(flexibles || 0) +
-    Number(metalicos || 0) +
-    Number(embalaje || 0);
-
-  async function generarCertificado(e: React.FormEvent) {
-    e.preventDefault();
-    if (!finca || !municipioDevolucion) return;
-    setGenerando(true);
-    setErrorGenerar(null);
-
-    try {
-      const res = await fetch("/api/certificados/portal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fincaId: finca.id,
-          municipioDevolucionId: municipioDevolucion.id,
-          rigidos: Number(rigidos || 0),
-          flexibles: Number(flexibles || 0),
-          metalicos: Number(metalicos || 0),
-          embalaje: Number(embalaje || 0),
-          triplelavado,
-          lugardevolucion,
-          fechadevolucion: fechaDevolucion,
-          observaciones,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorGenerar(data.error || "Error generando el certificado");
-        return;
-      }
-      setResultado(data);
-    } catch {
-      setErrorGenerar("Error de red generando el certificado");
-    } finally {
-      setGenerando(false);
-    }
-  }
-
-  function reiniciar() {
-    setGenerador(null);
-    setFinca(null);
-    setFechaDevolucion("");
-    setRigidos("");
-    setFlexibles("");
-    setMetalicos("");
-    setEmbalaje("");
-    setTriplelavado("");
-    setLugardevolucion("");
-    setMunicipioDevolucion(null);
-    setObservaciones("");
-    setResultado(null);
-    setErrorGenerar(null);
-  }
-
-  // ── RESULTADO ─────────────────────────────────────────────
-  if (resultado) {
-    return (
-      <AuthenticatedLayout>
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Certificado generado
-            </h2>
-            <p className="text-gray-600 mb-1">
-              Consecutivo:{" "}
-              <span className="font-bold text-green-700 text-xl">
-                #{resultado.consecutivo}
-              </span>
-            </p>
-            <p className="text-gray-500 text-sm mb-6">
-              PDF generado y email enviado al generador y coordinador.
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              <a
-                href={resultado.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg"
-              >
-                Ver PDF
-              </a>
-              <button
-                onClick={reiniciar}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-2 rounded-lg"
-              >
-                Nuevo certificado
-              </button>
-            </div>
-          </div>
-        </div>
-      </AuthenticatedLayout>
-    );
-  }
-
   return (
     <AuthenticatedLayout>
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Generar certificado
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Certificado de devolución de envases vacíos de plaguicidas
-          </p>
-        </div>
-
-        {crearPrefill !== null && !editando && !agregandoFincaPara && (
-          <CrearGeneradorForm
-            mode="crear"
-            prefillNit={crearPrefill}
-            onCancel={() => setCrearPrefill(null)}
-            onCreated={(g, f) => {
-              setGenerador(g);
-              setFinca(f);
-              setCrearPrefill(null);
-            }}
-            onExisting={(g) => {
-              setGenerador(g);
-              setFinca(null);
-              setCrearPrefill(null);
-            }}
-          />
-        )}
-
-        {editando && fincaInfo && !agregandoFincaPara && (
-          <CrearGeneradorForm
-            mode="editar"
-            initial={{
-              generador: fincaInfo.generador,
-              finca: fincaInfo.finca,
-            }}
-            onCancel={() => setEditando(false)}
-            onEdited={(g, f) => {
-              setEditando(false);
-              // Forzamos re-fetch del panel actualizando el ref de finca.
-              setFinca({ id: f.id, nombre: f.nombre });
-              if (generador) {
-                setGenerador({
-                  ...generador,
-                  nombre: g.nombre,
-                  nit: g.nit,
-                  tipo: g.tipo,
-                  tipopersona: g.tipopersona,
-                });
-              }
-            }}
-          />
-        )}
-
-        {agregandoFincaPara && (
-          <AgregarFincaForm
-            generadorContext={agregandoFincaPara}
-            onCancel={() => setAgregandoFincaPara(null)}
-            onFincaAdded={(f) => {
-              setAgregandoFincaPara(null);
-              // Seleccionar la nueva finca para que el panel se refresque
-              // y muestre los datos congelados de esa finca.
-              setFinca(f);
-            }}
-          />
-        )}
-
-        {/* ── PASO 1: GENERADOR → FINCA ──────────────────── */}
-        {crearPrefill === null && !editando && !agregandoFincaPara && (
-        <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-            1. Generador y finca
-          </h2>
-
-          <GeneradorAutocomplete
-            value={generador}
-            onChange={(g) => {
-              setGenerador(g);
-              setFinca(null);
-            }}
-            onCreateNew={(q) => setCrearPrefill(q)}
-          />
-
-          <FincaAutocomplete
-            value={finca}
-            onChange={setFinca}
-            generadorId={generador?.id}
-            disabled={!generador}
-            onCrearFinca={() => {
-              if (generador) {
-                setAgregandoFincaPara({
-                  id: generador.id,
-                  nombre: generador.nombre,
-                });
-              }
-            }}
-          />
-
-          {generador && !finca && (
-            <p className="text-xs text-gray-400">
-              Selecciona la finca del generador para continuar.
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Certificados</h1>
+            <p className="text-sm text-gray-500">
+              {loading
+                ? "Cargando..."
+                : `${records.length} certificado(s) cargado(s)${hasMore ? " — hay más" : ""}`}
             </p>
-          )}
-
-          {finca &&
-            (() => {
-              const incompleto =
-                !!fincaInfo && !fincaInfo.completitud.complete;
-              const boxCls = incompleto
-                ? "rounded-md border border-red-300 bg-red-50 px-4 py-3"
-                : "rounded-md border border-green-200 bg-green-50 px-4 py-3";
-              const titleCls = incompleto
-                ? "text-xs font-semibold text-red-800 uppercase tracking-wide mb-1"
-                : "text-xs font-semibold text-green-800 uppercase tracking-wide mb-1";
-              return (
-                <div className={boxCls}>
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className={titleCls}>
-                      {incompleto
-                        ? "⚠ Datos incompletos del generador o la finca"
-                        : "Datos del generador y la finca"}
-                    </p>
-                    {fincaInfo && (
-                      <button
-                        type="button"
-                        onClick={() => setEditando(true)}
-                        className={
-                          incompleto
-                            ? "text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
-                            : "text-xs font-medium text-gray-600 hover:text-gray-900 underline"
-                        }
-                      >
-                        {incompleto ? "Completar / Editar" : "Editar"}
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 mb-2">
-                    {incompleto
-                      ? "Antes de generar el certificado debes completar los datos del generador y la finca. Estas son las mismas reglas de \"revisar fincas\"."
-                      : "Vienen de los datos registrados del generador y su finca, y quedan guardados en el certificado. Revisa que sean correctos."}
-                  </p>
-                  {incompleto && fincaInfo && (
-                    <p className="text-xs text-red-700 mb-2">
-                      <span className="font-semibold">Faltan: </span>
-                      {fincaInfo.completitud.missing.join(", ")}
-                    </p>
-                  )}
-                  {fincaInfoLoading ? (
-                    <p className="text-xs text-gray-500">
-                      Cargando datos de la finca...
-                    </p>
-                  ) : fincaInfo ? (
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
-                      <div>
-                        <dt className="inline text-gray-500">Generador: </dt>
-                        <dd className="inline font-medium">
-                          {fincaInfo.nombregenerador || "—"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="inline text-gray-500">NIT/Cédula: </dt>
-                        <dd className="inline font-medium">
-                          {fincaInfo.cedulagenerador || "—"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="inline text-gray-500">Municipio: </dt>
-                        <dd className="inline font-medium">
-                          {fincaInfo.municipiogenerador || "—"}
-                        </dd>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <dt className="inline text-gray-500">Cultivo(s): </dt>
-                        <dd className="inline font-medium">
-                          {fincaInfo.cultivogenerador || (
-                            <span className="text-amber-700">
-                              Sin cultivo registrado en la finca
-                            </span>
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                  ) : (
-                    <p className="text-xs text-amber-700">
-                      No se pudieron cargar los datos de la finca.
-                    </p>
-                  )}
-                  {fincaInfo && generador && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAgregandoFincaPara({
-                            id: generador.id,
-                            nombre: generador.nombre,
-                          })
-                        }
-                        className="text-xs font-medium text-green-700 hover:text-green-900 underline"
-                      >
-                        + Agregar otra finca a este generador
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+          </div>
+          <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-sm px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Limpiar filtros
+              </button>
+            )}
+            <Link
+              href="/certificados/generar"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm"
+            >
+              <span className="text-lg leading-none">＋</span>
+              Generar nuevo certificado
+            </Link>
+          </div>
         </div>
+
+        {/* Chips de coordinadores (atajo tipo Kardex) */}
+        {canViewAll && filtrosData.coordinadores.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-3 mb-4">
+            <p className="text-xs text-gray-500 mb-2 font-medium">
+              Atajo: filtrar por coordinador
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelCoordinadores([])}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                  selCoordinadores.length === 0
+                    ? "bg-[#00d084] text-white border-[#00d084]"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Todos
+              </button>
+              {filtrosData.coordinadores.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() =>
+                    setSelCoordinadores(
+                      selCoordinadores.includes(c.id) && selCoordinadores.length === 1
+                        ? []
+                        : [c.id]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                    selCoordinadores.includes(c.id)
+                      ? "bg-[#00d084] text-white border-[#00d084]"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                  title={c.rol}
+                >
+                  {c.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* ── PASO 2: DATOS DEL CERTIFICADO ─────────────── */}
-        {finca && (
-          <form onSubmit={generarCertificado}>
-            <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-5">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                2. Datos de devolución
-              </h2>
+        {!canViewAll && sessionCoordinatorId && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 mb-4 text-sm">
+            Estás viendo solo tus certificados.
+          </div>
+        )}
 
-              {/* Fecha */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha de devolución <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={fechaDevolucion}
-                  onChange={(e) => setFechaDevolucion(e.target.value)}
-                  min={minFecha}
-                  max={hoy}
-                  required
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
+        {/* Filtros */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
+          {/* Búsqueda: Generador y Finca dependiente */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <GeneradorAutocomplete
+              value={generador}
+              onChange={(g) => {
+                setGenerador(g);
+                setFinca(null);
+              }}
+            />
+            <FincaAutocomplete
+              value={finca}
+              onChange={setFinca}
+              generadorId={generador?.id}
+              disabled={false}
+            />
+          </div>
 
-              {/* Materiales */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Materiales (kg) <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Rígidos", value: rigidos, set: setRigidos },
-                    { label: "Flexibles", value: flexibles, set: setFlexibles },
-                    { label: "Metálicos", value: metalicos, set: setMetalicos },
-                    { label: "Embalaje", value: embalaje, set: setEmbalaje },
-                  ].map(({ label, value, set }) => (
-                    <div key={label}>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        {label}
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={value}
-                        onChange={(e) => set(e.target.value)}
-                        placeholder="0"
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Total: {totalKg.toFixed(1)} kg
-                </p>
-              </div>
-
-              {/* Triple lavado */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Triple lavado <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-4">
-                  {(["SI", "NO"] as const).map((v) => (
-                    <label
-                      key={v}
-                      className="flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="triplelavado"
-                        value={v}
-                        checked={triplelavado === v}
-                        onChange={() => setTriplelavado(v)}
-                        className="accent-green-600"
-                      />
-                      <span className="text-sm text-gray-700">{v}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Lugar de devolución */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lugar de devolución <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={lugardevolucion}
-                  onChange={(e) => setLugardevolucion(e.target.value)}
-                  placeholder="Ej. Bodega Municipal CampoLimpio"
-                  required
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              {/* Municipio de devolución */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Municipio de devolución{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <MunicipioSearch
-                  value={municipioDevolucion}
-                  onChange={setMunicipioDevolucion}
-                  placeholder="Buscar municipio..."
-                />
-              </div>
-
-              {/* Observaciones */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Observaciones
-                </label>
-                <textarea
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  rows={3}
-                  placeholder="Opcional"
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                />
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Año
+              </label>
+              <select
+                value={ano}
+                onChange={(e) => setAno(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">Todos</option>
+                {filtrosData.anos.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {errorGenerar && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm text-red-700">
-                {errorGenerar}
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mes
+              </label>
+              <select
+                value={mes}
+                onChange={(e) => setMes(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">Todos</option>
+                {filtrosData.meses.map((m) => (
+                  <option key={m} value={m}>
+                    {m} — {formatMes(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-            {fincaInfo && !fincaInfo.completitud.complete && (
-              <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 mb-4 text-sm text-red-800">
-                <strong>No se puede generar el certificado.</strong> Antes
-                debes completar los datos del generador y la finca
-                (botón <em>Completar / Editar</em> arriba).
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={
-                generando ||
-                !municipioDevolucion ||
-                !lugardevolucion ||
-                !fechaDevolucion ||
-                !triplelavado ||
-                totalKg <= 0 ||
-                !!(fincaInfo && !fincaInfo.completitud.complete)
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <MultiSelectChips
+              label="Departamento"
+              options={filtrosData.departamentos.map((d) => ({ id: d, label: d }))}
+              selected={selDepartamentos}
+              onToggle={(v) =>
+                toggleInArray(selDepartamentos, v, setSelDepartamentos)
               }
-              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm transition-colors"
-            >
-              {generando ? "Generando certificado..." : "Generar certificado"}
-            </button>
+              loading={filtrosLoading}
+              searchable
+            />
+            <MultiSelectChips
+              label="Municipio"
+              options={filtrosData.municipios.map((m) => ({ id: m, label: m }))}
+              selected={selMunicipios}
+              onToggle={(v) => toggleInArray(selMunicipios, v, setSelMunicipios)}
+              loading={filtrosLoading}
+              searchable
+            />
+            <MultiSelectChips
+              label="Cultivos"
+              options={filtrosData.cultivos.map((c) => ({
+                id: c.id,
+                label: c.nombre,
+              }))}
+              selected={selCultivos}
+              onToggle={(v) => toggleInArray(selCultivos, v, setSelCultivos)}
+              loading={filtrosLoading}
+              searchable
+            />
+          </div>
+        </div>
 
-            {generando && (
-              <p className="text-center text-xs text-gray-400 mt-2">
-                Generando PDF y enviando email... esto puede tomar unos
-                segundos.
-              </p>
-            )}
-          </form>
-        )}
+        {/* Tabla */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {error && (
+            <div className="bg-red-50 border-b border-red-200 text-red-700 p-3 text-sm">
+              {error}
+            </div>
+          )}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Consecutivo</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Generador</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Municipio</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cultivos</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Coordinador</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total (kg)</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">PDF</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {records.map((r) => (
+                  <tr key={r.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-sm text-gray-900 font-mono">
+                      {r.consecutivo}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">
+                      {r.fechadevolucion}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700">
+                      <div className="font-medium text-gray-900">
+                        {r.nombregenerador}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {r.cedulagenerador}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700">
+                      <div>{r.municipiogenerador}</div>
+                      <div className="text-xs text-gray-500">{r.departamento}</div>
+                    </td>
+                    <td className="px-3 py-2 text-sm">
+                      <div className="flex flex-wrap gap-1">
+                        {r.cultivos.length === 0 ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          r.cultivos.map((c, i) => (
+                            <span
+                              key={`${r.id}-cul-${i}`}
+                              className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs"
+                            >
+                              {c}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700">
+                      {r.coordinador}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-gray-900 font-medium">
+                      {formatNumber(r.total)}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {r.pdfUrl ? (
+                        <a
+                          href={r.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline text-sm"
+                        >
+                          Descargar
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {records.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-gray-500 text-sm">
+                      No hay certificados para los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-500">
+              {loading
+                ? "Cargando..."
+                : `${records.length} resultado(s)${hasMore ? " (hay más)" : ""}`}
+            </span>
+            <button
+              onClick={() => fetchPage("append")}
+              disabled={!hasMore || loading}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${
+                !hasMore || loading
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-[#00d084] hover:bg-[#00b070] text-white"
+              }`}
+            >
+              {loading ? "Cargando..." : hasMore ? "Cargar más" : "No hay más"}
+            </button>
+          </div>
+        </div>
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+/* -------------------- Autocomplete Generador -------------------- */
+
+function GeneradorAutocomplete({
+  value,
+  onChange,
+}: {
+  value: GeneradorOption | null;
+  onChange: (g: GeneradorOption | null) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<GeneradorOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/generadores/buscar?q=${encodeURIComponent(q)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.results || []);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Generador
+      </label>
+      {value ? (
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-green-50">
+          <span className="text-sm text-gray-800 flex-1">
+            <span className="font-medium">{value.nombre}</span>
+            {value.nit && <span className="text-xs text-gray-500"> · NIT {value.nit}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setQ("");
+            }}
+            className="text-gray-500 hover:text-red-600 text-sm"
+            aria-label="Quitar generador"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="Buscar por nombre o NIT (mín 2 caracteres)"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          />
+          {open && q.length >= 2 && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {loading ? (
+                <div className="p-2 text-xs text-gray-400">Buscando...</div>
+              ) : results.length === 0 ? (
+                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+              ) : (
+                results.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(g);
+                      setQ("");
+                      setOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="text-sm font-medium text-gray-800">
+                      {g.nombre}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {g.nit && `NIT ${g.nit}`}
+                      {g.tipo && ` · ${g.tipo}`}
+                      {g.fincaIds.length > 0 && ` · ${g.fincaIds.length} finca(s)`}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -------------------- Autocomplete Finca -------------------- */
+
+function FincaAutocomplete({
+  value,
+  onChange,
+  generadorId,
+  disabled,
+}: {
+  value: FincaOption | null;
+  onChange: (f: FincaOption | null) => void;
+  generadorId?: string;
+  disabled: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<FincaOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Si hay generador seleccionado, cargamos sus fincas al inicio (sin q)
+    if (generadorId && !value) {
+      (async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(
+            `/api/fincas/buscar?generador=${encodeURIComponent(generadorId)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setResults(data.results || []);
+          }
+        } catch {
+          setResults([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [generadorId, value]);
+
+  useEffect(() => {
+    if (!generadorId && q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const url = generadorId
+          ? `/api/fincas/buscar?generador=${encodeURIComponent(generadorId)}&q=${encodeURIComponent(q)}`
+          : `/api/fincas/buscar?q=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.results || []);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [q, generadorId]);
+
+  const placeholder = generadorId
+    ? "Selecciona o filtra fincas..."
+    : "Buscar finca por nombre (mín 2 caracteres)";
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Finca
+      </label>
+      {value ? (
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-green-50">
+          <span className="text-sm text-gray-800 flex-1 font-medium">
+            {value.nombre}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setQ("");
+            }}
+            className="text-gray-500 hover:text-red-600 text-sm"
+            aria-label="Quitar finca"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+          />
+          {open && (generadorId || q.length >= 2) && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {loading ? (
+                <div className="p-2 text-xs text-gray-400">Buscando...</div>
+              ) : results.length === 0 ? (
+                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+              ) : (
+                results.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      onChange({ id: f.id, nombre: f.nombre });
+                      setQ("");
+                      setOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="text-sm font-medium text-gray-800">
+                      {f.nombre}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -------------------- MultiSelectChips -------------------- */
+
+interface MultiSelectChipsProps {
+  label: string;
+  options: { id: string; label: string }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  loading?: boolean;
+  searchable?: boolean;
+}
+
+function MultiSelectChips({
+  label,
+  options,
+  selected,
+  onToggle,
+  loading,
+  searchable,
+}: MultiSelectChipsProps) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!filter) return options;
+    const f = filter.toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(f));
+  }, [filter, options]);
+
+  return (
+    <div className="border border-gray-200 rounded-md p-2">
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="text-xs text-blue-600 hover:underline"
+          type="button"
+        >
+          {open ? "Cerrar" : `${selected.length > 0 ? `${selected.length} sel` : "Ver"}`}
+        </button>
+      </div>
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {selected.map((id) => {
+            const opt = options.find((o) => o.id === id);
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 bg-[#00d084] text-white text-xs px-2 py-0.5 rounded-full"
+              >
+                {opt?.label || id}
+                <button
+                  onClick={() => onToggle(id)}
+                  type="button"
+                  className="hover:text-gray-200"
+                  aria-label={`Quitar ${opt?.label || id}`}
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {open && (
+        <div className="border-t border-gray-100 pt-2">
+          {searchable && (
+            <input
+              type="text"
+              placeholder="Filtrar..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 text-xs mb-2"
+            />
+          )}
+          <div className="max-h-48 overflow-y-auto space-y-1">
+            {loading ? (
+              <p className="text-xs text-gray-400">Cargando...</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-xs text-gray-400">Sin opciones</p>
+            ) : (
+              filtered.map((opt) => {
+                const isSel = selected.includes(opt.id);
+                return (
+                  <label
+                    key={opt.id}
+                    className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded cursor-pointer ${
+                      isSel ? "bg-green-50" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSel}
+                      onChange={() => onToggle(opt.id)}
+                    />
+                    <span className="text-gray-700">{opt.label}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
