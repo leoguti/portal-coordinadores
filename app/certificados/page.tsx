@@ -61,8 +61,8 @@ export default function CertificadosPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Al elegir finca, traer los datos que se congelarán (mismo resolver que
-  // /generar) para mostrarlos como información antes de generar.
+  // Al elegir finca, traer los datos del generador/finca que quedarán en el
+  // certificado (mismo resolver que /generar) para mostrarlos antes de generar.
   useEffect(() => {
     if (!finca) {
       setFincaInfo(null);
@@ -239,8 +239,12 @@ export default function CertificadosPage() {
 
           {finca && (
             <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3">
-              <p className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-2">
-                Datos que se congelan en el certificado
+              <p className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">
+                Datos del generador y la finca
+              </p>
+              <p className="text-xs text-gray-500 mb-2">
+                Vienen de los datos registrados del generador y su finca, y
+                quedan guardados en el certificado. Revisa que sean correctos.
               </p>
               {fincaInfoLoading ? (
                 <p className="text-xs text-gray-500">
