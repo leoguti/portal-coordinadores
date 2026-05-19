@@ -30,17 +30,40 @@ const navItems = [
   { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+} = {}) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRol = session?.user?.rol || "Coordinador";
 
+  // En móvil arranca oculto (-translate-x-full) y se desliza al abrir.
+  // En escritorio (md+) siempre visible.
+  const translateCls = mobileOpen ? "translate-x-0" : "-translate-x-full";
+
   return (
-    <aside className="w-64 bg-[#042726] text-white h-screen flex flex-col fixed left-0 top-0">
-      <div className="p-6 border-b border-gray-700">
-        <img 
-          src="/logo-campolimpio-white.png" 
-          alt="CampoLimpio" 
+    <aside
+      className={`w-64 bg-[#042726] text-white h-screen flex flex-col fixed left-0 top-0 z-40 transform transition-transform duration-200 ease-out md:translate-x-0 ${translateCls}`}
+    >
+      <div className="p-6 border-b border-gray-700 relative">
+        {/* Botón cerrar — sólo móvil cuando el drawer está abierto */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar menú"
+            className="md:hidden absolute top-3 right-3 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-white/10"
+          >
+            ×
+          </button>
+        )}
+        <img
+          src="/logo-campolimpio-white.png"
+          alt="CampoLimpio"
           className="h-12 w-auto mb-2"
         />
         <p className="text-sm text-gray-300 mt-1">Portal Coordinadores</p>
