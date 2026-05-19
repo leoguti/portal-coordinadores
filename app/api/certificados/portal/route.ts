@@ -12,7 +12,7 @@ export const maxDuration = 60;
  *
  * Body esperado (sin coordinadorId — se toma de la sesión):
  * {
- *   ubicacionId: string,
+ *   fincaId: string,            // esquema nuevo GENERADORES/FINCAS
  *   municipioDevolucionId: string,
  *   rigidos: number,
  *   flexibles: number,
@@ -39,11 +39,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const { ubicacionId, municipioDevolucionId, rigidos, flexibles, metalicos, embalaje, triplelavado, lugardevolucion, fechadevolucion, observaciones } = body as any;
+  const {
+    fincaId,
+    municipioDevolucionId,
+    rigidos,
+    flexibles,
+    metalicos,
+    embalaje,
+    triplelavado,
+    lugardevolucion,
+    fechadevolucion,
+    observaciones,
+  } = body as {
+    fincaId?: string;
+    municipioDevolucionId?: string;
+    rigidos?: number;
+    flexibles?: number;
+    metalicos?: number;
+    embalaje?: number;
+    triplelavado?: string;
+    lugardevolucion?: string;
+    fechadevolucion?: string;
+    observaciones?: string;
+  };
 
-  if (!ubicacionId || !municipioDevolucionId || !lugardevolucion || !fechadevolucion || !triplelavado) {
+  if (!fincaId || !municipioDevolucionId || !lugardevolucion || !fechadevolucion || !triplelavado) {
     return NextResponse.json(
-      { error: "Faltan campos requeridos: ubicacionId, municipioDevolucionId, lugardevolucion, fechadevolucion, triplelavado" },
+      { error: "Faltan campos requeridos: fincaId, municipioDevolucionId, lugardevolucion, fechadevolucion, triplelavado" },
       { status: 400 }
     );
   }
@@ -79,7 +101,7 @@ export async function POST(req: NextRequest) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      ubicacionId,
+      fincaId,
       coordinadorId,
       municipioDevolucionId,
       rigidos: Number(rigidos || 0),

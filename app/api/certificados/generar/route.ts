@@ -6,6 +6,10 @@ import React from "react";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Client as PgClient } from "pg";
 import { sendCertificadoEmail } from "@/lib/sendCertificadoEmail";
+import {
+  resolveGeneradorDataFromFinca,
+  type ResolvedGeneradorData,
+} from "@/lib/fincaGeneradorResolver";
 
 export const maxDuration = 60;
 
@@ -17,7 +21,10 @@ const R2_PUBLIC_URL =
   "https://pub-7ae3d6e965b84710a236072921fe7e61.r2.dev";
 
 interface GenerarRequest {
-  ubicacionId: string;
+  /** Vía nueva (esquema GENERADORES/FINCAS). Prioritaria sobre ubicacionId. */
+  fincaId?: string;
+  /** Vía legacy (esquema ubicaciones). Fallback mientras se migra Telegram. */
+  ubicacionId?: string;
   coordinadorId: string;
   municipioDevolucionId: string;
   rigidos: number;
@@ -210,12 +217,40 @@ export async function POST(request: NextRequest) {
       body = JSON.parse(sanitizeJsonControlChars(raw));
     }
 
-    // Basic validation
-    if (!body.ubicacionId || !body.coordinadorId || !body.municipioDevolucionId) {
+    // Basic validation. fincaId (esquema nuevo) tiene prioridad; ubicacionId
+    // queda como fallback legacy mientras se migra el bot de Telegram.
+    const useFinca = Boolean(body.fincaId);
+    if (
+      (!body.fincaId && !body.ubicacionId) ||
+      !body.coordinadorId ||
+      !body.municipioDevolucionId
+    ) {
       return NextResponse.json(
-        { error: "Faltan campos requeridos: ubicacionId, coordinadorId, municipioDevolucionId" },
+        {
+          error:
+            "Faltan campos requeridos: (fincaId o ubicacionId), coordinadorId, municipioDevolucionId",
+        },
         { status: 400 }
       );
+    }
+
+    // Vía nueva: resolver datos del generador desde la FINCA (antes de crear
+    // el registro, para fallar temprano con un mensaje claro).
+    let resolved: ResolvedGeneradorData | null = null;
+    if (useFinca) {
+      try {
+        resolved = await resolveGeneradorDataFromFinca(
+          AIRTABLE_API_KEY,
+          AIRTABLE_BASE_ID,
+          body.fincaId!
+        );
+      } catch (err) {
+        console.error("[certificados/generar] Resolución de finca falló:", err);
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Finca inválida" },
+          { status: 400 }
+        );
+      }
     }
 
     console.log("[certificados/generar] Starting certificate generation...");
@@ -230,19 +265,31 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        fields: {
-          link_ubicacion: [body.ubicacionId],
-          coordinador: [body.coordinadorId],
-          idmunicipiodevolucion: [body.municipioDevolucionId],
-          rigidos: body.rigidos || 0,
-          flexibles: body.flexibles || 0,
-          metalicos: body.metalicos || 0,
-          embalaje: body.embalaje || 0,
-          observaciones: body.observaciones || "",
-          triplelavado: body.triplelavado || "PENDIENTE",
-          lugardevolucion: body.lugardevolucion || "",
-          fechadevolucion: body.fechadevolucion || "",
-        },
+        fields: (() => {
+          const fields: Record<string, unknown> = {
+            coordinador: [body.coordinadorId],
+            idmunicipiodevolucion: [body.municipioDevolucionId],
+            rigidos: body.rigidos || 0,
+            flexibles: body.flexibles || 0,
+            metalicos: body.metalicos || 0,
+            embalaje: body.embalaje || 0,
+            observaciones: body.observaciones || "",
+            triplelavado: body.triplelavado || "PENDIENTE",
+            lugardevolucion: body.lugardevolucion || "",
+            fechadevolucion: body.fechadevolucion || "",
+          };
+          if (useFinca && resolved) {
+            // Esquema nuevo: vincular FINCA y congelar cultivos.
+            fields.FINCAS = [resolved.fincaId];
+            if (resolved.cultivoIds.length > 0) {
+              fields.cultivos_certificado = resolved.cultivoIds;
+            }
+          } else {
+            // Legacy: vincular ubicación (alimenta lookups vía link_ubicacion).
+            fields.link_ubicacion = [body.ubicacionId];
+          }
+          return fields;
+        })(),
         typecast: true,
       }),
     });
@@ -285,16 +332,35 @@ export async function POST(request: NextRequest) {
     console.log(`[certificados/generar] Consecutivo: ${consecutivo}`);
 
     // 4. Map Airtable fields to PDF props
+    // En la vía nueva los datos del generador vienen resueltos por el endpoint
+    // (no hay lookups vía link_ubicacion). Los datos del coordinador y el
+    // consecutivo sí siguen viniendo del read-back (lookups vía `coordinador`).
     const pdfProps: CertificadoPDFProps = {
       consecutivo: consecutivo || 0,
-      nombregenerador: (f.nombregenerador || [])[0] || "",
-      cedulagenerador: (f.cedulagenerador || [])[0] || "",
-      movilgenerador: (f.movilgenerador || [])[0] || "",
-      direcciongenerador: (f.direcciongenerador || [])[0] || "",
-      cultivogenerador: (f.cultivogenerador || [])[0] || "",
-      emailgenerador: (f.emailgenerador || [])[0] || "",
-      municipiogenerador: (f.municipiogenerador || [])[0] || "",
-      tipogenerador: (f.tipogenerador || [])[0] || "",
+      nombregenerador: resolved
+        ? resolved.nombregenerador
+        : (f.nombregenerador || [])[0] || "",
+      cedulagenerador: resolved
+        ? resolved.cedulagenerador
+        : (f.cedulagenerador || [])[0] || "",
+      movilgenerador: resolved
+        ? resolved.movilgenerador
+        : (f.movilgenerador || [])[0] || "",
+      direcciongenerador: resolved
+        ? resolved.direcciongenerador
+        : (f.direcciongenerador || [])[0] || "",
+      cultivogenerador: resolved
+        ? resolved.cultivogenerador
+        : (f.cultivogenerador || [])[0] || "",
+      emailgenerador: resolved
+        ? resolved.emailgenerador
+        : (f.emailgenerador || [])[0] || "",
+      municipiogenerador: resolved
+        ? resolved.municipiogenerador
+        : (f.municipiogenerador || [])[0] || "",
+      tipogenerador: resolved
+        ? resolved.tipogenerador
+        : (f.tipogenerador || [])[0] || "",
       rigidos: f.rigidos || 0,
       flexibles: f.flexibles || 0,
       metalicos: f.metalicos || 0,
