@@ -156,11 +156,15 @@ export function FincaAutocomplete({
   onChange,
   generadorId,
   disabled,
+  onCrearFinca,
 }: {
   value: FincaOption | null;
   onChange: (f: FincaOption | null) => void;
   generadorId?: string;
   disabled: boolean;
+  /** Si se pasa Y hay generador seleccionado, al no haber resultados se
+   *  ofrece "+ Crear nueva finca para este generador". */
+  onCrearFinca?: () => void;
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<FincaOption[]>([]);
@@ -269,7 +273,21 @@ export function FincaAutocomplete({
               {loading ? (
                 <div className="p-2 text-xs text-gray-400">Buscando...</div>
               ) : results.length === 0 ? (
-                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+                <div className="p-2">
+                  <p className="text-xs text-gray-400 mb-2">Sin resultados</p>
+                  {onCrearFinca && generadorId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCrearFinca();
+                        setOpen(false);
+                      }}
+                      className="w-full text-left text-sm font-medium text-green-700 hover:bg-green-50 rounded px-2 py-1.5 border border-green-200"
+                    >
+                      + Crear nueva finca para este generador
+                    </button>
+                  )}
+                </div>
               ) : (
                 results.map((f) => (
                   <button

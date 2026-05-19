@@ -14,6 +14,7 @@ import {
 import CrearGeneradorForm, {
   type GeneradorFincaInitial,
 } from "@/components/CrearGeneradorForm";
+import AgregarFincaForm from "@/components/AgregarFincaForm";
 
 interface Resultado {
   consecutivo: number;
@@ -46,6 +47,12 @@ export default function CertificadosPage() {
   // Edición: cuando es true, se reemplaza Paso 1 por el form de edición
   // pre-cargado con los datos actuales del generador y la finca.
   const [editando, setEditando] = useState(false);
+  // Agregar otra finca al generador actual: si !== null muestra el form
+  // de creación de finca enlazada al generador con ese id.
+  const [agregandoFincaPara, setAgregandoFincaPara] = useState<{
+    id: string;
+    nombre: string;
+  } | null>(null);
 
   // ── Paso 2: datos del certificado ─────────────────────────
   const [fechaDevolucion, setFechaDevolucion] = useState("");
@@ -224,7 +231,7 @@ export default function CertificadosPage() {
           </p>
         </div>
 
-        {crearPrefill !== null && !editando && (
+        {crearPrefill !== null && !editando && !agregandoFincaPara && (
           <CrearGeneradorForm
             mode="crear"
             prefillNit={crearPrefill}
@@ -242,7 +249,7 @@ export default function CertificadosPage() {
           />
         )}
 
-        {editando && fincaInfo && (
+        {editando && fincaInfo && !agregandoFincaPara && (
           <CrearGeneradorForm
             mode="editar"
             initial={{
@@ -267,8 +274,21 @@ export default function CertificadosPage() {
           />
         )}
 
+        {agregandoFincaPara && (
+          <AgregarFincaForm
+            generadorContext={agregandoFincaPara}
+            onCancel={() => setAgregandoFincaPara(null)}
+            onFincaAdded={(f) => {
+              setAgregandoFincaPara(null);
+              // Seleccionar la nueva finca para que el panel se refresque
+              // y muestre los datos congelados de esa finca.
+              setFinca(f);
+            }}
+          />
+        )}
+
         {/* ── PASO 1: GENERADOR → FINCA ──────────────────── */}
-        {crearPrefill === null && !editando && (
+        {crearPrefill === null && !editando && !agregandoFincaPara && (
         <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             1. Generador y finca
@@ -288,6 +308,14 @@ export default function CertificadosPage() {
             onChange={setFinca}
             generadorId={generador?.id}
             disabled={!generador}
+            onCrearFinca={() => {
+              if (generador) {
+                setAgregandoFincaPara({
+                  id: generador.id,
+                  nombre: generador.nombre,
+                });
+              }
+            }}
           />
 
           {generador && !finca && (
@@ -378,6 +406,22 @@ export default function CertificadosPage() {
                     <p className="text-xs text-amber-700">
                       No se pudieron cargar los datos de la finca.
                     </p>
+                  )}
+                  {fincaInfo && generador && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAgregandoFincaPara({
+                            id: generador.id,
+                            nombre: generador.nombre,
+                          })
+                        }
+                        className="text-xs font-medium text-green-700 hover:text-green-900 underline"
+                      >
+                        + Agregar otra finca a este generador
+                      </button>
+                    </div>
                   )}
                 </div>
               );
