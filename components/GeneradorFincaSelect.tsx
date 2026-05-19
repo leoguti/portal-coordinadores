@@ -272,39 +272,49 @@ export function FincaAutocomplete({
             <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {loading ? (
                 <div className="p-2 text-xs text-gray-400">Buscando...</div>
-              ) : results.length === 0 ? (
-                <div className="p-2">
-                  <p className="text-xs text-gray-400 mb-2">Sin resultados</p>
-                  {onCrearFinca && generadorId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onCrearFinca();
-                        setOpen(false);
-                      }}
-                      className="w-full text-left text-sm font-medium text-green-700 hover:bg-green-50 rounded px-2 py-1.5 border border-green-200"
-                    >
-                      + Crear nueva finca para este generador
-                    </button>
-                  )}
-                </div>
               ) : (
-                results.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      onChange({ id: f.id, nombre: f.nombre });
-                      setQ("");
-                      setOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                  >
-                    <div className="text-sm font-medium text-gray-800">
-                      {f.nombre}
+                <>
+                  {results.length === 0 ? (
+                    <p className="p-2 text-xs text-gray-400">Sin resultados</p>
+                  ) : (
+                    results.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => {
+                          onChange({ id: f.id, nombre: f.nombre });
+                          setQ("");
+                          setOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="text-sm font-medium text-gray-800">
+                          {f.nombre}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                  {onCrearFinca && generadorId && (
+                    <div
+                      className={
+                        results.length > 0
+                          ? "p-2 border-t border-gray-200 bg-gray-50"
+                          : "p-2"
+                      }
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onCrearFinca();
+                          setOpen(false);
+                        }}
+                        className="w-full text-left text-sm font-medium text-green-700 hover:bg-green-100 rounded px-2 py-1.5 border border-green-200"
+                      >
+                        + Crear nueva finca para este generador
+                      </button>
                     </div>
-                  </button>
-                ))
+                  )}
+                </>
               )}
             </div>
           )}
