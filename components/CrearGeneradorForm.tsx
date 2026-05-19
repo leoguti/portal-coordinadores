@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * Formulario para crear un generador desde cero (camino "no tan feliz").
- * Captura los datos del generador + UNA finca obligatoria (un generador sin
- * finca no tiene sentido). El backend (/api/generadores/crear) comprueba que
- * el NIT/cédula no exista antes de crear.
+ * Formulario de generador + finca. Modos:
+ *  - "crear": crea generador y su primera finca (POST /api/generadores/crear).
+ *  - "editar": actualiza generador y la finca seleccionada
+ *    (PATCH /api/generadores/[id]/editar). Pre-llena con `initial`. Es el
+ *    mismo formulario que usan los coordinadores para COMPLETAR datos
+ *    faltantes en generadores antiguos (data dirty), aplicando las reglas
+ *    de la interfaz "revisar fincas".
  */
 
 import { useEffect, useState } from "react";
@@ -16,38 +19,78 @@ import type {
 import { esMovilCOValido, validarDocumento } from "@/lib/validacionesCO";
 
 type Mun = { id: string; mundep: string } | null;
+type Modo = "crear" | "editar";
 
 const TIPOS = ["AGRICOLA", "PECUARIO", "FLORICULTOR", "OTRO"] as const;
 const TIPOS_PERSONA = ["Natural", "Juridica"] as const;
 
+export interface GeneradorFincaInitial {
+  generador: {
+    id: string;
+    nombre: string;
+    nit: string;
+    tipo: string;
+    tipopersona: string;
+    direccion_sede: string;
+    municipio: { id: string; mundep: string } | null;
+    movil: string;
+    email: string;
+  };
+  finca: {
+    id: string;
+    nombre: string;
+    municipio: { id: string; mundep: string } | null;
+    cultivos: { id: string; nombre: string }[];
+    movil: string;
+    email: string;
+  };
+}
+
 export default function CrearGeneradorForm({
+  mode = "crear",
+  initial,
   prefillNit,
   onCancel,
   onCreated,
   onExisting,
+  onEdited,
 }: {
+  mode?: Modo;
+  initial?: GeneradorFincaInitial;
   prefillNit?: string;
   onCancel: () => void;
-  onCreated: (g: GeneradorOption, f: FincaOption) => void;
-  onExisting: (g: GeneradorOption) => void;
+  onCreated?: (g: GeneradorOption, f: FincaOption) => void;
+  onExisting?: (g: GeneradorOption) => void;
+  onEdited?: (g: GeneradorOption, f: FincaOption) => void;
 }) {
+  const isEditar = mode === "editar";
+
   // Generador
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState(initial?.generador.nombre ?? "");
   const [nit, setNit] = useState(
-    prefillNit && /\d/.test(prefillNit) ? prefillNit : ""
+    initial?.generador.nit ??
+      (prefillNit && /\d/.test(prefillNit) ? prefillNit : "")
   );
-  const [tipo, setTipo] = useState<string>("");
-  const [tipopersona, setTipopersona] = useState<string>("");
-  const [direccionSede, setDireccionSede] = useState("");
-  const [genMunicipio, setGenMunicipio] = useState<Mun>(null);
-  const [genMovil, setGenMovil] = useState("");
-  const [genEmail, setGenEmail] = useState("");
+  const [tipo, setTipo] = useState<string>(initial?.generador.tipo ?? "");
+  const [tipopersona, setTipopersona] = useState<string>(
+    initial?.generador.tipopersona ?? ""
+  );
+  const [direccionSede, setDireccionSede] = useState(
+    initial?.generador.direccion_sede ?? ""
+  );
+  const [genMunicipio, setGenMunicipio] = useState<Mun>(
+    initial?.generador.municipio ?? null
+  );
+  const [genMovil, setGenMovil] = useState(initial?.generador.movil ?? "");
+  const [genEmail, setGenEmail] = useState(initial?.generador.email ?? "");
 
   // Finca
-  const [fincaNombre, setFincaNombre] = useState("");
-  const [fincaMunicipio, setFincaMunicipio] = useState<Mun>(null);
-  const [fincaMovil, setFincaMovil] = useState("");
-  const [fincaEmail, setFincaEmail] = useState("");
+  const [fincaNombre, setFincaNombre] = useState(initial?.finca.nombre ?? "");
+  const [fincaMunicipio, setFincaMunicipio] = useState<Mun>(
+    initial?.finca.municipio ?? null
+  );
+  const [fincaMovil, setFincaMovil] = useState(initial?.finca.movil ?? "");
+  const [fincaEmail, setFincaEmail] = useState(initial?.finca.email ?? "");
 
   // Cultivos
   const [cultivos, setCultivos] = useState<{ id: string; nombre: string }[]>(
@@ -55,7 +98,7 @@ export default function CrearGeneradorForm({
   );
   const [cultivoSel, setCultivoSel] = useState<
     { id: string; nombre: string }[]
-  >([]);
+  >(initial?.finca.cultivos ?? []);
   const [cultivoQ, setCultivoQ] = useState("");
 
   // Estado
@@ -121,8 +164,21 @@ export default function CrearGeneradorForm({
 
     setEnviando(true);
     try {
-      const res = await fetch("/api/generadores/crear", {
-        method: "POST",
+      const url = isEditar
+        ? `/api/generadores/${initial!.generador.id}/editar`
+        : "/api/generadores/crear";
+      const method = isEditar ? "PATCH" : "POST";
+      const fincaBody: Record<string, unknown> = {
+        nombre: fincaNombre,
+        municipioId: fincaMunicipio?.id,
+        cultivoIds: cultivoSel.map((c) => c.id),
+        movil: fincaMovil,
+        email: fincaEmail,
+      };
+      if (isEditar) fincaBody.id = initial!.finca.id;
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           generador: {
@@ -135,13 +191,7 @@ export default function CrearGeneradorForm({
             movil: genMovil,
             email: genEmail,
           },
-          finca: {
-            nombre: fincaNombre,
-            municipioId: fincaMunicipio?.id,
-            cultivoIds: cultivoSel.map((c) => c.id),
-            movil: fincaMovil,
-            email: fincaEmail,
-          },
+          finca: fincaBody,
         }),
       });
       const data = await res.json();
@@ -151,7 +201,9 @@ export default function CrearGeneradorForm({
         return;
       }
       if (!res.ok) {
-        setError(data.error || "Error creando el generador");
+        setError(
+          data.error || (isEditar ? "Error guardando" : "Error creando")
+        );
         return;
       }
       setCreado({
@@ -159,7 +211,11 @@ export default function CrearGeneradorForm({
         finca: data.finca as FincaOption,
       });
     } catch {
-      setError("Error de red creando el generador");
+      setError(
+        isEditar
+          ? "Error de red guardando cambios"
+          : "Error de red creando el generador"
+      );
     } finally {
       setEnviando(false);
     }
@@ -183,7 +239,13 @@ export default function CrearGeneradorForm({
     <div className="bg-white rounded-lg shadow p-6 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          {creado ? "Generador creado" : "Crear generador nuevo"}
+          {creado
+            ? isEditar
+              ? "Datos actualizados"
+              : "Generador creado"
+            : isEditar
+            ? "Editar generador y finca"
+            : "Crear generador nuevo"}
         </h2>
         {!creado && (
           <button
@@ -200,11 +262,14 @@ export default function CrearGeneradorForm({
         <div className="text-center py-4">
           <div className="text-6xl mb-3">✅</div>
           <h3 className="text-xl font-bold text-gray-900 mb-1">
-            Generador y finca creados con éxito
+            {isEditar
+              ? "Datos del generador y la finca actualizados"
+              : "Generador y finca creados con éxito"}
           </h3>
           <p className="text-sm text-gray-600 mb-5">
-            Quedaron registrados en el sistema. Ya puedes generar el
-            certificado.
+            {isEditar
+              ? "Los cambios quedaron guardados. Ya puedes continuar al certificado."
+              : "Quedaron registrados en el sistema. Ya puedes generar el certificado."}
           </p>
           <div className="bg-green-50 border border-green-200 rounded-md text-left px-4 py-3 mb-5">
             <dl className="grid grid-cols-1 gap-y-1 text-sm text-gray-700">
@@ -232,7 +297,10 @@ export default function CrearGeneradorForm({
           </div>
           <button
             type="button"
-            onClick={() => onCreated(creado.generador, creado.finca)}
+            onClick={() => {
+              if (isEditar) onEdited?.(creado.generador, creado.finca);
+              else onCreated?.(creado.generador, creado.finca);
+            }}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg text-sm"
           >
             Continuar a generar el certificado
@@ -241,23 +309,29 @@ export default function CrearGeneradorForm({
       ) : duplicado ? (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-sm text-amber-900 font-medium mb-1">
-            Ya existe un generador con ese NIT/cédula
+            {isEditar
+              ? "Otro generador ya tiene ese NIT/cédula"
+              : "Ya existe un generador con ese NIT/cédula"}
           </p>
           <p className="text-sm text-amber-800 mb-3">
             <strong>{duplicado.nombre}</strong>
             {duplicado.nit && ` · NIT ${duplicado.nit}`}
           </p>
           <p className="text-xs text-amber-700 mb-3">
-            No se crea un duplicado. Puedes usar el generador existente.
+            {isEditar
+              ? "No se puede guardar con un NIT/cédula que ya tiene otro generador. Corrige el dato y vuelve a intentar."
+              : "No se crea un duplicado. Puedes usar el generador existente."}
           </p>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onExisting(duplicado)}
-              className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg"
-            >
-              Usar este generador
-            </button>
+            {!isEditar && (
+              <button
+                type="button"
+                onClick={() => onExisting?.(duplicado)}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg"
+              >
+                Usar este generador
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setDuplicado(null)}
@@ -510,7 +584,11 @@ export default function CrearGeneradorForm({
             className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm transition-colors"
           >
             {enviando
-              ? "Creando generador..."
+              ? isEditar
+                ? "Guardando cambios..."
+                : "Creando generador..."
+              : isEditar
+              ? "Guardar cambios"
               : "Crear generador y continuar"}
           </button>
         </form>

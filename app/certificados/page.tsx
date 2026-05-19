@@ -11,7 +11,9 @@ import {
   type GeneradorOption,
   type FincaOption,
 } from "@/components/GeneradorFincaSelect";
-import CrearGeneradorForm from "@/components/CrearGeneradorForm";
+import CrearGeneradorForm, {
+  type GeneradorFincaInitial,
+} from "@/components/CrearGeneradorForm";
 
 interface Resultado {
   consecutivo: number;
@@ -26,16 +28,24 @@ export default function CertificadosPage() {
   // ── Paso 1: generador → finca ─────────────────────────────
   const [generador, setGenerador] = useState<GeneradorOption | null>(null);
   const [finca, setFinca] = useState<FincaOption | null>(null);
+  // fincaInfo trae los datos del panel + raw para pre-cargar el form de
+  // edición + el estado de completitud (para warning rojo y bloqueo).
   const [fincaInfo, setFincaInfo] = useState<{
     nombregenerador: string;
     cedulagenerador: string;
     municipiogenerador: string;
     cultivogenerador: string;
+    generador: GeneradorFincaInitial["generador"];
+    finca: GeneradorFincaInitial["finca"];
+    completitud: { complete: boolean; missing: string[] };
   } | null>(null);
   const [fincaInfoLoading, setFincaInfoLoading] = useState(false);
   // Camino no tan feliz: si !== null, se muestra el form de crear generador
   // (con el texto buscado como prefill del NIT/cédula).
   const [crearPrefill, setCrearPrefill] = useState<string | null>(null);
+  // Edición: cuando es true, se reemplaza Paso 1 por el form de edición
+  // pre-cargado con los datos actuales del generador y la finca.
+  const [editando, setEditando] = useState(false);
 
   // ── Paso 2: datos del certificado ─────────────────────────
   const [fechaDevolucion, setFechaDevolucion] = useState("");
@@ -214,8 +224,9 @@ export default function CertificadosPage() {
           </p>
         </div>
 
-        {crearPrefill !== null && (
+        {crearPrefill !== null && !editando && (
           <CrearGeneradorForm
+            mode="crear"
             prefillNit={crearPrefill}
             onCancel={() => setCrearPrefill(null)}
             onCreated={(g, f) => {
@@ -231,8 +242,33 @@ export default function CertificadosPage() {
           />
         )}
 
+        {editando && fincaInfo && (
+          <CrearGeneradorForm
+            mode="editar"
+            initial={{
+              generador: fincaInfo.generador,
+              finca: fincaInfo.finca,
+            }}
+            onCancel={() => setEditando(false)}
+            onEdited={(g, f) => {
+              setEditando(false);
+              // Forzamos re-fetch del panel actualizando el ref de finca.
+              setFinca({ id: f.id, nombre: f.nombre });
+              if (generador) {
+                setGenerador({
+                  ...generador,
+                  nombre: g.nombre,
+                  nit: g.nit,
+                  tipo: g.tipo,
+                  tipopersona: g.tipopersona,
+                });
+              }
+            }}
+          />
+        )}
+
         {/* ── PASO 1: GENERADOR → FINCA ──────────────────── */}
-        {crearPrefill === null && (
+        {crearPrefill === null && !editando && (
         <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             1. Generador y finca
@@ -260,57 +296,92 @@ export default function CertificadosPage() {
             </p>
           )}
 
-          {finca && (
-            <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3">
-              <p className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">
-                Datos del generador y la finca
-              </p>
-              <p className="text-xs text-gray-500 mb-2">
-                Vienen de los datos registrados del generador y su finca, y
-                quedan guardados en el certificado. Revisa que sean correctos.
-              </p>
-              {fincaInfoLoading ? (
-                <p className="text-xs text-gray-500">
-                  Cargando datos de la finca...
-                </p>
-              ) : fincaInfo ? (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
-                  <div>
-                    <dt className="inline text-gray-500">Generador: </dt>
-                    <dd className="inline font-medium">
-                      {fincaInfo.nombregenerador || "—"}
-                    </dd>
+          {finca &&
+            (() => {
+              const incompleto =
+                !!fincaInfo && !fincaInfo.completitud.complete;
+              const boxCls = incompleto
+                ? "rounded-md border border-red-300 bg-red-50 px-4 py-3"
+                : "rounded-md border border-green-200 bg-green-50 px-4 py-3";
+              const titleCls = incompleto
+                ? "text-xs font-semibold text-red-800 uppercase tracking-wide mb-1"
+                : "text-xs font-semibold text-green-800 uppercase tracking-wide mb-1";
+              return (
+                <div className={boxCls}>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className={titleCls}>
+                      {incompleto
+                        ? "⚠ Datos incompletos del generador o la finca"
+                        : "Datos del generador y la finca"}
+                    </p>
+                    {fincaInfo && (
+                      <button
+                        type="button"
+                        onClick={() => setEditando(true)}
+                        className={
+                          incompleto
+                            ? "text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
+                            : "text-xs font-medium text-gray-600 hover:text-gray-900 underline"
+                        }
+                      >
+                        {incompleto ? "Completar / Editar" : "Editar"}
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <dt className="inline text-gray-500">NIT/Cédula: </dt>
-                    <dd className="inline font-medium">
-                      {fincaInfo.cedulagenerador || "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="inline text-gray-500">Municipio: </dt>
-                    <dd className="inline font-medium">
-                      {fincaInfo.municipiogenerador || "—"}
-                    </dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt className="inline text-gray-500">Cultivo(s): </dt>
-                    <dd className="inline font-medium">
-                      {fincaInfo.cultivogenerador || (
-                        <span className="text-amber-700">
-                          Sin cultivo registrado en la finca
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="text-xs text-amber-700">
-                  No se pudieron cargar los datos de la finca.
-                </p>
-              )}
-            </div>
-          )}
+                  <p className="text-xs text-gray-600 mb-2">
+                    {incompleto
+                      ? "Antes de generar el certificado debes completar los datos del generador y la finca. Estas son las mismas reglas de \"revisar fincas\"."
+                      : "Vienen de los datos registrados del generador y su finca, y quedan guardados en el certificado. Revisa que sean correctos."}
+                  </p>
+                  {incompleto && fincaInfo && (
+                    <p className="text-xs text-red-700 mb-2">
+                      <span className="font-semibold">Faltan: </span>
+                      {fincaInfo.completitud.missing.join(", ")}
+                    </p>
+                  )}
+                  {fincaInfoLoading ? (
+                    <p className="text-xs text-gray-500">
+                      Cargando datos de la finca...
+                    </p>
+                  ) : fincaInfo ? (
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
+                      <div>
+                        <dt className="inline text-gray-500">Generador: </dt>
+                        <dd className="inline font-medium">
+                          {fincaInfo.nombregenerador || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline text-gray-500">NIT/Cédula: </dt>
+                        <dd className="inline font-medium">
+                          {fincaInfo.cedulagenerador || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="inline text-gray-500">Municipio: </dt>
+                        <dd className="inline font-medium">
+                          {fincaInfo.municipiogenerador || "—"}
+                        </dd>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <dt className="inline text-gray-500">Cultivo(s): </dt>
+                        <dd className="inline font-medium">
+                          {fincaInfo.cultivogenerador || (
+                            <span className="text-amber-700">
+                              Sin cultivo registrado en la finca
+                            </span>
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="text-xs text-amber-700">
+                      No se pudieron cargar los datos de la finca.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
         </div>
         )}
 
@@ -445,6 +516,14 @@ export default function CertificadosPage() {
               </div>
             )}
 
+            {fincaInfo && !fincaInfo.completitud.complete && (
+              <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 mb-4 text-sm text-red-800">
+                <strong>No se puede generar el certificado.</strong> Antes
+                debes completar los datos del generador y la finca
+                (botón <em>Completar / Editar</em> arriba).
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={
@@ -453,7 +532,8 @@ export default function CertificadosPage() {
                 !lugardevolucion ||
                 !fechaDevolucion ||
                 !triplelavado ||
-                totalKg <= 0
+                totalKg <= 0 ||
+                !!(fincaInfo && !fincaInfo.completitud.complete)
               }
               className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm transition-colors"
             >
