@@ -70,11 +70,16 @@ export default function CrearGeneradorForm({
       .catch(() => setCultivos([]));
   }, []);
 
+  // Algunos registros de CULTIVOS pueden venir sin nombre: descartarlos y
+  // blindar el filtro (un nombre undefined rompía toda la página).
+  const cultivosValidos = cultivos.filter(
+    (c) => typeof c.nombre === "string" && c.nombre.trim() !== ""
+  );
   const cultivosFiltrados = cultivoQ.trim()
-    ? cultivos.filter((c) =>
+    ? cultivosValidos.filter((c) =>
         c.nombre.toLowerCase().includes(cultivoQ.trim().toLowerCase())
       )
-    : cultivos;
+    : cultivosValidos;
 
   function toggleCultivo(c: { id: string; nombre: string }) {
     setCultivoSel((prev) =>

@@ -25,7 +25,8 @@ export async function GET() {
     });
     const data = await res.json();
     for (const r of data.records) {
-      records.push({ id: r.id, nombre: r.fields.nombre });
+      const nombre = String(r.fields?.nombre || "").trim();
+      if (nombre) records.push({ id: r.id, nombre });
     }
     offset = data.offset || "";
   } while (offset);
