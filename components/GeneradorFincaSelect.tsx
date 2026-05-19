@@ -168,7 +168,9 @@ export function FincaAutocomplete({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Si hay generador seleccionado, cargamos sus fincas al inicio (sin q)
+    // Si hay generador seleccionado, cargamos sus fincas al inicio (sin q).
+    // Si el generador tiene EXACTAMENTE una finca, se auto-selecciona para
+    // ahorrarle un click al coordinador.
     if (generadorId && !value) {
       (async () => {
         setLoading(true);
@@ -178,7 +180,11 @@ export function FincaAutocomplete({
           );
           if (res.ok) {
             const data = await res.json();
-            setResults(data.results || []);
+            const list: FincaOption[] = data.results || [];
+            setResults(list);
+            if (list.length === 1) {
+              onChange({ id: list[0].id, nombre: list[0].nombre });
+            }
           }
         } catch {
           setResults([]);
@@ -187,6 +193,8 @@ export function FincaAutocomplete({
         }
       })();
     }
+    // onChange es estable desde el padre; lo omitimos a propósito.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generadorId, value]);
 
   useEffect(() => {
