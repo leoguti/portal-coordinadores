@@ -14,8 +14,8 @@ export default function AuthenticatedLayout({
 
   // Cierra el drawer cuando se navega (el coordinador toca un menú).
   // Sincronizar con cambio de ruta es un side-effect legítimo aquí.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
 
