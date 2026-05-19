@@ -11,6 +11,7 @@ import {
   type GeneradorOption,
   type FincaOption,
 } from "@/components/GeneradorFincaSelect";
+import CrearGeneradorForm from "@/components/CrearGeneradorForm";
 
 interface Resultado {
   consecutivo: number;
@@ -32,6 +33,9 @@ export default function CertificadosPage() {
     cultivogenerador: string;
   } | null>(null);
   const [fincaInfoLoading, setFincaInfoLoading] = useState(false);
+  // Camino no tan feliz: si !== null, se muestra el form de crear generador
+  // (con el texto buscado como prefill del NIT/cédula).
+  const [crearPrefill, setCrearPrefill] = useState<string | null>(null);
 
   // ── Paso 2: datos del certificado ─────────────────────────
   const [fechaDevolucion, setFechaDevolucion] = useState("");
@@ -210,7 +214,25 @@ export default function CertificadosPage() {
           </p>
         </div>
 
+        {crearPrefill !== null && (
+          <CrearGeneradorForm
+            prefillNit={crearPrefill}
+            onCancel={() => setCrearPrefill(null)}
+            onCreated={(g, f) => {
+              setGenerador(g);
+              setFinca(f);
+              setCrearPrefill(null);
+            }}
+            onExisting={(g) => {
+              setGenerador(g);
+              setFinca(null);
+              setCrearPrefill(null);
+            }}
+          />
+        )}
+
         {/* ── PASO 1: GENERADOR → FINCA ──────────────────── */}
+        {crearPrefill === null && (
         <div className="bg-white rounded-lg shadow p-6 mb-4 space-y-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             1. Generador y finca
@@ -222,6 +244,7 @@ export default function CertificadosPage() {
               setGenerador(g);
               setFinca(null);
             }}
+            onCreateNew={(q) => setCrearPrefill(q)}
           />
 
           <FincaAutocomplete
@@ -289,6 +312,7 @@ export default function CertificadosPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* ── PASO 2: DATOS DEL CERTIFICADO ─────────────── */}
         {finca && (

@@ -25,9 +25,12 @@ export interface FincaOption {
 export function GeneradorAutocomplete({
   value,
   onChange,
+  onCreateNew,
 }: {
   value: GeneradorOption | null;
   onChange: (g: GeneradorOption | null) => void;
+  /** Si se pasa, al no haber resultados se ofrece crear uno nuevo. */
+  onCreateNew?: (prefill: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<GeneradorOption[]>([]);
@@ -101,7 +104,21 @@ export function GeneradorAutocomplete({
               {loading ? (
                 <div className="p-2 text-xs text-gray-400">Buscando...</div>
               ) : results.length === 0 ? (
-                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
+                <div className="p-2">
+                  <p className="text-xs text-gray-400 mb-2">Sin resultados</p>
+                  {onCreateNew && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCreateNew(q.trim());
+                        setOpen(false);
+                      }}
+                      className="w-full text-left text-sm font-medium text-green-700 hover:bg-green-50 rounded px-2 py-1.5 border border-green-200"
+                    >
+                      + Crear generador nuevo
+                    </button>
+                  )}
+                </div>
               ) : (
                 results.map((g) => (
                   <button
