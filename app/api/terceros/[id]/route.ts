@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { evaluarCompletitud } from "@/lib/terceros";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -96,6 +97,58 @@ export async function PATCH(
   }
   if (body.coordinadorResponsableId !== undefined) {
     fields.coordinador_responsable = body.coordinadorResponsableId ? [body.coordinadorResponsableId] : [];
+  }
+
+  // Para personas jurídicas, el NIT debe incluir el dígito de verificación
+  // y ser válido contra el algoritmo oficial DIAN. Se valida acá para
+  // bloquear la escritura (antes solo se reportaba como "incompleto"
+  // post-hoc). Necesitamos saber el estado FINAL del tercero, así que si el
+  // body trae solo uno de {nit, tipoPersona} consultamos el resto del record.
+  const nitNuevo: string | undefined =
+    typeof body.nit === "string" ? body.nit : undefined;
+  const tipoNuevo: string | undefined =
+    typeof body.tipoPersona === "string" ? body.tipoPersona : undefined;
+  if (nitNuevo !== undefined || tipoNuevo !== undefined) {
+    let nitFinal = nitNuevo;
+    let tipoFinal = tipoNuevo;
+    if (nitFinal === undefined || tipoFinal === undefined) {
+      const curr = await fetch(
+        `https://api.airtable.com/v0/${BASE}/Terceros/${id}`,
+        { headers: { Authorization: `Bearer ${KEY}` }, cache: "no-store" }
+      );
+      if (curr.ok) {
+        const c = await curr.json();
+        if (nitFinal === undefined) nitFinal = c.fields?.NIT;
+        if (tipoFinal === undefined) tipoFinal = c.fields?.tipo_persona;
+      }
+    }
+    if (tipoFinal === "Jurídica" && nitFinal) {
+      if (!validarNitJuridica(nitFinal)) {
+        // Sugerir DV correcto si el usuario escribió solo la base
+        const limpio = String(nitFinal).replace(/[^\d]/g, "");
+        const base = limpio.includes("-")
+          ? String(nitFinal).split("-")[0].replace(/[^\d]/g, "")
+          : limpio.length >= 9
+          ? limpio.slice(0, -1)
+          : limpio;
+        const dvSugerido =
+          base.length >= 8 && base.length <= 15
+            ? calcularDigitoVerificador(base)
+            : null;
+        return NextResponse.json(
+          {
+            error: "NIT_DV_INVALIDO",
+            mensaje:
+              "Para personas jurídicas el NIT debe incluir el dígito de verificación correcto.",
+            sugerencia:
+              dvSugerido !== null
+                ? `El NIT correcto sería: ${base}-${dvSugerido}`
+                : undefined,
+          },
+          { status: 400 }
+        );
+      }
+    }
   }
 
   const res = await fetch(`https://api.airtable.com/v0/${BASE}/Terceros/${id}`, {

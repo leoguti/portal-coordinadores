@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 const TIPOS_PERSONA = ["Natural", "Jurídica"];
 
@@ -69,7 +70,34 @@ export default function TerceroEditPage() {
     if (status === "authenticated") load();
   }, [status, id]);
 
+  // Validación en vivo del DV del NIT cuando es persona jurídica.
+  // Si el usuario escribe solo la base ("900123456") sin DV, sugerimos el
+  // dígito correcto. Si el DV es inválido, el botón Guardar se bloquea.
+  const dvSugerido = (() => {
+    if (tipoPersona !== "Jurídica" || !nit) return null;
+    const limpio = nit.replace(/[^\d]/g, "");
+    const base = nit.includes("-")
+      ? nit.split("-")[0].replace(/[^\d]/g, "")
+      : limpio.length >= 9
+      ? limpio.slice(0, -1)
+      : limpio;
+    if (base.length < 8 || base.length > 15) return null;
+    return calcularDigitoVerificador(base);
+  })();
+  const nitJuridicaInvalido =
+    tipoPersona === "Jurídica" &&
+    nit.trim().length > 0 &&
+    !validarNitJuridica(nit);
+
   const handleSave = async () => {
+    if (nitJuridicaInvalido) {
+      alert(
+        `El NIT no tiene un dígito de verificación válido.${
+          dvSugerido !== null ? ` Sugerencia: ${nit.replace(/[^\d]/g, "").includes("-") ? nit : `${nit.replace(/[^\d]/g, "").slice(0, -1)}-${dvSugerido}` }` : ""
+        }`
+      );
+      return;
+    }
     setSaving(true);
     const res = await fetch(`/api/terceros/${id}`, {
       method: "PATCH",
@@ -92,7 +120,17 @@ export default function TerceroEditPage() {
       setNitInvalido(data.completitud?.nitInvalido || false);
       setCompleto(data.completitud?.completo || false);
     } else {
-      alert("Error al guardar");
+      // Mostrar mensaje específico del backend (ej. NIT_DV_INVALIDO con sugerencia)
+      try {
+        const err = await res.json();
+        alert(
+          err.mensaje
+            ? `${err.mensaje}${err.sugerencia ? "\n\n" + err.sugerencia : ""}`
+            : "Error al guardar"
+        );
+      } catch {
+        alert("Error al guardar");
+      }
     }
   };
 
@@ -167,13 +205,42 @@ export default function TerceroEditPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
-                NIT / Cédula * {nitInvalido && <span className="text-red-600">(dígito verificador inválido)</span>}
+                NIT / Cédula *
+                {tipoPersona === "Jurídica" && (
+                  <span className="ml-1 text-[10px] text-gray-400">
+                    (debe incluir dígito de verificación, ej. 900123456-7)
+                  </span>
+                )}
               </label>
               <input
                 value={nit}
                 onChange={(e) => setNit(e.target.value)}
-                className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 ${nitInvalido ? "border-red-300" : "border-gray-300"}`}
+                className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 ${
+                  nitJuridicaInvalido || nitInvalido
+                    ? "border-red-400 bg-red-50 focus:ring-red-400"
+                    : "border-gray-300 focus:ring-green-500"
+                }`}
               />
+              {nitJuridicaInvalido && (
+                <p className="text-xs text-red-600 mt-1 flex items-start gap-1">
+                  <span className="font-bold">⚠</span>
+                  <span>
+                    El dígito de verificación no es válido.
+                    {dvSugerido !== null && (
+                      <>
+                        {" "}Sugerencia: <strong className="font-mono">
+                          {(() => {
+                            const base = nit.includes("-")
+                              ? nit.split("-")[0].replace(/[^\d]/g, "")
+                              : nit.replace(/[^\d]/g, "").slice(0, -1);
+                            return `${base}-${dvSugerido}`;
+                          })()}
+                        </strong>
+                      </>
+                    )}
+                  </span>
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Tipo de persona *</label>
@@ -223,8 +290,16 @@ export default function TerceroEditPage() {
           </div>
 
           <div className="flex gap-3 pt-3 border-t border-gray-100">
-            <button onClick={handleSave} disabled={saving}
-              className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50">
+            <button
+              onClick={handleSave}
+              disabled={saving || nitJuridicaInvalido}
+              title={
+                nitJuridicaInvalido
+                  ? "Corrige el dígito de verificación del NIT antes de guardar"
+                  : undefined
+              }
+              className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {saving ? "Guardando..." : "Guardar"}
             </button>
           </div>
