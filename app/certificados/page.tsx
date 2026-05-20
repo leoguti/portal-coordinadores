@@ -71,8 +71,10 @@ interface FincaOption {
 
 const PAGE_SIZE = 50;
 
+// Kilos siempre se muestran como enteros — los coordinadores no manejan
+// fracciones de kilo en la operación cotidiana.
 const formatNumber = (n: number) =>
-  new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 }).format(n);
+  new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(n);
 
 const formatMes = (yyyymm: string): string => {
   const m = yyyymm.match(/^(\d{4})-(\d{2})$/);
@@ -122,6 +124,7 @@ function ListarCertificadosPage() {
   // Filtros activos
   const [ano, setAno] = useState("");
   const [mes, setMes] = useState("");
+  const [consecutivoFiltro, setConsecutivoFiltro] = useState("");
   const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
   const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
   const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
@@ -176,6 +179,8 @@ function ListarCertificadosPage() {
       if (offset) params.set("offset", offset);
       if (ano) params.set("ano", ano);
       if (mes) params.set("mes", mes);
+      if (consecutivoFiltro.trim())
+        params.set("consecutivo", consecutivoFiltro.trim());
       if (generador) params.set("generador", generador.id);
       if (finca) params.set("finca", finca.id);
       for (const d of selDepartamentos) params.append("departamento", d);
@@ -192,6 +197,7 @@ function ListarCertificadosPage() {
     [
       ano,
       mes,
+      consecutivoFiltro,
       generador,
       finca,
       selDepartamentos,
@@ -266,6 +272,7 @@ function ListarCertificadosPage() {
   const clearAllFilters = () => {
     setAno("");
     setMes("");
+    setConsecutivoFiltro("");
     setSelDepartamentos([]);
     setSelMunicipios([]);
     setSelCultivos([]);
@@ -420,6 +427,22 @@ function ListarCertificadosPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                N° certificado
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={consecutivoFiltro}
+                onChange={(e) =>
+                  setConsecutivoFiltro(e.target.value.replace(/[^\d]/g, ""))
+                }
+                placeholder="Ej. 1234"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Año

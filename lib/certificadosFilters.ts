@@ -16,6 +16,8 @@ export interface CertificadosFilterInput {
   mes?: string;
   /** Filtro forzado por coordinador (no removible por el usuario, p.ej. usuario Coordinador). */
   forceCoordinadorId?: string;
+  /** Número de consecutivo exacto a buscar (usado por coordinadores que conocen el número). */
+  consecutivo?: number | string;
 }
 
 /** Escapa comillas simples y dobles para uso en filterByFormula. */
@@ -46,6 +48,17 @@ export function buildCertificadosFilterFormula(
     const n = Number(input.ano);
     if (Number.isFinite(n)) {
       clauses.push(`{ano} = ${n}`);
+    }
+  }
+
+  if (
+    input.consecutivo !== undefined &&
+    input.consecutivo !== null &&
+    `${input.consecutivo}`.trim() !== ""
+  ) {
+    const n = Number(input.consecutivo);
+    if (Number.isFinite(n)) {
+      clauses.push(`{consecutivo} = ${n}`);
     }
   }
 

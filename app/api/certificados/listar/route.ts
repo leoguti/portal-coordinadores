@@ -32,6 +32,9 @@ const FIELDS_TO_FETCH = [
   "nombrecoordinador",
   "total",
   "certificadopdf",
+  // Esquema nuevo: vínculo a FINCAS (usado para rellenar lookups vacíos en
+  // certs nuevos, ver enrichRecordsViaFincas).
+  "FINCAS",
 ];
 
 function arr<T = unknown>(v: unknown): T[] {
@@ -98,6 +101,138 @@ async function resolveFincasDelGenerador(
   return resolveFincaNombres(apiKey, baseId, fincaIds);
 }
 
+/**
+ * Para certs del esquema nuevo (GENERADORES + FINCAS), los lookups antiguos
+ * (nombregenerador, cedulagenerador, municipiogenerador) están VACÍOS porque
+ * apuntan a `link_ubicacion` (legacy) que ya no se llena. Esta función los
+ * rellena resolviendo en batch vía FINCAS → GENERADORES → MUNICIPIOS.
+ *
+ * Estrategia: 3 calls Airtable en paralelo (no 1 por cert), solo para los
+ * records que tienen FINCAS pero nombregenerador vacío.
+ */
+async function enrichRecordsViaFincas(
+  apiKey: string,
+  baseId: string,
+  records: CertificadoItem[],
+  fincaIdsByRecord: Map<string, string>
+): Promise<void> {
+  const fincaIds = Array.from(new Set(fincaIdsByRecord.values()));
+  if (fincaIds.length === 0) return;
+
+  // 1) Traer las FINCAS necesarias en una sola call (OR de RECORD_ID).
+  const orClause = fincaIds.map((id) => `RECORD_ID()='${id}'`).join(",");
+  const filterFormula = fincaIds.length === 1 ? orClause : `OR(${orClause})`;
+  const fincasParams = new URLSearchParams();
+  for (const f of ["nombre", "generador", "municipio"]) {
+    fincasParams.append("fields[]", f);
+  }
+  fincasParams.set("filterByFormula", filterFormula);
+  fincasParams.set("pageSize", "100");
+  const fincasRes = await fetch(
+    `https://api.airtable.com/v0/${baseId}/FINCAS?${fincasParams.toString()}`,
+    { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
+  );
+  if (!fincasRes.ok) return;
+  const fincasData = await fincasRes.json();
+  const fincaById = new Map<
+    string,
+    { nombre: string; generadorId: string | null; municipioId: string | null }
+  >();
+  for (const rec of fincasData.records || []) {
+    const gens = arr<string>(rec.fields?.generador);
+    const muns = arr<string>(rec.fields?.municipio);
+    fincaById.set(rec.id, {
+      nombre: String(rec.fields?.nombre || "").trim(),
+      generadorId: gens[0] ? String(gens[0]) : null,
+      municipioId: muns[0] ? String(muns[0]) : null,
+    });
+  }
+
+  // 2) Traer GENERADORES en una sola call.
+  const generadorIds = Array.from(
+    new Set(
+      Array.from(fincaById.values())
+        .map((f) => f.generadorId)
+        .filter((x): x is string => !!x)
+    )
+  );
+  const generadorById = new Map<string, { nombre: string; nit: string }>();
+  if (generadorIds.length > 0) {
+    const orGen = generadorIds.map((id) => `RECORD_ID()='${id}'`).join(",");
+    const genFormula = generadorIds.length === 1 ? orGen : `OR(${orGen})`;
+    const genParams = new URLSearchParams();
+    for (const f of ["nombre", "nit"]) genParams.append("fields[]", f);
+    genParams.set("filterByFormula", genFormula);
+    genParams.set("pageSize", "100");
+    const genRes = await fetch(
+      `https://api.airtable.com/v0/${baseId}/GENERADORES?${genParams.toString()}`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
+    );
+    if (genRes.ok) {
+      const genData = await genRes.json();
+      for (const rec of genData.records || []) {
+        generadorById.set(rec.id, {
+          nombre: String(rec.fields?.nombre || "").trim(),
+          nit: String(rec.fields?.nit || "").trim(),
+        });
+      }
+    }
+  }
+
+  // 3) Traer MUNICIPIOS en una sola call.
+  const municipioIds = Array.from(
+    new Set(
+      Array.from(fincaById.values())
+        .map((f) => f.municipioId)
+        .filter((x): x is string => !!x)
+    )
+  );
+  const municipioById = new Map<string, string>();
+  if (municipioIds.length > 0) {
+    const orMun = municipioIds.map((id) => `RECORD_ID()='${id}'`).join(",");
+    const munFormula = municipioIds.length === 1 ? orMun : `OR(${orMun})`;
+    const munParams = new URLSearchParams();
+    for (const f of ["mundep"]) munParams.append("fields[]", f);
+    munParams.set("filterByFormula", munFormula);
+    munParams.set("pageSize", "100");
+    const munRes = await fetch(
+      `https://api.airtable.com/v0/${baseId}/MUNICIPIOS?${munParams.toString()}`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" }
+    );
+    if (munRes.ok) {
+      const munData = await munRes.json();
+      for (const rec of munData.records || []) {
+        municipioById.set(rec.id, String(rec.fields?.mundep || "").trim());
+      }
+    }
+  }
+
+  // 4) Rellenar in-place los records que estaban vacíos.
+  for (const r of records) {
+    const fincaId = fincaIdsByRecord.get(r.id);
+    if (!fincaId) continue;
+    const finca = fincaById.get(fincaId);
+    if (!finca) continue;
+    if (!r.nombregenerador && finca.generadorId) {
+      const gen = generadorById.get(finca.generadorId);
+      if (gen) {
+        r.nombregenerador = gen.nombre;
+        if (!r.cedulagenerador) r.cedulagenerador = gen.nit;
+      }
+    }
+    if (!r.municipiogenerador && finca.municipioId) {
+      const mundep = municipioById.get(finca.municipioId);
+      if (mundep) {
+        r.municipiogenerador = mundep;
+        // El departamento también: extraerlo del mundep si está vacío.
+        if (!r.departamento && mundep.includes(" - ")) {
+          r.departamento = mundep.split(" - ")[1] || "";
+        }
+      }
+    }
+  }
+}
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
@@ -122,6 +257,7 @@ export async function GET(request: Request) {
   const offset = searchParams.get("offset");
   const ano = searchParams.get("ano") || "";
   const mes = searchParams.get("mes") || "";
+  const consecutivo = (searchParams.get("consecutivo") || "").trim();
   const generadorId = (searchParams.get("generador") || "").trim();
   const fincaId = (searchParams.get("finca") || "").trim();
 
@@ -167,6 +303,7 @@ export async function GET(request: Request) {
     fincaNombres,
     mes: mes || undefined,
     forceCoordinadorId,
+    consecutivo: consecutivo || undefined,
   });
 
   try {
@@ -196,6 +333,10 @@ export async function GET(request: Request) {
       console.error("Error cargando cultivos cache:", err);
     }
 
+    // Mapa de recordId → fincaId del primer FINCAS vinculado, usado por
+    // enrichRecordsViaFincas para resolver datos del esquema nuevo.
+    const fincaIdsByRecord = new Map<string, string>();
+
     const records: CertificadoItem[] = (data.records || []).map(
       (rec: { id: string; fields: Record<string, unknown> }) => {
         const f = rec.fields;
@@ -207,11 +348,17 @@ export async function GET(request: Request) {
         const cultivos = cultivoIds.map(
           (id) => cultivosMap.get(id) || id
         );
+        const nombregenerador = firstString(f["nombregenerador"]);
+        const fincasLink = arr<string>(f["FINCAS"]).map((x) => String(x));
+        // Guardar fincaId solo si el lookup viejo viene vacío (esquema nuevo).
+        if (!nombregenerador && fincasLink[0]) {
+          fincaIdsByRecord.set(rec.id, fincasLink[0]);
+        }
         return {
           id: rec.id,
           consecutivo: (f["consecutivo"] as string | number) ?? "",
           fechadevolucion: firstString(f["fechadevolucion"]),
-          nombregenerador: firstString(f["nombregenerador"]),
+          nombregenerador,
           cedulagenerador: firstString(f["cedulagenerador"]),
           municipiogenerador: firstString(f["municipiogenerador"]),
           departamento: firstString(f["Departamento"]),
@@ -222,6 +369,17 @@ export async function GET(request: Request) {
         };
       }
     );
+
+    // Rellenar nombregenerador/cedulagenerador/municipiogenerador/depto en
+    // records nuevos (esquema GENERADORES+FINCAS) cuyos lookups viejos vienen
+    // vacíos porque apuntan a link_ubicacion (legacy ya no usado).
+    if (fincaIdsByRecord.size > 0) {
+      try {
+        await enrichRecordsViaFincas(apiKey, baseId, records, fincaIdsByRecord);
+      } catch (err) {
+        console.error("Error enriqueciendo records vía FINCAS:", err);
+      }
+    }
 
     return NextResponse.json({
       records,
