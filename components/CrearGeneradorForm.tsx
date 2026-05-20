@@ -110,6 +110,10 @@ export default function CrearGeneradorForm({
   // re-validan en cada cambio para que el rojo desaparezca al corregir.
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  // Checkbox "la finca usa los mismos datos del generador" (municipio, móvil,
+  // email). Solo en modo crear — en editar los datos ya están guardados y
+  // podrían diferir intencionalmente.
+  const [mismosDatos, setMismosDatos] = useState(false);
   // Tras crear con éxito, mostramos una pantalla de confirmación explícita
   // (los coordinadores necesitan un aviso contundente antes de continuar).
   const [creado, setCreado] = useState<{
@@ -172,6 +176,16 @@ export default function CrearGeneradorForm({
 
     return e;
   }
+
+  // Cuando "mismos datos" está activo, copiar/sincronizar los campos del
+  // generador en la finca. Si se desactiva, los valores quedan donde estaban
+  // (el usuario puede editarlos libremente).
+  useEffect(() => {
+    if (!mismosDatos) return;
+    setFincaMunicipio(genMunicipio);
+    setFincaMovil(genMovil);
+    setFincaEmail(genEmail);
+  }, [mismosDatos, genMunicipio, genMovil, genEmail]);
 
   // Re-validar en vivo solo después del primer intento de submit, para que el
   // rojo desaparezca a medida que el usuario corrige.
@@ -545,6 +559,28 @@ export default function CrearGeneradorForm({
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
               Finca (obligatoria — un generador debe tener al menos una)
             </p>
+
+            {/* Checkbox "mismos datos del generador" — solo en modo crear */}
+            {!isEditar && (
+              <label className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md cursor-pointer hover:bg-blue-100/60 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={mismosDatos}
+                  onChange={(e) => setMismosDatos(e.target.checked)}
+                  className="mt-0.5 accent-blue-600"
+                />
+                <div className="text-xs">
+                  <p className="font-medium text-blue-900">
+                    La finca tiene los mismos datos del generador
+                  </p>
+                  <p className="text-blue-700 mt-0.5">
+                    Copia municipio, móvil y email desde el generador. Útil
+                    cuando la sede del generador y la finca son el mismo lugar.
+                  </p>
+                </div>
+              </label>
+            )}
+
             <div data-field="fincaNombre">
               <label className={labelCls}>
                 Nombre de la finca <span className="text-red-500">*</span>
@@ -559,20 +595,35 @@ export default function CrearGeneradorForm({
             <div data-field="fincaMunicipio">
               <label className={labelCls}>
                 Municipio de la finca <span className="text-red-500">*</span>
+                {mismosDatos && (
+                  <span className="ml-1 text-[10px] font-normal text-blue-700">
+                    (= municipio del generador)
+                  </span>
+                )}
               </label>
-              <div
-                className={
-                  errors.fincaMunicipio
-                    ? "rounded-lg ring-2 ring-red-400 ring-offset-1"
-                    : ""
-                }
-              >
-                <MunicipioSearch
-                  value={fincaMunicipio}
-                  onChange={setFincaMunicipio}
-                  placeholder="Buscar municipio..."
-                />
-              </div>
+              {mismosDatos ? (
+                <div className="w-full border border-blue-200 bg-blue-50 text-blue-900 rounded-lg px-3 py-2 text-sm">
+                  {genMunicipio?.mundep || (
+                    <span className="text-blue-500 italic">
+                      Selecciona arriba el municipio del generador
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={
+                    errors.fincaMunicipio
+                      ? "rounded-lg ring-2 ring-red-400 ring-offset-1"
+                      : ""
+                  }
+                >
+                  <MunicipioSearch
+                    value={fincaMunicipio}
+                    onChange={setFincaMunicipio}
+                    placeholder="Buscar municipio..."
+                  />
+                </div>
+              )}
               {errMsg("fincaMunicipio")}
             </div>
             <div data-field="cultivos">
@@ -646,25 +697,47 @@ export default function CrearGeneradorForm({
               <div data-field="fincaMovil">
                 <label className={labelCls}>
                   Móvil finca <span className="text-red-500">*</span>
+                  {mismosDatos && (
+                    <span className="ml-1 text-[10px] font-normal text-blue-700">
+                      (= móvil del generador)
+                    </span>
+                  )}
                 </label>
                 <input
-                  className={inputClsFor("fincaMovil")}
+                  className={
+                    mismosDatos
+                      ? "w-full border border-blue-200 bg-blue-50 text-blue-900 rounded-lg px-3 py-2 text-sm"
+                      : inputClsFor("fincaMovil")
+                  }
                   value={fincaMovil}
                   onChange={(e) => setFincaMovil(e.target.value)}
                   inputMode="numeric"
                   placeholder="3XXXXXXXXX"
+                  readOnly={mismosDatos}
                 />
                 {errMsg("fincaMovil") || (
                   <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
                 )}
               </div>
               <div>
-                <label className={labelCls}>Email finca (opcional)</label>
+                <label className={labelCls}>
+                  Email finca (opcional)
+                  {mismosDatos && (
+                    <span className="ml-1 text-[10px] font-normal text-blue-700">
+                      (= email del generador)
+                    </span>
+                  )}
+                </label>
                 <input
                   type="email"
-                  className={inputCls}
+                  className={
+                    mismosDatos
+                      ? "w-full border border-blue-200 bg-blue-50 text-blue-900 rounded-lg px-3 py-2 text-sm"
+                      : inputCls
+                  }
                   value={fincaEmail}
                   onChange={(e) => setFincaEmail(e.target.value)}
+                  readOnly={mismosDatos}
                 />
               </div>
             </div>
