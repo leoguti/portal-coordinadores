@@ -18,7 +18,7 @@ export const maxDuration = 60;
  *   flexibles: number,
  *   metalicos: number,
  *   embalaje: number,
- *   triplelavado: "SI" | "NO" | "PENDIENTE",
+ *   triplelavado: "SI" | "NO" | "NO APLICA" | "PENDIENTE",
  *   lugardevolucion: string,
  *   fechadevolucion: string,   // YYYY-MM-DD
  *   observaciones?: string

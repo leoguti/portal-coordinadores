@@ -60,7 +60,9 @@ export default function CertificadosPage() {
   const [flexibles, setFlexibles] = useState("");
   const [metalicos, setMetalicos] = useState("");
   const [embalaje, setEmbalaje] = useState("");
-  const [triplelavado, setTriplelavado] = useState<"SI" | "NO" | "">("");
+  const [triplelavado, setTriplelavado] = useState<
+    "SI" | "NO" | "NO APLICA" | ""
+  >("");
   const [lugardevolucion, setLugardevolucion] = useState("");
   const [municipioDevolucion, setMunicipioDevolucion] = useState<{
     id: string;
@@ -491,8 +493,8 @@ export default function CertificadosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Triple lavado <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-4">
-                  {(["SI", "NO"] as const).map((v) => (
+                <div className="flex flex-wrap gap-4">
+                  {(["SI", "NO", "NO APLICA"] as const).map((v) => (
                     <label
                       key={v}
                       className="flex items-center gap-1.5 cursor-pointer"
@@ -509,6 +511,10 @@ export default function CertificadosPage() {
                     </label>
                   ))}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Usa <strong>NO APLICA</strong> para materiales que no
+                  requieren triple lavado (ej. cartón, embalaje seco).
+                </p>
               </div>
 
               {/* Lugar de devolución */}
