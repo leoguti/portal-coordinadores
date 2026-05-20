@@ -21,6 +21,9 @@ export interface CertificadoPDFProps {
   emailgenerador: string;
   municipiogenerador: string;
   tipogenerador: string;
+  // Finca (esquema nuevo GENERADORES + FINCAS). En la vía legacy
+  // (`link_ubicacion`) puede llegar vacío y el PDF lo omite.
+  nombrefinca?: string;
   // Materiales
   rigidos: number;
   flexibles: number;
@@ -384,6 +387,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
     movilcoordinador,
     emailcoordinador,
     observaciones,
+    nombrefinca,
   } = props;
 
   return (
@@ -444,10 +448,24 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           </View>
         </View>
 
-        {/* Row 3: Direccion + Cultivo */}
+        {/* Row 3 (NUEVA): Nombre de la finca. Esquema GENERADORES+FINCAS — un
+            generador puede tener varias fincas y el cert se emite contra una
+            específica. Si llega vacío (legacy via ubicaciones), se oculta. */}
+        {nombrefinca ? (
+          <View style={s.genRow}>
+            <View style={[s.cell, { width: "16%" }]}>
+              <Text style={s.labelText}>Finca</Text>
+            </View>
+            <View style={[s.cell, { width: "84%" }]}>
+              <Text style={s.valueBold}>{nombrefinca}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Row 4: Dirección sede + Cultivo */}
         <View style={s.genRow}>
           <View style={[s.cell, { width: "16%" }]}>
-            <Text style={s.labelText}>Dirección/Finca</Text>
+            <Text style={s.labelText}>Dirección sede</Text>
           </View>
           <View style={[s.cell, { width: "42%" }]}>
             <Text style={s.valueText}>{direcciongenerador}</Text>
@@ -469,7 +487,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>{emailgenerador}</Text>
           </View>
           <View style={[s.cell, { width: "12%" }]}>
-            <Text style={s.labelText}>Municipio/Depto</Text>
+            <Text style={s.labelText}>Municipio finca</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
             <Text style={s.valueText}>{municipiogenerador}</Text>

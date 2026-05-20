@@ -361,6 +361,10 @@ export async function POST(request: NextRequest) {
       tipogenerador: resolved
         ? resolved.tipogenerador
         : (f.tipogenerador || [])[0] || "",
+      // Nombre de la finca: solo lo tenemos en la vía nueva (resolved).
+      // En la vía legacy (link_ubicacion) el "nombre" de la ubicación ya
+      // estaba mezclado con dirección — no se pasa para no duplicar.
+      nombrefinca: resolved?.fincaNombre || "",
       rigidos: f.rigidos || 0,
       flexibles: f.flexibles || 0,
       metalicos: f.metalicos || 0,
