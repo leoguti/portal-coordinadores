@@ -6,6 +6,7 @@ import {
   esMovilCOValido,
   validarDocumento,
 } from "@/lib/validacionesCO";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 export const maxDuration = 30;
 
@@ -118,6 +119,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: docError }, { status: 400 });
   }
 
+  // Personas jurídicas: el NIT debe incluir el dígito de verificación correcto.
+  // Se valida con el algoritmo oficial DIAN (docs/ALGORITMO_DIGITO_VERIFICACION.md).
+  // Si es válido, además extraemos el DV numérico para poblarlo en el campo dv.
+  let dvJuridica: number | null = null;
+  if (tipopersona === "Juridica") {
+    if (!validarNitJuridica(nit)) {
+      const limpio = nit.replace(/[^\d]/g, "");
+      const base = nit.includes("-")
+        ? nit.split("-")[0].replace(/[^\d]/g, "")
+        : limpio.length >= 9
+        ? limpio.slice(0, -1)
+        : limpio;
+      const dvSugerido =
+        base.length >= 8 && base.length <= 15
+          ? calcularDigitoVerificador(base)
+          : null;
+      return NextResponse.json(
+        {
+          error: "NIT_DV_INVALIDO",
+          mensaje:
+            "El NIT no tiene un dígito de verificación válido. Para personas jurídicas el NIT debe incluir el DV (ej. 900123456-7).",
+          sugerencia:
+            dvSugerido !== null
+              ? `El NIT correcto sería: ${base}-${dvSugerido}`
+              : undefined,
+        },
+        { status: 400 }
+      );
+    }
+    // DV válido: extraer el número
+    if (nit.includes("-")) {
+      const after = nit.split("-")[1]?.replace(/[^\d]/g, "") || "";
+      dvJuridica = after.length > 0 ? parseInt(after, 10) : null;
+    } else {
+      const limpio = nit.replace(/[^\d]/g, "");
+      dvJuridica = limpio.length > 0 ? parseInt(limpio.slice(-1), 10) : null;
+    }
+  }
+
   // Móviles colombianos (10 dígitos, empiezan por 3)
   if (!esMovilCOValido(genMovil)) {
     return NextResponse.json(
@@ -202,6 +242,7 @@ export async function POST(req: NextRequest) {
       movil: genMovil,
     };
     if (genEmail) genFields.email = genEmail;
+    if (dvJuridica !== null) genFields.dv = dvJuridica;
 
     const res = await fetch(
       `https://api.airtable.com/v0/${baseId}/GENERADORES`,

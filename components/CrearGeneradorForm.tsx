@@ -17,6 +17,7 @@ import type {
   FincaOption,
 } from "@/components/GeneradorFincaSelect";
 import { esMovilCOValido, validarDocumento } from "@/lib/validacionesCO";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 type Mun = { id: string; mundep: string } | null;
 type Modo = "crear" | "editar";
@@ -147,6 +148,20 @@ export default function CrearGeneradorForm({
     );
   }
 
+  // Sugerencia del NIT correcto cuando es jurídica con DV inválido.
+  // null si no aplica (Natural, NIT vacío o base fuera de rango).
+  const dvSugeridoNit = (() => {
+    if (tipopersona !== "Juridica" || !nit) return null;
+    const limpio = nit.replace(/[^\d]/g, "");
+    const base = nit.includes("-")
+      ? nit.split("-")[0].replace(/[^\d]/g, "")
+      : limpio.length >= 9
+      ? limpio.slice(0, -1)
+      : limpio;
+    if (base.length < 8 || base.length > 15) return null;
+    return { base, dv: calcularDigitoVerificador(base) };
+  })();
+
   function validarFormulario(): Record<string, string> {
     const e: Record<string, string> = {};
 
@@ -155,6 +170,16 @@ export default function CrearGeneradorForm({
     if (!tipopersona) e.tipopersona = "Selecciona Natural o Jurídica";
     const docErr = validarDocumento(tipopersona, nit);
     if (docErr) e.nit = docErr;
+    // DV obligatorio + válido para personas jurídicas
+    else if (
+      tipopersona === "Juridica" &&
+      nit.trim().length > 0 &&
+      !validarNitJuridica(nit)
+    ) {
+      e.nit = dvSugeridoNit
+        ? `Dígito de verificación inválido. Sugerencia: ${dvSugeridoNit.base}-${dvSugeridoNit.dv}`
+        : "Dígito de verificación inválido. Para jurídicas el NIT debe incluir el DV (ej. 900123456-7)";
+    }
     if (!tipo) e.tipo = "Selecciona el tipo de generador";
     if (!genMovil.trim()) e.genMovil = "Falta el móvil del generador";
     else if (!esMovilCOValido(genMovil))
@@ -270,9 +295,13 @@ export default function CrearGeneradorForm({
         return;
       }
       if (!res.ok) {
-        setError(
-          data.error || (isEditar ? "Error guardando" : "Error creando")
-        );
+        // El backend devuelve { error: "NIT_DV_INVALIDO", mensaje, sugerencia }
+        // para el caso específico del DV; usamos esos campos si vienen.
+        const msg =
+          data.mensaje ||
+          data.error ||
+          (isEditar ? "Error guardando" : "Error creando");
+        setError(data.sugerencia ? `${msg}\n${data.sugerencia}` : msg);
         return;
       }
       setCreado({
@@ -315,6 +344,11 @@ export default function CrearGeneradorForm({
       : "NIT / Cédula";
   const docPlaceholder =
     tipopersona === "Natural" ? "Ej. 1098765432" : "Ej. 800141506-1";
+  // Hint que se muestra cuando NO hay error en el campo NIT
+  const docHint =
+    tipopersona === "Juridica"
+      ? "Incluye el dígito de verificación (ej. 900123456-7)"
+      : "Jurídica → NIT con DV · Natural → cédula";
   const movilHint = "Celular colombiano: 10 dígitos, empieza por 3";
 
   return (
@@ -453,9 +487,7 @@ export default function CrearGeneradorForm({
                   placeholder={docPlaceholder}
                 />
                 {errMsg("nit") || (
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Jurídica → NIT · Natural → cédula
-                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">{docHint}</p>
                 )}
               </div>
               <div data-field="tipopersona">

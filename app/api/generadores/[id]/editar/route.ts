@@ -6,6 +6,7 @@ import {
   esMovilCOValido,
   validarDocumento,
 } from "@/lib/validacionesCO";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 export const maxDuration = 30;
 
@@ -123,6 +124,44 @@ export async function PATCH(
     return NextResponse.json({ error: docError }, { status: 400 });
   }
 
+  // Personas jurídicas: el NIT debe incluir el dígito de verificación correcto.
+  // Algoritmo oficial DIAN (docs/ALGORITMO_DIGITO_VERIFICACION.md). Si es
+  // válido, extraemos el DV numérico para poblar el campo dv.
+  let dvJuridica: number | null = null;
+  if (tipopersona === "Juridica") {
+    if (!validarNitJuridica(nit)) {
+      const limpio = nit.replace(/[^\d]/g, "");
+      const base = nit.includes("-")
+        ? nit.split("-")[0].replace(/[^\d]/g, "")
+        : limpio.length >= 9
+        ? limpio.slice(0, -1)
+        : limpio;
+      const dvSugerido =
+        base.length >= 8 && base.length <= 15
+          ? calcularDigitoVerificador(base)
+          : null;
+      return NextResponse.json(
+        {
+          error: "NIT_DV_INVALIDO",
+          mensaje:
+            "El NIT no tiene un dígito de verificación válido. Para personas jurídicas el NIT debe incluir el DV (ej. 900123456-7).",
+          sugerencia:
+            dvSugerido !== null
+              ? `El NIT correcto sería: ${base}-${dvSugerido}`
+              : undefined,
+        },
+        { status: 400 }
+      );
+    }
+    if (nit.includes("-")) {
+      const after = nit.split("-")[1]?.replace(/[^\d]/g, "") || "";
+      dvJuridica = after.length > 0 ? parseInt(after, 10) : null;
+    } else {
+      const limpio = nit.replace(/[^\d]/g, "");
+      dvJuridica = limpio.length > 0 ? parseInt(limpio.slice(-1), 10) : null;
+    }
+  }
+
   if (!esMovilCOValido(genMovil)) {
     return NextResponse.json(
       { error: "El móvil del generador no es un celular colombiano válido" },
@@ -218,6 +257,8 @@ export async function PATCH(
       municipio: [genMunicipioId],
       movil: genMovil,
       email: genEmail || "",
+      // Limpiar dv si tipopersona pasó a Natural; setear si es Juridica con DV válido.
+      dv: dvJuridica,
     };
     const res = await fetch(
       `https://api.airtable.com/v0/${baseId}/GENERADORES/${generadorId}`,
