@@ -105,6 +105,11 @@ export default function CrearGeneradorForm({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicado, setDuplicado] = useState<GeneradorOption | null>(null);
+  // Errores por campo. Se llenan al hacer submit (no en vivo) para no marcar
+  // en rojo apenas el usuario abre el form. Una vez se intentó submit, se
+  // re-validan en cada cambio para que el rojo desaparezca al corregir.
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
   // Tras crear con éxito, mostramos una pantalla de confirmación explícita
   // (los coordinadores necesitan un aviso contundente antes de continuar).
   const [creado, setCreado] = useState<{
@@ -138,27 +143,77 @@ export default function CrearGeneradorForm({
     );
   }
 
+  function validarFormulario(): Record<string, string> {
+    const e: Record<string, string> = {};
+
+    // Generador
+    if (!nombre.trim()) e.nombre = "Falta el nombre / razón social";
+    if (!tipopersona) e.tipopersona = "Selecciona Natural o Jurídica";
+    const docErr = validarDocumento(tipopersona, nit);
+    if (docErr) e.nit = docErr;
+    if (!tipo) e.tipo = "Selecciona el tipo de generador";
+    if (!genMovil.trim()) e.genMovil = "Falta el móvil del generador";
+    else if (!esMovilCOValido(genMovil))
+      e.genMovil = "Celular colombiano: 10 dígitos, empieza por 3";
+    if (!direccionSede.trim())
+      e.direccionSede = "Falta la dirección de sede";
+    if (!genMunicipio) e.genMunicipio = "Selecciona el municipio del generador";
+
+    // Finca
+    if (!fincaNombre.trim()) e.fincaNombre = "Falta el nombre de la finca";
+    if (!fincaMunicipio)
+      e.fincaMunicipio = "Selecciona el municipio de la finca";
+    if (cultivoSel.length === 0)
+      e.cultivos =
+        "Selecciona al menos un cultivo. Escribe para filtrar y HAZ CLICK en el cultivo de la lista.";
+    if (!fincaMovil.trim()) e.fincaMovil = "Falta el móvil de la finca";
+    else if (!esMovilCOValido(fincaMovil))
+      e.fincaMovil = "Celular colombiano: 10 dígitos, empieza por 3";
+
+    return e;
+  }
+
+  // Re-validar en vivo solo después del primer intento de submit, para que el
+  // rojo desaparezca a medida que el usuario corrige.
+  useEffect(() => {
+    if (!submitted) return;
+    setErrors(validarFormulario());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    submitted,
+    nombre,
+    nit,
+    tipo,
+    tipopersona,
+    direccionSede,
+    genMunicipio,
+    genMovil,
+    fincaNombre,
+    fincaMunicipio,
+    fincaMovil,
+    cultivoSel,
+  ]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setDuplicado(null);
 
-    // Validación en tiempo de ejecución
-    const docErr = validarDocumento(tipopersona, nit);
-    if (docErr) {
-      setError(docErr);
-      return;
-    }
-    if (!esMovilCOValido(genMovil)) {
-      setError(
-        "El móvil del generador debe ser un celular colombiano (10 dígitos, empieza por 3)"
-      );
-      return;
-    }
-    if (!esMovilCOValido(fincaMovil)) {
-      setError(
-        "El móvil de la finca debe ser un celular colombiano (10 dígitos, empieza por 3)"
-      );
+    const errs = validarFormulario();
+    setErrors(errs);
+    setSubmitted(true);
+    if (Object.keys(errs).length > 0) {
+      // Hacer scroll al primer campo con error (UX)
+      const firstKey = Object.keys(errs)[0];
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-field="${firstKey}"]`);
+        if (el && "scrollIntoView" in el) {
+          (el as HTMLElement).scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      });
       return;
     }
 
@@ -221,9 +276,22 @@ export default function CrearGeneradorForm({
     }
   }
 
-  const inputCls =
-    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
+  const baseInputCls =
+    "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2";
+  const okBorder = "border-gray-300 focus:ring-green-500";
+  const errBorder = "border-red-400 bg-red-50 focus:ring-red-400";
+  const inputClsFor = (key: string) =>
+    `${baseInputCls} ${errors[key] ? errBorder : okBorder}`;
+  // Compat con código previo que usa `inputCls` (sin estado de error).
+  const inputCls = `${baseInputCls} ${okBorder}`;
   const labelCls = "block text-xs font-medium text-gray-600 mb-1";
+  const errMsg = (key: string) =>
+    errors[key] ? (
+      <p className="text-xs text-red-600 mt-1 flex items-start gap-1">
+        <span className="font-bold">⚠</span>
+        <span>{errors[key]}</span>
+      </p>
+    ) : null;
 
   const docLabel =
     tipopersona === "Natural"
@@ -348,42 +416,42 @@ export default function CrearGeneradorForm({
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
               Datos del generador
             </p>
-            <div>
+            <div data-field="nombre">
               <label className={labelCls}>
                 Nombre / Razón social <span className="text-red-500">*</span>
               </label>
               <input
-                className={inputCls}
+                className={inputClsFor("nombre")}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                required
               />
+              {errMsg("nombre")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div data-field="nit">
                 <label className={labelCls}>
                   {docLabel} <span className="text-red-500">*</span>
                 </label>
                 <input
-                  className={inputCls}
+                  className={inputClsFor("nit")}
                   value={nit}
                   onChange={(e) => setNit(e.target.value)}
-                  required
                   placeholder={docPlaceholder}
                 />
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Jurídica → NIT · Natural → cédula
-                </p>
+                {errMsg("nit") || (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Jurídica → NIT · Natural → cédula
+                  </p>
+                )}
               </div>
-              <div>
+              <div data-field="tipopersona">
                 <label className={labelCls}>
                   Tipo de persona <span className="text-red-500">*</span>
                 </label>
                 <select
-                  className={inputCls}
+                  className={inputClsFor("tipopersona")}
                   value={tipopersona}
                   onChange={(e) => setTipopersona(e.target.value)}
-                  required
                 >
                   <option value="">Seleccionar...</option>
                   {TIPOS_PERSONA.map((t) => (
@@ -392,18 +460,18 @@ export default function CrearGeneradorForm({
                     </option>
                   ))}
                 </select>
+                {errMsg("tipopersona")}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div data-field="tipo">
                 <label className={labelCls}>
                   Tipo de generador <span className="text-red-500">*</span>
                 </label>
                 <select
-                  className={inputCls}
+                  className={inputClsFor("tipo")}
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value)}
-                  required
                 >
                   <option value="">Seleccionar...</option>
                   {TIPOS.map((t) => (
@@ -412,43 +480,54 @@ export default function CrearGeneradorForm({
                     </option>
                   ))}
                 </select>
+                {errMsg("tipo")}
               </div>
-              <div>
+              <div data-field="genMovil">
                 <label className={labelCls}>
                   Móvil del generador <span className="text-red-500">*</span>
                 </label>
                 <input
-                  className={inputCls}
+                  className={inputClsFor("genMovil")}
                   value={genMovil}
                   onChange={(e) => setGenMovil(e.target.value)}
-                  required
                   inputMode="numeric"
                   placeholder="3XXXXXXXXX"
                 />
-                <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
+                {errMsg("genMovil") || (
+                  <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
+                )}
               </div>
             </div>
-            <div>
+            <div data-field="direccionSede">
               <label className={labelCls}>
                 Dirección de sede <span className="text-red-500">*</span>
               </label>
               <input
-                className={inputCls}
+                className={inputClsFor("direccionSede")}
                 value={direccionSede}
                 onChange={(e) => setDireccionSede(e.target.value)}
-                required
               />
+              {errMsg("direccionSede")}
             </div>
-            <div>
+            <div data-field="genMunicipio">
               <label className={labelCls}>
                 Municipio del generador{" "}
                 <span className="text-red-500">*</span>
               </label>
-              <MunicipioSearch
-                value={genMunicipio}
-                onChange={setGenMunicipio}
-                placeholder="Buscar municipio..."
-              />
+              <div
+                className={
+                  errors.genMunicipio
+                    ? "rounded-lg ring-2 ring-red-400 ring-offset-1"
+                    : ""
+                }
+              >
+                <MunicipioSearch
+                  value={genMunicipio}
+                  onChange={setGenMunicipio}
+                  placeholder="Buscar municipio..."
+                />
+              </div>
+              {errMsg("genMunicipio")}
             </div>
             <div>
               <label className={labelCls}>Email (opcional)</label>
@@ -466,33 +545,43 @@ export default function CrearGeneradorForm({
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
               Finca (obligatoria — un generador debe tener al menos una)
             </p>
-            <div>
+            <div data-field="fincaNombre">
               <label className={labelCls}>
                 Nombre de la finca <span className="text-red-500">*</span>
               </label>
               <input
-                className={inputCls}
+                className={inputClsFor("fincaNombre")}
                 value={fincaNombre}
                 onChange={(e) => setFincaNombre(e.target.value)}
-                required
               />
+              {errMsg("fincaNombre")}
             </div>
-            <div>
+            <div data-field="fincaMunicipio">
               <label className={labelCls}>
                 Municipio de la finca <span className="text-red-500">*</span>
               </label>
-              <MunicipioSearch
-                value={fincaMunicipio}
-                onChange={setFincaMunicipio}
-                placeholder="Buscar municipio..."
-              />
+              <div
+                className={
+                  errors.fincaMunicipio
+                    ? "rounded-lg ring-2 ring-red-400 ring-offset-1"
+                    : ""
+                }
+              >
+                <MunicipioSearch
+                  value={fincaMunicipio}
+                  onChange={setFincaMunicipio}
+                  placeholder="Buscar municipio..."
+                />
+              </div>
+              {errMsg("fincaMunicipio")}
             </div>
-            <div>
+            <div data-field="cultivos">
               <label className={labelCls}>
                 Cultivo(s) <span className="text-red-500">*</span>
               </label>
               <p className="text-[11px] text-gray-500 mb-1">
-                Puedes seleccionar varios cultivos.
+                Escribe para filtrar y <strong>haz click</strong> en el
+                cultivo de la lista para seleccionarlo. Puedes elegir varios.
               </p>
               {cultivoSel.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -515,12 +604,20 @@ export default function CrearGeneradorForm({
                 </div>
               )}
               <input
-                className={inputCls + " mb-1"}
+                className={
+                  `${baseInputCls} mb-1 ` +
+                  (errors.cultivos ? errBorder : okBorder)
+                }
                 value={cultivoQ}
                 onChange={(e) => setCultivoQ(e.target.value)}
                 placeholder="Filtrar cultivos..."
               />
-              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md">
+              <div
+                className={
+                  "max-h-40 overflow-y-auto border rounded-md " +
+                  (errors.cultivos ? "border-red-400" : "border-gray-200")
+                }
+              >
                 {cultivosFiltrados.length === 0 ? (
                   <p className="text-xs text-gray-400 p-2">Sin cultivos</p>
                 ) : (
@@ -546,19 +643,20 @@ export default function CrearGeneradorForm({
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div data-field="fincaMovil">
                 <label className={labelCls}>
                   Móvil finca <span className="text-red-500">*</span>
                 </label>
                 <input
-                  className={inputCls}
+                  className={inputClsFor("fincaMovil")}
                   value={fincaMovil}
                   onChange={(e) => setFincaMovil(e.target.value)}
-                  required
                   inputMode="numeric"
                   placeholder="3XXXXXXXXX"
                 />
-                <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
+                {errMsg("fincaMovil") || (
+                  <p className="text-[11px] text-gray-400 mt-1">{movilHint}</p>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Email finca (opcional)</label>
@@ -578,9 +676,25 @@ export default function CrearGeneradorForm({
             </div>
           )}
 
+          {submitted && Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 text-sm text-red-800">
+              <p className="font-semibold mb-1">
+                Faltan o están incorrectos {Object.keys(errors).length} campo(s):
+              </p>
+              <ul className="list-disc list-inside text-xs space-y-0.5">
+                {Object.values(errors).map((m, i) => (
+                  <li key={i}>{m}</li>
+                ))}
+              </ul>
+              <p className="text-xs mt-2 text-red-700">
+                Revisa los campos marcados en rojo arriba.
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={enviando || cultivoSel.length === 0}
+            disabled={enviando}
             className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-lg text-sm transition-colors"
           >
             {enviando
