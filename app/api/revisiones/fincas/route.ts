@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { getCultivosMap } from "@/lib/cultivosCache";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -94,9 +95,12 @@ export async function GET(request: NextRequest) {
 
   // 1. Fetch FINCAS asignadas al coordinador vía el rollup coordinador_id
   // (expone el RECORD_ID de coordinador_asignado como texto, sí filtrable).
+  // La lista se ancla DIRECTAMENTE en FINCAS (modelo nuevo): ya no recorremos
+  // `ubicaciones`, así toda finca aparece —venga de migración o de un
+  // certificado— y la vista sobrevive al borrado de la tabla `ubicaciones`.
   const fFields = [
-    "nombre", "generador", "municipio", "cultivos", "movil", "email",
-    "revisado", "notas_migracion", "coordinador_asignado", "ubicaciones",
+    "nombre", "generador", "municipio", "cultivos", "movil", "fijo", "email",
+    "revisado", "notas_migracion", "coordinador_asignado", "Certificados",
   ];
   const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
   const fincaFilter = !filtroCoordinadorId
@@ -117,100 +121,101 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
   }
 
-  const fincaMap = new Map<string, any>();
-  for (const f of fincas) fincaMap.set(f.id, f);
-
-  // 2. Recolectar IDs de ubicaciones desde el inverse link `ubicaciones` de cada finca
-  const ubicacionIdsSet = new Set<string>();
-  for (const f of fincas) {
-    for (const uid of (f.fields.ubicaciones || [])) ubicacionIdsSet.add(uid);
-  }
-  const ubicacionIds = Array.from(ubicacionIdsSet);
-
-  // 3. Fetch ubicaciones por RECORD_ID (que sí funciona)
-  const ubicaciones: any[] = [];
-  if (ubicacionIds.length > 0) {
-    const uFields = [
-      "nombregenerador", "cedulagenerador", "direcciongenerador",
-      "mundep", "cultivogenerador", "movilgenerador", "emailgenerador",
-      "tipogenerador", "finca",
-    ];
-    const ufp = uFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-    for (let i = 0; i < ubicacionIds.length; i += CHUNK) {
-      const chunk = ubicacionIds.slice(i, i + CHUNK);
-      const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
-      const url = `https://api.airtable.com/v0/${BASE}/ubicaciones?filterByFormula=${encodeURIComponent(formula)}&${ufp}&pageSize=100`;
-      const data = await airtableGet(url);
-      if (data.error) return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
-      ubicaciones.push(...data.records);
-    }
-  }
-
-  // 4. IDs de GENERADORES
+  // 2. Resolver GENERADORES de esas fincas
   const generadorIdsSet = new Set<string>();
-  for (const finca of fincaMap.values()) {
-    const gId = finca.fields.generador?.[0];
+  for (const f of fincas) {
+    const gId = f.fields.generador?.[0];
     if (gId) generadorIdsSet.add(gId);
   }
-  const generadorIds = Array.from(generadorIdsSet);
-
-  // 4. Fetch GENERADORES
   const generadorMap = new Map<string, any>();
+  const generadorIds = Array.from(generadorIdsSet);
   for (let i = 0; i < generadorIds.length; i += CHUNK) {
     const chunk = generadorIds.slice(i, i + CHUNK);
-    const formula = `OR(${chunk.map((id: string) => `RECORD_ID()='${id}'`).join(",")})`;
-    const gFields = ["nombre", "nit", "tipo", "tipopersona"];
+    const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+    const gFields = ["nombre", "nit", "tipo", "tipopersona", "direccion_sede", "movil", "email"];
     const gfp = gFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
     const url = `https://api.airtable.com/v0/${BASE}/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&${gfp}&pageSize=100`;
     const data = await airtableGet(url);
-    for (const r of data.records) generadorMap.set(r.id, r);
+    for (const r of (data.records || [])) generadorMap.set(r.id, r);
   }
 
-  // 5. Construir items por ubicacion — solo los cuya finca quedó en fincaMap
-  // (las fincas reasignadas a otro coordinador ya se excluyeron en el paso 3.5)
-  const items = ubicaciones
-    .filter((u) => {
-      const fid = u.fields.finca?.[0];
-      return fid && fincaMap.has(fid);
-    })
-    .map((u) => {
-    const fincaId = u.fields.finca?.[0] || null;
-    const finca = fincaId ? fincaMap.get(fincaId) : null;
-    const notas = finca?.fields?.notas_migracion || "";
-    const revisado = finca?.fields?.revisado || false;
+  // 3. Resolver MUNICIPIOS de las fincas → nombre "mundep"
+  const municipioIdsSet = new Set<string>();
+  for (const f of fincas) {
+    const mId = f.fields.municipio?.[0];
+    if (mId) municipioIdsSet.add(mId);
+  }
+  const municipioMap = new Map<string, string>();
+  const municipioIds = Array.from(municipioIdsSet);
+  for (let i = 0; i < municipioIds.length; i += CHUNK) {
+    const chunk = municipioIds.slice(i, i + CHUNK);
+    const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+    const url = `https://api.airtable.com/v0/${BASE}/MUNICIPIOS?filterByFormula=${encodeURIComponent(formula)}&fields[]=mundep&pageSize=100`;
+    const data = await airtableGet(url);
+    for (const r of (data.records || [])) {
+      municipioMap.set(r.id, String(r.fields?.mundep || "").trim());
+    }
+  }
+
+  // 4. Nombres de cultivos (cache en memoria)
+  let cultivosMap = new Map<string, string>();
+  try { cultivosMap = await getCultivosMap(); } catch { cultivosMap = new Map(); }
+
+  // 5. Construir items anclados en FINCAS.
+  // `original` se conserva por compatibilidad con el UI, pero ahora se puebla
+  // con datos ya resueltos de la finca/generador (no de `ubicaciones`).
+  const items = fincas.map((f) => {
+    const ff = f.fields;
+    const generadorId = ff.generador?.[0] || null;
+    const municipioId = ff.municipio?.[0] || null;
+    const municipioNombre = municipioId ? (municipioMap.get(municipioId) || "") : "";
+    const cultivoIds: string[] = Array.isArray(ff.cultivos) ? ff.cultivos : [];
+    const cultivoNombres = cultivoIds
+      .map((id) => cultivosMap.get(id) || "")
+      .filter(Boolean)
+      .join(", ");
+    const gen = generadorId ? generadorMap.get(generadorId) : null;
+    const certCount = Array.isArray(ff.Certificados) ? ff.Certificados.length : 0;
 
     return {
-      ubicacionId: u.id,
-      fincaId,
+      ubicacionId: null as string | null, // legacy: ya no se usa para nada
+      fincaId: f.id,
+      certCount,
       original: {
-        nombre: u.fields.nombregenerador || "",
-        nit: u.fields.cedulagenerador || "",
-        direccion: u.fields.direcciongenerador || "",
-        municipio: u.fields.mundep || "",
-        cultivo: u.fields.cultivogenerador || "",
-        movil: u.fields.movilgenerador || "",
-        email: u.fields.emailgenerador || "",
-        tipo: u.fields.tipogenerador || "",
+        nombre: gen ? String(gen.fields?.nombre || "") : "",
+        nit: gen ? String(gen.fields?.nit || "") : "",
+        direccion: String(ff.nombre || ""),
+        municipio: municipioNombre,
+        cultivo: cultivoNombres,
+        movil: String(ff.movil || ""),
+        email: String(ff.email || ""),
+        tipo: gen ? String(gen.fields?.tipo || "") : "",
       },
-      finca: finca ? {
-        nombre: finca.fields.nombre || "",
-        generadorId: finca.fields.generador?.[0] || null,
-        municipioId: finca.fields.municipio?.[0] || null,
-        cultivoIds: finca.fields.cultivos || [],
-        movil: finca.fields.movil || "",
-        fijo: finca.fields.fijo || "",
-        email: finca.fields.email || "",
-        coordinadorAsignadoId: finca.fields.coordinador_asignado?.[0] || null,
-        revisado,
-        notas,
-      } : null,
+      finca: {
+        nombre: String(ff.nombre || ""),
+        generadorId,
+        municipioId,
+        municipioNombre,
+        cultivoIds,
+        cultivoNombres,
+        movil: String(ff.movil || ""),
+        fijo: String(ff.fijo || ""),
+        email: String(ff.email || ""),
+        coordinadorAsignadoId: ff.coordinador_asignado?.[0] || null,
+        revisado: ff.revisado || false,
+        notas: ff.notas_migracion || "",
+        certCount,
+      },
     };
   });
 
   // 6. Agrupar por GENERADOR
   const gruposMap = new Map<string, {
     generadorId: string | null;
-    generador: { nombre: string; nit: string; tipo: string; tipopersona: string } | null;
+    generador: {
+      nombre: string; nit: string; tipo: string; tipopersona: string;
+      direccionSede: string; movil: string; email: string;
+    } | null;
     fincas: typeof items;
   }>();
 
@@ -225,6 +230,9 @@ export async function GET(request: NextRequest) {
           nit: genRecord.fields.nit || "",
           tipo: genRecord.fields.tipo || "",
           tipopersona: genRecord.fields.tipopersona || "",
+          direccionSede: genRecord.fields.direccion_sede || "",
+          movil: genRecord.fields.movil || "",
+          email: genRecord.fields.email || "",
         } : null,
         fincas: [],
       });

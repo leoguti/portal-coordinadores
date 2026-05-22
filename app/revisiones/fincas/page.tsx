@@ -10,7 +10,8 @@ import { calcularDigitoVerificador } from "@/lib/nit";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FincaItem {
-  ubicacionId: string;
+  /** Legacy: ya no se usa (la lista se ancla en FINCAS). Puede venir null. */
+  ubicacionId: string | null;
   fincaId: string | null;
   original: {
     nombre: string;
@@ -312,12 +313,13 @@ function EditPanel({
   const [loadingCerts, setLoadingCerts] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/generadores/${item.ubicacionId}/certificados`)
+    if (!item.fincaId) { setLoadingCerts(false); return; }
+    fetch(`/api/fincas/${item.fincaId}/certificados`)
       .then((r) => r.json())
       .then((d) => setCertificados(d.certificados || []))
       .catch(() => setCertificados([]))
       .finally(() => setLoadingCerts(false));
-  }, [item.ubicacionId]);
+  }, [item.fincaId]);
 
   useEffect(() => {
     if (item.finca?.municipioId && item.original.municipio) {
@@ -993,7 +995,7 @@ function GeneradorRow({
       {expanded && (
         <div className="divide-y divide-gray-50 bg-gray-50/50 px-2 pb-2 pt-1">
           {visibleFincas.map((finca) => {
-            const fid = finca.fincaId || finca.ubicacionId;
+            const fid = finca.fincaId || finca.ubicacionId || "";
             const siblings = grupo.fincas.filter((f) => f.fincaId !== finca.fincaId && !!f.fincaId);
             return (
               <FincaRow

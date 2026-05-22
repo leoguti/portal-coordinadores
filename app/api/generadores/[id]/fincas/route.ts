@@ -108,6 +108,9 @@ export async function POST(
     movil,
     email,
     revisado: true,
+    // Asigna la finca al coordinador que la crea para que aparezca en su
+    // lista de "Generadores y Fincas" (filtrada por coordinador_asignado).
+    coordinador_asignado: [session.user.coordinatorRecordId],
   };
 
   try {
