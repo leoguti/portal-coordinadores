@@ -84,6 +84,23 @@ export default function CertificadosPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
+  // Precarga desde la URL: al llegar con ?fincaId=... (botón "Generar
+  // certificado" de la lista de Generadores y Fincas) se selecciona la finca
+  // automáticamente y se salta el paso de buscarla.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const fincaId = sp.get("fincaId");
+    if (!fincaId) return;
+    const generadorId = sp.get("generadorId") || "";
+    const generadorNombre = sp.get("generadorNombre") || "";
+    if (generadorId) {
+      setGenerador({ id: generadorId, nombre: generadorNombre, nit: "", tipo: "", tipopersona: "", fincaIds: [] });
+    }
+    setFinca({ id: fincaId, nombre: sp.get("fincaNombre") || "" });
+    // Solo en el montaje inicial.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Al elegir finca, traer los datos del generador/finca que quedarán en el
   // certificado (mismo resolver que /generar) para mostrarlos antes de generar.
   useEffect(() => {

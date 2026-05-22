@@ -635,8 +635,20 @@ function FincaRow({
   onSave: (fincaId: string, data: any) => Promise<void>;
   onReassigned: (fincaId: string) => void;
 }) {
+  const router = useRouter();
   const revisado = item.finca?.revisado;
   const tieneProblemas = item.finca?.notas && item.finca.notas.length > 0;
+
+  const irAGenerarCertificado = () => {
+    if (!item.fincaId) return;
+    const p = new URLSearchParams({
+      fincaId: item.fincaId,
+      fincaNombre: item.finca?.nombre || "",
+      generadorId: item.finca?.generadorId || "",
+      generadorNombre: generador?.nombre || "",
+    });
+    router.push(`/certificados/generar?${p.toString()}`);
+  };
 
   return (
     <div className={`border-l-2 ml-4 ${isSelected ? "border-blue-400 bg-blue-50/40" : revisado ? "border-green-300" : tieneProblemas ? "border-amber-300" : "border-gray-200"}`}>
@@ -682,7 +694,16 @@ function FincaRow({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {item.fincaId && (
+            <button
+              onClick={irAGenerarCertificado}
+              className="text-xs font-semibold text-white bg-[#00d084] hover:bg-[#00a868] px-2.5 py-1 rounded whitespace-nowrap transition-colors"
+              title="Generar un certificado para esta finca"
+            >
+              📄 Generar certificado
+            </button>
+          )}
           {isAdmin && item.fincaId && (
             <button
               onClick={onDelete}
