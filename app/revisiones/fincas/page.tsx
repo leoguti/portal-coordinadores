@@ -1403,7 +1403,7 @@ export default function RevisionFincasPage() {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos" | "multiples">("todas");
+  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos">("todas");
   const [filtroPersona, setFiltroPersona] = useState<"todos" | "Natural" | "Juridica" | "sin-clasificar">("todos");
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
@@ -1634,12 +1634,10 @@ export default function RevisionFincasPage() {
     if (filtro === "revisadas") return g.revisadas === g.totalFincas;
     if (filtro === "duplicados") return getDuplicadosFor(g).length > 0;
     if (filtro === "incompletos") return grupoTieneIncompletas(g);
-    if (filtro === "multiples") return g.totalFincas >= 2;
     return true;
   });
 
   const totalIncompletos = grupos.filter(grupoTieneIncompletas).length;
-  const totalMultiples = grupos.filter((g) => g.totalFincas >= 2).length;
   const totalNatural = grupos.filter((g) => g.generador?.tipopersona === "Natural").length;
   const totalJuridica = grupos.filter((g) => g.generador?.tipopersona === "Juridica").length;
   const totalSinClasificar = grupos.filter((g) => !g.generador?.tipopersona).length;
@@ -1705,19 +1703,16 @@ export default function RevisionFincasPage() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm flex-wrap">
-            {(["todas", "incompletos", "multiples", "duplicados"] as const).map((f) => {
+            {(["todas", "incompletos", "duplicados"] as const).map((f) => {
               if (f === "duplicados" && (!isAdmin || totalGeneradoresConDuplicados === 0)) return null;
-              if (f === "multiples" && totalMultiples === 0) return null;
               const label =
                 f === "duplicados" ? `Duplicados (${totalGeneradoresConDuplicados})` :
                 f === "incompletos" ? `Incompletos (${totalIncompletos})` :
-                f === "multiples" ? `≥2 fincas (${totalMultiples})` :
                 `Todos (${grupos.length})`;
               const isActive = filtro === f;
               const activeClass =
                 f === "duplicados" ? "bg-red-600 text-white" :
                 f === "incompletos" ? "bg-amber-600 text-white" :
-                f === "multiples" ? "bg-blue-600 text-white" :
                 "bg-[#042726] text-white";
               return (
                 <button key={f} onClick={() => setFiltro(f)}
