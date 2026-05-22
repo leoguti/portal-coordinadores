@@ -883,7 +883,9 @@ function GeneradorRow({
   duplicadosNit: GeneradorGrupo[];
   search: string;
 }) {
-  const [expanded, setExpanded] = useState(grupo.revisadas < grupo.totalFincas);
+  // Colapsado por defecto: el coordinador puede tener cientos de generadores;
+  // expande el que busca. (Antes se auto-expandía por estado de migración.)
+  const [expanded, setExpanded] = useState(false);
   const [editingGen, setEditingGen] = useState(false);
   const pct = grupo.totalFincas > 0 ? Math.round((grupo.revisadas / grupo.totalFincas) * 100) : 0;
   const allDone = grupo.revisadas === grupo.totalFincas && grupo.totalFincas > 0;
