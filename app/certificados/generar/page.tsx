@@ -350,11 +350,11 @@ export default function CertificadosPage() {
                         onClick={() => setEditando(true)}
                         className={
                           incompleto
-                            ? "text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
-                            : "text-xs font-medium text-gray-600 hover:text-gray-900 underline"
+                            ? "text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded whitespace-nowrap"
+                            : "text-xs font-semibold text-[#042726] border border-[#042726] hover:bg-[#042726] hover:text-white px-3 py-1.5 rounded whitespace-nowrap transition-colors"
                         }
                       >
-                        {incompleto ? "Completar / Editar" : "Editar"}
+                        {incompleto ? "⚠ Completar datos" : "✏️ Editar datos"}
                       </button>
                     )}
                   </div>

@@ -14,11 +14,11 @@ const navItems = [
   { name: "Saldos Coordinador", href: "/saldos-coordinador", icon: "👤", roles: ["Administrador", "Supervisor"] },
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Terceros", href: "/terceros", icon: "🏢", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  // "Revisión Fincas" oculto en el Sidebar (2026-05-19): la completitud
-  // ahora se exige al momento de generar el certificado (panel rojo +
-  // bloqueo). El código de /revisiones/fincas se conserva en disco por si
-  // se vuelve a habilitar.
-  // { name: "Revisión Fincas", href: "/revisiones/fincas", icon: "✅", roles: ["Coordinador", "Administrador", "Supervisor"] },
+  // "Generadores y Fincas": sección para que los coordinadores busquen,
+  // editen y agreguen generadores (padre) y sus fincas (hijos). Vive en
+  // /revisiones/fincas (la antigua "Revisión Fincas" reanclada al modelo
+  // nuevo GENERADORES+FINCAS). Fusionar/reasignar/eliminar solo para admin.
+  { name: "Generadores y Fincas", href: "/revisiones/fincas", icon: "🌾", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
   // "Certificados" consolida lo que antes era "Generación de Certificados"
   // (/certificados) y "Listar Certificados" (/certificados/listar). Ahora

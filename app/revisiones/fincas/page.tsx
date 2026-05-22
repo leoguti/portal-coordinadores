@@ -290,6 +290,7 @@ function EditPanel({
   item,
   generador,
   cultivos,
+  isAdmin,
   onSave,
   onReassigned,
   onClose,
@@ -297,6 +298,7 @@ function EditPanel({
   item: FincaItem;
   generador: GeneradorGrupo["generador"];
   cultivos: Cultivo[];
+  isAdmin: boolean;
   onSave: (fincaId: string, data: any) => Promise<void>;
   onReassigned: (fincaId: string) => void;
   onClose: () => void;
@@ -359,22 +361,8 @@ function EditPanel({
 
   return (
     <div className="bg-white px-4 py-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Izquierda: datos originales */}
-        <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Datos originales</p>
-          <div className="space-y-1.5 text-sm">
-            <div><span className="text-gray-400">Nombre:</span> <span className="text-gray-700">{item.original.nombre || "—"}</span></div>
-            <div><span className="text-gray-400">NIT:</span> <span className="text-gray-700 font-mono">{item.original.nit || "—"}</span></div>
-            <div><span className="text-gray-400">Dirección:</span> <span className="text-gray-700">{item.original.direccion || "—"}</span></div>
-            <div><span className="text-gray-400">Municipio:</span> <span className="text-gray-700">{item.original.municipio || <span className="text-red-400">Sin municipio</span>}</span></div>
-            <div><span className="text-gray-400">Cultivo:</span> <span className="text-gray-700">{item.original.cultivo || "—"}</span></div>
-            <div><span className="text-gray-400">Móvil:</span> <span className="text-gray-700">{item.original.movil || "—"}</span></div>
-            <div><span className="text-gray-400">Email:</span> <span className="text-gray-700">{item.original.email || "—"}</span></div>
-          </div>
-        </div>
-
-        {/* Derecha: editable — solo datos de la finca */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Editable — datos de la finca */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Datos de la finca</p>
           <p className="text-xs text-gray-400 mb-3 italic">
@@ -494,33 +482,30 @@ function EditPanel({
       {/* Acciones */}
       <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 items-center">
         <button
-          onClick={() => handleSave(true)}
-          disabled={saving || !isComplete}
-          title={!isComplete ? `Faltan: ${missing.join(", ")}` : ""}
-          className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => handleSave(isComplete)}
+          disabled={saving}
+          className="px-4 py-2 bg-[#042726] text-white text-sm rounded-lg hover:bg-[#032120] disabled:opacity-50"
         >
-          {saving ? "Guardando..." : "Guardar y marcar revisado"}
-        </button>
-        <button onClick={() => handleSave(false)} disabled={saving}
-          className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50">
-          Solo guardar
+          {saving ? "Guardando..." : "Guardar cambios"}
         </button>
         <button onClick={onClose} className="px-4 py-2 text-gray-400 text-sm hover:text-gray-600">
           Cancelar
         </button>
         {!isComplete && (
           <span className="text-xs text-amber-600 ml-auto">
-            Faltan: {missing.join(", ")}
+            Faltan datos: {missing.join(", ")}
           </span>
         )}
       </div>
 
-      {/* Reasignar a otro coordinador */}
-      <ReassignSection
-        fincaId={item.fincaId || ""}
-        currentCoordinadorId={item.finca?.coordinadorAsignadoId || null}
-        onReassigned={onReassigned}
-      />
+      {/* Reasignar a otro coordinador (solo mantenimiento / admin) */}
+      {isAdmin && (
+        <ReassignSection
+          fincaId={item.fincaId || ""}
+          currentCoordinadorId={item.finca?.coordinadorAsignadoId || null}
+          onReassigned={onReassigned}
+        />
+      )}
     </div>
   );
 }
@@ -627,6 +612,7 @@ function FincaRow({
   item,
   generador,
   cultivos,
+  isAdmin,
   isExpanded,
   onToggle,
   showSelection,
@@ -639,6 +625,7 @@ function FincaRow({
   item: FincaItem;
   generador: GeneradorGrupo["generador"];
   cultivos: Cultivo[];
+  isAdmin: boolean;
   isExpanded: boolean;
   onToggle: () => void;
   showSelection: boolean;
@@ -696,7 +683,7 @@ function FincaRow({
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {item.fincaId && (
+          {isAdmin && item.fincaId && (
             <button
               onClick={onDelete}
               className="text-xs p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -715,7 +702,7 @@ function FincaRow({
       </div>
 
       {isExpanded && item.fincaId && (
-        <EditPanel item={item} generador={generador} cultivos={cultivos} onSave={onSave} onReassigned={onReassigned} onClose={onToggle} />
+        <EditPanel item={item} generador={generador} cultivos={cultivos} isAdmin={isAdmin} onSave={onSave} onReassigned={onReassigned} onClose={onToggle} />
       )}
     </div>
   );
@@ -868,6 +855,7 @@ function GeneradorEditForm({
 function GeneradorRow({
   grupo,
   cultivos,
+  isAdmin,
   expandedFinca,
   onFincaToggle,
   onSave,
@@ -882,6 +870,7 @@ function GeneradorRow({
 }: {
   grupo: GeneradorGrupo;
   cultivos: Cultivo[];
+  isAdmin: boolean;
   expandedFinca: string | null;
   onFincaToggle: (id: string) => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
@@ -898,6 +887,8 @@ function GeneradorRow({
   const [editingGen, setEditingGen] = useState(false);
   const pct = grupo.totalFincas > 0 ? Math.round((grupo.revisadas / grupo.totalFincas) * 100) : 0;
   const allDone = grupo.revisadas === grupo.totalFincas && grupo.totalFincas > 0;
+  // Indicadores de NIT duplicado solo para admin (son accionables solo por ellos).
+  const showDup = isAdmin && duplicadosNit.length > 0;
 
   const visibleFincas = search
     ? grupo.fincas.filter((f) => {
@@ -913,12 +904,12 @@ function GeneradorRow({
   if (search && visibleFincas.length === 0) return null;
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${allDone ? "border-green-200" : duplicadosNit.length > 0 ? "border-red-200" : "border-gray-200"}`}>
+    <div className={`rounded-xl border overflow-hidden ${allDone ? "border-green-200" : showDup ? "border-red-200" : "border-gray-200"}`}>
       {/* Cabecera generador */}
       <div
         onClick={() => setExpanded(!expanded)}
         className={`cursor-pointer px-4 py-3 transition-colors flex items-center justify-between gap-3 ${
-          allDone ? "bg-green-50 hover:bg-green-100" : duplicadosNit.length > 0 ? "bg-red-50/60 hover:bg-red-50" : "bg-white hover:bg-gray-50"
+          allDone ? "bg-green-50 hover:bg-green-100" : showDup ? "bg-red-50/60 hover:bg-red-50" : "bg-white hover:bg-gray-50"
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -938,7 +929,7 @@ function GeneradorRow({
               {grupo.generador?.tipo && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{grupo.generador.tipo}</span>
               )}
-              {duplicadosNit.length > 0 && (
+              {showDup && (
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
                   NIT repetido en {duplicadosNit.length + 1} generadores
                 </span>
@@ -957,7 +948,7 @@ function GeneradorRow({
               Editar
             </button>
           )}
-          {duplicadosNit.length > 0 && grupo.generadorId && (
+          {isAdmin && duplicadosNit.length > 0 && grupo.generadorId && (
             <button
               onClick={(e) => { e.stopPropagation(); onMergeGenerador(grupo, duplicadosNit); }}
               className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-100 bg-white transition-colors font-medium"
@@ -1003,9 +994,10 @@ function GeneradorRow({
                 item={finca}
                 generador={grupo.generador}
                 cultivos={cultivos}
+                isAdmin={isAdmin}
                 isExpanded={expandedFinca === fid}
                 onToggle={() => onFincaToggle(fid)}
-                showSelection={grupo.fincas.length > 1}
+                showSelection={isAdmin && grupo.fincas.length > 1}
                 isSelected={!!finca.fincaId && selectedFincaIds.has(finca.fincaId)}
                 onToggleSelect={() => finca.fincaId && onToggleFincaSelection(finca.fincaId, grupo.generadorId)}
                 onDelete={() => onDeleteFinca(finca, siblings)}
@@ -1409,7 +1401,7 @@ export default function RevisionFincasPage() {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos" | "multiples">("pendientes");
+  const [filtro, setFiltro] = useState<"pendientes" | "todas" | "revisadas" | "duplicados" | "incompletos" | "multiples">("todas");
   const [filtroPersona, setFiltroPersona] = useState<"todos" | "Natural" | "Juridica" | "sin-clasificar">("todos");
   const [expandedFinca, setExpandedFinca] = useState<string | null>(null);
   const [totalFincas, setTotalFincas] = useState(0);
@@ -1425,6 +1417,10 @@ export default function RevisionFincasPage() {
   // Filtro por coordinador (solo admin)
   const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
   const [coordinadores, setCoordinadores] = useState<{id: string; name: string}[]>([]);
+
+  // Las herramientas de mantenimiento (fusionar duplicados, reasignar, eliminar)
+  // solo las ven Admin/Supervisor; el coordinador del día a día ve la vista simple.
+  const isAdmin = !!session?.user?.rol && ["Administrador", "Supervisor"].includes(session.user.rol);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -1608,8 +1604,6 @@ export default function RevisionFincasPage() {
     .filter((arr) => arr.length > 1)
     .reduce((sum, arr) => sum + arr.length, 0);
 
-  const pct = totalFincas > 0 ? Math.round((totalRevisadas / totalFincas) * 100) : 0;
-
   // Una finca es "incompleta" si le falta municipio, cultivos, móvil o email
   const fincaIncompleta = (item: FincaItem): boolean => {
     const f = item.finca;
@@ -1663,9 +1657,9 @@ export default function RevisionFincasPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Revisión de Fincas</h1>
+            <h1 className="text-xl font-bold text-gray-900">Generadores y Fincas</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Verifica los datos de cada generador y sus fincas. Fusiona duplicados cuando sea necesario.
+              Busca un generador para ver y actualizar sus datos y los de sus fincas.
             </p>
           </div>
           <button
@@ -1676,19 +1670,17 @@ export default function RevisionFincasPage() {
           </button>
         </div>
 
-        {/* Progreso global */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">{totalRevisadas} de {totalFincas} fincas revisadas</span>
-            <span className="text-sm font-semibold text-green-700">{pct}%</span>
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
-          </div>
+        {/* Resumen */}
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+          <span className="text-gray-700"><b>{grupos.length}</b> generador{grupos.length !== 1 ? "es" : ""}</span>
+          <span className="text-gray-700"><b>{totalFincas}</b> finca{totalFincas !== 1 ? "s" : ""}</span>
+          {totalIncompletos > 0 && (
+            <span className="text-amber-700"><b>{totalIncompletos}</b> con datos incompletos</span>
+          )}
         </div>
 
-        {/* Banner de duplicados */}
-        {totalGeneradoresConDuplicados > 0 && (
+        {/* Banner de duplicados (solo mantenimiento / admin) */}
+        {isAdmin && totalGeneradoresConDuplicados > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
             <span className="text-red-600 text-lg flex-shrink-0">⚠</span>
             <div className="flex-1">
@@ -1711,16 +1703,14 @@ export default function RevisionFincasPage() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm flex-wrap">
-            {(["pendientes", "incompletos", "multiples", "duplicados", "todas", "revisadas"] as const).map((f) => {
-              if (f === "duplicados" && totalGeneradoresConDuplicados === 0) return null;
+            {(["todas", "incompletos", "multiples", "duplicados"] as const).map((f) => {
+              if (f === "duplicados" && (!isAdmin || totalGeneradoresConDuplicados === 0)) return null;
               if (f === "multiples" && totalMultiples === 0) return null;
               const label =
-                f === "pendientes" ? `Pendientes (${grupos.filter((g) => g.revisadas < g.totalFincas).length})` :
-                f === "revisadas" ? `Completos (${grupos.filter((g) => g.revisadas === g.totalFincas).length})` :
                 f === "duplicados" ? `Duplicados (${totalGeneradoresConDuplicados})` :
                 f === "incompletos" ? `Incompletos (${totalIncompletos})` :
                 f === "multiples" ? `≥2 fincas (${totalMultiples})` :
-                "Todos";
+                `Todos (${grupos.length})`;
               const isActive = filtro === f;
               const activeClass =
                 f === "duplicados" ? "bg-red-600 text-white" :
@@ -1778,6 +1768,7 @@ export default function RevisionFincasPage() {
                 key={grupo.generadorId || "sin-generador"}
                 grupo={grupo}
                 cultivos={cultivos}
+                isAdmin={isAdmin}
                 expandedFinca={expandedFinca}
                 onFincaToggle={(id) => setExpandedFinca(expandedFinca === id ? null : id)}
                 onSave={handleSave}
@@ -1795,8 +1786,8 @@ export default function RevisionFincasPage() {
         )}
       </div>
 
-      {/* Barra flotante de selección */}
-      {selectedFincaIds.size > 0 && !compareData && !deleteData && (
+      {/* Barra flotante de selección (solo mantenimiento / admin) */}
+      {isAdmin && selectedFincaIds.size > 0 && !compareData && !deleteData && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 shadow-xl rounded-full px-5 py-3 flex items-center gap-4 max-w-[92vw]">
           <span className="text-sm text-gray-700">
             {selectedFincaIds.size === 1 ? (
