@@ -4092,6 +4092,119 @@ export async function getAllCoordinadoresActivos(): Promise<
   }
 }
 
+/**
+ * Coordinadores activos (Rol != Desactivado) con su ZONA asignada.
+ * Usado por el dashboard de metas por zona.
+ */
+export async function getCoordinadoresConZona(): Promise<
+  Array<{ id: string; name: string; zona: string | null; rol: string }>
+> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const all: Array<{ id: string; name: string; zona: string | null; rol: string }> = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: `{Rol}!="Desactivado"`,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error getCoordinadoresConZona: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      for (const r of data.records || []) {
+        const zonaRaw = r.fields.ZONA;
+        const zona = Array.isArray(zonaRaw) ? zonaRaw[0] : zonaRaw;
+        all.push({
+          id: r.id,
+          name: r.fields.Name || "Sin nombre",
+          zona: zona ? String(zona).replace(/\s+/g, " ").trim() : null,
+          rol: r.fields.Rol || "Coordinador",
+        });
+      }
+      offset = data.offset;
+    } while (offset);
+    return all;
+  } catch (error) {
+    console.error("Error getCoordinadoresConZona:", error);
+    return [];
+  }
+}
+
+/**
+ * Todas las metas mensuales (raw) de un año, una fila por Coordinador/Mes.
+ * Devuelve el id de coordinador, el mes (1-12) y las 3 metas.
+ */
+export async function getMetasMensualesDelAño(
+  año: number
+): Promise<
+  Array<{
+    coordinadorId: string;
+    mes: number;
+    recoleccion: number;
+    sensibilizacion: number;
+    evaluaciones: number;
+  }>
+> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return [];
+
+  try {
+    const out: Array<{
+      coordinadorId: string;
+      mes: number;
+      recoleccion: number;
+      sensibilizacion: number;
+      evaluaciones: number;
+    }> = [];
+    let offset: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        filterByFormula: `{Año} = ${año}`,
+        pageSize: "100",
+      });
+      if (offset) params.set("offset", offset);
+      const url = `https://api.airtable.com/v0/${baseId}/MetasMensuales?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`Error getMetasMensualesDelAño: ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      for (const r of data.records || []) {
+        const cid = (r.fields.Coordinador as string[] | undefined)?.[0];
+        if (!cid) continue;
+        out.push({
+          coordinadorId: cid,
+          mes: (r.fields.Mes as number) || 0,
+          recoleccion: (r.fields.MetaRecoleccion as number) || 0,
+          sensibilizacion: (r.fields.MetaSensibilizacion as number) || 0,
+          evaluaciones: (r.fields.MetaEvaluaciones as number) || 0,
+        });
+      }
+      offset = data.offset;
+    } while (offset);
+    return out;
+  } catch (error) {
+    console.error("Error getMetasMensualesDelAño:", error);
+    return [];
+  }
+}
+
 // ============================================================
 // ADMIN COORDINADORES (vista completa)
 // ============================================================
