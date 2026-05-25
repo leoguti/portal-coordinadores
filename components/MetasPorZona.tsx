@@ -56,69 +56,87 @@ function acumuladoPct(meses: Celda[], metaAnual: number): number[] {
   });
 }
 
-// índice (0-11) del mes vigente si el año seleccionado es el actual; si no, -1
 function mesVigenteIdx(data: Data): number {
   return data.year === data.currentYear ? data.currentMonth - 1 : -1;
 }
 
-// --- Celda mensual: recolección · meta · % acumulado ---
+// Clases de línea compartidas para que valores y etiquetas queden alineados.
+const L_REAL = "text-[10px] leading-[14px] text-center px-1";
+const L_META = "text-[10px] leading-[14px] text-center px-1 font-bold border-y border-gray-300/50 bg-black/5";
+const L_PCT = "text-[11px] leading-[15px] text-center px-1 font-bold";
+
+// --- Encabezado de fila (zona) con etiquetas alineadas real / meta / % ---
+function RowHeader({ name, bg }: { name: string; bg: string }) {
+  return (
+    <td className={`sticky left-0 z-10 ${bg} align-top p-0`}>
+      <div className="flex">
+        <div className="flex-1 px-2 self-center font-semibold text-gray-800 text-[11px] whitespace-nowrap">
+          {name}
+        </div>
+        <div className="pr-1.5 text-right text-gray-400 select-none">
+          <div className="text-[9px] leading-[14px]">real</div>
+          <div className="text-[9px] leading-[14px] font-bold text-gray-500 border-y border-transparent">
+            meta
+          </div>
+          <div className="text-[9px] leading-[15px]">%</div>
+        </div>
+      </div>
+    </td>
+  );
+}
+
+// % de cumplimiento de la meta del MES (real del mes / meta del mes)
+function cumplimientoMes(c: Celda): number {
+  if (c.meta > 0) return Math.round((c.real / c.meta) * 100);
+  return c.real > 0 ? 100 : 0;
+}
+
+// --- Celda mensual: recolección (normal) · meta (negrita) · % acumulado ---
+// El COLOR se basa en el cumplimiento de la META MENSUAL; el NÚMERO mostrado
+// es el % acumulado del año. El detalle del mes va en el tooltip.
 function CeldaMes({
   celda,
   acum,
   estado,
   borde,
+  mes,
 }: {
   celda: Celda;
   acum: number;
   estado: Estado;
-  borde: boolean; // borde derecho = línea del mes vigente (Gantt)
+  borde: boolean;
+  mes: string;
 }) {
-  let bg = "bg-gray-50";
-  let pctText = "text-gray-300";
-  if (estado === "pasado") {
-    bg = "bg-emerald-50";
-    pctText = "text-emerald-700";
-  } else if (estado === "actual") {
-    const c = pctColor(acum);
-    bg = c.bg;
-    pctText = c.text;
-  }
   const futuro = estado === "futuro";
+  const cumpleMes = cumplimientoMes(celda);
+  const c = pctColor(cumpleMes);
+  const bg = futuro ? "bg-gray-50" : c.bg;
+  const pctText = futuro ? "text-gray-300" : c.text;
   const bordeCls = borde
     ? "border-r-2 border-indigo-500"
     : "border-r border-gray-100";
+  const tip = futuro
+    ? `${mes}: meta del mes ${fmt(celda.meta)} (pendiente)`
+    : `${mes} · Cumplimiento del mes: ${cumpleMes}% (recolectado ${fmt(
+        celda.real
+      )} / meta ${fmt(celda.meta)}) · Acumulado del año: ${acum}%`;
 
   return (
-    <td className={`${bg} ${bordeCls} p-0 align-top`}>
-      <div className="px-1 py-0.5 text-center">
-        <div
-          className={`text-[10px] font-mono leading-tight ${
-            futuro ? "text-gray-300" : "text-gray-800"
-          }`}
-          title="Recolección del mes"
-        >
-          {fmt(celda.real)}
-        </div>
-        <div
-          className={`text-[9px] font-mono leading-tight border-t border-gray-200/70 ${
-            futuro ? "text-gray-300" : "text-gray-400"
-          }`}
-          title="Meta del mes"
-        >
-          {fmt(celda.meta)}
-        </div>
-        {futuro ? (
-          <div className="text-[10px] text-gray-300 border-t border-gray-200/70">·</div>
-        ) : (
-          <div
-            className={`text-[11px] font-bold leading-tight border-t border-gray-200/70 ${pctText}`}
-            title="% acumulado del año"
-          >
-            {estado === "pasado" ? "✓ " : ""}
-            {acum}%
-          </div>
-        )}
+    <td className={`${bg} ${bordeCls} p-0 align-top font-mono`} title={tip}>
+      <div className={`${L_REAL} ${futuro ? "text-gray-300" : "text-gray-700"}`}>
+        {fmt(celda.real)}
       </div>
+      <div className={`${L_META} ${futuro ? "text-gray-400" : "text-gray-900"}`}>
+        {fmt(celda.meta)}
+      </div>
+      {futuro ? (
+        <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
+      ) : (
+        <div className={`${L_PCT} ${pctText}`}>
+          {estado === "pasado" ? "✓ " : ""}
+          {acum}%
+        </div>
+      )}
     </td>
   );
 }
@@ -128,18 +146,14 @@ function CeldaAnual({ real, meta }: { real: number; meta: number }) {
   const p = meta > 0 ? Math.round((real / meta) * 100) : real > 0 ? 100 : 0;
   const c = pctColor(p);
   return (
-    <td className={`${c.bg} border-l-2 border-gray-300 p-0 align-top`}>
-      <div className="px-1.5 py-0.5 text-center">
-        <div className="text-[11px] font-mono leading-tight text-gray-900 font-medium" title="Recolección acumulada del año">
-          {fmt(real)}
-        </div>
-        <div className="text-[9px] font-mono leading-tight border-t border-gray-200/70 text-gray-500" title="Meta del año">
-          {fmt(meta)}
-        </div>
-        <div className={`text-xs font-bold leading-tight border-t border-gray-200/70 ${c.text}`}>
-          {p}%
-        </div>
+    <td className={`${c.bg} border-l-2 border-gray-300 p-0 align-top font-mono`}>
+      <div className={`${L_REAL} text-gray-900`} title="Recolección acumulada del año">
+        {fmt(real)}
       </div>
+      <div className={`${L_META} text-gray-900`} title="Meta del año">
+        {fmt(meta)}
+      </div>
+      <div className={`${L_PCT} ${c.text}`}>{p}%</div>
     </td>
   );
 }
@@ -165,11 +179,11 @@ function TablaMeta({
       </h2>
       <table className="w-full table-fixed border-collapse">
         <colgroup>
-          <col style={{ width: 132 }} />
+          <col style={{ width: 152 }} />
           {MESES.map((_, i) => (
-            <col key={i} style={{ width: 62 }} />
+            <col key={i} style={{ width: 60 }} />
           ))}
-          <col style={{ width: 90 }} />
+          <col style={{ width: 88 }} />
         </colgroup>
         <thead>
           <tr className="bg-gray-50">
@@ -186,9 +200,7 @@ function TablaMeta({
                     esVigente
                       ? "border-r-2 border-indigo-500 bg-indigo-50 text-indigo-700"
                       : "border-r border-gray-100"
-                  } ${
-                    est === "futuro" && !esVigente ? "text-gray-400" : "text-gray-600"
-                  }`}
+                  } ${est === "futuro" && !esVigente ? "text-gray-400" : "text-gray-600"}`}
                 >
                   {esVigente && (
                     <div className="text-[8px] font-bold text-indigo-500 leading-none mb-0.5">
@@ -208,10 +220,8 @@ function TablaMeta({
           {tabla.filas.map((f) => {
             const acum = acumuladoPct(f.meses, f.metaAnual);
             return (
-              <tr key={f.zona} className="border-t border-gray-100 hover:bg-gray-50/40">
-                <td className="sticky left-0 z-10 bg-white px-2 py-1 font-medium text-gray-800 text-[11px] whitespace-nowrap">
-                  {f.zona}
-                </td>
+              <tr key={f.zona} className="border-t border-gray-100">
+                <RowHeader name={f.zona} bg="bg-white" />
                 {f.meses.map((celda, i) => (
                   <CeldaMes
                     key={i}
@@ -219,6 +229,7 @@ function TablaMeta({
                     acum={acum[i]}
                     estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
                     borde={i === vigente}
+                    mes={MESES[i]}
                   />
                 ))}
                 <CeldaAnual real={f.realAnual} meta={f.metaAnual} />
@@ -227,10 +238,8 @@ function TablaMeta({
           })}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-gray-300 bg-gray-100 font-bold">
-            <td className="sticky left-0 z-10 bg-gray-100 px-2 py-1 text-gray-900 text-[11px]">
-              TOTAL
-            </td>
+          <tr className="border-t-2 border-gray-300 bg-gray-100">
+            <RowHeader name="TOTAL" bg="bg-gray-100" />
             {tabla.total.meses.map((celda, i) => (
               <CeldaMes
                 key={i}
@@ -238,6 +247,7 @@ function TablaMeta({
                 acum={acumTotal[i]}
                 estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
                 borde={i === vigente}
+                mes={MESES[i]}
               />
             ))}
             <CeldaAnual real={tabla.total.realAnual} meta={tabla.total.metaAnual} />
@@ -286,7 +296,7 @@ export default function MetasPorZona() {
             Metas por Zona <span className="text-gray-500 font-medium">· {year}</span>
           </h1>
           <p className="text-sm text-gray-500">
-            Cada celda: recolección · meta · <strong>% acumulado del año</strong>
+            Cada celda: recolección · <strong>meta (negrita)</strong> · % acumulado del año
           </p>
         </div>
         <select
@@ -300,10 +310,27 @@ export default function MetasPorZona() {
         </select>
       </div>
 
-      {/* Leyenda */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs text-gray-600">
-        <span className="font-medium text-gray-700">Cada celda:</span>
-        <span>recolección <span className="text-gray-400">/ meta</span> / <strong>% acumulado</strong></span>
+      {/* Leyenda: estructura de la celda + colores */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-xs text-gray-600">
+        {/* Mini-celda de ejemplo */}
+        <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 px-2 py-1 bg-green-100">
+          <div className="font-mono text-right leading-tight">
+            <div className="text-[10px] text-gray-700">5.080</div>
+            <div className="text-[10px] font-bold text-gray-900 bg-black/5 px-1">5.000</div>
+            <div className="text-[10px] font-bold text-green-700">✓ 50%</div>
+          </div>
+          <div className="text-[10px] text-gray-600 leading-tight">
+            <div>← recolección (real)</div>
+            <div className="font-semibold">← meta (negrita)</div>
+            <div>← % acumulado del año</div>
+          </div>
+        </div>
+        <span className="basis-full text-[11px] text-gray-500">
+          El <strong>color</strong> de la celda indica el cumplimiento de la
+          <strong> meta del mes</strong> (recolectado ÷ meta del mes); el
+          <strong> número</strong> es el % acumulado del año. Pasa el mouse sobre una
+          celda para ver el detalle del mes.
+        </span>
         <span className="text-gray-300">|</span>
         <span><span className="inline-block w-3 h-3 rounded bg-emerald-50 border border-emerald-200 mr-1 align-middle" />Mes cerrado (✓)</span>
         <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />≥70%</span>
@@ -362,10 +389,9 @@ export default function MetasPorZona() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          {/* Un solo contenedor de scroll para que los meses queden alineados
-              en las 3 tablas y la línea del mes vigente sea continua */}
+          {/* Un solo contenedor de scroll → meses alineados en las 3 tablas */}
           <div className="overflow-x-auto">
-            <div className="min-w-[940px]">
+            <div className="min-w-[960px]">
               <TablaMeta titulo="Recolección" unidad="kg" tabla={data.metas.recoleccion} data={data} />
               <TablaMeta titulo="Sensibilización" unidad="personas" tabla={data.metas.sensibilizacion} data={data} />
               <TablaMeta titulo="Evaluaciones" unidad="evaluaciones" tabla={data.metas.evaluaciones} data={data} />
