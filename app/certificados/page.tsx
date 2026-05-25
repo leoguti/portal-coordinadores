@@ -331,6 +331,21 @@ function ListarCertificadosPage() {
           </div>
         </div>
 
+        {/* Acceso a Generadores y Fincas (vive aquí, no en el menú lateral) */}
+        <Link
+          href="/revisiones/fincas"
+          className="mb-5 flex items-center gap-4 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100 px-5 py-4 transition-colors"
+        >
+          <span className="text-3xl leading-none">🌾</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-gray-900">Generadores y Fincas</p>
+            <p className="text-sm text-gray-600">
+              Buscar, editar y agregar generadores y sus fincas, o generar un certificado desde una finca.
+            </p>
+          </div>
+          <span className="text-green-700 text-2xl flex-shrink-0">→</span>
+        </Link>
+
         {/* Tabs: actual (Airtable) vs histórico (snapshots Postgres+R2) */}
         <div className="border-b border-gray-200 mb-4 flex gap-1 flex-wrap">
           <button

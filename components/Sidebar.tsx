@@ -14,11 +14,8 @@ const navItems = [
   { name: "Saldos Coordinador", href: "/saldos-coordinador", icon: "👤", roles: ["Administrador", "Supervisor"] },
   { name: "Caja Menor", href: "/caja-menor", icon: "💰", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Terceros", href: "/terceros", icon: "🏢", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  // "Generadores y Fincas": sección para que los coordinadores busquen,
-  // editen y agreguen generadores (padre) y sus fincas (hijos). Vive en
-  // /revisiones/fincas (la antigua "Revisión Fincas" reanclada al modelo
-  // nuevo GENERADORES+FINCAS). Fusionar/reasignar/eliminar solo para admin.
-  { name: "Generadores y Fincas", href: "/revisiones/fincas", icon: "🌾", roles: ["Coordinador", "Administrador", "Supervisor"] },
+  // "Generadores y Fincas" (/revisiones/fincas) NO va en el menú lateral: se
+  // accede con el botón grande dentro de la página de Certificados.
   { name: "Resumen Gastos", href: "/resumen-gastos", icon: "📈", roles: ["Coordinador", "Administrador", "Supervisor"] },
   // "Certificados" consolida lo que antes era "Generación de Certificados"
   // (/certificados) y "Listar Certificados" (/certificados/listar). Ahora
