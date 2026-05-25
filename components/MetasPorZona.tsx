@@ -5,6 +5,11 @@ import { useEffect, useState } from "react";
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const fmt = (n: number) => Math.round(n).toLocaleString("es-CO");
 
+// Año en que se concertaron las metas y la fecha del acuerdo. La nota
+// explicativa de los primeros meses solo aplica a este año.
+const ACUERDO_METAS_YEAR = 2026;
+const ACUERDO_METAS_FECHA = "13 de marzo de 2026";
+
 type Celda = { real: number; meta: number };
 type Fila = { zona: string; meses: Celda[]; realAnual: number; metaAnual: number };
 type Tabla = {
@@ -239,6 +244,42 @@ export default function MetasPorZona() {
         <span><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-200 mr-1 align-middle" />&lt;40%</span>
         <span><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 mr-1 align-middle" />Pendiente (futuro)</span>
       </div>
+
+      {/* Nota: por qué los primeros meses coinciden exactamente con lo ejecutado */}
+      {year === ACUERDO_METAS_YEAR && (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900">
+          <div className="flex gap-2.5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 flex-shrink-0 text-amber-500"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="leading-relaxed">
+              <p className="font-semibold mb-0.5 text-amber-800">
+                Sobre las metas de los primeros meses
+              </p>
+              <p>
+                Las metas de {year} se concertaron el{" "}
+                <strong>{ACUERDO_METAS_FECHA}</strong>. Para los meses anteriores a
+                ese acuerdo —cuando todavía no existía una meta pactada contra la
+                cual comparar— se decidió, de común acuerdo, registrar como meta el
+                valor realmente ejecutado en cada zona. Por eso esos meses aparecen
+                marcados como cumplidos (✓) y sus cifras de meta y ejecución
+                coinciden exactamente. No se trata de un ajuste de cifras: refleja
+                que la planeación formal de metas inició en esa fecha, y el
+                seguimiento de ejecución frente a meta aplica de ahí en adelante.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
