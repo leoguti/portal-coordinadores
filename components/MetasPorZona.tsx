@@ -41,62 +41,105 @@ function estadoMes(
   return "futuro";
 }
 
-function pct(real: number, meta: number): number {
-  if (meta > 0) return Math.round((real / meta) * 100);
-  return real > 0 ? 100 : 0;
-}
-
 function pctColor(p: number): { bg: string; text: string } {
   if (p >= 70) return { bg: "bg-green-100", text: "text-green-700" };
   if (p >= 40) return { bg: "bg-yellow-100", text: "text-yellow-700" };
   return { bg: "bg-red-100", text: "text-red-700" };
 }
 
-// --- Celda mensual ---
-function CeldaMes({ celda, estado }: { celda: Celda; estado: Estado }) {
+// % acumulado del año hasta cada mes = (real acumulado) / (meta anual)
+function acumuladoPct(meses: Celda[], metaAnual: number): number[] {
+  let acc = 0;
+  return meses.map((c) => {
+    acc += c.real;
+    return metaAnual > 0 ? Math.round((acc / metaAnual) * 100) : 0;
+  });
+}
+
+// índice (0-11) del mes vigente si el año seleccionado es el actual; si no, -1
+function mesVigenteIdx(data: Data): number {
+  return data.year === data.currentYear ? data.currentMonth - 1 : -1;
+}
+
+// --- Celda mensual: recolección · meta · % acumulado ---
+function CeldaMes({
+  celda,
+  acum,
+  estado,
+  borde,
+}: {
+  celda: Celda;
+  acum: number;
+  estado: Estado;
+  borde: boolean; // borde derecho = línea del mes vigente (Gantt)
+}) {
+  let bg = "bg-gray-50";
+  let pctText = "text-gray-300";
   if (estado === "pasado") {
-    return (
-      <td className="px-1.5 py-1 text-center border-l border-gray-100 bg-green-50">
-        <div className="text-[10px] text-gray-600 leading-tight font-mono">
-          {fmt(celda.real)}/{fmt(celda.meta)}
-        </div>
-        <div className="text-[10px] font-semibold text-green-600">✓</div>
-      </td>
-    );
+    bg = "bg-emerald-50";
+    pctText = "text-emerald-700";
+  } else if (estado === "actual") {
+    const c = pctColor(acum);
+    bg = c.bg;
+    pctText = c.text;
   }
-  if (estado === "futuro") {
-    return (
-      <td className="px-1.5 py-1 text-center border-l border-gray-100 bg-gray-50">
-        <div className="text-[10px] text-gray-400 leading-tight font-mono">
-          {fmt(celda.real)}/{fmt(celda.meta)}
-        </div>
-        <div className="text-[10px] text-gray-300">·</div>
-      </td>
-    );
-  }
-  // actual
-  const p = pct(celda.real, celda.meta);
-  const c = pctColor(p);
+  const futuro = estado === "futuro";
+  const bordeCls = borde
+    ? "border-r-2 border-indigo-500"
+    : "border-r border-gray-100";
+
   return (
-    <td className={`px-1.5 py-1 text-center border-l border-gray-100 ${c.bg}`}>
-      <div className="text-[10px] text-gray-700 leading-tight font-mono">
-        {fmt(celda.real)}/{fmt(celda.meta)}
+    <td className={`${bg} ${bordeCls} p-0 align-top`}>
+      <div className="px-1 py-0.5 text-center">
+        <div
+          className={`text-[10px] font-mono leading-tight ${
+            futuro ? "text-gray-300" : "text-gray-800"
+          }`}
+          title="Recolección del mes"
+        >
+          {fmt(celda.real)}
+        </div>
+        <div
+          className={`text-[9px] font-mono leading-tight border-t border-gray-200/70 ${
+            futuro ? "text-gray-300" : "text-gray-400"
+          }`}
+          title="Meta del mes"
+        >
+          {fmt(celda.meta)}
+        </div>
+        {futuro ? (
+          <div className="text-[10px] text-gray-300 border-t border-gray-200/70">·</div>
+        ) : (
+          <div
+            className={`text-[11px] font-bold leading-tight border-t border-gray-200/70 ${pctText}`}
+            title="% acumulado del año"
+          >
+            {estado === "pasado" ? "✓ " : ""}
+            {acum}%
+          </div>
+        )}
       </div>
-      <div className={`text-[10px] font-bold ${c.text}`}>{p}%</div>
     </td>
   );
 }
 
 // --- Celda anual (avance verdadero del año) ---
 function CeldaAnual({ real, meta }: { real: number; meta: number }) {
-  const p = pct(real, meta);
+  const p = meta > 0 ? Math.round((real / meta) * 100) : real > 0 ? 100 : 0;
   const c = pctColor(p);
   return (
-    <td className={`px-2 py-1 text-center border-l-2 border-gray-300 ${c.bg}`}>
-      <div className="text-[11px] text-gray-800 leading-tight font-mono font-medium">
-        {fmt(real)}/{fmt(meta)}
+    <td className={`${c.bg} border-l-2 border-gray-300 p-0 align-top`}>
+      <div className="px-1.5 py-0.5 text-center">
+        <div className="text-[11px] font-mono leading-tight text-gray-900 font-medium" title="Recolección acumulada del año">
+          {fmt(real)}
+        </div>
+        <div className="text-[9px] font-mono leading-tight border-t border-gray-200/70 text-gray-500" title="Meta del año">
+          {fmt(meta)}
+        </div>
+        <div className={`text-xs font-bold leading-tight border-t border-gray-200/70 ${c.text}`}>
+          {p}%
+        </div>
       </div>
-      <div className={`text-xs font-bold ${c.text}`}>{p}%</div>
     </td>
   );
 }
@@ -112,74 +155,95 @@ function TablaMeta({
   tabla: Tabla;
   data: Data;
 }) {
+  const vigente = mesVigenteIdx(data);
+  const acumTotal = acumuladoPct(tabla.total.meses, tabla.total.metaAnual);
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+    <div className="mb-7">
+      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
         {titulo} <span className="text-gray-400 normal-case">({unidad})</span>
       </h2>
-      <div className="overflow-x-auto">
-        <table className="text-xs border-collapse">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-semibold text-gray-600 min-w-[140px]">
-                Zona
-              </th>
-              {MESES.map((m, i) => {
-                const est = estadoMes(data.year, i, data.currentYear, data.currentMonth);
-                return (
-                  <th
-                    key={m}
-                    className={`px-1.5 py-2 text-center font-semibold border-l border-gray-100 min-w-[64px] ${
-                      est === "actual"
-                        ? "text-gray-900 bg-blue-50"
-                        : est === "futuro"
-                        ? "text-gray-400"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {m}
-                  </th>
-                );
-              })}
-              <th className="px-2 py-2 text-center font-bold text-gray-700 border-l-2 border-gray-300 min-w-[80px]">
-                AÑO
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {tabla.filas.map((f) => (
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col style={{ width: 132 }} />
+          {MESES.map((_, i) => (
+            <col key={i} style={{ width: 62 }} />
+          ))}
+          <col style={{ width: 90 }} />
+        </colgroup>
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="sticky left-0 z-10 bg-gray-50 px-2 py-1.5 text-left font-semibold text-gray-600 text-xs">
+              Zona
+            </th>
+            {MESES.map((m, i) => {
+              const est = estadoMes(data.year, i, data.currentYear, data.currentMonth);
+              const esVigente = i === vigente;
+              return (
+                <th
+                  key={m}
+                  className={`px-1 py-1.5 text-center text-[11px] font-semibold ${
+                    esVigente
+                      ? "border-r-2 border-indigo-500 bg-indigo-50 text-indigo-700"
+                      : "border-r border-gray-100"
+                  } ${
+                    est === "futuro" && !esVigente ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  {esVigente && (
+                    <div className="text-[8px] font-bold text-indigo-500 leading-none mb-0.5">
+                      HOY ▾
+                    </div>
+                  )}
+                  {m}
+                </th>
+              );
+            })}
+            <th className="px-1.5 py-1.5 text-center text-[11px] font-bold text-gray-700 border-l-2 border-gray-300">
+              AÑO
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {tabla.filas.map((f) => {
+            const acum = acumuladoPct(f.meses, f.metaAnual);
+            return (
               <tr key={f.zona} className="border-t border-gray-100 hover:bg-gray-50/40">
-                <td className="sticky left-0 z-10 bg-white px-2 py-1 font-medium text-gray-800 whitespace-nowrap">
+                <td className="sticky left-0 z-10 bg-white px-2 py-1 font-medium text-gray-800 text-[11px] whitespace-nowrap">
                   {f.zona}
                 </td>
                 {f.meses.map((celda, i) => (
                   <CeldaMes
                     key={i}
                     celda={celda}
+                    acum={acum[i]}
                     estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
+                    borde={i === vigente}
                   />
                 ))}
                 <CeldaAnual real={f.realAnual} meta={f.metaAnual} />
               </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-gray-300 bg-gray-100 font-bold">
+            <td className="sticky left-0 z-10 bg-gray-100 px-2 py-1 text-gray-900 text-[11px]">
+              TOTAL
+            </td>
+            {tabla.total.meses.map((celda, i) => (
+              <CeldaMes
+                key={i}
+                celda={celda}
+                acum={acumTotal[i]}
+                estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
+                borde={i === vigente}
+              />
             ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-gray-300 bg-gray-100 font-bold">
-              <td className="sticky left-0 z-10 bg-gray-100 px-2 py-1 text-gray-900">
-                TOTAL
-              </td>
-              {tabla.total.meses.map((celda, i) => (
-                <CeldaMes
-                  key={i}
-                  celda={celda}
-                  estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
-                />
-              ))}
-              <CeldaAnual real={tabla.total.realAnual} meta={tabla.total.metaAnual} />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+            <CeldaAnual real={tabla.total.realAnual} meta={tabla.total.metaAnual} />
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }
@@ -222,7 +286,7 @@ export default function MetasPorZona() {
             Metas por Zona <span className="text-gray-500 font-medium">· {year}</span>
           </h1>
           <p className="text-sm text-gray-500">
-            Real / meta por mes · ✓ = mes cumplido · seguimiento real desde el mes en curso
+            Cada celda: recolección · meta · <strong>% acumulado del año</strong>
           </p>
         </div>
         <select
@@ -238,11 +302,15 @@ export default function MetasPorZona() {
 
       {/* Leyenda */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs text-gray-600">
-        <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />Cumplido (mes pasado)</span>
+        <span className="font-medium text-gray-700">Cada celda:</span>
+        <span>recolección <span className="text-gray-400">/ meta</span> / <strong>% acumulado</strong></span>
+        <span className="text-gray-300">|</span>
+        <span><span className="inline-block w-3 h-3 rounded bg-emerald-50 border border-emerald-200 mr-1 align-middle" />Mes cerrado (✓)</span>
         <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />≥70%</span>
         <span><span className="inline-block w-3 h-3 rounded bg-yellow-100 border border-yellow-200 mr-1 align-middle" />40–69%</span>
         <span><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-200 mr-1 align-middle" />&lt;40%</span>
-        <span><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 mr-1 align-middle" />Pendiente (futuro)</span>
+        <span><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 mr-1 align-middle" />Futuro</span>
+        <span><span className="inline-block w-0.5 h-3 bg-indigo-500 mr-1 align-middle" />Mes vigente (pasado | futuro)</span>
       </div>
 
       {/* Nota: por qué los primeros meses coinciden exactamente con lo ejecutado */}
@@ -293,11 +361,17 @@ export default function MetasPorZona() {
           Error al cargar las metas por zona. Intenta recargar.
         </div>
       ) : (
-        <>
-          <TablaMeta titulo="Recolección" unidad="kg" tabla={data.metas.recoleccion} data={data} />
-          <TablaMeta titulo="Sensibilización" unidad="personas" tabla={data.metas.sensibilizacion} data={data} />
-          <TablaMeta titulo="Evaluaciones" unidad="evaluaciones" tabla={data.metas.evaluaciones} data={data} />
-          <p className="text-xs text-gray-400 text-right">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          {/* Un solo contenedor de scroll para que los meses queden alineados
+              en las 3 tablas y la línea del mes vigente sea continua */}
+          <div className="overflow-x-auto">
+            <div className="min-w-[940px]">
+              <TablaMeta titulo="Recolección" unidad="kg" tabla={data.metas.recoleccion} data={data} />
+              <TablaMeta titulo="Sensibilización" unidad="personas" tabla={data.metas.sensibilizacion} data={data} />
+              <TablaMeta titulo="Evaluaciones" unidad="evaluaciones" tabla={data.metas.evaluaciones} data={data} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 text-right mt-2">
             Actualizado:{" "}
             {new Date(data.lastUpdated).toLocaleString("es-CO", {
               day: "numeric",
@@ -306,7 +380,7 @@ export default function MetasPorZona() {
               minute: "2-digit",
             })}
           </p>
-        </>
+        </div>
       )}
     </div>
   );
