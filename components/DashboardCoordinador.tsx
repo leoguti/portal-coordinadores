@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import MisMetas from "@/components/MisMetas";
 import {
   BarChart,
   Bar,
@@ -456,6 +457,9 @@ export default function DashboardCoordinador() {
           )}
         </div>
       </div>
+
+      {/* SECTION 2b: Mis Metas por Mes (matriz real vs meta) */}
+      <MisMetas year={year} />
 
       {/* SECTION 3: KPIs */}
       <div className="grid grid-cols-3 gap-4 mb-6">
