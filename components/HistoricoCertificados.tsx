@@ -35,6 +35,8 @@ const AÑOS = ["", "2020", "2021", "2022", "2023", "2024", "2025", "2026"];
 export default function HistoricoCertificados() {
   const [q, setQ] = useState("");
   const [ano, setAno] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const [page, setPage] = useState(1);
 
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -49,6 +51,8 @@ export default function HistoricoCertificados() {
       const params = new URLSearchParams();
       if (q) params.set("q", q);
       if (ano) params.set("ano", ano);
+      if (desde) params.set("desde", desde);
+      if (hasta) params.set("hasta", hasta);
       params.set("page", String(p));
 
       try {
@@ -70,7 +74,7 @@ export default function HistoricoCertificados() {
       }
       setLoading(false);
     },
-    [q, ano]
+    [q, ano, desde, hasta]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,6 +143,30 @@ export default function HistoricoCertificados() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="w-40">
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Desde (fecha)
+          </label>
+          <input
+            type="date"
+            value={desde}
+            max={hasta || undefined}
+            onChange={(e) => setDesde(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div className="w-40">
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Hasta (fecha)
+          </label>
+          <input
+            type="date"
+            value={hasta}
+            min={desde || undefined}
+            onChange={(e) => setHasta(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
         </div>
         <button
           type="submit"

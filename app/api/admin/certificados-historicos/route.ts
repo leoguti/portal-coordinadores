@@ -35,6 +35,13 @@ export async function GET(req: NextRequest) {
   const ano = searchParams.get("ano")?.trim() || "";
   const municipio = norm(searchParams.get("municipio")?.trim() || "");
   const coordinador = norm(searchParams.get("coordinador")?.trim() || "");
+  // Rango de fechas (YYYY-MM-DD). Se valida el formato antes de usarlo para
+  // evitar errores de cast en el SQL.
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const desdeRaw = searchParams.get("desde")?.trim() || "";
+  const hastaRaw = searchParams.get("hasta")?.trim() || "";
+  const desde = isDate(desdeRaw) ? desdeRaw : "";
+  const hasta = isDate(hastaRaw) ? hastaRaw : "";
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
   const limit = 50;
   const offset = (page - 1) * limit;
@@ -67,6 +74,16 @@ export async function GET(req: NextRequest) {
     if (ano) {
       conditions.push(`ano = $${p}`);
       params.push(parseInt(ano));
+      p++;
+    }
+    if (desde) {
+      conditions.push(`fechadevolucion::date >= $${p}::date`);
+      params.push(desde);
+      p++;
+    }
+    if (hasta) {
+      conditions.push(`fechadevolucion::date <= $${p}::date`);
+      params.push(hasta);
       p++;
     }
     if (municipio) {
