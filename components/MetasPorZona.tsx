@@ -108,15 +108,34 @@ function CeldaMes({
   mes: string;
 }) {
   const futuro = estado === "futuro";
+  const sinMeta = celda.meta === 0; // ese mes no tenía meta asignada
   const cumpleMes = cumplimientoMes(celda);
-  const c = pctColor(cumpleMes);
-  const bg = futuro ? "bg-gray-50" : c.bg;
-  const pctText = futuro ? "text-gray-300" : c.text;
+
+  // Color: por cumplimiento de la meta del mes. Sin meta = neutro (no rojo).
+  let bg = "bg-gray-50";
+  let pctText = "text-gray-400";
+  if (futuro) {
+    bg = "bg-gray-50";
+    pctText = "text-gray-300";
+  } else if (!sinMeta) {
+    const c = pctColor(cumpleMes);
+    bg = c.bg;
+    pctText = c.text;
+  }
   const bordeCls = borde
     ? "border-r-2 border-indigo-500"
     : "border-r border-gray-100";
+
+  // Símbolo solo en meses cerrados: ✓ si cumplió, ✗ si no, — si no había meta.
+  let simbolo = "";
+  if (estado === "pasado") {
+    simbolo = sinMeta ? "— " : cumpleMes >= 70 ? "✓ " : "✗ ";
+  }
+
   const tip = futuro
     ? `${mes}: meta del mes ${fmt(celda.meta)} (pendiente)`
+    : sinMeta
+    ? `${mes}: sin meta asignada · recolectado ${fmt(celda.real)} · Acumulado del año: ${acum}%`
     : `${mes} · Cumplimiento del mes: ${cumpleMes}% (recolectado ${fmt(
         celda.real
       )} / meta ${fmt(celda.meta)}) · Acumulado del año: ${acum}%`;
@@ -126,14 +145,14 @@ function CeldaMes({
       <div className={`${L_REAL} ${futuro ? "text-gray-300" : "text-gray-700"}`}>
         {fmt(celda.real)}
       </div>
-      <div className={`${L_META} ${futuro ? "text-gray-400" : "text-gray-900"}`}>
+      <div className={`${L_META} ${futuro || sinMeta ? "text-gray-400" : "text-gray-900"}`}>
         {fmt(celda.meta)}
       </div>
       {futuro ? (
         <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
       ) : (
         <div className={`${L_PCT} ${pctText}`}>
-          {estado === "pasado" ? "✓ " : ""}
+          {simbolo}
           {acum}%
         </div>
       )}
@@ -328,8 +347,10 @@ export default function MetasPorZona() {
         <span className="basis-full text-[11px] text-gray-500">
           El <strong>color</strong> de la celda indica el cumplimiento de la
           <strong> meta del mes</strong> (recolectado ÷ meta del mes); el
-          <strong> número</strong> es el % acumulado del año. Pasa el mouse sobre una
-          celda para ver el detalle del mes.
+          <strong> número</strong> es el % acumulado del año. En meses cerrados:
+          {" "}<strong>✓</strong> cumplió la meta · <strong>✗</strong> no la cumplió ·
+          {" "}<strong>—</strong> sin meta ese mes. Pasa el mouse sobre una celda para
+          ver el detalle del mes.
         </span>
         <span className="text-gray-300">|</span>
         <span><span className="inline-block w-3 h-3 rounded bg-emerald-50 border border-emerald-200 mr-1 align-middle" />Mes cerrado (✓)</span>
