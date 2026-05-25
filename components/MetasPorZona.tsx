@@ -109,15 +109,13 @@ function CeldaMes({
 }) {
   const futuro = estado === "futuro";
   const sinMeta = celda.meta === 0; // ese mes no tenía meta asignada
+  // Sin meta se trata igual que el futuro: gris, sin color ni símbolo.
+  const neutral = futuro || sinMeta;
   const cumpleMes = cumplimientoMes(celda);
 
-  // Color: por cumplimiento de la meta del mes. Sin meta = neutro (no rojo).
   let bg = "bg-gray-50";
-  let pctText = "text-gray-400";
-  if (futuro) {
-    bg = "bg-gray-50";
-    pctText = "text-gray-300";
-  } else if (!sinMeta) {
+  let pctText = "text-gray-300";
+  if (!neutral) {
     const c = pctColor(cumpleMes);
     bg = c.bg;
     pctText = c.text;
@@ -126,29 +124,29 @@ function CeldaMes({
     ? "border-r-2 border-indigo-500"
     : "border-r border-gray-100";
 
-  // Símbolo solo en meses cerrados: ✓ si cumplió, ✗ si no, — si no había meta.
+  // Símbolo solo en meses cerrados con meta: ✓ si cumplió, ✗ si no.
   let simbolo = "";
-  if (estado === "pasado") {
-    simbolo = sinMeta ? "— " : cumpleMes >= 70 ? "✓ " : "✗ ";
+  if (estado === "pasado" && !sinMeta) {
+    simbolo = cumpleMes >= 70 ? "✓ " : "✗ ";
   }
 
-  const tip = futuro
-    ? `${mes}: meta del mes ${fmt(celda.meta)} (pendiente)`
-    : sinMeta
-    ? `${mes}: sin meta asignada · recolectado ${fmt(celda.real)} · Acumulado del año: ${acum}%`
+  const tip = neutral
+    ? sinMeta
+      ? `${mes}: sin meta asignada${celda.real ? ` · recolectado ${fmt(celda.real)}` : ""}`
+      : `${mes}: meta del mes ${fmt(celda.meta)} (pendiente)`
     : `${mes} · Cumplimiento del mes: ${cumpleMes}% (recolectado ${fmt(
         celda.real
       )} / meta ${fmt(celda.meta)}) · Acumulado del año: ${acum}%`;
 
   return (
     <td className={`${bg} ${bordeCls} p-0 align-top font-mono`} title={tip}>
-      <div className={`${L_REAL} ${futuro ? "text-gray-300" : "text-gray-700"}`}>
+      <div className={`${L_REAL} ${neutral ? "text-gray-300" : "text-gray-700"}`}>
         {fmt(celda.real)}
       </div>
-      <div className={`${L_META} ${futuro || sinMeta ? "text-gray-400" : "text-gray-900"}`}>
+      <div className={`${L_META} ${neutral ? "text-gray-400" : "text-gray-900"}`}>
         {fmt(celda.meta)}
       </div>
-      {futuro ? (
+      {neutral ? (
         <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
       ) : (
         <div className={`${L_PCT} ${pctText}`}>
@@ -348,9 +346,9 @@ export default function MetasPorZona() {
           El <strong>color</strong> de la celda indica el cumplimiento de la
           <strong> meta del mes</strong> (recolectado ÷ meta del mes); el
           <strong> número</strong> es el % acumulado del año. En meses cerrados:
-          {" "}<strong>✓</strong> cumplió la meta · <strong>✗</strong> no la cumplió ·
-          {" "}<strong>—</strong> sin meta ese mes. Pasa el mouse sobre una celda para
-          ver el detalle del mes.
+          {" "}<strong>✓</strong> cumplió la meta · <strong>✗</strong> no la cumplió.
+          {" "}Los meses sin meta y los futuros van en gris. Pasa el mouse sobre una
+          celda para ver el detalle del mes.
         </span>
         <span className="text-gray-300">|</span>
         <span><span className="inline-block w-3 h-3 rounded bg-emerald-50 border border-emerald-200 mr-1 align-middle" />Mes cerrado (✓)</span>
