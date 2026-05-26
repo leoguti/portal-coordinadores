@@ -312,7 +312,7 @@ function ListarCertificadosPage() {
                 : `${records.length} certificado(s) cargado(s)${hasMore ? " — hay más" : ""}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
@@ -322,6 +322,13 @@ function ListarCertificadosPage() {
               </button>
             )}
             <Link
+              href="/revisiones/fincas"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm"
+            >
+              <span className="text-lg leading-none">🌾</span>
+              Generadores y Fincas
+            </Link>
+            <Link
               href="/certificados/generar"
               className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm"
             >
@@ -330,21 +337,6 @@ function ListarCertificadosPage() {
             </Link>
           </div>
         </div>
-
-        {/* Acceso a Generadores y Fincas (vive aquí, no en el menú lateral) */}
-        <Link
-          href="/revisiones/fincas"
-          className="mb-5 flex items-center gap-4 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100 px-5 py-4 transition-colors"
-        >
-          <span className="text-3xl leading-none">🌾</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-gray-900">Generadores y Fincas</p>
-            <p className="text-sm text-gray-600">
-              Buscar, editar y agregar generadores y sus fincas, o generar un certificado desde una finca.
-            </p>
-          </div>
-          <span className="text-green-700 text-2xl flex-shrink-0">→</span>
-        </Link>
 
         {/* Tabs: actual (Airtable) vs histórico (snapshots Postgres+R2) */}
         <div className="border-b border-gray-200 mb-4 flex gap-1 flex-wrap">
