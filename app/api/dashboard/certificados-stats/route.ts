@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
 
     // KPIs
     let certs = 0, kg = 0, rigidos = 0, flexibles = 0, metalicos = 0, embalaje = 0;
-    let con_triple = 0, triplesi = 0;
+    let tlSi = 0, tlNo = 0, tlNA = 0, tlSinResp = 0;
     for (const r of cur) {
       certs++;
       kg += Number(r.total || 0);
@@ -176,10 +176,12 @@ export async function GET(req: NextRequest) {
       flexibles += Number(r.flexibles || 0);
       metalicos += Number(r.metalicos || 0);
       embalaje += Number(r.embalaje || 0);
-      if (r.triplelavado) {
-        con_triple++;
-        if (normJs(r.triplelavado).startsWith("s")) triplesi++;
-      }
+      const v = normJs(r.triplelavado || "");
+      if (!v) tlSinResp++;
+      else if (v === "si" || v === "s" || v === "sí") tlSi++;
+      else if (v === "no") tlNo++;
+      else if (v.includes("aplica")) tlNA++;
+      else tlSinResp++;
     }
     let certsPrev = 0, kgPrev = 0;
     for (const r of prev) { certsPrev++; kgPrev += Number(r.total || 0); }
@@ -298,12 +300,11 @@ export async function GET(req: NextRequest) {
       kpis: {
         certs,
         kg,
-        kgPorCert: certs > 0 ? kg / certs : 0,
-        pctTripleLavado: con_triple > 0 ? (triplesi / con_triple) * 100 : 0,
         certsPrev,
         kgPrev,
         deltaCertsPct: certsPrev > 0 ? ((certs - certsPrev) / certsPrev) * 100 : null,
         deltaKgPct: kgPrev > 0 ? ((kg - kgPrev) / kgPrev) * 100 : null,
+        tripleLavado: { si: tlSi, no: tlNo, noAplica: tlNA, sinRespuesta: tlSinResp },
       },
       materiales: { rigidos, flexibles, metalicos, embalaje },
       tendencia: { actual: tendCurArr, anterior: tendPrevArr },

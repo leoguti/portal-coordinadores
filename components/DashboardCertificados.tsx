@@ -38,7 +38,7 @@ interface TendPoint { ym: string; certs: number; kg: number; }
 
 interface Stats {
   meta: { year: number; monthFrom: number; monthTo: number; coordinador: string | null; coordinadorForzado: boolean; };
-  kpis: { certs: number; kg: number; kgPorCert: number; pctTripleLavado: number; certsPrev: number; kgPrev: number; deltaCertsPct: number | null; deltaKgPct: number | null; };
+  kpis: { certs: number; kg: number; certsPrev: number; kgPrev: number; deltaCertsPct: number | null; deltaKgPct: number | null; tripleLavado: { si: number; no: number; noAplica: number; sinRespuesta: number; }; };
   materiales: { rigidos: number; flexibles: number; metalicos: number; embalaje: number; };
   tendencia: { actual: TendPoint[]; anterior: TendPoint[]; };
   porCultivo: CultivoRow[];
@@ -251,11 +251,10 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
       {data && (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <KpiCard label="Certificados" value={fmtInt(data.kpis.certs)} delta={data.kpis.deltaCertsPct} />
             <KpiCard label="Kilos totales" value={fmtKg(data.kpis.kg)} subtitle={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
-            <KpiCard label="Kg por certificado" value={data.kpis.kgPorCert.toFixed(1)} subtitle="promedio" />
-            <KpiCard label="% Triple lavado" value={data.kpis.pctTripleLavado.toFixed(1) + "%"} />
+            <TripleLavadoCard tl={data.kpis.tripleLavado} />
           </div>
 
           {/* Tendencia */}
@@ -416,6 +415,32 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
 }
 
 // ──────────────── Subcomponentes ────────────────
+
+function TripleLavadoCard({ tl }: { tl: { si: number; no: number; noAplica: number; sinRespuesta: number; } }) {
+  const total = tl.si + tl.no + tl.noAplica + tl.sinRespuesta;
+  const pct = (n: number) => (total > 0 ? ((n / total) * 100).toFixed(0) + "%" : "0%");
+  const rows: { label: string; n: number; color: string }[] = [
+    { label: "Sí", n: tl.si, color: "bg-green-500" },
+    { label: "No", n: tl.no, color: "bg-red-500" },
+    { label: "No aplica", n: tl.noAplica, color: "bg-amber-400" },
+  ];
+  if (tl.sinRespuesta > 0) rows.push({ label: "Sin respuesta", n: tl.sinRespuesta, color: "bg-gray-300" });
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <p className="text-xs text-gray-500 mb-2">Triple lavado</p>
+      <div className="space-y-1.5">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center gap-2">
+            <span className={`inline-block w-2 h-2 rounded-full ${r.color}`} />
+            <span className="text-xs text-gray-600 w-20">{r.label}</span>
+            <span className="text-sm font-semibold text-gray-900 tabular-nums">{fmtInt(r.n)}</span>
+            <span className="text-xs text-gray-400 ml-auto">{pct(r.n)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function KpiCard({ label, value, subtitle, delta }: { label: string; value: string; subtitle?: string; delta?: number | null; }) {
   const deltaColor = delta == null ? "text-gray-400" : delta > 0 ? "text-green-600" : delta < 0 ? "text-red-600" : "text-gray-500";
