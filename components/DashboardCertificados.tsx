@@ -253,7 +253,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <KpiCard label="Certificados" value={fmtInt(data.kpis.certs)} delta={data.kpis.deltaCertsPct} />
-            <KpiCard label="Kilos totales" value={fmtKg(data.kpis.kg)} subtitle={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
+            <KpiCard label="Kilos totales" value={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
             <TripleLavadoCard tl={data.kpis.tripleLavado} />
           </div>
 
