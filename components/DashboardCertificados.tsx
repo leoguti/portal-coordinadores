@@ -104,8 +104,8 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
   const [monthFrom, setMonthFrom] = useState(1);
   const [monthTo, setMonthTo] = useState(12);
   const [coordSel, setCoordSel] = useState<string>("");
-  const [cultivoSel, setCultivoSel] = useState<string[]>([]);
-  const [deptoSel, setDeptoSel] = useState<string[]>([]);
+  const [cultivoSel, setCultivoSel] = useState<string>("");
+  const [deptoSel, setDeptoSel] = useState<string>("");
 
   const [data, setData] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,8 +118,8 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
     p.set("monthFrom", String(monthFrom));
     p.set("monthTo", String(monthTo));
     if (showCoordSelect && coordSel) p.set("coordinador", coordSel);
-    if (cultivoSel.length) p.set("cultivo", cultivoSel.join(","));
-    if (deptoSel.length) p.set("departamento", deptoSel.join(","));
+    if (cultivoSel) p.set("cultivo", cultivoSel);
+    if (deptoSel) p.set("departamento", deptoSel);
     try {
       const r = await fetch(`/api/dashboard/certificados-stats?${p.toString()}`);
       const j = await r.json();
@@ -223,22 +223,24 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             </select>
           </div>
         )}
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Cultivo (filtra)</label>
-          <select multiple value={cultivoSel} onChange={(e) => setCultivoSel([...e.target.selectedOptions].map((o) => o.value))}
-            className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs h-[58px]">
-            {cultivosOpts.slice(0, 30).map((c) => <option key={c} value={c}>{c}</option>)}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Cultivo</label>
+          <select value={cultivoSel} onChange={(e) => setCultivoSel(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Todos</option>
+            {cultivosOpts.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Departamento (filtra)</label>
-          <select multiple value={deptoSel} onChange={(e) => setDeptoSel([...e.target.selectedOptions].map((o) => o.value))}
-            className="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs h-[58px]">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
+          <select value={deptoSel} onChange={(e) => setDeptoSel(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Todos</option>
             {deptosOpts.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
-        {(cultivoSel.length > 0 || deptoSel.length > 0 || coordSel) && (
-          <button onClick={() => { setCultivoSel([]); setDeptoSel([]); setCoordSel(""); }}
+        {(cultivoSel || deptoSel || coordSel) && (
+          <button onClick={() => { setCultivoSel(""); setDeptoSel(""); setCoordSel(""); }}
             className="text-xs px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700">Limpiar</button>
         )}
       </div>

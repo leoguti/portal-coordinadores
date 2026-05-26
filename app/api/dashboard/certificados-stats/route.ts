@@ -267,10 +267,15 @@ export async function GET(req: NextRequest) {
     const tendCurArr = Object.entries(tendCur).map(([ym, v]) => ({ ym, certs: v.certs, kg: v.kg })).sort((a, b) => a.ym.localeCompare(b.ym));
     const tendPrevArr = Object.entries(tendPrev).map(([ym, v]) => ({ ym, certs: v.certs, kg: v.kg })).sort((a, b) => a.ym.localeCompare(b.ym));
 
-    // Filtros disponibles
-    // - Cultivos: lista canónica desde CULTIVOS (no de Neon ni del libre).
-    // - Departamentos: de los datos del año actual (lookup, ya canónicos).
-    const cultivosFiltro = [...cultivosMap.values()].sort((a, b) => a.localeCompare(b, "es"));
+    // Filtros disponibles: SOLO valores presentes en certificados del año.
+    // Cultivos: canónicos (lookup desde CULTIVOS) que aparecen en al menos un cert.
+    const cultivosSet = new Set<string>();
+    for (const r of allCur) {
+      for (const c of (r.cultivogenerador || [])) {
+        if (c) cultivosSet.add(toCanonicalCultivo(String(c)));
+      }
+    }
+    const cultivosFiltro = [...cultivosSet].sort((a, b) => a.localeCompare(b, "es"));
     const deptosSet = new Set<string>();
     for (const r of allCur) for (const d of (r.Departamento || [])) if (d) deptosSet.add(String(d));
     const departamentosFiltro = [...deptosSet].sort((a, b) => a.localeCompare(b, "es"));
