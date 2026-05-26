@@ -226,8 +226,12 @@ export async function GET(req: NextRequest) {
       const genNom = first(r.nombregenerador) || "(sin)";
       const genCed = first(r.cedulagenerador) || null;
 
-      if (cultArr.length === 0) sinCultivoCanonico++;
-      for (const c of cultArr) addToMap(cultivoAgg, c, totalKg);
+      if (cultArr.length === 0) {
+        sinCultivoCanonico++;
+        addToMap(cultivoAgg, "Sin cultivo", totalKg);
+      } else {
+        for (const c of cultArr) addToMap(cultivoAgg, c, totalKg);
+      }
 
       if (deptoArr.length === 0) addToMap(deptoAgg, "(sin)", totalKg);
       else for (const d of deptoArr) addToMap(deptoAgg, String(d), totalKg);
