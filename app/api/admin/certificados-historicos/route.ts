@@ -54,12 +54,8 @@ export async function GET(req: NextRequest) {
     const params: (string | number)[] = [];
     let p = 1;
 
-    // Coordinadores solo ven sus propios certificados
-    if (isCoordinador) {
-      conditions.push(`coordinador_airtable_id = $${p}`);
-      params.push(session.user.coordinatorRecordId!);
-      p++;
-    }
+    // En el histórico TODOS los roles ven todos los certificados (sin filtro
+    // por coordinador). La restricción por rol solo aplica al listado actual.
 
     if (q) {
       // Busca insensible a mayúsculas Y tildes
