@@ -7,7 +7,26 @@
  * solo ve los suyos, admin/supervisor ven todos.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+interface Stats {
+  minFecha: string | null;
+  maxFecha: string | null;
+  total: number;
+}
+
+const MESES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+function fmtMesAno(iso: string | null): string {
+  if (!iso) return "";
+  // iso = "YYYY-MM-DD" (sin zona horaria; no usar Date para evitar shifts)
+  const [y, m] = iso.split("-");
+  const mi = parseInt(m || "0", 10) - 1;
+  if (mi < 0 || mi > 11 || !y) return "";
+  return `${MESES_ES[mi]} de ${y}`;
+}
 
 interface Certificado {
   id: string;
@@ -43,6 +62,14 @@ export default function HistoricoCertificados() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/certificados-historicos/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && setStats(j))
+      .catch(() => {});
+  }, []);
 
   const buscar = useCallback(
     async (p = 1) => {
@@ -93,8 +120,14 @@ export default function HistoricoCertificados() {
               Histórico de certificados (snapshots)
             </p>
             <p className="text-amber-900/90 mb-2">
-              Aquí están los certificados de <strong>años anteriores</strong>{" "}
-              (incluso desde 2020) que ya no aparecen en el listado actual.
+              Aquí están los certificados de <strong>años anteriores</strong> que ya no aparecen en el listado actual.
+              {stats && stats.minFecha && stats.maxFecha && (
+                <>
+                  {" "}Cubre <strong>{stats.total.toLocaleString("es-CO")}</strong> certificados desde{" "}
+                  <strong>{fmtMesAno(stats.minFecha)}</strong> hasta{" "}
+                  <strong>{fmtMesAno(stats.maxFecha)}</strong>.
+                </>
+              )}
             </p>
             <p className="text-amber-900/80 mb-2">
               Cada registro es un <strong>snapshot</strong>: una copia
