@@ -25,10 +25,23 @@ const MetasPorZona = dynamic(() => import("@/components/MetasPorZona"), {
   loading: () => spinner,
 });
 
+const DashboardCertificados = dynamic(
+  () => import("@/components/DashboardCertificados"),
+  { loading: () => spinner }
+);
+
 export default function DashboardEjecutivoPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [tab, setTab] = useState<"resumen" | "zonas">("resumen");
+  const [tab, setTab] = useState<"resumen" | "zonas" | "certificados">("resumen");
+  const [coordinadores, setCoordinadores] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/coordinadores?onlyCoordinadores=true")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setCoordinadores(d.coordinadores || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -83,13 +96,27 @@ export default function DashboardEjecutivoPage() {
           >
             Metas por Zona
           </button>
+          <button
+            onClick={() => setTab("certificados")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+              tab === "certificados"
+                ? "bg-[#00d084] text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            Certificados
+          </button>
         </div>
       </div>
 
-      {tab === "resumen" ? (
+      {tab === "resumen" && (
         <DashboardEjecutivo userName={session.user?.name || undefined} />
-      ) : (
-        <MetasPorZona />
+      )}
+      {tab === "zonas" && <MetasPorZona />}
+      {tab === "certificados" && (
+        <div className="max-w-7xl mx-auto">
+          <DashboardCertificados scope="all" coordinadores={coordinadores} />
+        </div>
       )}
     </AuthenticatedLayout>
   );
