@@ -32,6 +32,9 @@ interface CertRaw {
   ano?: number;
   id_coordinador?: string[];
   nombrecoordinador?: string[];
+  /** Link directo a CULTIVOS (canónico). Fuente preferida para los nombres. */
+  cultivos_certificado?: string[];
+  /** Lookup viejo desde ubicaciones (texto libre). Fallback. */
   cultivogenerador?: string[];
   municipiodevolucion?: string[];
   Departamento?: string[];
@@ -66,7 +69,8 @@ async function fetchAllCerts(year: number, coordinadorId: string): Promise<CertR
   const fields = [
     "consecutivo", "fechadevolucion", "ano",
     "id_coordinador", "nombrecoordinador",
-    "cultivogenerador", "municipiodevolucion", "Departamento",
+    "cultivos_certificado",  // link canónico Certificados→CULTIVOS (fuente única)
+    "municipiodevolucion", "Departamento",
     "total", "rigidos", "flexibles", "metalicos", "embalaje", "triplelavado",
     "nombregenerador", "cedulagenerador",
   ];
@@ -104,9 +108,15 @@ function inRange(rec: CertRaw, monthFrom: number, monthTo: number): boolean {
   return m >= monthFrom && m <= monthTo;
 }
 
-function matchesCultivo(rec: CertRaw, cultivosNorm: string[]): boolean {
+// Devuelve los nombres canónicos del cert (resolviendo cultivos_certificado IDs
+// contra el mapa de CULTIVOS). Solo canónicos — si no tiene el link, no aporta.
+function cultivosCanonicos(rec: CertRaw, cmap: Map<string, string>): string[] {
+  const ids = rec.cultivos_certificado || [];
+  return ids.map((id) => cmap.get(id) || "").filter(Boolean);
+}
+function matchesCultivo(rec: CertRaw, cultivosNorm: string[], cmap: Map<string, string>): boolean {
   if (!cultivosNorm.length) return true;
-  const vals = (rec.cultivogenerador || []).map(normJs);
+  const vals = cultivosCanonicos(rec, cmap).map(normJs);
   return vals.some((v) => cultivosNorm.includes(v));
 }
 function matchesDepto(rec: CertRaw, deptosNorm: string[]): boolean {
@@ -151,7 +161,7 @@ export async function GET(req: NextRequest) {
     // Aplicar filtros de mes + cultivo + depto en memoria
     const filt = (rec: CertRaw) =>
       inRange(rec, monthFrom, monthTo) &&
-      matchesCultivo(rec, cultivosN) &&
+      matchesCultivo(rec, cultivosN, cultivosMap) &&
       matchesDepto(rec, deptosN);
     const cur = allCur.filter(filt);
     const prev = allPrev.filter(filt);
@@ -197,14 +207,6 @@ export async function GET(req: NextRequest) {
       e.kg += kgInc;
       map.set(key, e);
     }
-    // Construyo set canónico de cultivos (lower→canónico) usando CULTIVOS table
-    const canonicalCultivos = new Map<string, string>();
-    for (const n of cultivosMap.values()) canonicalCultivos.set(normJs(n), n);
-    function toCanonicalCultivo(s: string): string {
-      const n = normJs(s);
-      return canonicalCultivos.get(n) || s; // si no está en canónica, dejar como vino
-    }
-
     const cultivoAgg = new Map<string, AggMap>();
     const deptoAgg = new Map<string, AggMap>();
     const muniAgg = new Map<string, AggMap>();
@@ -212,9 +214,11 @@ export async function GET(req: NextRequest) {
     const genAgg = new Map<string, AggMap & { nombre: string; cedula: string | null }>();
     const heatAgg = new Map<string, AggMap & { cultivo: string; depto: string }>();
 
+    let sinCultivoCanonico = 0;
+
     for (const r of cur) {
       const totalKg = Number(r.total || 0);
-      const cultArr = (r.cultivogenerador || []).filter(Boolean);
+      const cultArr = cultivosCanonicos(r, cultivosMap); // solo canónicos
       const deptoArr = (r.Departamento || []).filter(Boolean);
       const muni = first(r.municipiodevolucion) || "(sin)";
       const coordId = first(r.id_coordinador) || "";
@@ -222,8 +226,8 @@ export async function GET(req: NextRequest) {
       const genNom = first(r.nombregenerador) || "(sin)";
       const genCed = first(r.cedulagenerador) || null;
 
-      if (cultArr.length === 0) addToMap(cultivoAgg, "(sin)", totalKg);
-      else for (const c of cultArr) addToMap(cultivoAgg, toCanonicalCultivo(String(c)), totalKg);
+      if (cultArr.length === 0) sinCultivoCanonico++;
+      for (const c of cultArr) addToMap(cultivoAgg, c, totalKg);
 
       if (deptoArr.length === 0) addToMap(deptoAgg, "(sin)", totalKg);
       else for (const d of deptoArr) addToMap(deptoAgg, String(d), totalKg);
@@ -239,12 +243,11 @@ export async function GET(req: NextRequest) {
       ge.certs++; ge.kg += totalKg; genAgg.set(gk, ge);
 
       // heatmap cultivo×depto
-      for (const c of cultArr.length ? cultArr : [""]) {
-        for (const d of deptoArr.length ? deptoArr : [""]) {
+      for (const c of cultArr) {
+        for (const d of deptoArr) {
           if (!c || !d) continue;
-          const cn = toCanonicalCultivo(String(c));
-          const hk = cn + "||" + String(d);
-          const he = heatAgg.get(hk) || { certs: 0, kg: 0, cultivo: cn, depto: String(d) };
+          const hk = c + "||" + String(d);
+          const he = heatAgg.get(hk) || { certs: 0, kg: 0, cultivo: c, depto: String(d) };
           he.certs++; he.kg += totalKg; heatAgg.set(hk, he);
         }
       }
@@ -268,21 +271,17 @@ export async function GET(req: NextRequest) {
     const tendPrevArr = Object.entries(tendPrev).map(([ym, v]) => ({ ym, certs: v.certs, kg: v.kg })).sort((a, b) => a.ym.localeCompare(b.ym));
 
     // Filtros disponibles: SOLO valores presentes en certificados del año.
-    // Cultivos: canónicos (lookup desde CULTIVOS) que aparecen en al menos un cert.
+    // Cultivos: nombres canónicos resueltos desde cultivos_certificado (link a CULTIVOS).
     const cultivosSet = new Set<string>();
-    for (const r of allCur) {
-      for (const c of (r.cultivogenerador || [])) {
-        if (c) cultivosSet.add(toCanonicalCultivo(String(c)));
-      }
-    }
+    for (const r of allCur) for (const c of cultivosCanonicos(r, cultivosMap)) cultivosSet.add(c);
     const cultivosFiltro = [...cultivosSet].sort((a, b) => a.localeCompare(b, "es"));
     const deptosSet = new Set<string>();
     for (const r of allCur) for (const d of (r.Departamento || [])) if (d) deptosSet.add(String(d));
     const departamentosFiltro = [...deptosSet].sort((a, b) => a.localeCompare(b, "es"));
 
-    // Years disponibles: ofrezco últimos 5 (no consultamos otro año aún).
-    const years: number[] = [];
-    for (let y = now.getFullYear(); y >= now.getFullYear() - 4; y--) years.push(y);
+    // Años disponibles en Airtable: solo año actual y anterior (los más viejos
+    // están en Neon-backup, no aquí). La auditoría confirmó: solo 2025 y 2026.
+    const years: number[] = [now.getFullYear(), now.getFullYear() - 1];
 
     return NextResponse.json({
       meta: {
@@ -290,6 +289,7 @@ export async function GET(req: NextRequest) {
         coordinador: coordinadorFilter || null,
         coordinadorForzado: isCoordinador,
         fuente: "airtable",
+        sinCultivoCanonico, // certs del periodo sin link cultivos_certificado
       },
       kpis: {
         certs,
