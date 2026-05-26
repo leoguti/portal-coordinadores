@@ -1,38 +1,125 @@
 /**
  * GET /api/dashboard/certificados-stats
  *
- * Estadísticas de certificados desde Neon. Devuelve KPIs, tendencia mensual,
- * top cultivos/municipios/departamentos/coordinadores, composición de
- * materiales, heatmap cultivo×departamento y top generadores.
+ * Estadísticas de certificados desde **Airtable** (fuente de verdad).
+ * Neon NO se usa aquí — es solo backup histórico.
+ *
+ * Devuelve KPIs, tendencia mensual, top cultivos/municipios/departamentos/
+ * coordinadores, composición de materiales, heatmap cultivo×departamento
+ * y top generadores. Lista de cultivos canónicos viene de la tabla CULTIVOS.
  *
  * Roles:
  *   - Coordinador: SOLO sus propios certificados (forzado).
  *   - Admin/Supervisor: todos; puede filtrar por ?coordinador=recXXX.
  *
- * Query params:
- *   year         (default año actual)
- *   monthFrom    1..12 (default 1)
- *   monthTo      1..12 (default 12)
- *   coordinador  (solo admin) recordId de coordinador para filtrar
- *   cultivo      coma-separado (ej. "Café,Aguacate")
- *   departamento coma-separado
+ * Cachea los records crudos por (year, coordinador) durante 5 minutos para
+ * que los cambios de filtro de cultivo/depto/meses sean instantáneos.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Client } from "pg";
+import { getCultivosMap } from "@/lib/cultivosCache";
 
-const ALL_KEY = "__all__";
+const KEY = process.env.AIRTABLE_API_KEY!;
+const BASE = process.env.AIRTABLE_BASE_ID!;
+const TABLE = "Certificados";
+const TTL_MS = 5 * 60 * 1000;
+
+interface CertRaw {
+  id: string;
+  consecutivo?: number;
+  fechadevolucion?: string;
+  ano?: number;
+  id_coordinador?: string[];
+  nombrecoordinador?: string[];
+  cultivogenerador?: string[];
+  municipiodevolucion?: string[];
+  Departamento?: string[];
+  total?: number;
+  rigidos?: number;
+  flexibles?: number;
+  metalicos?: number;
+  embalaje?: number;
+  triplelavado?: string;
+  nombregenerador?: string[];
+  cedulagenerador?: string[];
+}
+
+const cache = new Map<string, { ts: number; records: CertRaw[] }>();
 
 function parseList(s: string | null | undefined): string[] {
   if (!s) return [];
   return s.split(",").map((x) => x.trim()).filter(Boolean);
 }
+function normJs(s: string): string {
+  return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+function first<T>(v: T[] | undefined): T | undefined {
+  return Array.isArray(v) && v.length > 0 ? v[0] : undefined;
+}
+
+async function fetchAllCerts(year: number, coordinadorId: string): Promise<CertRaw[]> {
+  const k = `${year}|${coordinadorId || ""}`;
+  const hit = cache.get(k);
+  if (hit && Date.now() - hit.ts < TTL_MS) return hit.records;
+
+  const fields = [
+    "consecutivo", "fechadevolucion", "ano",
+    "id_coordinador", "nombrecoordinador",
+    "cultivogenerador", "municipiodevolucion", "Departamento",
+    "total", "rigidos", "flexibles", "metalicos", "embalaje", "triplelavado",
+    "nombregenerador", "cedulagenerador",
+  ];
+  const clauses: string[] = [`{ano}=${year}`];
+  if (coordinadorId) clauses.push(`FIND('${coordinadorId}', ARRAYJOIN({id_coordinador}))`);
+  const formula = clauses.length === 1 ? clauses[0] : `AND(${clauses.join(",")})`;
+
+  const out: CertRaw[] = [];
+  let offset: string | undefined;
+  do {
+    const p = new URLSearchParams();
+    p.set("filterByFormula", formula);
+    fields.forEach((f) => p.append("fields[]", f));
+    p.set("pageSize", "100");
+    if (offset) p.set("offset", offset);
+    const res = await fetch(`https://api.airtable.com/v0/${BASE}/${TABLE}?${p}`, {
+      headers: { Authorization: `Bearer ${KEY}` },
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Airtable ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    for (const r of data.records || []) {
+      out.push({ id: r.id, ...r.fields });
+    }
+    offset = data.offset;
+  } while (offset);
+
+  cache.set(k, { ts: Date.now(), records: out });
+  return out;
+}
+
+function inRange(rec: CertRaw, monthFrom: number, monthTo: number): boolean {
+  if (!rec.fechadevolucion) return false;
+  const m = new Date(rec.fechadevolucion).getUTCMonth() + 1;
+  return m >= monthFrom && m <= monthTo;
+}
+
+function matchesCultivo(rec: CertRaw, cultivosNorm: string[]): boolean {
+  if (!cultivosNorm.length) return true;
+  const vals = (rec.cultivogenerador || []).map(normJs);
+  return vals.some((v) => cultivosNorm.includes(v));
+}
+function matchesDepto(rec: CertRaw, deptosNorm: string[]): boolean {
+  if (!deptosNorm.length) return true;
+  const vals = (rec.Departamento || []).map(normJs);
+  return vals.some((v) => deptosNorm.includes(v));
+}
+
+interface AggMap { certs: number; kg: number; }
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-
   const rol = session.user?.rol;
   const isAdmin = rol === "Administrador" || rol === "Supervisor";
   const isCoordinador = rol === "Coordinador";
@@ -45,250 +132,186 @@ export async function GET(req: NextRequest) {
   const year = Math.max(2018, parseInt(sp.get("year") || String(now.getFullYear())));
   const monthFrom = Math.min(12, Math.max(1, parseInt(sp.get("monthFrom") || "1")));
   const monthTo = Math.min(12, Math.max(monthFrom, parseInt(sp.get("monthTo") || "12")));
-  const cultivos = parseList(sp.get("cultivo"));
-  const departamentos = parseList(sp.get("departamento"));
-
-  // Coordinador filter: coordinador autenticado SI no es admin; opcionalmente
-  // un coordinador específico si admin pasó el parámetro.
   const coordParam = sp.get("coordinador") || "";
   const coordinadorFilter = isCoordinador
     ? session.user.coordinatorRecordId!
     : coordParam || "";
+  const cultivos = parseList(sp.get("cultivo"));
+  const departamentos = parseList(sp.get("departamento"));
+  const cultivosN = cultivos.map(normJs);
+  const deptosN = departamentos.map(normJs);
 
-  // Construcción de WHERE compartido (excluye coordinador para ciertos subqueries
-  // donde queremos ranking GLOBAL incluso si hay filtro de coord; pero por
-  // simplicidad v1: el filtro de coord aplica a TODO).
-  const whereCommon = (alias = "c") => {
-    const w: string[] = [];
-    const params: (string | number | string[])[] = [];
-    let p = 1;
-    // Rango de fechas por year + monthFrom..monthTo
-    const desde = `${year}-${String(monthFrom).padStart(2, "0")}-01`;
-    // El último día del mes monthTo: usar primer día del mes siguiente y restar 1
-    const nextMonth = monthTo === 12 ? `${year + 1}-01-01` : `${year}-${String(monthTo + 1).padStart(2, "0")}-01`;
-    w.push(`${alias}.fechadevolucion IS NOT NULL AND ${alias}.fechadevolucion::text <> ''`);
-    w.push(`${alias}.fechadevolucion::date >= $${p}::date`);
-    params.push(desde);
-    p++;
-    w.push(`${alias}.fechadevolucion::date < $${p}::date`);
-    params.push(nextMonth);
-    p++;
-    if (coordinadorFilter) {
-      w.push(`${alias}.coordinador_airtable_id = $${p}`);
-      params.push(coordinadorFilter);
-      p++;
-    }
-    if (cultivos.length) {
-      w.push(`${alias}.cultivogenerador = ANY($${p}::text[])`);
-      params.push(cultivos);
-      p++;
-    }
-    if (departamentos.length) {
-      w.push(`${alias}.departamento = ANY($${p}::text[])`);
-      params.push(departamentos);
-      p++;
-    }
-    return { sql: w.join(" AND "), params };
-  };
-
-  // Ventana del año anterior (mismos meses)
-  const whereAnoAnterior = () => {
-    const desde = `${year - 1}-${String(monthFrom).padStart(2, "0")}-01`;
-    const nextMonth = monthTo === 12 ? `${year}-01-01` : `${year - 1}-${String(monthTo + 1).padStart(2, "0")}-01`;
-    const w: string[] = [];
-    const params: (string | number | string[])[] = [];
-    let p = 1;
-    w.push(`fechadevolucion IS NOT NULL AND fechadevolucion::text <> ''`);
-    w.push(`fechadevolucion::date >= $${p}::date`);
-    params.push(desde); p++;
-    w.push(`fechadevolucion::date < $${p}::date`);
-    params.push(nextMonth); p++;
-    if (coordinadorFilter) { w.push(`coordinador_airtable_id = $${p}`); params.push(coordinadorFilter); p++; }
-    if (cultivos.length) { w.push(`cultivogenerador = ANY($${p}::text[])`); params.push(cultivos); p++; }
-    if (departamentos.length) { w.push(`departamento = ANY($${p}::text[])`); params.push(departamentos); p++; }
-    return { sql: w.join(" AND "), params };
-  };
-
-  const pg = new Client({ connectionString: process.env.NEON_DATABASE_URL });
-  await pg.connect();
   try {
-    const { sql: W, params: P } = whereCommon();
-    const { sql: Wp, params: Pp } = whereAnoAnterior();
+    const [allCur, allPrev, cultivosMap] = await Promise.all([
+      fetchAllCerts(year, coordinadorFilter),
+      fetchAllCerts(year - 1, coordinadorFilter),
+      getCultivosMap().catch(() => new Map<string, string>()),
+    ]);
 
-    // 1. KPIs período actual
-    const kpiCur = await pg.query(
-      `SELECT
-         COUNT(*) certs,
-         COALESCE(SUM(total),0) kg,
-         COALESCE(SUM(rigidos),0) rigidos,
-         COALESCE(SUM(flexibles),0) flexibles,
-         COALESCE(SUM(metalicos),0) metalicos,
-         COALESCE(SUM(embalaje),0) embalaje,
-         COUNT(*) FILTER (WHERE LOWER(triplelavado) IN ('si','sí')) triplesi,
-         COUNT(*) FILTER (WHERE triplelavado IS NOT NULL AND triplelavado <> '') con_triple
-       FROM certificados c WHERE ${W}`,
-      P
-    );
+    // Aplicar filtros de mes + cultivo + depto en memoria
+    const filt = (rec: CertRaw) =>
+      inRange(rec, monthFrom, monthTo) &&
+      matchesCultivo(rec, cultivosN) &&
+      matchesDepto(rec, deptosN);
+    const cur = allCur.filter(filt);
+    const prev = allPrev.filter(filt);
 
-    // 2. KPIs período año anterior
-    const kpiPrev = await pg.query(
-      `SELECT COUNT(*) certs, COALESCE(SUM(total),0) kg FROM certificados WHERE ${Wp}`,
-      Pp
-    );
+    // KPIs
+    let certs = 0, kg = 0, rigidos = 0, flexibles = 0, metalicos = 0, embalaje = 0;
+    let con_triple = 0, triplesi = 0;
+    for (const r of cur) {
+      certs++;
+      kg += Number(r.total || 0);
+      rigidos += Number(r.rigidos || 0);
+      flexibles += Number(r.flexibles || 0);
+      metalicos += Number(r.metalicos || 0);
+      embalaje += Number(r.embalaje || 0);
+      if (r.triplelavado) {
+        con_triple++;
+        if (normJs(r.triplelavado).startsWith("s")) triplesi++;
+      }
+    }
+    let certsPrev = 0, kgPrev = 0;
+    for (const r of prev) { certsPrev++; kgPrev += Number(r.total || 0); }
 
-    // 3. Tendencia mensual (año actual + año anterior)
-    const tendCur = await pg.query(
-      `SELECT to_char(c.fechadevolucion::date,'YYYY-MM') ym,
-              COUNT(*) certs, COALESCE(SUM(total),0) kg
-       FROM certificados c WHERE ${W}
-       GROUP BY ym ORDER BY ym`,
-      P
-    );
-    const tendPrev = await pg.query(
-      `SELECT to_char(fechadevolucion::date,'YYYY-MM') ym,
-              COUNT(*) certs, COALESCE(SUM(total),0) kg
-       FROM certificados WHERE ${Wp}
-       GROUP BY ym ORDER BY ym`,
-      Pp
-    );
+    // Tendencia mensual (current + prev)
+    const tendCur: Record<string, { certs: number; kg: number }> = {};
+    const tendPrev: Record<string, { certs: number; kg: number }> = {};
+    for (const r of cur) {
+      if (!r.fechadevolucion) continue;
+      const ym = r.fechadevolucion.slice(0, 7);
+      const e = tendCur[ym] || (tendCur[ym] = { certs: 0, kg: 0 });
+      e.certs++; e.kg += Number(r.total || 0);
+    }
+    for (const r of prev) {
+      if (!r.fechadevolucion) continue;
+      const ym = r.fechadevolucion.slice(0, 7);
+      const e = tendPrev[ym] || (tendPrev[ym] = { certs: 0, kg: 0 });
+      e.certs++; e.kg += Number(r.total || 0);
+    }
 
-    // 4. Top cultivos
-    const porCultivo = await pg.query(
-      `SELECT COALESCE(NULLIF(c.cultivogenerador,''),'(sin)') cultivo,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c WHERE ${W}
-       GROUP BY cultivo ORDER BY kg DESC LIMIT 15`,
-      P
-    );
+    // Agregaciones por dimensión (normalizadas → mapear a forma canónica)
+    function addToMap(map: Map<string, AggMap>, key: string, kgInc: number) {
+      const e = map.get(key) || { certs: 0, kg: 0 };
+      e.certs++;
+      e.kg += kgInc;
+      map.set(key, e);
+    }
+    // Construyo set canónico de cultivos (lower→canónico) usando CULTIVOS table
+    const canonicalCultivos = new Map<string, string>();
+    for (const n of cultivosMap.values()) canonicalCultivos.set(normJs(n), n);
+    function toCanonicalCultivo(s: string): string {
+      const n = normJs(s);
+      return canonicalCultivos.get(n) || s; // si no está en canónica, dejar como vino
+    }
 
-    // 5. Por departamento (top 15)
-    const porDepto = await pg.query(
-      `SELECT COALESCE(NULLIF(c.departamento,''),'(sin)') depto,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c WHERE ${W}
-       GROUP BY depto ORDER BY kg DESC LIMIT 15`,
-      P
-    );
+    const cultivoAgg = new Map<string, AggMap>();
+    const deptoAgg = new Map<string, AggMap>();
+    const muniAgg = new Map<string, AggMap>();
+    const coordAgg = new Map<string, AggMap & { nombre: string }>();
+    const genAgg = new Map<string, AggMap & { nombre: string; cedula: string | null }>();
+    const heatAgg = new Map<string, AggMap & { cultivo: string; depto: string }>();
 
-    // 6. Top municipios (top 15)
-    const porMun = await pg.query(
-      `SELECT COALESCE(NULLIF(c.municipiodevolucion,''),'(sin)') mun,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c WHERE ${W}
-       GROUP BY mun ORDER BY kg DESC LIMIT 15`,
-      P
-    );
+    for (const r of cur) {
+      const totalKg = Number(r.total || 0);
+      const cultArr = (r.cultivogenerador || []).filter(Boolean);
+      const deptoArr = (r.Departamento || []).filter(Boolean);
+      const muni = first(r.municipiodevolucion) || "(sin)";
+      const coordId = first(r.id_coordinador) || "";
+      const coordNom = first(r.nombrecoordinador) || "(sin)";
+      const genNom = first(r.nombregenerador) || "(sin)";
+      const genCed = first(r.cedulagenerador) || null;
 
-    // 7. Por coordinador
-    const porCoord = await pg.query(
-      `SELECT c.coordinador_airtable_id id,
-              COALESCE(NULLIF(c.nombrecoordinador,''),'(sin)') nombre,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c WHERE ${W}
-       GROUP BY id, nombre ORDER BY kg DESC`,
-      P
-    );
+      if (cultArr.length === 0) addToMap(cultivoAgg, "(sin)", totalKg);
+      else for (const c of cultArr) addToMap(cultivoAgg, toCanonicalCultivo(String(c)), totalKg);
 
-    // 8. Top generadores
-    const topGen = await pg.query(
-      `SELECT COALESCE(NULLIF(c.nombregenerador,''),'(sin)') nombre,
-              c.cedulagenerador cedula,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c WHERE ${W}
-       GROUP BY nombre, cedula ORDER BY kg DESC LIMIT 20`,
-      P
-    );
+      if (deptoArr.length === 0) addToMap(deptoAgg, "(sin)", totalKg);
+      else for (const d of deptoArr) addToMap(deptoAgg, String(d), totalKg);
 
-    // 9. Heatmap cultivo × depto (top 8 x top 8)
-    const cdHeat = await pg.query(
-      `WITH topc AS (
-         SELECT cultivogenerador c FROM certificados c2
-         WHERE ${W.replace(/c\./g, "c2.")}
-           AND c2.cultivogenerador IS NOT NULL AND c2.cultivogenerador <> ''
-         GROUP BY c ORDER BY SUM(total) DESC NULLS LAST LIMIT 8
-       ),
-       topd AS (
-         SELECT departamento d FROM certificados c3
-         WHERE ${W.replace(/c\./g, "c3.")}
-           AND c3.departamento IS NOT NULL AND c3.departamento <> ''
-         GROUP BY d ORDER BY SUM(total) DESC NULLS LAST LIMIT 8
-       )
-       SELECT c.cultivogenerador cultivo, c.departamento depto,
-              COUNT(*) certs, COALESCE(SUM(total),0)::numeric kg
-       FROM certificados c
-       WHERE ${W}
-         AND c.cultivogenerador IN (SELECT c FROM topc)
-         AND c.departamento IN (SELECT d FROM topd)
-       GROUP BY cultivo, depto`,
-      P
-    );
+      addToMap(muniAgg, String(muni), totalKg);
 
-    // 10. Filtros disponibles (para los selects del UI)
-    const yearsList = await pg.query(
-      `SELECT DISTINCT ano FROM certificados WHERE ano IS NOT NULL ORDER BY ano DESC`
-    );
-    const cultivosList = await pg.query(
-      `SELECT cultivogenerador c, COUNT(*) n FROM certificados
-       WHERE cultivogenerador IS NOT NULL AND cultivogenerador <> ''
-       GROUP BY c ORDER BY n DESC LIMIT 40`
-    );
-    const deptosList = await pg.query(
-      `SELECT departamento d, COUNT(*) n FROM certificados
-       WHERE departamento IS NOT NULL AND departamento <> ''
-       GROUP BY d ORDER BY n DESC`
-    );
+      const ck = coordId || coordNom;
+      const ce = coordAgg.get(ck) || { certs: 0, kg: 0, nombre: String(coordNom) };
+      ce.certs++; ce.kg += totalKg; coordAgg.set(ck, ce);
 
-    const cur = kpiCur.rows[0];
-    const prev = kpiPrev.rows[0];
-    const curKg = Number(cur.kg) || 0;
-    const curCerts = Number(cur.certs) || 0;
-    const prevKg = Number(prev.kg) || 0;
-    const prevCerts = Number(prev.certs) || 0;
-    const conTriple = Number(cur.con_triple) || 0;
-    const triplesi = Number(cur.triplesi) || 0;
+      const gk = (genCed ? String(genCed) : "") + "|" + String(genNom);
+      const ge = genAgg.get(gk) || { certs: 0, kg: 0, nombre: String(genNom), cedula: genCed ? String(genCed) : null };
+      ge.certs++; ge.kg += totalKg; genAgg.set(gk, ge);
+
+      // heatmap cultivo×depto
+      for (const c of cultArr.length ? cultArr : [""]) {
+        for (const d of deptoArr.length ? deptoArr : [""]) {
+          if (!c || !d) continue;
+          const cn = toCanonicalCultivo(String(c));
+          const hk = cn + "||" + String(d);
+          const he = heatAgg.get(hk) || { certs: 0, kg: 0, cultivo: cn, depto: String(d) };
+          he.certs++; he.kg += totalKg; heatAgg.set(hk, he);
+        }
+      }
+    }
+
+    // Sort y top-N
+    const sortByKg = <T extends AggMap>(a: T, b: T) => b.kg - a.kg;
+    const porCultivo = [...cultivoAgg.entries()].map(([cultivo, v]) => ({ cultivo, ...v })).sort(sortByKg).slice(0, 15);
+    const porDepto = [...deptoAgg.entries()].map(([depto, v]) => ({ depto, ...v })).sort(sortByKg).slice(0, 15);
+    const porMunicipio = [...muniAgg.entries()].map(([mun, v]) => ({ mun, ...v })).sort(sortByKg).slice(0, 15);
+    const porCoordinador = [...coordAgg.entries()].map(([id, v]) => ({ id, nombre: v.nombre, certs: v.certs, kg: v.kg })).sort(sortByKg);
+    const topGeneradores = [...genAgg.values()].sort(sortByKg).slice(0, 20);
+
+    // Heatmap: top 8 cultivos × top 8 deptos (entre los presentes)
+    const topCs = porCultivo.slice(0, 8).map((x) => x.cultivo);
+    const topDs = porDepto.slice(0, 8).map((x) => x.depto);
+    const heatmap = [...heatAgg.values()].filter((h) => topCs.includes(h.cultivo) && topDs.includes(h.depto));
+
+    // Tendencias formateadas
+    const tendCurArr = Object.entries(tendCur).map(([ym, v]) => ({ ym, certs: v.certs, kg: v.kg })).sort((a, b) => a.ym.localeCompare(b.ym));
+    const tendPrevArr = Object.entries(tendPrev).map(([ym, v]) => ({ ym, certs: v.certs, kg: v.kg })).sort((a, b) => a.ym.localeCompare(b.ym));
+
+    // Filtros disponibles
+    // - Cultivos: lista canónica desde CULTIVOS (no de Neon ni del libre).
+    // - Departamentos: de los datos del año actual (lookup, ya canónicos).
+    const cultivosFiltro = [...cultivosMap.values()].sort((a, b) => a.localeCompare(b, "es"));
+    const deptosSet = new Set<string>();
+    for (const r of allCur) for (const d of (r.Departamento || [])) if (d) deptosSet.add(String(d));
+    const departamentosFiltro = [...deptosSet].sort((a, b) => a.localeCompare(b, "es"));
+
+    // Years disponibles: ofrezco últimos 5 (no consultamos otro año aún).
+    const years: number[] = [];
+    for (let y = now.getFullYear(); y >= now.getFullYear() - 4; y--) years.push(y);
 
     return NextResponse.json({
       meta: {
         year, monthFrom, monthTo,
         coordinador: coordinadorFilter || null,
         coordinadorForzado: isCoordinador,
+        fuente: "airtable",
       },
       kpis: {
-        certs: curCerts,
-        kg: curKg,
-        kgPorCert: curCerts > 0 ? curKg / curCerts : 0,
-        pctTripleLavado: conTriple > 0 ? (triplesi / conTriple) * 100 : 0,
-        certsPrev: prevCerts,
-        kgPrev: prevKg,
-        deltaCertsPct: prevCerts > 0 ? ((curCerts - prevCerts) / prevCerts) * 100 : null,
-        deltaKgPct: prevKg > 0 ? ((curKg - prevKg) / prevKg) * 100 : null,
+        certs,
+        kg,
+        kgPorCert: certs > 0 ? kg / certs : 0,
+        pctTripleLavado: con_triple > 0 ? (triplesi / con_triple) * 100 : 0,
+        certsPrev,
+        kgPrev,
+        deltaCertsPct: certsPrev > 0 ? ((certs - certsPrev) / certsPrev) * 100 : null,
+        deltaKgPct: kgPrev > 0 ? ((kg - kgPrev) / kgPrev) * 100 : null,
       },
-      materiales: {
-        rigidos: Number(cur.rigidos) || 0,
-        flexibles: Number(cur.flexibles) || 0,
-        metalicos: Number(cur.metalicos) || 0,
-        embalaje: Number(cur.embalaje) || 0,
-      },
-      tendencia: {
-        actual: tendCur.rows.map((r) => ({ ym: r.ym, certs: Number(r.certs), kg: Number(r.kg) })),
-        anterior: tendPrev.rows.map((r) => ({ ym: r.ym, certs: Number(r.certs), kg: Number(r.kg) })),
-      },
-      porCultivo: porCultivo.rows.map((r) => ({ cultivo: r.cultivo, certs: Number(r.certs), kg: Number(r.kg) })),
-      porDepto: porDepto.rows.map((r) => ({ depto: r.depto, certs: Number(r.certs), kg: Number(r.kg) })),
-      porMunicipio: porMun.rows.map((r) => ({ mun: r.mun, certs: Number(r.certs), kg: Number(r.kg) })),
-      porCoordinador: porCoord.rows.map((r) => ({ id: r.id, nombre: r.nombre, certs: Number(r.certs), kg: Number(r.kg) })),
-      topGeneradores: topGen.rows.map((r) => ({ nombre: r.nombre, cedula: r.cedula, certs: Number(r.certs), kg: Number(r.kg) })),
-      heatmap: cdHeat.rows.map((r) => ({ cultivo: r.cultivo, depto: r.depto, certs: Number(r.certs), kg: Number(r.kg) })),
+      materiales: { rigidos, flexibles, metalicos, embalaje },
+      tendencia: { actual: tendCurArr, anterior: tendPrevArr },
+      porCultivo,
+      porDepto,
+      porMunicipio,
+      porCoordinador,
+      topGeneradores,
+      heatmap,
       filtros: {
-        years: yearsList.rows.map((r) => Number(r.ano)),
-        cultivos: cultivosList.rows.map((r) => r.c),
-        departamentos: deptosList.rows.map((r) => r.d),
+        years,
+        cultivos: cultivosFiltro,
+        departamentos: departamentosFiltro,
       },
     });
   } catch (e) {
-    console.error("certificados-stats error:", e);
+    console.error("certificados-stats (Airtable) error:", e);
     return NextResponse.json({ error: e instanceof Error ? e.message : "Error" }, { status: 500 });
-  } finally {
-    await pg.end();
   }
 }
