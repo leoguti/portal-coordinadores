@@ -235,7 +235,12 @@ export async function crearRegistroCertificado(
 
   // Campos del flujo de aprobación (V4). Si la tabla no los tiene aún,
   // typecast:true los crea como single-select / text según definición.
-  if (opts.estado) fields.estado = opts.estado;
+  //
+  // IMPORTANTE: si el caller no pasó un estado explícito, asumimos
+  // "aprobado". Esto cubre el flujo del portal del coordinador (genera cert
+  // directo, no pasa por aprobación). Solo el flujo WhatsApp pasa
+  // estado="pendiente" explícitamente.
+  fields.estado = opts.estado || "aprobado";
   if (opts.solicitudOrigen) fields.solicitud_origen = opts.solicitudOrigen;
   if (opts.fechaSolicitud) fields.fecha_solicitud = opts.fechaSolicitud;
 

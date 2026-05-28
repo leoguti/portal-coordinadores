@@ -57,7 +57,8 @@ export async function POST(
   }
   const rec = await r1.json();
   const f = rec.fields as Record<string, unknown>;
-  const estado = String(f.estado || "aprobado");
+  // BLANK se considera aprobado (legado pre-V4).
+  const estado = f.estado ? String(f.estado) : "aprobado";
   if (estado !== "aprobado") {
     return NextResponse.json(
       { error: `Solo se pueden reenviar certs aprobados (estado actual: ${estado})` },

@@ -54,9 +54,12 @@ export async function POST(
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
   const rec = await r1.json();
-  if (String(rec.fields.estado) !== "aprobado") {
+  // Aceptamos "aprobado" o BLANK (certs creados antes del fix V4 quedaron
+  // sin estado; se tratan como aprobados por retrocompatibilidad).
+  const estadoActual = rec.fields.estado ? String(rec.fields.estado) : "aprobado";
+  if (estadoActual !== "aprobado") {
     return NextResponse.json(
-      { error: `Solo se pueden anular certs aprobados. Estado actual: ${rec.fields.estado}` },
+      { error: `Solo se pueden anular certs aprobados. Estado actual: ${estadoActual}` },
       { status: 409 }
     );
   }
