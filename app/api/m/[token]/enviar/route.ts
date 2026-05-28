@@ -156,7 +156,7 @@ async function manejarCertNuevo(
     intent: "cert-nuevo",
     recordId: result.recordId,
     mensaje:
-      "Solicitud enviada. Tu coordinador la revisará y, al aprobar, recibirás el PDF.",
+      "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
   };
 }
 
