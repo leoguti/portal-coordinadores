@@ -30,9 +30,9 @@ export default function MagicLinkLayout({ titulo, subtitulo, children }: Props) 
         </div>
       </header>
 
-      <main className="max-w-xl mx-auto px-4 py-4 pb-32">{children}</main>
+      <main className="max-w-xl mx-auto px-4 py-4 pb-48">{children}</main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 text-center text-xs text-gray-500 py-2 px-4">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 text-center text-xs text-gray-500 py-2 px-4 z-0">
         ¿Problemas?{" "}
         <a href="https://wa.me/573009999999" className="text-[#00d084] underline">
           Escribe a CampoLimpio
@@ -88,7 +88,7 @@ export function StickyBottomButton({
   loading?: boolean;
 }) {
   return (
-    <div className="fixed bottom-8 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 z-10">
+    <div className="fixed bottom-10 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.08)] px-4 py-3 z-20">
       <div className="max-w-xl mx-auto">
         <button
           type="submit"
