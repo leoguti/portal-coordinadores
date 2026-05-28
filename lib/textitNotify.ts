@@ -174,6 +174,53 @@ export async function notificarGenerico(
   return enviarBroadcastTelefono(p.telefono, p.texto);
 }
 
+// ─── Plantillas: solicitud recibida (apenas el agricultor termina) ─────────
+
+export interface SolicitudRecibidaParams {
+  telefono: string;
+  tipo: "cert" | "registro-generador" | "crear-finca" | "editar-finca" | "editar-generador";
+  consecutivo?: number;
+}
+
+export async function notificarSolicitudRecibida(
+  p: SolicitudRecibidaParams
+): Promise<BroadcastResult> {
+  let titulo = "✅ ¡Recibimos tu solicitud!";
+  let detalle = "";
+
+  switch (p.tipo) {
+    case "cert":
+      titulo = "✅ ¡Recibimos tu certificado!";
+      detalle = p.consecutivo
+        ? `Solicitud #${p.consecutivo}. Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`
+        : "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
+      break;
+    case "registro-generador":
+      titulo = "✅ ¡Recibimos tus datos!";
+      detalle =
+        "Tu coordinador revisará tu registro y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋";
+      break;
+    case "crear-finca":
+      titulo = "✅ ¡Recibimos los datos de tu nueva finca!";
+      detalle =
+        "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
+      break;
+    case "editar-finca":
+      titulo = "✅ ¡Recibimos los cambios de tu finca!";
+      detalle =
+        "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
+      break;
+    case "editar-generador":
+      titulo = "✅ ¡Recibimos los cambios de tus datos!";
+      detalle =
+        "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
+      break;
+  }
+
+  const texto = `${titulo}\n\n${detalle}`;
+  return enviarBroadcastTelefono(p.telefono, texto);
+}
+
 // ─── Plantillas Generador / Finca ──────────────────────────────────────────
 
 export async function notificarGeneradorAprobado(p: {

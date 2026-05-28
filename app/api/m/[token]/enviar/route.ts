@@ -15,13 +15,31 @@
  * No requiere bearer auth — el token es la auth.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import {
   consumirToken,
   type EdicionToken,
   type Intent,
 } from "@/lib/edicionTokens";
 import { crearRegistroCertificado } from "@/lib/certificadosCore";
+import { notificarSolicitudRecibida } from "@/lib/textitNotify";
+
+function intentToNotifTipo(
+  intent: Intent
+): "cert" | "registro-generador" | "crear-finca" | "editar-finca" | "editar-generador" {
+  switch (intent) {
+    case "cert-nuevo":
+      return "cert";
+    case "editar-finca":
+      return "editar-finca";
+    case "editar-generador":
+      return "editar-generador";
+    case "crear-finca":
+      return "crear-finca";
+    case "registro-generador":
+      return "registro-generador";
+  }
+}
 
 export const maxDuration = 30;
 
@@ -97,6 +115,8 @@ interface ResultadoOk {
   intent: Intent;
   recordId: string;
   mensaje: string;
+  /** Consecutivo del cert recién creado (solo aplica a cert-nuevo). */
+  consecutivo?: number;
 }
 
 async function manejarCertNuevo(
@@ -155,6 +175,7 @@ async function manejarCertNuevo(
     ok: true,
     intent: "cert-nuevo",
     recordId: result.recordId,
+    consecutivo: Number(result.fullRecord.fields.consecutivo) || undefined,
     mensaje:
       "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
   };
@@ -406,6 +427,23 @@ export async function POST(
     console.log(
       `[m/enviar] intent=${t.intent} record=${result.recordId} tel=${t.telefonoValidado}`
     );
+
+    // Notificar al agricultor por WhatsApp que recibimos su solicitud
+    // (background — no bloquea la respuesta del POST).
+    after(async () => {
+      try {
+        const tipo = intentToNotifTipo(t.intent);
+        const r = await notificarSolicitudRecibida({
+          telefono: t.telefonoValidado,
+          tipo,
+          consecutivo: result.consecutivo,
+        });
+        console.log(`[m/enviar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+      } catch (err) {
+        console.error("[m/enviar wa] Error:", err);
+      }
+    });
+
     return NextResponse.json(result);
   } catch (err) {
     console.error("[m/enviar] Error:", err);
