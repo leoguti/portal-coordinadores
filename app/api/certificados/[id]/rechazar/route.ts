@@ -5,10 +5,17 @@
  * Sprint 6 notificará al agricultor con el motivo.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { notificarCertRechazado } from "@/lib/textitNotify";
+
+function firstStr(v: unknown): string {
+  if (Array.isArray(v) && v.length > 0) return String(v[0] || "");
+  if (v == null) return "";
+  return String(v);
+}
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -87,5 +94,26 @@ export async function POST(
     );
   }
   console.log(`[certificados/${id}/rechazar] motivo="${motivo.slice(0, 60)}…"`);
+
+  // Notificar al agricultor por WhatsApp (background — no bloquea respuesta).
+  after(async () => {
+    try {
+      const tel = firstStr(rec.fields.movilgenerador);
+      if (tel) {
+        const consecutivo = Number(rec.fields.consecutivo) || undefined;
+        const nombreCoord = firstStr(rec.fields.nombrecoordinador) || "Coordinador";
+        const res = await notificarCertRechazado({
+          telefono: tel,
+          consecutivo,
+          motivo,
+          nombreCoordinador: nombreCoord,
+        });
+        console.log(`[cert/${id}/rechazar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
+      }
+    } catch (err) {
+      console.error(`[cert/${id}/rechazar wa] Error:`, err);
+    }
+  });
+
   return NextResponse.json({ ok: true, estado: "rechazado" });
 }

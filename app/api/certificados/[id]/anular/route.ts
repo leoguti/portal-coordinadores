@@ -14,6 +14,7 @@ import {
   puedeModificarFecha,
   getMensajeErrorFecha,
 } from "@/lib/dateValidations";
+import { notificarCertAnulado } from "@/lib/textitNotify";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -125,6 +126,9 @@ export async function POST(
       const nombreGen = firstStr(rec.fields.nombregenerador);
       const fechaDev = String(rec.fields.fechadevolucion || "");
       const totalKg = Number(rec.fields.total) || 0;
+      const movilGen = firstStr(rec.fields.movilgenerador);
+
+      // Email (admin + agricultor + coord)
       const res = await sendCertificadoAnuladoEmail({
         consecutivo,
         motivo,
@@ -136,8 +140,19 @@ export async function POST(
         totalKg,
       });
       console.log(`[cert/${id}/anular email] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
+
+      // WhatsApp al agricultor (si tiene móvil registrado).
+      if (movilGen) {
+        const wa = await notificarCertAnulado({
+          telefono: movilGen,
+          consecutivo,
+          motivo,
+          nombreCoordinador: nombreCoord || "Coordinador",
+        });
+        console.log(`[cert/${id}/anular wa] ${wa.ok ? "OK" : "FAIL"}: ${wa.message}`);
+      }
     } catch (err) {
-      console.error(`[cert/${id}/anular email] Error:`, err);
+      console.error(`[cert/${id}/anular notif] Error:`, err);
     }
   });
 

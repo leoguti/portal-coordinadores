@@ -18,6 +18,7 @@ import {
   generarYAdjuntarPDF,
 } from "@/lib/certificadosCore";
 import { resolveGeneradorDataFromFinca } from "@/lib/fincaGeneradorResolver";
+import { notificarCertAprobado } from "@/lib/textitNotify";
 
 export const maxDuration = 60;
 
@@ -173,6 +174,26 @@ export async function POST(
     console.log(
       `[certificados/${id}/aprobar] aprobado por ${coordId} consecutivo=${pdfProps.consecutivo}`
     );
+
+    // Notificar al agricultor por WhatsApp (background — no bloquea respuesta).
+    after(async () => {
+      try {
+        const telefono = pdfProps.movilgenerador;
+        if (telefono) {
+          const res = await notificarCertAprobado({
+            telefono,
+            consecutivo: pdfProps.consecutivo,
+            pdfUrl: null, // El PDF llega por email; no exponemos URL del Blob (efímera).
+            nombreCoordinador: pdfProps.nombrecoordinador || "Coordinador",
+          });
+          console.log(`[cert/${id}/aprobar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
+        } else {
+          console.warn(`[cert/${id}/aprobar wa] sin móvil del agricultor — skip`);
+        }
+      } catch (err) {
+        console.error(`[cert/${id}/aprobar wa] Error:`, err);
+      }
+    });
 
     return NextResponse.json({
       ok: true,
