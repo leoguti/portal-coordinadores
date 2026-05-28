@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { isAuthorizedOrMagicLink } from "@/lib/magicLinkAuth";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
 
 let cache: { id: string; nombre: string }[] | null = null;
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.coordinatorRecordId) {
+export async function GET(request: Request) {
+  if (!(await isAuthorizedOrMagicLink(request))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

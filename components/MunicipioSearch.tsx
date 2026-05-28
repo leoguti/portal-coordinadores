@@ -13,6 +13,8 @@ interface MunicipioSearchProps {
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  /** Magic-link token para autenticar sin sesión NextAuth (páginas /m/*). */
+  magicLinkToken?: string;
 }
 
 export default function MunicipioSearch({
@@ -21,6 +23,7 @@ export default function MunicipioSearch({
   required = false,
   disabled = false,
   placeholder = "Escribe para buscar...",
+  magicLinkToken,
 }: MunicipioSearchProps) {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Municipio[]>([]);
@@ -52,7 +55,8 @@ export default function MunicipioSearch({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/municipios?search=${encodeURIComponent(search)}`);
+        const url = `/api/municipios?search=${encodeURIComponent(search)}${magicLinkToken ? `&token=${encodeURIComponent(magicLinkToken)}` : ""}`;
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           setResults(data.municipios || []);
@@ -67,7 +71,7 @@ export default function MunicipioSearch({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, magicLinkToken]);
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {

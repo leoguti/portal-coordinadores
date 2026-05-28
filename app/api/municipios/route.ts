@@ -123,14 +123,10 @@ async function getMunicipiosCache(): Promise<CachedMunicipio[]> {
  * Búsqueda insensible a mayúsculas y acentos
  */
 export async function GET(request: Request) {
-  // Check authentication
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+  // Acepta sesión NextAuth o token de magic-link (?token=XXX) válido.
+  const { isAuthorizedOrMagicLink } = await import("@/lib/magicLinkAuth");
+  if (!(await isAuthorizedOrMagicLink(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
