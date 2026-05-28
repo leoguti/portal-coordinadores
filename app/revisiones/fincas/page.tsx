@@ -741,6 +741,128 @@ function FincaRow({
 
 // ─── GeneradorEditForm ────────────────────────────────────────────────────────
 
+// ─── GeneradorDetailCard ──────────────────────────────────────────────────────
+// Tarjeta de solo lectura con todos los datos del generador. Es la "ficha"
+// que aparece en la columna izquierda cuando se expande un generador. Cuando
+// el usuario pulsa "Editar" se reemplaza por GeneradorEditForm.
+function GeneradorDetailCard({
+  grupo,
+  onEdit,
+}: {
+  grupo: GeneradorGrupo;
+  onEdit: () => void;
+}) {
+  const gen = grupo.generador;
+  const tienePersona = !!gen?.tipopersona;
+  const tieneEmail = !!gen?.email?.trim();
+  const tieneMovil = !!gen?.movil?.trim();
+
+  return (
+    <div className="bg-white rounded-lg border-2 border-[#042726]/15 overflow-hidden">
+      {/* Header de la tarjeta */}
+      <div className="bg-[#042726] text-white px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <span>🏢</span>
+          <span>Generador (dueño)</span>
+        </div>
+        {grupo.generadorId && (
+          <button
+            onClick={onEdit}
+            className="text-xs px-3 py-1 rounded bg-white/15 hover:bg-white/25 transition-colors"
+          >
+            Editar
+          </button>
+        )}
+      </div>
+
+      {/* Cuerpo */}
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">
+            Nombre / Razón social
+          </p>
+          <p className="text-sm font-semibold text-gray-900 break-words">
+            {gen?.nombre || <span className="italic text-gray-400">—</span>}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">
+              NIT / Cédula
+            </p>
+            <p className="text-sm font-mono text-gray-800">
+              {gen?.nit || <span className="italic text-gray-400">—</span>}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">
+              Persona
+            </p>
+            <p className="text-sm text-gray-800">
+              {tienePersona ? (
+                gen!.tipopersona
+              ) : (
+                <span className="italic text-gray-400">—</span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">
+            Tipo de actividad
+          </p>
+          <p className="text-sm text-gray-800">
+            {gen?.tipo || <span className="italic text-gray-400">—</span>}
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-gray-100">
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">
+            Sede
+          </p>
+          <p className="text-sm text-gray-800">
+            📍{" "}
+            {gen?.direccionSede || (
+              <span className="italic text-gray-400">Sin dirección</span>
+            )}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 pl-5">
+            {gen?.municipioLabel || (
+              <span className="italic text-gray-400">Sin municipio</span>
+            )}
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-gray-100 space-y-1">
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">
+            Contacto
+          </p>
+          <p className="text-sm text-gray-800 flex items-center gap-2">
+            <span>📱</span>
+            {tieneMovil ? (
+              <span className="font-mono">{gen!.movil}</span>
+            ) : (
+              <span className="italic text-gray-400">Sin móvil</span>
+            )}
+          </p>
+          <p className="text-sm text-gray-800 flex items-center gap-2 break-all">
+            <span>📧</span>
+            {tieneEmail ? (
+              gen!.email
+            ) : (
+              <span className="italic text-amber-600">
+                Sin email — el agricultor no recibirá copia del PDF
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GeneradorEditForm({
   grupo,
   onSaved,
@@ -1096,42 +1218,66 @@ function GeneradorRow({
         </div>
       </div>
 
-      {/* Edit form del generador (inline) */}
-      {editingGen && grupo.generadorId && (
-        <GeneradorEditForm
-          grupo={grupo}
-          onSaved={(fields) => {
-            onGeneradorSaved(grupo.generadorId!, fields);
-            setEditingGen(false);
-          }}
-          onCancel={() => setEditingGen(false)}
-        />
-      )}
-
-      {/* Fincas del generador */}
+      {/* Detalle expandido: 2 columnas (gen | fincas) en desktop, stack en mobile */}
       {expanded && (
-        <div className="divide-y divide-gray-50 bg-gray-50/50 px-2 pb-2 pt-1">
-          {visibleFincas.map((finca) => {
-            const fid = finca.fincaId || finca.ubicacionId || "";
-            const siblings = grupo.fincas.filter((f) => f.fincaId !== finca.fincaId && !!f.fincaId);
-            return (
-              <FincaRow
-                key={fid}
-                item={finca}
-                generador={grupo.generador}
-                cultivos={cultivos}
-                isAdmin={isAdmin}
-                isExpanded={expandedFinca === fid}
-                onToggle={() => onFincaToggle(fid)}
-                showSelection={isAdmin && grupo.fincas.length > 1}
-                isSelected={!!finca.fincaId && selectedFincaIds.has(finca.fincaId)}
-                onToggleSelect={() => finca.fincaId && onToggleFincaSelection(finca.fincaId, grupo.generadorId)}
-                onDelete={() => onDeleteFinca(finca, siblings)}
-                onSave={onSave}
-                onReassigned={onReassigned}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 bg-gray-50/50 p-3 border-t border-gray-100">
+          {/* COLUMNA IZQUIERDA: Generador */}
+          <div className="lg:sticky lg:top-3 lg:self-start">
+            {editingGen && grupo.generadorId ? (
+              <GeneradorEditForm
+                grupo={grupo}
+                onSaved={(fields) => {
+                  onGeneradorSaved(grupo.generadorId!, fields);
+                  setEditingGen(false);
+                }}
+                onCancel={() => setEditingGen(false)}
               />
-            );
-          })}
+            ) : (
+              <GeneradorDetailCard
+                grupo={grupo}
+                onEdit={() => setEditingGen(true)}
+              />
+            )}
+          </div>
+
+          {/* COLUMNA DERECHA: Fincas */}
+          <div>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span>🌾</span>
+                <span>Fincas de este generador ({visibleFincas.length})</span>
+              </h3>
+            </div>
+            <div className="space-y-1 bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+              {visibleFincas.length === 0 ? (
+                <p className="text-xs text-gray-500 italic px-4 py-6 text-center">
+                  Este generador aún no tiene fincas registradas.
+                </p>
+              ) : (
+                visibleFincas.map((finca) => {
+                  const fid = finca.fincaId || finca.ubicacionId || "";
+                  const siblings = grupo.fincas.filter((f) => f.fincaId !== finca.fincaId && !!f.fincaId);
+                  return (
+                    <FincaRow
+                      key={fid}
+                      item={finca}
+                      generador={grupo.generador}
+                      cultivos={cultivos}
+                      isAdmin={isAdmin}
+                      isExpanded={expandedFinca === fid}
+                      onToggle={() => onFincaToggle(fid)}
+                      showSelection={isAdmin && grupo.fincas.length > 1}
+                      isSelected={!!finca.fincaId && selectedFincaIds.has(finca.fincaId)}
+                      onToggleSelect={() => finca.fincaId && onToggleFincaSelection(finca.fincaId, grupo.generadorId)}
+                      onDelete={() => onDeleteFinca(finca, siblings)}
+                      onSave={onSave}
+                      onReassigned={onReassigned}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
