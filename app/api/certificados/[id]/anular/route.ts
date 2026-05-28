@@ -10,6 +10,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
 import { sendCertificadoAnuladoEmail } from "@/lib/sendCertificadoAnuladoEmail";
+import {
+  puedeModificarFecha,
+  getMensajeErrorFecha,
+} from "@/lib/dateValidations";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -68,6 +72,20 @@ export async function POST(
     : [];
   if (!isAdmin && !certCoordIds.includes(coordId)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  // Restricción de ventana de tiempo: misma regla que el resto del sistema
+  // (Kardex, etc). Solo se pueden anular certs cuya fecha de devolución cae
+  // en un mes "abierto" (mes actual; los días 1-5 también el anterior).
+  // Admin/Supervisor pueden saltarse esta restricción.
+  const fechaDevolucion = String(rec.fields.fechadevolucion || "");
+  if (!isAdmin && fechaDevolucion && !puedeModificarFecha(fechaDevolucion)) {
+    return NextResponse.json(
+      {
+        error: `${getMensajeErrorFecha()} (cert con fecha ${fechaDevolucion}). Si necesitas anular un cert más viejo, contacta a un administrador.`,
+      },
+      { status: 422 }
+    );
   }
 
   const r2 = await fetch(
