@@ -78,6 +78,96 @@ export async function GET(request: Request) {
     : session.user.coordinatorRecordId;
 
   try {
+    // Helper: resolver nombre+cédula del generador y nombre de finca para
+    // certs creados con el esquema nuevo (FINCAS+GENERADORES) cuyos lookups
+    // viejos vienen vacíos. Solo se llama si hace falta.
+    async function enriquecerVíaFincas(
+      certs: Array<{
+        nombregenerador?: string;
+        generadorCedula?: string;
+        fincaNombre?: string;
+        fincaId?: string;
+      }>
+    ): Promise<void> {
+      const fincaIds = Array.from(
+        new Set(
+          certs
+            .filter((c) => c.fincaId && (!c.nombregenerador || !c.fincaNombre))
+            .map((c) => c.fincaId!)
+        )
+      );
+      if (fincaIds.length === 0) return;
+      const CHUNK = 30;
+      const fincaById = new Map<
+        string,
+        { nombre: string; generadorId: string | null }
+      >();
+      for (let i = 0; i < fincaIds.length; i += CHUNK) {
+        const chunk = fincaIds.slice(i, i + CHUNK);
+        const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+        const p = new URLSearchParams();
+        p.set("filterByFormula", formula);
+        for (const f of ["nombre", "generador"]) p.append("fields[]", f);
+        p.set("pageSize", "100");
+        const r = await fetch(
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/FINCAS?${p}`,
+          { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+        );
+        if (!r.ok) continue;
+        const d = await r.json();
+        for (const rec of d.records || []) {
+          fincaById.set(rec.id, {
+            nombre: String(rec.fields.nombre || ""),
+            generadorId: Array.isArray(rec.fields.generador)
+              ? String(rec.fields.generador[0] || "")
+              : null,
+          });
+        }
+      }
+      // Generadores necesarios
+      const genIds = Array.from(
+        new Set(
+          [...fincaById.values()]
+            .map((f) => f.generadorId)
+            .filter((x): x is string => !!x)
+        )
+      );
+      const genById = new Map<string, { nombre: string; nit: string }>();
+      for (let i = 0; i < genIds.length; i += CHUNK) {
+        const chunk = genIds.slice(i, i + CHUNK);
+        const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+        const p = new URLSearchParams();
+        p.set("filterByFormula", formula);
+        for (const f of ["nombre", "nit"]) p.append("fields[]", f);
+        p.set("pageSize", "100");
+        const r = await fetch(
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/GENERADORES?${p}`,
+          { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+        );
+        if (!r.ok) continue;
+        const d = await r.json();
+        for (const rec of d.records || []) {
+          genById.set(rec.id, {
+            nombre: String(rec.fields.nombre || ""),
+            nit: String(rec.fields.nit || ""),
+          });
+        }
+      }
+      for (const c of certs) {
+        if (!c.fincaId) continue;
+        const fincaInfo = fincaById.get(c.fincaId);
+        if (!fincaInfo) continue;
+        if (!c.fincaNombre) c.fincaNombre = fincaInfo.nombre;
+        if (!c.nombregenerador && fincaInfo.generadorId) {
+          const gen = genById.get(fincaInfo.generadorId);
+          if (gen) {
+            c.nombregenerador = gen.nombre;
+            if (!c.generadorCedula) c.generadorCedula = gen.nit;
+          }
+        }
+      }
+    }
+
     if (tipo === "cert") {
       const filtros: string[] = [`{estado}='pendiente'`];
       if (coordinadorId) {
@@ -110,6 +200,7 @@ export async function GET(request: Request) {
       ]);
       const items = records.map((r) => {
         const f = r.fields;
+        const fincaIds = asArrStr(f.FINCAS);
         return {
           id: r.id,
           consecutivo: Number(f.consecutivo) || 0,
@@ -126,13 +217,23 @@ export async function GET(request: Request) {
           observaciones: asStr(f.observaciones),
           coordinadorId: asStr(f.id_coordinador),
           coordinadorNombre: asStr(f.nombrecoordinador),
-          generadorNombre: asStr(f.nombregenerador),
+          nombregenerador: asStr(f.nombregenerador),
           generadorCedula: asStr(f.cedulagenerador),
-          fincaNombre: (asArrStr(f.FINCAS)[0] as string) || "",
+          generadorNombre: asStr(f.nombregenerador),
+          fincaId: fincaIds[0] || "",
+          fincaNombre: "",
           municipioDevolucion: asStr(f.municipiodevolucion),
           createdTime: r.createdTime,
         };
       });
+      // Enriquecer certs WhatsApp/nuevos cuyos lookups vienen vacíos.
+      await enriquecerVíaFincas(items);
+      // Asegurar coherencia entre nombregenerador (helper) y generadorNombre (UI).
+      for (const it of items) {
+        if (!it.generadorNombre && it.nombregenerador) {
+          it.generadorNombre = it.nombregenerador;
+        }
+      }
       // Ordenar por fecha de solicitud desc.
       items.sort((a, b) => (b.fechaSolicitud > a.fechaSolicitud ? 1 : -1));
       return NextResponse.json({ tipo: "cert", items });
