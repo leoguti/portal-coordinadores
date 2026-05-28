@@ -34,7 +34,7 @@ export default function MagicLinkLayout({ titulo, subtitulo, children }: Props) 
 
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 text-center text-xs text-gray-500 py-2 px-4 z-0">
         ¿Problemas?{" "}
-        <a href="https://wa.me/573009999999" className="text-[#00d084] underline">
+        <a href="https://wa.me/573152699275" className="text-[#00d084] underline">
           Escribe a CampoLimpio
         </a>
       </footer>
