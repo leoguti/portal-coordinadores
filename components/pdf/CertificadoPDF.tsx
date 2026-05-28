@@ -462,18 +462,14 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           </View>
         ) : null}
 
-        {/* Row 4: Dirección sede + Cultivo */}
+        {/* Row 4: Cultivo (dirección sede del generador removida — se mostraba
+            duplicada con el nombre/dirección de la finca y confundía al
+            usuario). */}
         <View style={s.genRow}>
           <View style={[s.cell, { width: "16%" }]}>
-            <Text style={s.labelText}>Dirección sede</Text>
-          </View>
-          <View style={[s.cell, { width: "42%" }]}>
-            <Text style={s.valueText}>{direcciongenerador}</Text>
-          </View>
-          <View style={[s.cell, { width: "12%" }]}>
             <Text style={s.labelText}>Cultivo:</Text>
           </View>
-          <View style={[s.cell, { width: "30%" }]}>
+          <View style={[s.cell, { width: "84%" }]}>
             <Text style={s.valueText}>{cultivogenerador}</Text>
           </View>
         </View>
