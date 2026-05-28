@@ -190,28 +190,28 @@ export async function notificarSolicitudRecibida(
 
   switch (p.tipo) {
     case "cert":
-      titulo = "✅ ¡Recibimos tu certificado!";
+      titulo = "✅ ¡Recibimos tu solicitud de certificado!";
       detalle = p.consecutivo
         ? `Solicitud #${p.consecutivo}. Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`
         : "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
       break;
     case "registro-generador":
-      titulo = "✅ ¡Recibimos tus datos!";
+      titulo = "✅ ¡Recibimos tu solicitud de registro!";
       detalle =
-        "Tu coordinador revisará tu registro y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋";
+        "Tu coordinador revisará tus datos y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋";
       break;
     case "crear-finca":
-      titulo = "✅ ¡Recibimos los datos de tu nueva finca!";
+      titulo = "✅ ¡Recibimos tu solicitud de nueva finca!";
       detalle =
         "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
       break;
     case "editar-finca":
-      titulo = "✅ ¡Recibimos los cambios de tu finca!";
+      titulo = "✅ ¡Recibimos tu solicitud de cambios en la finca!";
       detalle =
         "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
       break;
     case "editar-generador":
-      titulo = "✅ ¡Recibimos los cambios de tus datos!";
+      titulo = "✅ ¡Recibimos tu solicitud de cambios en tus datos!";
       detalle =
         "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
       break;
