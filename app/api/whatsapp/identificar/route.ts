@@ -51,7 +51,14 @@ function armarRespuesta(
   identidad: Awaited<ReturnType<typeof identificarAgricultor>>
 ): RespuestaIdentificar {
   const nombre = identidad.generador?.nombre || null;
-  const primerNombre = nombre ? nombre.split(/\s+/)[0] : null;
+  // Usar el nombre completo del generador en el saludo (no solo el primer
+  // token). Truncamos a 40 chars para no romper el formato del mensaje si
+  // es muy largo (ej. razón social con descripciones).
+  const saludoNombre = nombre
+    ? nombre.length > 40
+      ? nombre.slice(0, 40) + "…"
+      : nombre
+    : null;
 
   let opciones: MenuOpcion[] = [];
   let saludo = "Hola 👋";
@@ -59,7 +66,7 @@ function armarRespuesta(
 
   switch (identidad.estado) {
     case "conocido_con_fincas":
-      saludo = primerNombre ? `Hola ${primerNombre} 👋` : "Hola 👋";
+      saludo = saludoNombre ? `Hola ${saludoNombre} 👋` : "Hola 👋";
       opciones = [
         { numero: 1, intent: "cert-nuevo", label: "1️⃣ Generar un certificado" },
         { numero: 2, intent: "editar-datos", label: "2️⃣ Actualizar mis datos" },
@@ -70,7 +77,7 @@ function armarRespuesta(
       break;
 
     case "conocido_sin_finca":
-      saludo = primerNombre ? `Hola ${primerNombre} 👋` : "Hola 👋";
+      saludo = saludoNombre ? `Hola ${saludoNombre} 👋` : "Hola 👋";
       opciones = [
         { numero: 1, intent: "crear-finca", label: "1️⃣ Registrar mi primera finca" },
         { numero: 2, intent: "editar-datos", label: "2️⃣ Actualizar mis datos" },
