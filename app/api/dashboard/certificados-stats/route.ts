@@ -74,9 +74,15 @@ async function fetchAllCerts(year: number, coordinadorId: string): Promise<CertR
     "total", "rigidos", "flexibles", "metalicos", "embalaje", "triplelavado",
     "nombregenerador", "cedulagenerador",
   ];
-  const clauses: string[] = [`{ano}=${year}`];
+  // Solo contar APROBADOS para estadísticas oficiales. Pendientes/rechazados/
+  // anulados no son "kilos válidos". `{estado}=BLANK()` cubre el periodo de
+  // transición si algún record nuevo se cuela sin estado por error.
+  const clauses: string[] = [
+    `{ano}=${year}`,
+    `OR({estado}='aprobado', {estado}=BLANK())`,
+  ];
   if (coordinadorId) clauses.push(`FIND('${coordinadorId}', ARRAYJOIN({id_coordinador}))`);
-  const formula = clauses.length === 1 ? clauses[0] : `AND(${clauses.join(",")})`;
+  const formula = `AND(${clauses.join(",")})`;
 
   const out: CertRaw[] = [];
   let offset: string | undefined;

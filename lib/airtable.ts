@@ -806,7 +806,8 @@ export async function countCertificadosCoordinador(
   try {
     const filterFormula = `AND(
       FIND("${coordinatorRecordId}", ARRAYJOIN({id_coordinador})),
-      {ano} = ${año}
+      {ano} = ${año},
+      OR({estado}='aprobado', {estado}=BLANK())
     )`;
 
     let total = 0;
@@ -4004,7 +4005,8 @@ export async function countAllCertificados(año: number): Promise<number> {
   }
 
   try {
-    const filterFormula = `{ano} = ${año}`;
+    // Solo aprobados (BLANK por compatibilidad con registros pre-V4).
+    const filterFormula = `AND({ano} = ${año}, OR({estado}='aprobado', {estado}=BLANK()))`;
     let total = 0;
     let offset: string | undefined;
 

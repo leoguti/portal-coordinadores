@@ -18,6 +18,12 @@ export interface CertificadosFilterInput {
   forceCoordinadorId?: string;
   /** Número de consecutivo exacto a buscar (usado por coordinadores que conocen el número). */
   consecutivo?: number | string;
+  /**
+   * Estados a incluir. Default ['aprobado'] (con BLANK por compatibilidad).
+   * Pasar ['pendiente'] para la bandeja del coord, ['aprobado','pendiente','rechazado']
+   * para una vista de auditoría, etc.
+   */
+  estados?: string[];
 }
 
 /** Escapa comillas simples y dobles para uso en filterByFormula. */
@@ -109,6 +115,15 @@ export function buildCertificadosFilterFormula(
     clauses.push(
       `DATETIME_FORMAT({fechadevolucion}, 'YYYY-MM') = ${quoted(input.mes)}`
     );
+  }
+
+  // Filtro por estado. Default: solo aprobados (con BLANK por compatibilidad
+  // con registros creados antes de la migración V4, si los hubiera).
+  const estados = input.estados ?? ["aprobado"];
+  if (estados.length > 0) {
+    const partes = estados.map((e) => `{estado}=${quoted(e)}`);
+    if (estados.includes("aprobado")) partes.push(`{estado}=BLANK()`);
+    clauses.push(orParts(partes));
   }
 
   if (clauses.length === 0) return "";

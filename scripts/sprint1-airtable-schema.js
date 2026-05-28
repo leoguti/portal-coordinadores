@@ -69,7 +69,7 @@ const CAMPOS_CERTIFICADOS = [
   { name: "fecha_anulacion", type: "dateTime", options: { dateFormat: { name: "iso" }, timeFormat: { name: "24hour" }, timeZone: "America/Bogota" } },
   { name: "motivo_rechazo", type: "multilineText" },
   { name: "motivo_anulacion", type: "multilineText" },
-  { name: "aprobado_por", type: "multipleRecordLinks", options: { linkedTableId: null /* se resuelve abajo */, prefersSingleRecordLink: true }, _linkTo: "Coordinadores" },
+  { name: "aprobado_por", type: "multipleRecordLinks", options: { linkedTableId: null /* se resuelve abajo */ }, _linkTo: "Coordinadores" },
   { name: "rechazado_por", type: "multipleRecordLinks", options: { linkedTableId: null }, _linkTo: "Coordinadores" },
   { name: "anulado_por", type: "multipleRecordLinks", options: { linkedTableId: null }, _linkTo: "Coordinadores" },
 ];
@@ -84,7 +84,7 @@ const CAMPOS_GENERADORES = [
   { name: "cambios_pendientes", type: "multilineText" },
   { name: "aprobado_por", type: "multipleRecordLinks", options: { linkedTableId: null }, _linkTo: "Coordinadores" },
   { name: "rechazado_por", type: "multipleRecordLinks", options: { linkedTableId: null }, _linkTo: "Coordinadores" },
-  { name: "coordinador_solicitado", type: "multipleRecordLinks", options: { linkedTableId: null, prefersSingleRecordLink: true }, _linkTo: "Coordinadores" },
+  { name: "coordinador_solicitado", type: "multipleRecordLinks", options: { linkedTableId: null }, _linkTo: "Coordinadores" },
 ];
 
 const CAMPOS_FINCAS = [
