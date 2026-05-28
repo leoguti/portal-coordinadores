@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard-ejecutivo", icon: "📊", roles: ["Administrador", "Supervisor"] },
@@ -28,7 +27,6 @@ const navItems = [
   // Las rutas viejas /certificados-historicos y /admin/certificados-historicos
   // siguen funcionando como redirects a /certificados?tab=historico.
   { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
-  { name: "Pendientes", href: "/certificados/pendientes", icon: "⏳", roles: ["Coordinador", "Administrador", "Supervisor"], badge: true },
   { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
 ];
 
@@ -42,23 +40,6 @@ export default function Sidebar({
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRol = session?.user?.rol || "Coordinador";
-  const [pendientesTotal, setPendientesTotal] = useState<number>(0);
-
-  useEffect(() => {
-    if (!session) return;
-    let cancelled = false;
-    function fetchCounts() {
-      fetch("/api/certificados/pendientes/counts")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (!cancelled && d && typeof d.total === "number") setPendientesTotal(d.total);
-        })
-        .catch(() => {});
-    }
-    fetchCounts();
-    const id = setInterval(fetchCounts, 30000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [session]);
 
   // En móvil arranca oculto (-translate-x-full) y se desliza al abrir.
   // En escritorio (md+) siempre visible.
@@ -110,12 +91,7 @@ export default function Sidebar({
                     }`}
                   >
                     <span>{item.icon}</span>
-                    <span className="flex-1">{item.name}</span>
-                    {item.badge && pendientesTotal > 0 && (
-                      <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold">
-                        {pendientesTotal > 99 ? "99+" : pendientesTotal}
-                      </span>
-                    )}
+                    <span>{item.name}</span>
                   </Link>
                 </li>
               );

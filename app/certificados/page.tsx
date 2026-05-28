@@ -108,6 +108,24 @@ function ListarCertificadosPage() {
     searchParams.get("tab") === "historico" ? "historico" : "actual"
   );
 
+  // Conteo de solicitudes pendientes (badge del botón "Pendientes").
+  const [pendientesTotal, setPendientesTotal] = useState(0);
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    function fetchCounts() {
+      fetch("/api/certificados/pendientes/counts")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!cancelled && d && typeof d.total === "number") setPendientesTotal(d.total);
+        })
+        .catch(() => {});
+    }
+    fetchCounts();
+    const id = setInterval(fetchCounts, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [session]);
+
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);
   const sessionCoordinatorId = session?.user?.coordinatorRecordId;
 
@@ -327,6 +345,23 @@ function ListarCertificadosPage() {
             >
               <span className="text-lg leading-none">🌾</span>
               Generadores y Fincas
+            </Link>
+            <Link
+              href="/certificados/pendientes"
+              className={`relative inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors ${
+                pendientesTotal > 0
+                  ? "bg-amber-500 hover:bg-amber-600 text-white"
+                  : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
+              }`}
+              title="Solicitudes pendientes de aprobación"
+            >
+              <span className="text-lg leading-none">⏳</span>
+              Pendientes
+              {pendientesTotal > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-white text-amber-700 text-xs font-bold">
+                  {pendientesTotal > 99 ? "99+" : pendientesTotal}
+                </span>
+              )}
             </Link>
             <Link
               href="/certificados/generar"
