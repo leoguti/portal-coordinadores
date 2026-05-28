@@ -82,6 +82,12 @@ export interface GenerarPDFInput {
 export interface PDFGenerado {
   consecutivo: number;
   pdfUrl: string;
+  /**
+   * URL permanente del PDF en R2 (Cloudflare). Solo se llena si el upload
+   * a R2 fue exitoso. Usar esta URL para enlaces que el usuario reciba
+   * (WhatsApp, email) — `pdfUrl` (Vercel Blob) se borra a los 60s.
+   */
+  r2Url: string | null;
 }
 
 // ─── Helpers internos ──────────────────────────────────────────────────────
@@ -371,15 +377,19 @@ export async function generarYAdjuntarPDF(
     throw new Error(`Airtable PDF attach failed: ${errorText}`);
   }
 
-  // 4. Background: R2 + Neon + email + cleanup del blob
+  // 4. R2 upload SINCRÓNICO (~200-500ms). El R2 URL es permanente y se
+  // devuelve al caller para usar en mensajes que el agricultor recibe
+  // (WhatsApp, email). El Blob temporal se borra en 60s en background.
+  let r2Url: string | null = null;
+  try {
+    r2Url = await uploadToR2(pdfBuffer, filename);
+  } catch (err) {
+    console.error("[certificados/core] R2 upload failed (non-blocking):", err);
+  }
+
+  // 5. Background: Neon + email + cleanup del blob (R2 ya está hecho).
   const blobUrl = blob.url;
   const backgroundWork = async () => {
-    let r2Url: string | null = null;
-    try {
-      r2Url = await uploadToR2(pdfBuffer, filename);
-    } catch (err) {
-      console.error("[certificados/core] R2 upload failed (non-blocking):", err);
-    }
     await backupToNeon(
       recordId,
       pdfProps,
@@ -428,7 +438,7 @@ export async function generarYAdjuntarPDF(
     );
   }
 
-  return { consecutivo: pdfProps.consecutivo, pdfUrl: blob.url };
+  return { consecutivo: pdfProps.consecutivo, pdfUrl: blob.url, r2Url };
 }
 
 /**

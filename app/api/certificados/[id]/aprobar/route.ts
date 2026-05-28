@@ -176,21 +176,21 @@ export async function POST(
     );
 
     // Notificar al agricultor por WhatsApp (background — no bloquea respuesta).
-    // Pasamos el URL del Blob para que el broadcast incluya el PDF como
-    // attachment. TextIt descarga el archivo a su CDN antes de los 60s en
-    // que expira el Blob, así que el agricultor recibe el PDF aunque el
-    // Blob ya esté borrado cuando reciba el mensaje.
+    // Preferimos el R2 URL (permanente) sobre el Blob URL (60s). Si por
+    // algún motivo R2 falló, caemos al Blob URL como fallback (TextIt suele
+    // descargar el archivo a su CDN antes de que expire).
     after(async () => {
       try {
         const telefono = pdfProps.movilgenerador;
         if (telefono) {
+          const pdfUrlFinal = pdfResult.r2Url || pdfResult.pdfUrl;
           const res = await notificarCertAprobado({
             telefono,
             consecutivo: pdfProps.consecutivo,
-            pdfUrl: pdfResult.pdfUrl,
+            pdfUrl: pdfUrlFinal,
             nombreCoordinador: pdfProps.nombrecoordinador || "Coordinador",
           });
-          console.log(`[cert/${id}/aprobar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
+          console.log(`[cert/${id}/aprobar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message} (pdf=${pdfResult.r2Url ? "R2" : "Blob"})`);
         } else {
           console.warn(`[cert/${id}/aprobar wa] sin móvil del agricultor — skip`);
         }
