@@ -104,14 +104,20 @@ export interface AprobadoCertParams {
 export async function notificarCertAprobado(
   p: AprobadoCertParams
 ): Promise<BroadcastResult> {
+  // NO usar attachments en broadcast (TextIt los rechaza por su forma de
+  // procesar archivos remotos). En cambio, incluimos el link del PDF como
+  // última línea — WhatsApp genera preview clickeable y al ser R2 el
+  // enlace es permanente.
   const lineas = [
     `✅ ¡Tu certificado #${p.consecutivo} fue aprobado!`,
     `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    "Adjunto el PDF del certificado.",
   ];
-  const attachments = p.pdfUrl ? [`application/pdf:${p.pdfUrl}`] : undefined;
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"), attachments);
+  if (p.pdfUrl) {
+    lineas.push("", "📄 Descarga el PDF:", p.pdfUrl);
+  } else {
+    lineas.push("", "El PDF te llegará también por email.");
+  }
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
 }
 
 export interface RechazadoCertParams {
