@@ -43,8 +43,10 @@ export async function enviarBroadcastTelefono(
   if (tel10.length !== 10) {
     return { ok: false, message: `Teléfono inválido: ${telefono}` };
   }
-  // Default a WhatsApp; si hay canal específico forzamos por uuid.
-  const urn = `whatsapp:+57${tel10}`;
+  // Default a WhatsApp. ATENCIÓN: TextIt rechaza el "+" en el URN
+  // ("Invalid URN: Ensure phone numbers contain country codes" — el error es
+  // engañoso, en realidad NO acepta el +). Usar formato `whatsapp:57XXXXXX`.
+  const urn = `whatsapp:57${tel10}`;
 
   const body: Record<string, unknown> = {
     text: texto,
