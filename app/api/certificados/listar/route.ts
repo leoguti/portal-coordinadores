@@ -13,12 +13,16 @@ interface CertificadoItem {
   fechadevolucion: string;
   nombregenerador: string;
   cedulagenerador: string;
+  emailgenerador: string;
   municipiogenerador: string;
   departamento: string;
   cultivos: string[];
   coordinador: string;
   total: number;
   pdfUrl: string | null;
+  estado: string;
+  motivoAnulacion: string;
+  fechaAnulacion: string;
 }
 
 const FIELDS_TO_FETCH = [
@@ -26,12 +30,17 @@ const FIELDS_TO_FETCH = [
   "fechadevolucion",
   "nombregenerador",
   "cedulagenerador",
+  "emailgenerador",
   "municipiogenerador",
   "Departamento",
   "cultivos_certificado",
   "nombrecoordinador",
   "total",
   "certificadopdf",
+  "estado",
+  "motivo_anulacion",
+  "fecha_anulacion",
+  "anulado_por",
   // Esquema nuevo: vínculo a FINCAS (usado para rellenar lookups vacíos en
   // certs nuevos, ver enrichRecordsViaFincas).
   "FINCAS",
@@ -265,6 +274,9 @@ export async function GET(request: Request) {
   const municipios = searchParams.getAll("municipio");
   const cultivoNombres = searchParams.getAll("cultivo");
   const coordinadorIds = searchParams.getAll("coordinador");
+  // Estados a incluir. Default: solo aprobados. Pasar ?estado=anulado para
+  // la vista de auditoría, o ?estado=aprobado&estado=anulado para incluir.
+  const estados = searchParams.getAll("estado");
 
   const canViewAll = isAdminOrSupervisor(session.user.rol);
   const forceCoordinadorId = canViewAll
@@ -304,6 +316,7 @@ export async function GET(request: Request) {
     mes: mes || undefined,
     forceCoordinadorId,
     consecutivo: consecutivo || undefined,
+    estados: estados.length > 0 ? estados : undefined,
   });
 
   try {
@@ -360,12 +373,16 @@ export async function GET(request: Request) {
           fechadevolucion: firstString(f["fechadevolucion"]),
           nombregenerador,
           cedulagenerador: firstString(f["cedulagenerador"]),
+          emailgenerador: firstString(f["emailgenerador"]),
           municipiogenerador: firstString(f["municipiogenerador"]),
           departamento: firstString(f["Departamento"]),
           cultivos,
           coordinador: firstString(f["nombrecoordinador"]),
           total: typeof f["total"] === "number" ? (f["total"] as number) : 0,
           pdfUrl,
+          estado: firstString(f["estado"]) || "aprobado",
+          motivoAnulacion: firstString(f["motivo_anulacion"]),
+          fechaAnulacion: firstString(f["fecha_anulacion"]),
         };
       }
     );

@@ -27,12 +27,16 @@ interface CertificadoItem {
   fechadevolucion: string;
   nombregenerador: string;
   cedulagenerador: string;
+  emailgenerador: string;
   municipiogenerador: string;
   departamento: string;
   cultivos: string[];
   coordinador: string;
   total: number;
   pdfUrl: string | null;
+  estado: string;
+  motivoAnulacion: string;
+  fechaAnulacion: string;
 }
 
 interface CultivoOption {
@@ -107,6 +111,12 @@ function ListarCertificadosPage() {
   const [vista, setVista] = useState<Vista>(() =>
     searchParams.get("tab") === "historico" ? "historico" : "actual"
   );
+
+  // Estado para acciones sobre certs: reenviar y anular.
+  const [actionFor, setActionFor] = useState<{ id: string; consecutivo: string | number; mode: "anular" | "reenviar" } | null>(null);
+  const [actionMotivo, setActionMotivo] = useState("");
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [actionToast, setActionToast] = useState<string | null>(null);
 
   // Conteo de solicitudes pendientes (badge del botón "Pendientes").
   const [pendientesTotal, setPendientesTotal] = useState(0);
@@ -210,6 +220,9 @@ function ListarCertificadosPage() {
       if (canViewAll) {
         for (const c of selCoordinadores) params.append("coordinador", c);
       }
+      // Vista anulados → solo certs anulados. Listado actual = solo aprobados
+      // (default del filterBuilder).
+      if (vista === "anulados") params.append("estado", "anulado");
       return params.toString();
     },
     [
@@ -223,6 +236,7 @@ function ListarCertificadosPage() {
       selCultivos,
       selCoordinadores,
       cultivoNombreById,
+      vista,
       canViewAll,
     ]
   );
@@ -410,7 +424,7 @@ function ListarCertificadosPage() {
           </button>
         </div>
 
-        {vista === "actual" && (
+        {(vista === "actual" || vista === "anulados") && (
         <>
 
         {/* Chips de coordinadores (atajo tipo Kardex) */}
@@ -585,6 +599,11 @@ function ListarCertificadosPage() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Coordinador</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total (kg)</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">PDF</th>
+                  {vista === "anulados" ? (
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Motivo / Fecha anulación</th>
+                  ) : (
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -644,12 +663,56 @@ function ListarCertificadosPage() {
                         <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
+                    {vista === "anulados" ? (
+                      <td className="px-3 py-2 text-xs text-gray-600">
+                        <div className="text-orange-700 font-medium">
+                          {r.motivoAnulacion || "(sin motivo)"}
+                        </div>
+                        {r.fechaAnulacion && (
+                          <div className="text-gray-400 mt-0.5">
+                            {new Date(r.fechaAnulacion).toLocaleDateString("es-CO", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    ) : (
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        <div className="inline-flex gap-1">
+                          <button
+                            onClick={() => {
+                              setActionFor({ id: r.id, consecutivo: r.consecutivo, mode: "reenviar" });
+                              setActionMotivo("");
+                            }}
+                            disabled={!r.pdfUrl}
+                            className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={r.pdfUrl ? "Reenviar el PDF por email" : "No hay PDF para reenviar"}
+                          >
+                            📧 Reenviar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActionFor({ id: r.id, consecutivo: r.consecutivo, mode: "anular" });
+                              setActionMotivo("");
+                            }}
+                            className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50"
+                            title="Anular este certificado"
+                          >
+                            ⊘ Anular
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {records.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-500 text-sm">
-                      No hay certificados para los filtros seleccionados.
+                    <td colSpan={9} className="text-center py-8 text-gray-500 text-sm">
+                      {vista === "anulados"
+                        ? "No hay certificados anulados."
+                        : "No hay certificados para los filtros seleccionados."}
                     </td>
                   </tr>
                 )}
@@ -680,8 +743,187 @@ function ListarCertificadosPage() {
         )}
 
         {vista === "historico" && <HistoricoCertificados />}
+
+        {/* Modal: Anular / Reenviar */}
+        {actionFor && (
+          <ActionModal
+            mode={actionFor.mode}
+            consecutivo={actionFor.consecutivo}
+            initialEmail={
+              records.find((r) => r.id === actionFor.id)?.emailgenerador || ""
+            }
+            motivo={actionMotivo}
+            setMotivo={setActionMotivo}
+            submitting={actionSubmitting}
+            onClose={() => {
+              if (actionSubmitting) return;
+              setActionFor(null);
+              setActionMotivo("");
+            }}
+            onSubmit={async (emailOverride?: string) => {
+              setActionSubmitting(true);
+              try {
+                if (actionFor.mode === "anular") {
+                  const r = await fetch(
+                    `/api/certificados/${actionFor.id}/anular`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ motivo: actionMotivo.trim() }),
+                    }
+                  );
+                  const d = await r.json();
+                  if (!r.ok) {
+                    setActionToast(`Error: ${d.error || "no se pudo anular"}`);
+                  } else {
+                    setActionToast(`Cert #${actionFor.consecutivo} anulado. Se notificó por email.`);
+                    fetchPage("reset");
+                  }
+                } else {
+                  const r = await fetch(
+                    `/api/certificados/${actionFor.id}/reenviar`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(emailOverride ? { emailOverride } : {}),
+                    }
+                  );
+                  const d = await r.json();
+                  if (!r.ok) {
+                    setActionToast(`Error: ${d.error || "no se pudo reenviar"}`);
+                  } else {
+                    setActionToast(
+                      `Cert reenviado a ${d.emailAgricultor || "los destinatarios"}.`
+                    );
+                  }
+                }
+              } catch {
+                setActionToast("Error de red");
+              } finally {
+                setActionSubmitting(false);
+                setActionFor(null);
+                setActionMotivo("");
+                setTimeout(() => setActionToast(null), 5000);
+              }
+            }}
+          />
+        )}
+
+        {actionToast && (
+          <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg max-w-md z-50">
+            {actionToast}
+          </div>
+        )}
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+// ─── ActionModal ──────────────────────────────────────────────────────────────
+function ActionModal({
+  mode,
+  consecutivo,
+  initialEmail,
+  motivo,
+  setMotivo,
+  submitting,
+  onClose,
+  onSubmit,
+}: {
+  mode: "anular" | "reenviar";
+  consecutivo: string | number;
+  initialEmail: string;
+  motivo: string;
+  setMotivo: (v: string) => void;
+  submitting: boolean;
+  onClose: () => void;
+  onSubmit: (emailOverride?: string) => void;
+}) {
+  const [emailOverride, setEmailOverride] = useState("");
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        {mode === "anular" ? (
+          <>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Anular certificado #{consecutivo}
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              El certificado quedará marcado como <strong>anulado</strong> (no se borra del histórico) y se enviará un email automático al agricultor, al coordinador y a CampoLimpio notificando la anulación. <strong>Indica el motivo</strong> (mínimo 10 caracteres):
+            </p>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
+              placeholder="Ej. Cantidades equivocadas — se generó por error…"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={onClose}
+                disabled={submitting}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => onSubmit()}
+                disabled={submitting || motivo.trim().length < 10}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded-lg"
+              >
+                {submitting ? "Anulando…" : "Confirmar anulación"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Reenviar certificado #{consecutivo}
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Se reenviará el PDF a los destinatarios (agricultor, coordinador y CampoLimpio).
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-sm">
+              <p className="text-xs text-blue-800 mb-1">Email actual del agricultor:</p>
+              <p className="font-mono text-blue-900 break-all">
+                {initialEmail || (
+                  <span className="italic text-amber-700">
+                    Sin email registrado
+                  </span>
+                )}
+              </p>
+            </div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              ¿Reenviar a un email diferente? (opcional)
+            </label>
+            <input
+              type="email"
+              value={emailOverride}
+              onChange={(e) => setEmailOverride(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
+              placeholder="otro@ejemplo.com"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={onClose}
+                disabled={submitting}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => onSubmit(emailOverride.trim() || undefined)}
+                disabled={submitting}
+                className="px-4 py-2 text-sm bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white rounded-lg"
+              >
+                {submitting ? "Enviando…" : "Reenviar email"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
