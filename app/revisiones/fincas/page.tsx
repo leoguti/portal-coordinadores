@@ -663,8 +663,7 @@ function FincaRow({
   return (
     <div className={`border-l-2 ml-4 ${isSelected ? "border-blue-400 bg-blue-50/40" : revisado ? "border-green-300" : tieneProblemas ? "border-amber-300" : "border-gray-200"}`}>
       <div
-        className={`flex items-start justify-between gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${isExpanded ? "bg-gray-50" : ""}`}
-        onClick={onToggle}
+        className={`flex items-start justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors ${isExpanded ? "bg-gray-50" : ""}`}
       >
         <div className="flex items-start gap-2 min-w-0">
           {showSelection && item.fincaId && (
@@ -704,7 +703,7 @@ function FincaRow({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {item.fincaId && (
             <button
               onClick={irAGenerarCertificado}
@@ -712,6 +711,19 @@ function FincaRow({
               title="Generar un certificado para esta finca"
             >
               📄 Generar certificado
+            </button>
+          )}
+          {item.fincaId && (
+            <button
+              onClick={onToggle}
+              className={`text-xs font-medium px-2.5 py-1 rounded whitespace-nowrap transition-colors border ${
+                isExpanded
+                  ? "bg-gray-200 text-gray-700 border-gray-300 hover:bg-gray-300"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+              }`}
+              title={isExpanded ? "Cerrar edición" : "Editar datos de esta finca"}
+            >
+              {isExpanded ? "▲ Cerrar" : "✏️ Editar finca"}
             </button>
           )}
           {isAdmin && item.fincaId && (
@@ -723,12 +735,6 @@ function FincaRow({
               🗑️
             </button>
           )}
-          <span
-            className="text-gray-400 text-sm px-1 cursor-pointer"
-            onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          >
-            {isExpanded ? "▲" : "▼"}
-          </span>
         </div>
       </div>
 

@@ -5,13 +5,20 @@
  * libera) para auditoría: queda un hueco con marca clara de anulación.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { sendCertificadoAnuladoEmail } from "@/lib/sendCertificadoAnuladoEmail";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
+
+function firstStr(v: unknown): string {
+  if (Array.isArray(v) && v.length > 0) return String(v[0] || "");
+  if (v == null) return "";
+  return String(v);
+}
 
 export async function POST(
   request: NextRequest,
@@ -86,5 +93,32 @@ export async function POST(
     );
   }
   console.log(`[certificados/${id}/anular] motivo="${motivo.slice(0, 60)}…"`);
+
+  // Notificar a agricultor + coord + auditoría (background — no bloquea respuesta).
+  after(async () => {
+    try {
+      const consecutivo = Number(rec.fields.consecutivo) || 0;
+      const emailGen = firstStr(rec.fields.emailgenerador);
+      const emailCoord = firstStr(rec.fields.emailcoordinador);
+      const nombreCoord = firstStr(rec.fields.nombrecoordinador);
+      const nombreGen = firstStr(rec.fields.nombregenerador);
+      const fechaDev = String(rec.fields.fechadevolucion || "");
+      const totalKg = Number(rec.fields.total) || 0;
+      const res = await sendCertificadoAnuladoEmail({
+        consecutivo,
+        motivo,
+        emailsAgricultor: emailGen ? [emailGen] : [],
+        emailCoordinador: emailCoord,
+        nombreCoordinador: nombreCoord || "Coordinador",
+        nombreGenerador: nombreGen || "(sin nombre)",
+        fechaDevolucion: fechaDev,
+        totalKg,
+      });
+      console.log(`[cert/${id}/anular email] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
+    } catch (err) {
+      console.error(`[cert/${id}/anular email] Error:`, err);
+    }
+  });
+
   return NextResponse.json({ ok: true, estado: "anulado" });
 }

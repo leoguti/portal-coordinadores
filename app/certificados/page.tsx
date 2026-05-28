@@ -8,7 +8,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { isAdminOrSupervisor } from "@/lib/roles";
 import HistoricoCertificados from "@/components/HistoricoCertificados";
 
-type Vista = "actual" | "historico";
+type Vista = "actual" | "anulados" | "historico";
 
 // El export default envuelve en <Suspense> porque el contenido usa
 // useSearchParams() (lee ?tab=historico). Sin esto Next.js falla el
@@ -350,6 +350,17 @@ function ListarCertificadosPage() {
             }`}
           >
             📋 Listado actual
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista("anulados")}
+            className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              vista === "anulados"
+                ? "border-orange-600 text-orange-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            ⊘ Anulados
           </button>
           <button
             type="button"
