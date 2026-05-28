@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal CampoLimpio — Nuevo flujo de certificados</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+
+<!-- Preheader text (invisible, aparece en preview de Gmail) -->
+<div style="display:none;max-height:0;overflow:hidden;color:transparent;">
+  Ya está listo el portal con WhatsApp. Solo pruebas con el generador de pruebas hasta validar.
+</div>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;padding:24px 12px;">
+  <tr>
+    <td align="center">
+
+      <!-- Container principal -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+
+        <!-- Header verde -->
+        <tr>
+          <td style="background-color:#042726;padding:32px 32px 28px;text-align:left;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <div style="display:inline-block;width:44px;height:44px;border-radius:50%;background-color:#00d084;color:#ffffff;font-weight:700;font-size:18px;line-height:44px;text-align:center;vertical-align:middle;">CL</div>
+                  <span style="display:inline-block;margin-left:12px;color:#ffffff;font-size:20px;font-weight:600;vertical-align:middle;">CampoLimpio</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:20px;">
+                  <h1 style="margin:0;color:#ffffff;font-size:26px;line-height:1.3;font-weight:700;">Portal coordinadores: nuevo flujo de certificados</h1>
+                  <p style="margin:8px 0 0;color:#a7e3c8;font-size:14px;">Mayo 2026 · Actualización importante</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Intro -->
+        <tr>
+          <td style="padding:28px 32px 8px;">
+            <p style="margin:0 0 16px;color:#1f2937;font-size:16px;line-height:1.6;">Hola coordinador/a,</p>
+            <p style="margin:0 0 16px;color:#1f2937;font-size:16px;line-height:1.6;">El portal de CampoLimpio ya tiene activo el nuevo flujo de certificados con <strong>WhatsApp</strong>, <strong>bandeja de aprobaciones</strong>, <strong>anulaciones</strong> y <strong>reenvío de PDFs</strong>. Antes de empezar a usarlo con tus agricultores reales, te pedimos leer estas instrucciones con atención.</p>
+          </td>
+        </tr>
+
+        <!-- ALERTA — usar solo generador de pruebas -->
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fef2f2;border:2px solid #ef4444;border-radius:10px;">
+              <tr>
+                <td style="padding:20px 20px 18px;">
+                  <p style="margin:0 0 8px;color:#991b1b;font-size:14px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">⚠️ Importante · Lee antes de seguir</p>
+                  <p style="margin:0 0 12px;color:#7f1d1d;font-size:16px;line-height:1.5;font-weight:600;">Por ahora, <u>solo prueba con el generador de pruebas</u>. No emitas certificados a clientes reales hasta que tu coordinación principal lo confirme.</p>
+                  <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.5;">Generador habilitado para pruebas:</p>
+                  <div style="margin-top:10px;padding:12px;background-color:#ffffff;border-radius:6px;border:1px dashed #fca5a5;">
+                    <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.5;"><strong>Nombre:</strong> GENERADOR DE PRUEBAS — NO USAR</p>
+                    <p style="margin:4px 0 0;color:#7f1d1d;font-size:14px;line-height:1.5;"><strong>Identificación:</strong> PRUEBA-000</p>
+                    <p style="margin:4px 0 0;color:#7f1d1d;font-size:14px;line-height:1.5;"><strong>Fincas disponibles:</strong> 3 (para pruebas variadas)</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Sección 1 — Limpieza de certs de prueba -->
+        <tr>
+          <td style="padding:8px 32px 8px;">
+            <h2 style="margin:0 0 16px;color:#1f2937;font-size:20px;font-weight:700;">1. Anula los certificados de prueba que ya emitiste</h2>
+            <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.6;">Durante los días anteriores, varios coordinadores generaron certificados <strong>de prueba con clientes reales</strong> para conocer el portal. Estos certificados deben ser <strong>anulados</strong> para no contaminar la base de datos.</p>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fffbeb;border:1px solid #fbbf24;border-radius:8px;margin:0 0 20px;">
+              <tr>
+                <td style="padding:16px 18px;">
+                  <p style="margin:0 0 10px;color:#78350f;font-size:14px;font-weight:600;">📋 Cómo anular tus certs de prueba:</p>
+                  <ol style="margin:0;padding-left:20px;color:#78350f;font-size:14px;line-height:1.7;">
+                    <li>Entra al portal: <a href="https://portal.campolimpio.org/certificados" style="color:#92400e;text-decoration:underline;">portal.campolimpio.org/certificados</a></li>
+                    <li>Filtra por <strong>tu nombre</strong> en el filtro de Coordinador.</li>
+                    <li>Identifica los certificados que generaste como <strong>prueba</strong> (los de los últimos días, con cantidades o lugares que no corresponden a una entrega real).</li>
+                    <li>En cada uno, click en el botón rojo <strong>✗ Anular</strong>.</li>
+                    <li>Escribe el motivo: <em>"Certificado de prueba — emitido durante onboarding del portal"</em>.</li>
+                    <li>Click <strong>Confirmar anulación</strong>.</li>
+                  </ol>
+                  <p style="margin:14px 0 0;color:#78350f;font-size:13px;font-style:italic;">El sistema enviará automáticamente un email al agricultor avisando que ese cert fue anulado.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Aviso sobre los DOS ROLES -->
+        <tr>
+          <td style="padding:8px 32px 0;">
+            <h2 style="margin:0 0 8px;color:#1f2937;font-size:20px;font-weight:700;">2. Tu prueba tiene dos roles MUY diferentes</h2>
+            <p style="margin:0 0 18px;color:#4b5563;font-size:15px;line-height:1.6;">El flujo nuevo tiene <strong>dos lados</strong>. Primero te haces pasar por un agricultor (escribes al bot desde tu celular). Después entras al portal a aprobar la solicitud que tú mismo enviaste.</p>
+            <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.6;">Compara cuidadosamente las dos columnas. <strong>No mezcles los roles</strong>.</p>
+
+            <!-- TABLA COMPARATIVA GRANDE -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:2px solid #d1d5db;">
+
+              <!-- Header con los dos títulos -->
+              <tr>
+                <td width="50%" style="background-color:#2563eb;padding:18px 14px;text-align:center;border-right:2px solid #ffffff;">
+                  <div style="font-size:32px;line-height:1;margin-bottom:8px;">👨‍🌾</div>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Escenario A</p>
+                  <p style="margin:6px 0 0;color:#ffffff;font-size:17px;font-weight:700;line-height:1.3;">Tú haciendo de<br><u>AGRICULTOR</u></p>
+                </td>
+                <td width="50%" style="background-color:#00865a;padding:18px 14px;text-align:center;">
+                  <div style="font-size:32px;line-height:1;margin-bottom:8px;">🧑‍💼</div>
+                  <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Escenario B</p>
+                  <p style="margin:6px 0 0;color:#ffffff;font-size:17px;font-weight:700;line-height:1.3;">Tú haciendo de<br><u>COORDINADOR</u></p>
+                </td>
+              </tr>
+
+              <!-- Fila: ¿Dónde? -->
+              <tr>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">📍 ¿Dónde?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;">WhatsApp en tu <strong>celular personal</strong></p>
+                </td>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">📍 ¿Dónde?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;">Portal web en el <strong>navegador</strong></p>
+                </td>
+              </tr>
+
+              <!-- Fila: ¿Quién soy? -->
+              <tr>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">👤 ¿Quién soy?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;">Un <strong>agricultor cualquiera</strong>. El bot no me conoce.</p>
+                </td>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">👤 ¿Quién soy?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>Tú con tu usuario</strong> habitual de coordinador.</p>
+                </td>
+              </tr>
+
+              <!-- Fila: ¿Qué hago? -->
+              <tr>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🎯 ¿Qué hago?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>Pido</strong> que me hagan un certificado.</p>
+                </td>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🎯 ¿Qué hago?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>Reviso, apruebo o rechazo</strong> la solicitud.</p>
+                </td>
+              </tr>
+
+              <!-- Fila: Datos a usar -->
+              <tr>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">📝 Datos a usar</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>Ficticios</strong> (cédula, nombre y finca inventados para la prueba).</p>
+                </td>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">📝 Datos a usar</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;">No introduces datos. Solo <strong>revisas y decides</strong>.</p>
+                </td>
+              </tr>
+
+              <!-- Fila: Coordinador a elegir -->
+              <tr>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🧭 Coordinador a elegir</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><span style="background:#fef08a;padding:2px 6px;border-radius:3px;font-weight:600;">A TI MISMO/A</span> en el dropdown del formulario. Así la solicitud te llega a ti para aprobarla.</p>
+                </td>
+                <td style="background-color:#ffffff;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🧭 Coordinador a elegir</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;">No aplica. Aquí <strong>ERES</strong> el coordinador.</p>
+                </td>
+              </tr>
+
+              <!-- Fila: ¿Cuándo? -->
+              <tr>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">⏱ ¿Cuándo?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>PRIMERO.</strong> Empiezas por aquí.</p>
+                </td>
+                <td style="background-color:#f9fafb;padding:10px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">⏱ ¿Cuándo?</p>
+                  <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.5;"><strong>DESPUÉS.</strong> Cuando hayas enviado la solicitud del Escenario A.</p>
+                </td>
+              </tr>
+
+              <!-- Fila: En el mundo real (final) -->
+              <tr>
+                <td style="background-color:#ffffff;padding:12px 14px 14px;border-top:1px solid #e5e7eb;border-right:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#1e3a8a;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🌎 En producción real</p>
+                  <p style="margin:0;color:#1f2937;font-size:13px;line-height:1.5;font-style:italic;">Aquí escribiría un agricultor real con su WhatsApp.</p>
+                </td>
+                <td style="background-color:#ffffff;padding:12px 14px 14px;border-top:1px solid #e5e7eb;text-align:left;vertical-align:top;">
+                  <p style="margin:0 0 4px;color:#065f46;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🌎 En producción real</p>
+                  <p style="margin:0;color:#1f2937;font-size:13px;line-height:1.5;font-style:italic;">Aquí entrarías tú a aprobar lo que el agricultor real envió.</p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        <!-- ESCENARIO A — Agricultor en WhatsApp -->
+        <tr>
+          <td style="padding:8px 32px 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#eff6ff;border-radius:10px;border:2px solid #93c5fd;">
+              <tr>
+                <td style="padding:18px 20px 8px;">
+                  <p style="margin:0;color:#1e3a8a;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">👨‍🌾 Escenario A · Tú haciendo de agricultor</p>
+                  <h3 style="margin:6px 0 4px;color:#1e3a8a;font-size:18px;font-weight:700;">Simula que eres un agricultor real desde tu WhatsApp</h3>
+                  <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.5;font-style:italic;">En esta prueba <strong>no estás conectado al portal</strong>. Eres un agricultor cualquiera escribiendo desde tu celular.</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 20px 18px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #dbeafe;">
+                        <p style="margin:0;color:#1e3a8a;font-size:14px;font-weight:600;">Paso A1 · Escribe al bot</p>
+                        <p style="margin:4px 0 0;color:#1e40af;font-size:14px;line-height:1.6;">Desde tu WhatsApp personal, escribe cualquier mensaje (ej. "hola") al número <strong>+57 323 468 8397</strong>.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #dbeafe;">
+                        <p style="margin:0;color:#1e3a8a;font-size:14px;font-weight:600;">Paso A2 · Recibirás un menú</p>
+                        <p style="margin:4px 0 0;color:#1e40af;font-size:14px;line-height:1.6;">Como tu número <strong>NO está</strong> registrado en ninguna finca, el bot te identifica como "desconocido". Eso es normal. Te ofrecerá: <em>1. Registrarme como generador · 2. Hablar con un coordinador</em>.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #dbeafe;">
+                        <p style="margin:0;color:#1e3a8a;font-size:14px;font-weight:600;">Paso A3 · Elige opción 1 y llena el formulario</p>
+                        <p style="margin:4px 0 0;color:#1e40af;font-size:14px;line-height:1.6;">Responde <code style="background:#dbeafe;padding:2px 6px;border-radius:3px;font-family:monospace;">1</code>. El bot te envía un link (válido 30 min). Abre el link y llena el formulario con <strong>datos ficticios de prueba</strong> (no uses datos reales). Cuando pida coordinador, <strong style="background:#fde68a;padding:2px 6px;border-radius:3px;">selecciónate a ti mismo</strong> de la lista. Así la solicitud llega a tu propia bandeja.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;">
+                        <p style="margin:0;color:#1e3a8a;font-size:14px;font-weight:600;">Paso A4 · Envía la solicitud</p>
+                        <p style="margin:4px 0 0;color:#1e40af;font-size:14px;line-height:1.6;">Le das clic a "Enviar para aprobación". Vas a recibir un WhatsApp diciendo <em>"Recibimos tu solicitud, tu coordinador la revisará"</em>. <strong>Aquí termina el Escenario A.</strong> Ahora pasa al B.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ESCENARIO B — Coordinador en el portal -->
+        <tr>
+          <td style="padding:16px 32px 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f0fdf4;border-radius:10px;border:2px solid #86efac;">
+              <tr>
+                <td style="padding:18px 20px 8px;">
+                  <p style="margin:0;color:#065f46;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">🧑‍💼 Escenario B · Tú haciendo de coordinador</p>
+                  <h3 style="margin:6px 0 4px;color:#065f46;font-size:18px;font-weight:700;">Ahora entras al portal a aprobar lo que tú mismo enviaste</h3>
+                  <p style="margin:0;color:#047857;font-size:14px;line-height:1.5;font-style:italic;">Cambia de rol mental: dejas de ser el agricultor y ahora eres el coordinador profesional revisando la solicitud.</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 20px 18px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #d1fae5;">
+                        <p style="margin:0;color:#065f46;font-size:14px;font-weight:600;">Paso B1 · Entra al portal con tu usuario habitual</p>
+                        <p style="margin:4px 0 0;color:#047857;font-size:14px;line-height:1.6;">Login normal en <a href="https://portal.campolimpio.org/certificados" style="color:#065f46;text-decoration:underline;">portal.campolimpio.org/certificados</a>.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #d1fae5;">
+                        <p style="margin:0;color:#065f46;font-size:14px;font-weight:600;">Paso B2 · Verás el botón "Pendientes" con un contador</p>
+                        <p style="margin:4px 0 0;color:#047857;font-size:14px;line-height:1.6;">En la barra superior, al lado de <em>"Generar nuevo certificado"</em>, aparece un botón ámbar <strong>⏳ Pendientes (1)</strong>. Click ahí.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;border-bottom:1px solid #d1fae5;">
+                        <p style="margin:0;color:#065f46;font-size:14px;font-weight:600;">Paso B3 · Revisa tu solicitud y aprueba</p>
+                        <p style="margin:4px 0 0;color:#047857;font-size:14px;line-height:1.6;">Verás la solicitud que enviaste en el Escenario A. Verifica los datos. Si todo está bien, click en el botón verde <strong>✓ Aprobar</strong>. El sistema genera el PDF y te lo envía por email + WhatsApp (al mismo número con el que probaste).</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px 0;">
+                        <p style="margin:0;color:#065f46;font-size:14px;font-weight:600;">Paso B4 · Verifica que llegó el PDF</p>
+                        <p style="margin:4px 0 0;color:#047857;font-size:14px;line-height:1.6;">Abre tu WhatsApp: deberías ver un mensaje del bot <em>"✅ ¡Tu certificado fue aprobado!"</em> con el link de descarga del PDF. También revisa tu email.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Aclaración importante sobre el cambio de rol -->
+        <tr>
+          <td style="padding:8px 32px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;">
+              <tr>
+                <td style="padding:14px 18px;">
+                  <p style="margin:0 0 6px;color:#78350f;font-size:14px;font-weight:700;">🔑 Punto clave para no confundirse</p>
+                  <p style="margin:0 0 6px;color:#78350f;font-size:14px;line-height:1.6;">El portal es para <strong>coordinadores</strong>. El bot de WhatsApp es para <strong>agricultores</strong>. Son dos puertas distintas.</p>
+                  <p style="margin:0;color:#78350f;font-size:14px;line-height:1.6;">Durante esta prueba <strong>tú vas a hacer las dos cosas</strong>: primero te haces pasar por un agricultor desde tu WhatsApp, después entras como coordinador desde el portal. En producción real, cada persona usará solo su lado.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Sección 3 — Botones Anular y Reenviar -->
+        <tr>
+          <td style="padding:8px 32px 8px;">
+            <h2 style="margin:0 0 16px;color:#1f2937;font-size:20px;font-weight:700;">3. Nuevos botones: Anular y Reenviar PDF</h2>
+            <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.6;">En el listado de Certificados ahora cada fila tiene 2 botones nuevos a la derecha:</p>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;">
+              <tr>
+                <td style="padding:16px;background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+                  <p style="margin:0 0 8px;color:#1f2937;font-size:15px;font-weight:600;">📧 Reenviar</p>
+                  <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Reenvía el PDF del certificado al email del agricultor (por si no lo recibió o cambió el correo). Te pide confirmar el destinatario y manda el archivo en segundos.</p>
+                </td>
+              </tr>
+              <tr><td style="height:10px;line-height:10px;">&nbsp;</td></tr>
+              <tr>
+                <td style="padding:16px;background-color:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
+                  <p style="margin:0 0 8px;color:#991b1b;font-size:15px;font-weight:600;">⊘ Anular</p>
+                  <p style="margin:0 0 8px;color:#7f1d1d;font-size:14px;line-height:1.6;">Marca el certificado como anulado (no se borra del histórico, queda para auditoría). Pide motivo de mínimo 10 caracteres.</p>
+                  <p style="margin:0;color:#7f1d1d;font-size:14px;line-height:1.6;"><strong>Avisos automáticos:</strong> al anular, el sistema notifica al agricultor por email y por WhatsApp explicando el motivo.</p>
+                  <p style="margin:8px 0 0;color:#7f1d1d;font-size:13px;font-style:italic;">Ventana de tiempo: solo puedes anular certs del mes actual. Para meses anteriores, contacta al administrador.</p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 12px;color:#4b5563;font-size:15px;line-height:1.6;">También hay una pestaña nueva <strong>⊘ Anulados</strong> donde puedes consultar los certificados que se anularon (junto con el motivo y quién los anuló).</p>
+          </td>
+        </tr>
+
+        <!-- CTA Botón principal -->
+        <tr>
+          <td style="padding:24px 32px 8px;text-align:center;">
+            <a href="https://portal.campolimpio.org/certificados" style="display:inline-block;background-color:#00d084;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;">Entrar al portal</a>
+            <p style="margin:12px 0 0;color:#6b7280;font-size:13px;">portal.campolimpio.org/certificados</p>
+          </td>
+        </tr>
+
+        <!-- Resumen -->
+        <tr>
+          <td style="padding:24px 32px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#042726;border-radius:10px;">
+              <tr>
+                <td style="padding:24px;">
+                  <p style="margin:0 0 14px;color:#a7e3c8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Resumen de pasos</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr><td style="padding:6px 0;color:#ffffff;font-size:15px;">1. Anula los certs de prueba que hiciste en días anteriores.</td></tr>
+                    <tr><td style="padding:6px 0;color:#ffffff;font-size:15px;">2. Solo prueba con el generador <em>GENERADOR DE PRUEBAS — NO USAR</em>.</td></tr>
+                    <tr><td style="padding:6px 0;color:#ffffff;font-size:15px;">3. Escríbele al bot <strong>+57 323 468 8397</strong> para simular el flujo del agricultor.</td></tr>
+                    <tr><td style="padding:6px 0;color:#ffffff;font-size:15px;">4. Aprueba/rechaza desde la bandeja <em>Pendientes</em>.</td></tr>
+                    <tr><td style="padding:6px 0;color:#ffffff;font-size:15px;">5. Aprende a usar los botones <em>Anular</em> y <em>Reenviar</em>.</td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Soporte -->
+        <tr>
+          <td style="padding:8px 32px 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f9fafb;border-radius:8px;">
+              <tr>
+                <td style="padding:18px 20px;">
+                  <p style="margin:0 0 6px;color:#1f2937;font-size:14px;font-weight:600;">¿Tienes dudas o algo no funciona como esperas?</p>
+                  <p style="margin:0;color:#4b5563;font-size:14px;line-height:1.6;">Escribe a tu coordinación principal o al equipo de soporte de CampoLimpio. Es importante reportar cualquier comportamiento extraño durante esta fase de pruebas.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 32px;background-color:#f3f4f6;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="margin:0 0 6px;color:#6b7280;font-size:12px;">Corporación CampoLimpio · NIT 900.235.428-2</p>
+            <p style="margin:0;color:#9ca3af;font-size:11px;">Programa de manejo de envases vacíos de plaguicidas</p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>
