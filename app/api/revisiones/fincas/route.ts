@@ -132,17 +132,21 @@ export async function GET(request: NextRequest) {
   for (let i = 0; i < generadorIds.length; i += CHUNK) {
     const chunk = generadorIds.slice(i, i + CHUNK);
     const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
-    const gFields = ["nombre", "nit", "tipo", "tipopersona", "direccion_sede", "movil", "email"];
+    const gFields = ["nombre", "nit", "tipo", "tipopersona", "direccion_sede", "municipio", "movil", "email"];
     const gfp = gFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
     const url = `https://api.airtable.com/v0/${BASE}/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&${gfp}&pageSize=100`;
     const data = await airtableGet(url);
     for (const r of (data.records || [])) generadorMap.set(r.id, r);
   }
 
-  // 3. Resolver MUNICIPIOS de las fincas → nombre "mundep"
+  // 3. Resolver MUNICIPIOS de las fincas y de los generadores → "mundep"
   const municipioIdsSet = new Set<string>();
   for (const f of fincas) {
     const mId = f.fields.municipio?.[0];
+    if (mId) municipioIdsSet.add(mId);
+  }
+  for (const g of generadorMap.values()) {
+    const mId = g.fields?.municipio?.[0];
     if (mId) municipioIdsSet.add(mId);
   }
   const municipioMap = new Map<string, string>();
@@ -215,6 +219,7 @@ export async function GET(request: NextRequest) {
     generador: {
       nombre: string; nit: string; tipo: string; tipopersona: string;
       direccionSede: string; movil: string; email: string;
+      municipioId: string | null; municipioLabel: string | null;
     } | null;
     fincas: typeof items;
   }>();
@@ -223,6 +228,7 @@ export async function GET(request: NextRequest) {
     const gId = item.finca?.generadorId || "sin-generador";
     if (!gruposMap.has(gId)) {
       const genRecord = gId !== "sin-generador" ? generadorMap.get(gId) : null;
+      const genMunId = genRecord?.fields?.municipio?.[0] || null;
       gruposMap.set(gId, {
         generadorId: gId !== "sin-generador" ? gId : null,
         generador: genRecord ? {
@@ -233,6 +239,8 @@ export async function GET(request: NextRequest) {
           direccionSede: genRecord.fields.direccion_sede || "",
           movil: genRecord.fields.movil || "",
           email: genRecord.fields.email || "",
+          municipioId: genMunId,
+          municipioLabel: genMunId ? (municipioMap.get(genMunId) || null) : null,
         } : null,
         fincas: [],
       });

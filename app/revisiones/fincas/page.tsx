@@ -39,7 +39,17 @@ interface FincaItem {
 
 interface GeneradorGrupo {
   generadorId: string | null;
-  generador: { nombre: string; nit: string; tipo: string; tipopersona: string } | null;
+  generador: {
+    nombre: string;
+    nit: string;
+    tipo: string;
+    tipopersona: string;
+    direccionSede: string;
+    movil: string;
+    email: string;
+    municipioId: string | null;
+    municipioLabel: string | null;
+  } | null;
   fincas: FincaItem[];
   totalFincas: number;
   revisadas: number;
@@ -737,7 +747,17 @@ function GeneradorEditForm({
   onCancel,
 }: {
   grupo: GeneradorGrupo;
-  onSaved: (fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => void;
+  onSaved: (fields: {
+    nombre: string;
+    nit: string;
+    tipo: string;
+    tipopersona: string;
+    direccionSede: string;
+    movil: string;
+    email: string;
+    municipioId: string | null;
+    municipioLabel: string | null;
+  }) => void;
   onCancel: () => void;
 }) {
   // Parse NIT existente: si trae "9001234-5" separar; si trae "90012345" dejar como base
@@ -757,6 +777,14 @@ function GeneradorEditForm({
   const [tipopersona, setTipopersona] = useState(grupo.generador?.tipopersona || "Natural");
   const [nitBase, setNitBase] = useState(initial.base);
   const [dv, setDv] = useState(initial.dv);
+  const [direccionSede, setDireccionSede] = useState(grupo.generador?.direccionSede || "");
+  const [movil, setMovil] = useState(grupo.generador?.movil || "");
+  const [email, setEmail] = useState(grupo.generador?.email || "");
+  const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(
+    grupo.generador?.municipioId && grupo.generador?.municipioLabel
+      ? { id: grupo.generador.municipioId, mundep: grupo.generador.municipioLabel }
+      : null
+  );
   const [saving, setSaving] = useState(false);
 
   const isJuridica = tipopersona === "Juridica";
@@ -779,11 +807,30 @@ function GeneradorEditForm({
     const res = await fetch(`/api/revisiones/generadores/${grupo.generadorId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, nit: nitFinal, tipo, tipopersona }),
+      body: JSON.stringify({
+        nombre,
+        nit: nitFinal,
+        tipo,
+        tipopersona,
+        direccion_sede: direccionSede.trim(),
+        movil: movil.trim(),
+        email: email.trim(),
+        municipioId: municipio?.id || null,
+      }),
     });
     setSaving(false);
     if (res.ok) {
-      onSaved({ nombre, nit: nitFinal, tipo, tipopersona });
+      onSaved({
+        nombre,
+        nit: nitFinal,
+        tipo,
+        tipopersona,
+        direccionSede: direccionSede.trim(),
+        movil: movil.trim(),
+        email: email.trim(),
+        municipioId: municipio?.id || null,
+        municipioLabel: municipio?.mundep || null,
+      });
     } else {
       alert("Error al guardar generador");
     }
@@ -854,6 +901,49 @@ function GeneradorEditForm({
         )}
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Dirección de la sede</label>
+          <input
+            value={direccionSede}
+            onChange={(e) => setDireccionSede(e.target.value)}
+            placeholder="Calle / Carrera / Vereda…"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Municipio sede</label>
+          <MunicipioSearch
+            value={municipio}
+            onChange={setMunicipio}
+            placeholder="Buscar municipio..."
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Móvil</label>
+          <input
+            value={movil}
+            onChange={(e) => setMovil(e.target.value)}
+            inputMode="numeric"
+            placeholder="3001234567"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="agricultor@example.com"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+      </div>
+
       <div className="flex gap-2 items-center">
         <button onClick={handleSave} disabled={saving || !puedeGuardar}
           title={!puedeGuardar ? `Faltan: ${missing.join(", ")}` : ""}
@@ -896,7 +986,20 @@ function GeneradorRow({
   onFincaToggle: (id: string) => void;
   onSave: (fincaId: string, data: any) => Promise<void>;
   onMergeGenerador: (grupo: GeneradorGrupo, candidates: GeneradorGrupo[]) => void;
-  onGeneradorSaved: (grupoId: string, fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => void;
+  onGeneradorSaved: (
+    grupoId: string,
+    fields: {
+      nombre: string;
+      nit: string;
+      tipo: string;
+      tipopersona: string;
+      direccionSede: string;
+      movil: string;
+      email: string;
+      municipioId: string | null;
+      municipioLabel: string | null;
+    }
+  ) => void;
   onDeleteFinca: (finca: FincaItem, siblings: FincaItem[]) => void;
   onReassigned: (fincaId: string) => void;
   selectedFincaIds: Set<string>;
@@ -1576,15 +1679,44 @@ export default function RevisionFincasPage() {
     setExpandedFinca(null);
   }, []);
 
-  const handleGeneradorSaved = useCallback((grupoId: string, fields: { nombre: string; nit: string; tipo: string; tipopersona: string }) => {
-    setGrupos((prev) =>
-      prev.map((g) =>
-        g.generadorId === grupoId
-          ? { ...g, generador: { nombre: fields.nombre, nit: fields.nit, tipo: fields.tipo, tipopersona: fields.tipopersona } }
-          : g
-      )
-    );
-  }, []);
+  const handleGeneradorSaved = useCallback(
+    (
+      grupoId: string,
+      fields: {
+        nombre: string;
+        nit: string;
+        tipo: string;
+        tipopersona: string;
+        direccionSede: string;
+        movil: string;
+        email: string;
+        municipioId: string | null;
+        municipioLabel: string | null;
+      }
+    ) => {
+      setGrupos((prev) =>
+        prev.map((g) =>
+          g.generadorId === grupoId
+            ? {
+                ...g,
+                generador: {
+                  nombre: fields.nombre,
+                  nit: fields.nit,
+                  tipo: fields.tipo,
+                  tipopersona: fields.tipopersona,
+                  direccionSede: fields.direccionSede,
+                  movil: fields.movil,
+                  email: fields.email,
+                  municipioId: fields.municipioId,
+                  municipioLabel: fields.municipioLabel,
+                },
+              }
+            : g
+        )
+      );
+    },
+    []
+  );
 
   const handleMergeGenerador = useCallback(async (survivorGeneradorId: string, deleteGeneradorId: string) => {
     const res = await fetch("/api/revisiones/generadores/merge", {

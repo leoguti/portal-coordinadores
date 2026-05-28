@@ -20,6 +20,7 @@ interface Resultado {
   consecutivo: number;
   pdfUrl: string;
   recordId: string;
+  emailAgricultor?: string;
 }
 
 export default function CertificadosPage() {
@@ -173,7 +174,11 @@ export default function CertificadosPage() {
         setErrorGenerar(data.error || "Error generando el certificado");
         return;
       }
-      setResultado(data);
+      // Calcular el email destinatario que efectivamente se usó (misma
+      // lógica del resolver server-side: finca || generador).
+      const emailAgricultor =
+        fincaInfo?.finca?.email || fincaInfo?.generador?.email || "";
+      setResultado({ ...data, emailAgricultor });
     } catch {
       setErrorGenerar("Error de red generando el certificado");
     } finally {
@@ -213,9 +218,31 @@ export default function CertificadosPage() {
                 #{resultado.consecutivo}
               </span>
             </p>
-            <p className="text-gray-500 text-sm mb-6">
-              PDF generado y email enviado al generador y coordinador.
-            </p>
+            {resultado.emailAgricultor ? (
+              <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm font-semibold text-green-900 mb-1">
+                  📧 PDF enviado al agricultor:
+                </p>
+                <p className="text-base font-mono text-green-900 break-all">
+                  {resultado.emailAgricultor}
+                </p>
+                <p className="text-xs text-green-700 mt-2">
+                  También se envió copia al coordinador y a CampoLimpio.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm font-semibold text-red-900 mb-1">
+                  ⚠️ El PDF NO se envió al agricultor por email
+                </p>
+                <p className="text-xs text-red-700">
+                  Ni la finca ni el generador tenían email registrado. Solo se
+                  envió al coordinador y a CampoLimpio. Si necesitas que el
+                  agricultor lo reciba, agrega el email en la finca y vuelve a
+                  generar (puedes anular este si fue un error).
+                </p>
+              </div>
+            )}
             <div className="flex gap-3 justify-center flex-wrap">
               <a
                 href={resultado.pdfUrl}
@@ -426,6 +453,42 @@ export default function CertificadosPage() {
                       No se pudieron cargar los datos de la finca.
                     </p>
                   )}
+                  {fincaInfo && (() => {
+                    const emailFinca = fincaInfo.finca?.email || "";
+                    const emailGen = fincaInfo.generador?.email || "";
+                    const destinatario = emailFinca || emailGen;
+                    const fuente = emailFinca ? "finca" : emailGen ? "generador" : null;
+                    return (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        {destinatario ? (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p className="text-sm font-semibold text-green-800">
+                              📧 El PDF se enviará a:
+                            </p>
+                            <p className="text-sm text-green-900 font-mono mt-1 break-all">
+                              {destinatario}
+                            </p>
+                            <p className="text-xs text-green-700 mt-1">
+                              {fuente === "finca"
+                                ? "(email registrado en la finca)"
+                                : "(email del generador — la finca no tiene email propio)"}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+                            <p className="text-sm font-semibold text-red-800">
+                              ⚠️ NO se enviará al agricultor por email
+                            </p>
+                            <p className="text-xs text-red-700 mt-1">
+                              Ni la finca ni el generador tienen email registrado.
+                              Si quieres que reciba copia, agrega el email antes
+                              de generar.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {fincaInfo && generador && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <button
