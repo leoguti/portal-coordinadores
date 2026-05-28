@@ -33,7 +33,8 @@ export interface BroadcastResult {
  */
 export async function enviarBroadcastTelefono(
   telefono: string,
-  texto: string
+  texto: string,
+  attachments?: string[]
 ): Promise<BroadcastResult> {
   if (!TEXTIT_API_TOKEN) {
     console.warn("[textitNotify] TEXTIT_API_TOKEN no configurado — skip");
@@ -52,6 +53,9 @@ export async function enviarBroadcastTelefono(
     text: texto,
     urns: [urn],
   };
+  // Attachments: array de strings con formato `mimetype:url` (ej.
+  // "application/pdf:https://..."). TextIt los descarga y los sirve al canal.
+  if (attachments && attachments.length > 0) body.attachments = attachments;
   if (TEXTIT_CHANNEL_UUID) body.channel = TEXTIT_CHANNEL_UUID;
 
   try {
@@ -103,13 +107,11 @@ export async function notificarCertAprobado(
   const lineas = [
     `✅ ¡Tu certificado #${p.consecutivo} fue aprobado!`,
     `Coordinador: ${p.nombreCoordinador}`,
+    "",
+    "Adjunto el PDF del certificado.",
   ];
-  if (p.pdfUrl) {
-    lineas.push("", `Descarga el PDF: ${p.pdfUrl}`);
-  } else {
-    lineas.push("", "El PDF te llegará también por email.");
-  }
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const attachments = p.pdfUrl ? [`application/pdf:${p.pdfUrl}`] : undefined;
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"), attachments);
 }
 
 export interface RechazadoCertParams {

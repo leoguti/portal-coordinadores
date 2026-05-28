@@ -140,7 +140,7 @@ export async function POST(
     const municipioDevId = Array.isArray(f.idmunicipiodevolucion)
       ? String((f.idmunicipiodevolucion as string[])[0] || "")
       : "";
-    await generarYAdjuntarPDF(
+    const pdfResult = await generarYAdjuntarPDF(
       {
         recordId: id,
         pdfProps,
@@ -176,6 +176,10 @@ export async function POST(
     );
 
     // Notificar al agricultor por WhatsApp (background — no bloquea respuesta).
+    // Pasamos el URL del Blob para que el broadcast incluya el PDF como
+    // attachment. TextIt descarga el archivo a su CDN antes de los 60s en
+    // que expira el Blob, así que el agricultor recibe el PDF aunque el
+    // Blob ya esté borrado cuando reciba el mensaje.
     after(async () => {
       try {
         const telefono = pdfProps.movilgenerador;
@@ -183,7 +187,7 @@ export async function POST(
           const res = await notificarCertAprobado({
             telefono,
             consecutivo: pdfProps.consecutivo,
-            pdfUrl: null, // El PDF llega por email; no exponemos URL del Blob (efímera).
+            pdfUrl: pdfResult.pdfUrl,
             nombreCoordinador: pdfProps.nombrecoordinador || "Coordinador",
           });
           console.log(`[cert/${id}/aprobar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message}`);
