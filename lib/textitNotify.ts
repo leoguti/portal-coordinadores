@@ -163,3 +163,75 @@ export async function notificarGenerico(
 ): Promise<BroadcastResult> {
   return enviarBroadcastTelefono(p.telefono, p.texto);
 }
+
+// ─── Plantillas Generador / Finca ──────────────────────────────────────────
+
+export async function notificarGeneradorAprobado(p: {
+  telefono: string;
+  nombre: string;
+  nombreCoordinador: string;
+}): Promise<BroadcastResult> {
+  const lineas = [
+    `✅ Tu registro como generador fue aprobado.`,
+    `Nombre: ${p.nombre}`,
+    `Coordinador: ${p.nombreCoordinador}`,
+    "",
+    "Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.",
+  ];
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+}
+
+export async function notificarGeneradorRechazado(p: {
+  telefono: string;
+  nombre: string;
+  motivo: string;
+  nombreCoordinador: string;
+}): Promise<BroadcastResult> {
+  const lineas = [
+    `❌ Tu solicitud de registro como generador fue rechazada.`,
+    `Coordinador: ${p.nombreCoordinador}`,
+    "",
+    `Motivo: ${p.motivo}`,
+    "",
+    "Si tienes dudas, escríbele a tu coordinador.",
+  ];
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+}
+
+export async function notificarFincaAprobada(p: {
+  telefono: string;
+  nombreFinca: string;
+  nombreCoordinador: string;
+  esRevision?: boolean;
+}): Promise<BroadcastResult> {
+  const titulo = p.esRevision
+    ? `✅ Los cambios en tu finca fueron aprobados.`
+    : `✅ Tu nueva finca fue aprobada.`;
+  const lineas = [
+    titulo,
+    `Finca: ${p.nombreFinca}`,
+    `Coordinador: ${p.nombreCoordinador}`,
+    "",
+    p.esRevision
+      ? "Los datos actualizados ya están firmes."
+      : "Ya puedes generar certificados para esta finca.",
+  ];
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+}
+
+export async function notificarFincaRechazada(p: {
+  telefono: string;
+  nombreFinca: string;
+  motivo: string;
+  nombreCoordinador: string;
+}): Promise<BroadcastResult> {
+  const lineas = [
+    `❌ Tu solicitud sobre la finca "${p.nombreFinca}" fue rechazada.`,
+    `Coordinador: ${p.nombreCoordinador}`,
+    "",
+    `Motivo: ${p.motivo}`,
+    "",
+    "Si tienes dudas, escríbele a tu coordinador.",
+  ];
+  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+}

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
@@ -6,6 +6,7 @@ import {
   airtableGetRecord,
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
+import { notificarFincaAprobada } from "@/lib/textitNotify";
 
 export async function POST(
   _request: NextRequest,
@@ -36,6 +37,8 @@ export async function POST(
     }
   }
 
+  const esRevision = estado === "pendiente_revision";
+
   // En pendiente_revision los cambios ya están aplicados (el form los hizo
   // PATCH al enviar). Solo limpiamos cambios_pendientes y marcamos estado.
   const res = await airtablePatchRecord("FINCAS", id, {
@@ -47,5 +50,30 @@ export async function POST(
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: 500 });
   }
+
+  after(async () => {
+    try {
+      // Buscar móvil: primero el de la finca, sino el del generador
+      let tel = String(f.movil || "");
+      if (!tel && Array.isArray(f.generador) && f.generador.length > 0) {
+        const gen = await airtableGetRecord("GENERADORES", String(f.generador[0]));
+        tel = String(gen?.fields?.movil || "");
+      }
+      if (tel) {
+        const coordRec = await airtableGetRecord("Coordinadores", coordId);
+        const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
+        const r = await notificarFincaAprobada({
+          telefono: tel,
+          nombreFinca: String(f.nombre || ""),
+          nombreCoordinador: nombreCoord,
+          esRevision,
+        });
+        console.log(`[finca/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+      }
+    } catch (err) {
+      console.error(`[finca/${id}/aprobar wa] Error:`, err);
+    }
+  });
+
   return NextResponse.json({ ok: true, estado: "aprobado" });
 }

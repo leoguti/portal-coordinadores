@@ -8,7 +8,7 @@
  * coordinador_solicitado; admin/supervisor puede aprobar cualquiera.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
@@ -16,6 +16,12 @@ import {
   airtableGetRecord,
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
+import { notificarGeneradorAprobado } from "@/lib/textitNotify";
+
+async function getCoordinadorNombre(coordId: string): Promise<string> {
+  const rec = await airtableGetRecord("Coordinadores", coordId);
+  return String(rec?.fields?.Name || "Coordinador");
+}
 
 export async function POST(
   _request: NextRequest,
@@ -59,5 +65,24 @@ export async function POST(
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: 500 });
   }
+
+  // Notificar al agricultor por WhatsApp (background, no bloquea respuesta).
+  after(async () => {
+    try {
+      const tel = String(f.movil || "");
+      if (tel) {
+        const nombreCoord = await getCoordinadorNombre(coordId);
+        const r = await notificarGeneradorAprobado({
+          telefono: tel,
+          nombre: String(f.nombre || ""),
+          nombreCoordinador: nombreCoord,
+        });
+        console.log(`[gen/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+      }
+    } catch (err) {
+      console.error(`[gen/${id}/aprobar wa] Error:`, err);
+    }
+  });
+
   return NextResponse.json({ ok: true, estado: "aprobado" });
 }

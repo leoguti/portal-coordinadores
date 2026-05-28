@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
@@ -6,6 +6,7 @@ import {
   airtableGetRecord,
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
+import { notificarGeneradorRechazado } from "@/lib/textitNotify";
 
 export async function POST(
   request: NextRequest,
@@ -59,5 +60,25 @@ export async function POST(
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: 500 });
   }
+
+  after(async () => {
+    try {
+      const tel = String(rec.fields.movil || "");
+      if (tel) {
+        const coordRec = await airtableGetRecord("Coordinadores", coordId);
+        const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
+        const r = await notificarGeneradorRechazado({
+          telefono: tel,
+          nombre: String(rec.fields.nombre || ""),
+          motivo,
+          nombreCoordinador: nombreCoord,
+        });
+        console.log(`[gen/${id}/rechazar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+      }
+    } catch (err) {
+      console.error(`[gen/${id}/rechazar wa] Error:`, err);
+    }
+  });
+
   return NextResponse.json({ ok: true, estado: "rechazado" });
 }
