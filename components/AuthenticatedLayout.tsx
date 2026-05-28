@@ -20,7 +20,10 @@ export default function AuthenticatedLayout({
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    // notranslate evita que Google Translate de Chrome reescriba el DOM y
+    // rompa React con NotFoundError en insertBefore (bug clásico de Translate
+    // interfiriendo con la reconciliación). Aplicado a todo el portal.
+    <div className="flex min-h-screen bg-gray-50 notranslate" translate="no">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Backdrop sólo en móvil cuando el drawer está abierto */}

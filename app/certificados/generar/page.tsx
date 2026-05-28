@@ -267,7 +267,9 @@ export default function CertificadosPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="max-w-2xl mx-auto">
+      {/* translate="no" + class notranslate: bloquea Google Translate de Chrome
+          que reescribe el DOM y rompe React con NotFoundError en insertBefore. */}
+      <div className="max-w-2xl mx-auto notranslate" translate="no">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             Generar certificado
