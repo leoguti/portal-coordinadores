@@ -135,6 +135,17 @@ function buscarNombreFincaEnContexto(
   return m?.nombre || null;
 }
 
+async function nombreCoordinador(coordinadorId: string): Promise<string> {
+  try {
+    const r = await airtableFetch(`/Coordinadores/${coordinadorId}`);
+    if (!r.ok) return "";
+    const d = (await r.json()) as { fields: Record<string, unknown> };
+    return String(d.fields?.Name || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 async function manejarCertNuevo(
   t: EdicionToken,
   body: Record<string, unknown>
@@ -188,12 +199,14 @@ async function manejarCertNuevo(
   );
 
   const fincaNombre = buscarNombreFincaEnContexto(t.contexto, fincaId) || "(finca)";
+  const coordNombre = (await nombreCoordinador(coordinadorId)) || "(coordinador)";
   const total = rigidos + flexibles + metalicos + embalaje;
   const triplelavadoLbl = asString(body.triplelavado) || "PENDIENTE";
   const lugar = asString(body.lugardevolucion) || "(no especificado)";
   const fechaLbl = fechadevolucion;
   const lineas = [
     `• Finca: ${fincaNombre}`,
+    `• Coordinador: ${coordNombre}`,
     `• Rígidos: ${fmtNumKg(rigidos)}`,
     `• Flexibles: ${fmtNumKg(flexibles)}`,
     `• Metálicos: ${fmtNumKg(metalicos)}`,
