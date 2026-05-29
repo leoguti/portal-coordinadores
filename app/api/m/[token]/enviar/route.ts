@@ -177,6 +177,21 @@ async function manejarCertNuevo(
     throw new Error("Finca no autorizada para este link");
   }
 
+  // Verificar que la finca esté aprobada. Si está en pendiente_revision
+  // (porque el agricultor editó datos y el coord aún no aprobó), bloquear
+  // la generación del cert hasta que se apruebe.
+  const fincaRec = await airtableFetch(`/FINCAS/${fincaId}`);
+  if (!fincaRec.ok) {
+    throw new Error("No se pudo verificar el estado de la finca");
+  }
+  const fincaData = (await fincaRec.json()) as { fields: Record<string, unknown> };
+  const fincaEstado = String(fincaData.fields?.estado || "").toLowerCase();
+  if (fincaEstado !== "aprobado") {
+    throw new Error(
+      "Tu finca está en revisión por el coordinador. No puedes generar certificados hasta que apruebe los cambios. Te avisaré por aquí cuando esté lista."
+    );
+  }
+
   const rigidos = asNumber(body.rigidos);
   const flexibles = asNumber(body.flexibles);
   const metalicos = asNumber(body.metalicos);

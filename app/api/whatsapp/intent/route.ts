@@ -47,6 +47,11 @@ function opcionesParaIdentidad(identidad: IdentidadAgricultor): MenuIntent[] {
   if (identidad.rol === "titular") {
     const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
     if (fincasAprobadas.length === 0) {
+      // Si TIENE fincas pero todas en revisión → bloqueado, menú reducido
+      if (identidad.fincas.length > 0) {
+        return ["editar-datos-personales", "contactar-coord"];
+      }
+      // Si NO tiene fincas → puede crear su primera
       return ["crear-finca", "editar-datos-personales", "contactar-coord"];
     }
     return [

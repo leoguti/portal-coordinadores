@@ -19,6 +19,7 @@ interface Finca {
   id: string;
   nombre: string;
   generadorId: string;
+  cultivos: { id: string; nombre: string }[];
 }
 interface FincaCompleta {
   id: string;
@@ -211,6 +212,25 @@ export default function CertNuevoPage({
               Finca: <span className="font-medium text-gray-900">{fincaSeleccionada.nombre}</span>
             </div>
           ) : null}
+
+          {fincaSeleccionada && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3">
+              <p className="text-xs text-emerald-700 font-medium mb-1">
+                🌱 Cultivos registrados en la finca
+              </p>
+              <p className="text-sm text-emerald-900 font-medium">
+                {fincaSeleccionada.cultivos.length > 0
+                  ? fincaSeleccionada.cultivos.map((c) => c.nombre).join(", ")
+                  : "Aún no tienes cultivos registrados"}
+              </p>
+              <p className="text-xs text-emerald-700 mt-2">
+                ¿Necesitas cambiar o agregar cultivos? Vuelve al bot y elige{" "}
+                <strong>&quot;Actualizar datos de la finca&quot;</strong>.
+                Mientras tu coordinador no apruebe los cambios, no podrás
+                generar el certificado.
+              </p>
+            </div>
+          )}
 
           <Field label="Coordinador que te atiende" required>
             <select

@@ -76,23 +76,55 @@ function armarRespuestaTitular(
   const nombreCorto = truncar(generador.nombre, 40);
   const esJuridica = esEmpresa(generador.tipopersona);
 
-  // Sin fincas todavía
+  // Sin fincas todavía o todas en revisión por el coord
   if (fincasAprobadas.length === 0) {
     const saludo = `Hola ${nombreCorto} 👋`;
-    const intro = esJuridica
-      ? `Estás escribiendo como *${nombreCorto}*.\n\nTe falta registrar tu primera finca para poder generar certificados.`
-      : `Te falta registrar tu primera finca para poder generar certificados.`;
-    const opciones: MenuOpcion[] = [
-      { numero: 1, intent: "crear-finca", label: "1️⃣ Registrar mi primera finca" },
-      {
-        numero: 2,
-        intent: "editar-datos-personales",
-        label: esJuridica
-          ? "2️⃣ Actualizar datos de la empresa"
-          : "2️⃣ Actualizar mis datos personales",
-      },
-      { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
-    ];
+    // Caso A: tiene fincas pero todas en pendiente_revision / pendiente
+    const tieneFincasEnRevision = identidad.fincas.length > 0;
+    const nombresFincas = identidad.fincas
+      .map((f) => f.nombre)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(", ");
+    let intro: string;
+    let opciones: MenuOpcion[];
+    if (tieneFincasEnRevision) {
+      const prefijo = esJuridica
+        ? `Estás escribiendo como *${nombreCorto}*.\n\n`
+        : "";
+      intro =
+        `${prefijo}` +
+        `Tu coordinador está revisando ${
+          identidad.fincas.length === 1 ? "tu finca" : "tus fincas"
+        }${nombresFincas ? ` (${nombresFincas})` : ""}.\n\n` +
+        `No puedes generar certificados hasta que apruebe los cambios. Te aviso por aquí cuando esté lista.`;
+      opciones = [
+        {
+          numero: 1,
+          intent: "editar-datos-personales",
+          label: esJuridica
+            ? "1️⃣ Actualizar datos de la empresa"
+            : "1️⃣ Actualizar mis datos personales",
+        },
+        { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
+      ];
+    } else {
+      // Caso B: realmente no tiene fincas
+      intro = esJuridica
+        ? `Estás escribiendo como *${nombreCorto}*.\n\nTe falta registrar tu primera finca para poder generar certificados.`
+        : `Te falta registrar tu primera finca para poder generar certificados.`;
+      opciones = [
+        { numero: 1, intent: "crear-finca", label: "1️⃣ Registrar mi primera finca" },
+        {
+          numero: 2,
+          intent: "editar-datos-personales",
+          label: esJuridica
+            ? "2️⃣ Actualizar datos de la empresa"
+            : "2️⃣ Actualizar mis datos personales",
+        },
+        { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
+      ];
+    }
     return baseResp(identidad, saludo, intro, opciones, generador.nombre);
   }
 

@@ -95,7 +95,12 @@ interface PayloadCertNuevo extends PayloadBase {
   intent: "cert-nuevo";
   finca: DatosFinca | null;
   generador: DatosGenerador | null;
-  fincasDisponibles: { id: string; nombre: string; generadorId: string }[];
+  fincasDisponibles: {
+    id: string;
+    nombre: string;
+    generadorId: string;
+    cultivos: { id: string; nombre: string }[];
+  }[];
 }
 
 interface PayloadEditarFinca extends PayloadBase {
@@ -245,7 +250,12 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         : t.recordId
           ? [t.recordId]
           : [];
-      const fincasDisponibles: { id: string; nombre: string; generadorId: string }[] = [];
+      const fincasDisponibles: {
+        id: string;
+        nombre: string;
+        generadorId: string;
+        cultivos: { id: string; nombre: string }[];
+      }[] = [];
       let fincaPrincipal: DatosFinca | null = null;
       let generadorPrincipal: DatosGenerador | null = null;
       for (const fid of fincaIds) {
@@ -266,6 +276,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
               id: f.id,
               nombre: f.nombre,
               generadorId: genId,
+              cultivos: f.cultivos,
             });
           }
         } else {
@@ -273,6 +284,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
             id: f.id,
             nombre: f.nombre,
             generadorId: generadorPrincipal.id,
+            cultivos: f.cultivos,
           });
         }
       }
