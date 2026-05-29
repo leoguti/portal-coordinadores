@@ -19,6 +19,7 @@ import {
   type IdentidadAgricultor,
 } from "@/lib/whatsappResolver";
 import { crearToken, type Intent } from "@/lib/edicionTokens";
+import { getCultivosMap } from "@/lib/cultivosCache";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 const PORTAL_BASE = process.env.NEXTAUTH_URL || "https://portal.campolimpio.org";
@@ -212,7 +213,7 @@ export async function POST(request: NextRequest) {
     });
 
     const url = urlParaIntent(resolved, token.token);
-    const mensaje_ok = mensajeOkParaIntent(resolved, identidad);
+    const mensaje_ok = await mensajeOkParaIntent(resolved, identidad);
 
     console.log(
       `[whatsapp/intent] tel=${identidad.telefonoNormalizado} rol=${identidad.rol} intent=${resolved} token=${token.token.slice(0, 8)}…`
@@ -236,22 +237,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function mensajeOkParaIntent(
+async function mensajeOkParaIntent(
   intent: Intent,
   identidad: IdentidadAgricultor
-): string {
+): Promise<string> {
   const esEmpresa = (identidad.generador?.tipopersona || "")
     .toLowerCase()
     .includes("juridic");
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
   switch (intent) {
     case "cert-nuevo": {
-      // Si tiene una sola finca aprobada, personalizamos el mensaje para
-      // que el agricultor confirme visualmente cuál finca se va a usar
-      // antes de abrir el formulario.
       if (fincasAprobadas.length === 1) {
         const f = fincasAprobadas[0];
-        return `Vamos a generar tu certificado para la finca *${f.nombre}*.`;
+        const cultivos = await resolverNombresCultivos(f.cultivoIds);
+        const cultivosBloque =
+          cultivos.length > 0
+            ? `\n\n🌱 *Cultivos registrados:*\n${cultivos.map((c) => `• ${c}`).join("\n")}`
+            : "";
+        return `Vamos a generar tu certificado para la finca *${f.nombre}*.${cultivosBloque}`;
       }
       if (fincasAprobadas.length > 1) {
         return `Vamos a generar tu certificado. Tienes ${fincasAprobadas.length} fincas — elige una en el formulario.`;
@@ -272,5 +275,15 @@ function mensajeOkParaIntent(
       return "Vamos a registrar tu nueva finca.";
     case "registro-generador":
       return "Vamos a registrarte como agricultor.";
+  }
+}
+
+async function resolverNombresCultivos(cultivoIds: string[]): Promise<string[]> {
+  if (cultivoIds.length === 0) return [];
+  try {
+    const map = await getCultivosMap();
+    return cultivoIds.map((id) => map.get(id) || "").filter(Boolean);
+  } catch {
+    return [];
   }
 }

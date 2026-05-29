@@ -33,6 +33,9 @@ export interface FincaInfo {
   generadorId: string;
   estado: string;
   completitudOk: boolean;
+  /** IDs de los cultivos linked. El consumer resuelve a nombres con
+   *  getCultivosMap() según necesite. */
+  cultivoIds: string[];
 }
 
 export interface GeneradorInfo {
@@ -65,14 +68,16 @@ async function airtableFetch(path: string): Promise<Record<string, unknown>> {
 function mapFincaRecord(r: { id: string; fields: Record<string, unknown> }): FincaInfo {
   const ff = r.fields;
   const generadorIds = Array.isArray(ff.generador) ? (ff.generador as string[]) : [];
+  const cultivoIds = Array.isArray(ff.cultivos)
+    ? (ff.cultivos as string[]).map(String)
+    : [];
   return {
     id: r.id,
     nombre: String(ff.nombre || "").trim(),
     generadorId: generadorIds[0] || "",
     estado: String(ff.estado || "aprobado"),
-    completitudOk: Boolean(
-      ff.municipio && Array.isArray(ff.cultivos) && ff.cultivos.length > 0
-    ),
+    completitudOk: Boolean(ff.municipio && cultivoIds.length > 0),
+    cultivoIds,
   };
 }
 
