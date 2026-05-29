@@ -200,7 +200,9 @@ function baseResp(
   opciones: MenuOpcion[],
   nombre: string | null
 ): RespuestaIdentificar {
-  const menu_texto = `${saludo}\n\n${intro}\n\n${opciones.map((o) => o.label).join("\n")}`;
+  // El saludo NO se incluye en menu_texto: el flow 30 lo manda por separado
+  // como `saludo_personalizado`. Si se incluyera acá, sale duplicado.
+  const menu_texto = `${intro}\n\n${opciones.map((o) => o.label).join("\n")}`;
   return {
     estado: identidad.estado,
     rol: identidad.rol,
