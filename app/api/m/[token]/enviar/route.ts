@@ -185,6 +185,11 @@ async function manejarCertNuevo(
     throw new Error("El total de kilos debe ser mayor a 0");
   }
 
+  const triplelavado = asString(body.triplelavado);
+  if (!["SI", "NO", "NO APLICA"].includes(triplelavado)) {
+    throw new Error("Indica si hiciste triple lavado");
+  }
+
   const result = await crearRegistroCertificado(
     {
       fincaId,
@@ -194,7 +199,7 @@ async function manejarCertNuevo(
       flexibles,
       metalicos,
       embalaje,
-      triplelavado: asString(body.triplelavado) || "PENDIENTE",
+      triplelavado,
       lugardevolucion: asString(body.lugardevolucion),
       fechadevolucion,
       observaciones: asString(body.observaciones),
@@ -216,7 +221,7 @@ async function manejarCertNuevo(
   const coordContactoWaUrl = coordTel10 ? `wa.me/57${coordTel10}` : "";
   const coordLinea = `• Coordinador: ${coordNombre}`;
   const total = rigidos + flexibles + metalicos + embalaje;
-  const triplelavadoLbl = asString(body.triplelavado) || "PENDIENTE";
+  const triplelavadoLbl = triplelavado;
   const lugar = asString(body.lugardevolucion) || "(no especificado)";
   const fechaLbl = fechadevolucion;
   const lineas = [

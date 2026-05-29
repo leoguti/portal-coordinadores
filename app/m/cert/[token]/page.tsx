@@ -69,7 +69,7 @@ export default function CertNuevoPage({
   const [flexibles, setFlexibles] = useState("");
   const [metalicos, setMetalicos] = useState("");
   const [embalaje, setEmbalaje] = useState("");
-  const [triplelavado, setTriplelavado] = useState<"SI" | "NO" | "NO APLICA">("SI");
+  const [triplelavado, setTriplelavado] = useState<"" | "SI" | "NO" | "NO APLICA">("");
   const [observaciones, setObservaciones] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +111,7 @@ export default function CertNuevoPage({
     if (!lugar.trim()) return "Indica el lugar de devolución";
     if (!fecha) return "Indica la fecha de devolución";
     if (totalKg <= 0) return "El total de kilos debe ser mayor a 0";
+    if (!triplelavado) return "Indica si hiciste triple lavado";
     return null;
   }
 
