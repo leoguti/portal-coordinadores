@@ -134,16 +134,24 @@ export default function EditarGeneradorPage({
     );
   }
 
+  const esEmpresa = (payload.generador.tipopersona || "")
+    .toLowerCase()
+    .includes("juridic");
+  const titulo = esEmpresa
+    ? `Editando datos de la empresa`
+    : `Editando mis datos`;
+  const subtitulo = esEmpresa
+    ? `${payload.generador.nombre} · NIT ${payload.generador.nit}`
+    : `${payload.generador.nombre} · CC ${payload.generador.nit}`;
+
   return (
-    <MagicLinkLayout
-      titulo="Mis datos"
-      subtitulo={`NIT/CC: ${payload.generador.nit}`}
-    >
+    <MagicLinkLayout titulo={titulo} subtitulo={subtitulo}>
       <form onSubmit={onSubmit}>
         <FormCard>
           <p className="text-xs text-gray-500 mb-3">
-            Tu NIT/cédula y tipo de persona no se pueden cambiar desde aquí. Si
-            necesitas corregirlos, escríbele a tu coordinador.
+            {esEmpresa
+              ? "El NIT y el tipo de persona no se pueden cambiar desde aquí. Si necesitas corregirlos, escríbele a tu coordinador."
+              : "Tu cédula y tipo de persona no se pueden cambiar desde aquí. Si necesitas corregirlos, escríbele a tu coordinador."}
           </p>
 
           <Field label="Nombre / Razón social" required>

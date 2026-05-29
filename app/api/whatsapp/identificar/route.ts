@@ -3,16 +3,26 @@
  *
  * Llamado por TextIt al principio del flow `30-agricultor-router`. Recibe el
  * teléfono del agricultor y devuelve:
- *   - estado: conocido_con_fincas / conocido_sin_finca / desconocido
- *   - saludo personalizado (con nombre si lo conocemos)
+ *   - estado: conocido_con_fincas / conocido_sin_finca / desconocido (compat)
+ *   - rol: titular / admin_finca / desconocido
+ *   - saludo personalizado
  *   - menu_texto: el texto del menú listo para mostrar en WhatsApp
  *   - opciones[]: mapping numero → intent (para el siguiente paso /intent)
+ *
+ * Wording rules:
+ *   - "generador" jamás aparece en WhatsApp cuando el titular es persona
+ *     natural — se usa el nombre propio.
+ *   - Para persona jurídica se usa "empresa" + razón social.
+ *   - El admin_finca ve un mensaje explícito que aclara su alcance limitado.
  *
  * Auth: Bearer ${WHATSAPP_BOT_API_KEY}.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { identificarAgricultor } from "@/lib/whatsappResolver";
+import {
+  identificarAgricultor,
+  type IdentidadAgricultor,
+} from "@/lib/whatsappResolver";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 
@@ -20,7 +30,8 @@ interface MenuOpcion {
   numero: number;
   intent:
     | "cert-nuevo"
-    | "editar-datos"
+    | "editar-datos-personales"
+    | "editar-finca"
     | "crear-finca"
     | "registro-generador"
     | "contactar-coord";
@@ -29,6 +40,7 @@ interface MenuOpcion {
 
 interface RespuestaIdentificar {
   estado: "conocido_con_fincas" | "conocido_sin_finca" | "desconocido";
+  rol: "titular" | "admin_finca" | "desconocido";
   telefonoNormalizado: string;
   nombre: string | null;
   saludo_personalizado: string;
@@ -47,66 +59,163 @@ function validateApiKey(request: NextRequest): boolean {
   return auth.replace(/^Bearer\s+/i, "") === WHATSAPP_BOT_API_KEY;
 }
 
-function armarRespuesta(
-  identidad: Awaited<ReturnType<typeof identificarAgricultor>>
+function truncar(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
+function esEmpresa(tipopersona: string): boolean {
+  const t = tipopersona.toLowerCase();
+  return t === "juridica" || t === "jurídica" || t.includes("juridic");
+}
+
+function armarRespuestaTitular(
+  identidad: IdentidadAgricultor
 ): RespuestaIdentificar {
-  const nombre = identidad.generador?.nombre || null;
-  // Usar el nombre completo del generador en el saludo (no solo el primer
-  // token). Truncamos a 40 chars para no romper el formato del mensaje si
-  // es muy largo (ej. razón social con descripciones).
-  const saludoNombre = nombre
-    ? nombre.length > 40
-      ? nombre.slice(0, 40) + "…"
-      : nombre
-    : null;
+  const generador = identidad.generador!;
+  const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
+  const nombreCorto = truncar(generador.nombre, 40);
+  const esJuridica = esEmpresa(generador.tipopersona);
 
-  let opciones: MenuOpcion[] = [];
-  let saludo = "Hola 👋";
-  let intro = "";
-
-  switch (identidad.estado) {
-    case "conocido_con_fincas":
-      saludo = saludoNombre ? `Hola ${saludoNombre} 👋` : "Hola 👋";
-      opciones = [
-        { numero: 1, intent: "cert-nuevo", label: "1️⃣ Generar un certificado" },
-        { numero: 2, intent: "editar-datos", label: "2️⃣ Actualizar mis datos" },
-        { numero: 3, intent: "crear-finca", label: "3️⃣ Agregar otra finca" },
-        { numero: 4, intent: "contactar-coord", label: "4️⃣ Hablar con mi coordinador" },
-      ];
-      intro = "¿Qué necesitas hoy?";
-      break;
-
-    case "conocido_sin_finca":
-      saludo = saludoNombre ? `Hola ${saludoNombre} 👋` : "Hola 👋";
-      opciones = [
-        { numero: 1, intent: "crear-finca", label: "1️⃣ Registrar mi primera finca" },
-        { numero: 2, intent: "editar-datos", label: "2️⃣ Actualizar mis datos" },
-        { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
-      ];
-      intro =
-        "Te falta registrar tu primera finca para poder generar certificados.";
-      break;
-
-    case "desconocido":
-    default:
-      saludo = "Hola 👋";
-      opciones = [
-        { numero: 1, intent: "registro-generador", label: "1️⃣ Registrarme como generador" },
-        { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
-      ];
-      intro = "No te encuentro en nuestro sistema.";
-      break;
+  // Sin fincas todavía
+  if (fincasAprobadas.length === 0) {
+    const saludo = `Hola ${nombreCorto} 👋`;
+    const intro = esJuridica
+      ? `Estás escribiendo como *${nombreCorto}*.\n\nTe falta registrar tu primera finca para poder generar certificados.`
+      : `Te falta registrar tu primera finca para poder generar certificados.`;
+    const opciones: MenuOpcion[] = [
+      { numero: 1, intent: "crear-finca", label: "1️⃣ Registrar mi primera finca" },
+      {
+        numero: 2,
+        intent: "editar-datos-personales",
+        label: esJuridica
+          ? "2️⃣ Actualizar datos de la empresa"
+          : "2️⃣ Actualizar mis datos personales",
+      },
+      { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
+    ];
+    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
   }
 
-  const menu_texto = `${intro}\n\n${opciones.map((o) => o.label).join("\n")}`;
+  // Una sola finca
+  if (fincasAprobadas.length === 1) {
+    const finca = fincasAprobadas[0];
+    const nombreFinca = truncar(finca.nombre || "tu finca", 30);
+    const saludo = `Hola ${nombreCorto} 👋`;
+    const intro = esJuridica
+      ? `Estás escribiendo como *${nombreCorto}*.\nTienes registrada la finca *${nombreFinca}*.\n\n¿Qué quieres hacer?`
+      : `Te tengo registrado con la finca *${nombreFinca}*.\n\n¿Qué quieres hacer?`;
+    const opciones: MenuOpcion[] = [
+      { numero: 1, intent: "cert-nuevo", label: "1️⃣ Solicitar un nuevo certificado" },
+      {
+        numero: 2,
+        intent: "editar-datos-personales",
+        label: esJuridica
+          ? `2️⃣ Actualizar datos de la empresa (${nombreCorto})`
+          : `2️⃣ Actualizar mis datos personales (${nombreCorto})`,
+      },
+      {
+        numero: 3,
+        intent: "editar-finca",
+        label: `3️⃣ Actualizar datos de la finca (${nombreFinca})`,
+      },
+      { numero: 4, intent: "crear-finca", label: "4️⃣ Registrar otra finca" },
+      { numero: 5, intent: "contactar-coord", label: "5️⃣ Hablar con un coordinador" },
+    ];
+    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+  }
+
+  // Varias fincas
+  const saludo = `Hola ${nombreCorto} 👋`;
+  const intro = esJuridica
+    ? `Estás escribiendo como *${nombreCorto}*.\nTienes registradas ${fincasAprobadas.length} fincas.\n\n¿Qué quieres hacer?`
+    : `Tienes registradas ${fincasAprobadas.length} fincas.\n\n¿Qué quieres hacer?`;
+  const opciones: MenuOpcion[] = [
+    { numero: 1, intent: "cert-nuevo", label: "1️⃣ Solicitar un nuevo certificado" },
+    {
+      numero: 2,
+      intent: "editar-datos-personales",
+      label: esJuridica
+        ? `2️⃣ Actualizar datos de la empresa (${nombreCorto})`
+        : `2️⃣ Actualizar mis datos personales (${nombreCorto})`,
+    },
+    {
+      numero: 3,
+      intent: "editar-finca",
+      label: "3️⃣ Actualizar datos de una finca",
+    },
+    { numero: 4, intent: "crear-finca", label: "4️⃣ Registrar otra finca" },
+    { numero: 5, intent: "contactar-coord", label: "5️⃣ Hablar con un coordinador" },
+  ];
+  return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+}
+
+function armarRespuestaAdminFinca(
+  identidad: IdentidadAgricultor
+): RespuestaIdentificar {
+  const finca = identidad.fincas[0];
+  const generador = identidad.generador;
+  const nombreFinca = truncar(finca?.nombre || "tu finca", 30);
+  const nombreGen = generador ? truncar(generador.nombre, 40) : null;
+  const esJuridica = generador ? esEmpresa(generador.tipopersona) : false;
+
+  const saludo = `Hola 👋`;
+  const intro = nombreGen
+    ? esJuridica
+      ? `Eres responsable de la finca *${nombreFinca}*\n(parte de la empresa ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de ${nombreGen}, contacta a la empresa.\n\n¿Qué quieres hacer?`
+      : `Eres responsable de la finca *${nombreFinca}*\n(registrada a nombre de ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de los datos personales del titular, contáctalo a él.\n\n¿Qué quieres hacer?`
+    : `Eres responsable de la finca *${nombreFinca}*.\n\n¿Qué quieres hacer?`;
+
+  const opciones: MenuOpcion[] = [
+    {
+      numero: 1,
+      intent: "cert-nuevo",
+      label: `1️⃣ Solicitar certificado para ${nombreFinca}`,
+    },
+    {
+      numero: 2,
+      intent: "editar-finca",
+      label: `2️⃣ Actualizar datos de ${nombreFinca}`,
+    },
+    { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
+  ];
+  return baseResp(identidad, saludo, intro, opciones, generador?.nombre || null);
+}
+
+function armarRespuestaDesconocido(
+  identidad: IdentidadAgricultor
+): RespuestaIdentificar {
+  const saludo = "Hola 👋";
+  const intro = "No te tengo registrado todavía con este número.\n\n¿Qué quieres hacer?";
+  const opciones: MenuOpcion[] = [
+    { numero: 1, intent: "registro-generador", label: "1️⃣ Registrarme como agricultor" },
+    { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
+  ];
+  return baseResp(identidad, saludo, intro, opciones, null);
+}
+
+function baseResp(
+  identidad: IdentidadAgricultor,
+  saludo: string,
+  intro: string,
+  opciones: MenuOpcion[],
+  nombre: string | null
+): RespuestaIdentificar {
+  const menu_texto = `${saludo}\n\n${intro}\n\n${opciones.map((o) => o.label).join("\n")}`;
   return {
     estado: identidad.estado,
+    rol: identidad.rol,
     telefonoNormalizado: identidad.telefonoNormalizado,
     nombre,
     saludo_personalizado: saludo,
     menu_texto,
     opciones,
   };
+}
+
+function armarRespuesta(identidad: IdentidadAgricultor): RespuestaIdentificar {
+  if (identidad.rol === "titular") return armarRespuestaTitular(identidad);
+  if (identidad.rol === "admin_finca") return armarRespuestaAdminFinca(identidad);
+  return armarRespuestaDesconocido(identidad);
 }
 
 export async function POST(request: NextRequest) {
@@ -127,7 +236,7 @@ export async function POST(request: NextRequest) {
     const identidad = await identificarAgricultor(telefono);
     const respuesta = armarRespuesta(identidad);
     console.log(
-      `[whatsapp/identificar] tel=${respuesta.telefonoNormalizado} estado=${respuesta.estado}`
+      `[whatsapp/identificar] tel=${respuesta.telefonoNormalizado} rol=${respuesta.rol} estado=${respuesta.estado}`
     );
     return NextResponse.json(respuesta);
   } catch (err) {

@@ -33,6 +33,7 @@ interface Payload {
   intent: "editar-finca";
   expiraEn: string;
   finca: Finca;
+  generador: { id: string; nombre: string; tipopersona: string } | null;
 }
 
 export default function EditarFincaPage({
@@ -130,10 +131,27 @@ export default function EditarFincaPage({
     );
   }
 
+  const esEmpresa = (payload.generador?.tipopersona || "")
+    .toLowerCase()
+    .includes("juridic");
+  const contextoTexto = payload.generador
+    ? esEmpresa
+      ? `de la empresa ${payload.generador.nombre}`
+      : `de ${payload.generador.nombre}`
+    : null;
+
   return (
-    <MagicLinkLayout titulo="Actualizar finca" subtitulo={payload.finca.nombre}>
+    <MagicLinkLayout
+      titulo={`Editando finca ${payload.finca.nombre}`}
+      subtitulo={contextoTexto || undefined}
+    >
       <form onSubmit={onSubmit}>
         <FormCard>
+          <p className="text-xs text-gray-500 mb-3">
+            Solo cambias los datos de esta finca. Para cambios{" "}
+            {esEmpresa ? "de los datos de la empresa" : "de tus datos personales"}{" "}
+            usa la opción del menú correspondiente en WhatsApp.
+          </p>
           <Field label="Nombre de la finca" required>
             <input
               type="text"

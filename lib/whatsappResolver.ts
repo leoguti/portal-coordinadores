@@ -1,13 +1,18 @@
 /**
  * Resuelve la identidad del agricultor a partir de su teléfono de WhatsApp.
  *
- * Busca primero en FINCAS.movil (normalizado a 10 dígitos). Si no encuentra,
- * fallback en GENERADORES.movil (un agricultor que aún no tiene fincas).
+ * Reglas (esquema rol — 2026-05-29):
+ *   1. Si el número está en GENERADOR.movil → rol = "titular".
+ *      Trae TODAS las fincas del generador (no solo las que matchean por
+ *      movil), porque el titular es dueño/representante del generador entero.
+ *   2. Si el número NO está en generador pero SÍ en una o más FINCAS.movil
+ *      → rol = "admin_finca". Solo se exponen las fincas matcheadas
+ *      (no las demás del mismo generador). Bloqueado de editar generador.
+ *   3. Caso 1=1 (titular cuyo número también está copiado en la finca):
+ *      gana el rol "titular" por la regla 1.
+ *   4. Si no aparece en ninguna tabla → rol = "desconocido".
  *
- * Devuelve la información necesaria para que el bot arme el menú adaptado:
- *   - conocido_con_fincas: tiene generador + ≥1 finca aprobada
- *   - conocido_sin_finca:  tiene generador pero 0 fincas (o todas pendientes)
- *   - desconocido:         no aparece en ninguna tabla
+ * `estado` se mantiene como compat: derivado de rol + fincas.
  */
 
 import { normalizarMovilCO } from "@/lib/validacionesCO";
@@ -20,11 +25,13 @@ export type EstadoAgricultor =
   | "conocido_sin_finca"
   | "desconocido";
 
+export type RolAgricultor = "titular" | "admin_finca" | "desconocido";
+
 export interface FincaInfo {
   id: string;
   nombre: string;
   generadorId: string;
-  estado: string; // "aprobado" | "pendiente" | etc — campo nuevo del V4
+  estado: string;
   completitudOk: boolean;
 }
 
@@ -32,10 +39,13 @@ export interface GeneradorInfo {
   id: string;
   nombre: string;
   estado: string;
+  /** "natural" | "juridica" (o vacío si legacy). */
+  tipopersona: string;
 }
 
 export interface IdentidadAgricultor {
   estado: EstadoAgricultor;
+  rol: RolAgricultor;
   telefonoNormalizado: string;
   generador: GeneradorInfo | null;
   fincas: FincaInfo[];
@@ -52,27 +62,38 @@ async function airtableFetch(path: string): Promise<Record<string, unknown>> {
   return res.json();
 }
 
-/**
- * Busca fincas cuyo `movil` termina en los últimos 10 dígitos del teléfono dado.
- * Tolerante a formatos sucios en data legacy (espacios, +57, etc).
- */
+function mapFincaRecord(r: { id: string; fields: Record<string, unknown> }): FincaInfo {
+  const ff = r.fields;
+  const generadorIds = Array.isArray(ff.generador) ? (ff.generador as string[]) : [];
+  return {
+    id: r.id,
+    nombre: String(ff.nombre || "").trim(),
+    generadorId: generadorIds[0] || "",
+    estado: String(ff.estado || "aprobado"),
+    completitudOk: Boolean(
+      ff.municipio && Array.isArray(ff.cultivos) && ff.cultivos.length > 0
+    ),
+  };
+}
+
+function mapGeneradorRecord(
+  r: { id: string; fields: Record<string, unknown> }
+): GeneradorInfo {
+  return {
+    id: r.id,
+    nombre: String(r.fields.nombre || "").trim(),
+    estado: String(r.fields.estado || "aprobado"),
+    tipopersona: String(r.fields.tipopersona || "").trim().toLowerCase(),
+  };
+}
+
 async function buscarFincasPorTelefono(tel10: string): Promise<FincaInfo[]> {
   const formula = `RIGHT(REGEX_REPLACE({movil}&'', '[^0-9]', ''), 10) = '${tel10}'`;
   const url = `/FINCAS?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
   const data = (await airtableFetch(url)) as {
     records: Array<{ id: string; fields: Record<string, unknown> }>;
   };
-  return (data.records || []).map((r) => {
-    const ff = r.fields;
-    const generadorIds = Array.isArray(ff.generador) ? (ff.generador as string[]) : [];
-    return {
-      id: r.id,
-      nombre: String(ff.nombre || "").trim(),
-      generadorId: generadorIds[0] || "",
-      estado: String(ff.estado || "aprobado"), // si el campo aún no existe, asumir aprobado
-      completitudOk: Boolean(ff.municipio && Array.isArray(ff.cultivos) && ff.cultivos.length > 0),
-    };
-  });
+  return (data.records || []).map(mapFincaRecord);
 }
 
 async function buscarGeneradorPorTelefono(tel10: string): Promise<GeneradorInfo | null> {
@@ -82,12 +103,7 @@ async function buscarGeneradorPorTelefono(tel10: string): Promise<GeneradorInfo 
     records: Array<{ id: string; fields: Record<string, unknown> }>;
   };
   const r = data.records?.[0];
-  if (!r) return null;
-  return {
-    id: r.id,
-    nombre: String(r.fields.nombre || "").trim(),
-    estado: String(r.fields.estado || "aprobado"),
-  };
+  return r ? mapGeneradorRecord(r) : null;
 }
 
 async function buscarGeneradorPorId(id: string): Promise<GeneradorInfo | null> {
@@ -96,14 +112,19 @@ async function buscarGeneradorPorId(id: string): Promise<GeneradorInfo | null> {
       id: string;
       fields: Record<string, unknown>;
     };
-    return {
-      id: data.id,
-      nombre: String(data.fields.nombre || "").trim(),
-      estado: String(data.fields.estado || "aprobado"),
-    };
+    return mapGeneradorRecord(data);
   } catch {
     return null;
   }
+}
+
+async function listarFincasDeGenerador(generadorId: string): Promise<FincaInfo[]> {
+  const formula = `FIND('${generadorId}', ARRAYJOIN({generador}, ',')) > 0`;
+  const url = `/FINCAS?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+  const data = (await airtableFetch(url)) as {
+    records: Array<{ id: string; fields: Record<string, unknown> }>;
+  };
+  return (data.records || []).map(mapFincaRecord);
 }
 
 export async function identificarAgricultor(
@@ -113,41 +134,52 @@ export async function identificarAgricultor(
   if (!tel10 || tel10.length < 10) {
     return {
       estado: "desconocido",
+      rol: "desconocido",
       telefonoNormalizado: tel10,
       generador: null,
       fincas: [],
     };
   }
 
-  // 1. Buscar por FINCAS.movil
-  const fincas = await buscarFincasPorTelefono(tel10);
+  // Búsqueda paralela en ambas tablas.
+  const [generadorPorMovil, fincasPorMovil] = await Promise.all([
+    buscarGeneradorPorTelefono(tel10),
+    buscarFincasPorTelefono(tel10),
+  ]);
 
-  if (fincas.length > 0) {
-    const generadorId = fincas[0].generadorId;
+  // CASO 1: número en GENERADOR → rol titular, traer todas sus fincas.
+  if (generadorPorMovil) {
+    const todasLasFincas = await listarFincasDeGenerador(generadorPorMovil.id);
+    const fincasAprobadas = todasLasFincas.filter((f) => f.estado === "aprobado");
+    return {
+      estado:
+        fincasAprobadas.length > 0 ? "conocido_con_fincas" : "conocido_sin_finca",
+      rol: "titular",
+      telefonoNormalizado: tel10,
+      generador: generadorPorMovil,
+      fincas: todasLasFincas,
+    };
+  }
+
+  // CASO 2: número solo en FINCAS → rol admin_finca.
+  if (fincasPorMovil.length > 0) {
+    const generadorId = fincasPorMovil[0].generadorId;
     const generador = generadorId ? await buscarGeneradorPorId(generadorId) : null;
-    const fincasAprobadas = fincas.filter((f) => f.estado === "aprobado");
+    const fincasAprobadas = fincasPorMovil.filter((f) => f.estado === "aprobado");
     return {
-      estado: fincasAprobadas.length > 0 ? "conocido_con_fincas" : "conocido_sin_finca",
+      estado:
+        fincasAprobadas.length > 0 ? "conocido_con_fincas" : "conocido_sin_finca",
+      rol: "admin_finca",
       telefonoNormalizado: tel10,
       generador,
-      fincas,
+      fincas: fincasPorMovil,
     };
   }
 
-  // 2. Fallback: buscar por GENERADORES.movil
-  const generador = await buscarGeneradorPorTelefono(tel10);
-  if (generador) {
-    return {
-      estado: "conocido_sin_finca",
-      telefonoNormalizado: tel10,
-      generador,
-      fincas: [],
-    };
-  }
-
-  // 3. Desconocido
+  // CASO 3: nada.
   return {
     estado: "desconocido",
+    rol: "desconocido",
     telefonoNormalizado: tel10,
     generador: null,
     fincas: [],

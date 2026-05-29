@@ -101,6 +101,7 @@ interface PayloadCertNuevo extends PayloadBase {
 interface PayloadEditarFinca extends PayloadBase {
   intent: "editar-finca";
   finca: DatosFinca;
+  generador: { id: string; nombre: string; tipopersona: string } | null;
 }
 
 interface PayloadEditarGenerador extends PayloadBase {
@@ -289,7 +290,23 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
     case "editar-finca": {
       const finca = t.recordId ? await cargarFinca(t.recordId) : null;
       if (!finca) throw new Error("Finca no encontrada");
-      return { ...base, intent: "editar-finca", finca };
+      // Cargar el generador padre para mostrar contexto en el header.
+      let generadorContext: { id: string; nombre: string; tipopersona: string } | null = null;
+      const fincaRec = await getRecord("FINCAS", finca.id);
+      const genId = Array.isArray(fincaRec?.fields.generador)
+        ? String((fincaRec!.fields.generador as string[])[0])
+        : null;
+      if (genId) {
+        const gen = await cargarGenerador(genId);
+        if (gen) {
+          generadorContext = {
+            id: gen.id,
+            nombre: gen.nombre,
+            tipopersona: gen.tipopersona,
+          };
+        }
+      }
+      return { ...base, intent: "editar-finca", finca, generador: generadorContext };
     }
 
     case "editar-generador": {
