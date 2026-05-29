@@ -96,14 +96,25 @@ async function buscarFincasPorTelefono(tel10: string): Promise<FincaInfo[]> {
   return (data.records || []).map(mapFincaRecord);
 }
 
-async function buscarGeneradorPorTelefono(tel10: string): Promise<GeneradorInfo | null> {
+interface GeneradorPorTelefonoRes {
+  info: GeneradorInfo;
+  fincaIds: string[];
+}
+
+async function buscarGeneradorPorTelefono(
+  tel10: string
+): Promise<GeneradorPorTelefonoRes | null> {
   const formula = `RIGHT(REGEX_REPLACE({movil}&'', '[^0-9]', ''), 10) = '${tel10}'`;
   const url = `/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`;
   const data = (await airtableFetch(url)) as {
     records: Array<{ id: string; fields: Record<string, unknown> }>;
   };
   const r = data.records?.[0];
-  return r ? mapGeneradorRecord(r) : null;
+  if (!r) return null;
+  const fincaIds = Array.isArray(r.fields.FINCAS)
+    ? (r.fields.FINCAS as string[]).map(String)
+    : [];
+  return { info: mapGeneradorRecord(r), fincaIds };
 }
 
 async function buscarGeneradorPorId(id: string): Promise<GeneradorInfo | null> {
@@ -118,7 +129,29 @@ async function buscarGeneradorPorId(id: string): Promise<GeneradorInfo | null> {
   }
 }
 
+/**
+ * Trae las fincas dado el array de IDs (típicamente del campo lookup
+ * `FINCAS` del generador padre). Usa `OR(RECORD_ID()='id1', ...)` en
+ * filterByFormula. Reemplaza la fórmula vieja que usaba ARRAYJOIN sobre
+ * el linked record `generador` — esa devolvía el display name, no el ID,
+ * y por eso fallaba silenciosamente.
+ */
+async function traerFincasPorIds(ids: string[]): Promise<FincaInfo[]> {
+  if (ids.length === 0) return [];
+  const orParts = ids.map((id) => `RECORD_ID()='${id}'`).join(",");
+  const formula = `OR(${orParts})`;
+  const url = `/FINCAS?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+  const data = (await airtableFetch(url)) as {
+    records: Array<{ id: string; fields: Record<string, unknown> }>;
+  };
+  return (data.records || []).map(mapFincaRecord);
+}
+
 async function listarFincasDeGenerador(generadorId: string): Promise<FincaInfo[]> {
+  // Fallback usado SOLO en admin_finca (no llega acá normalmente). Misma
+  // fórmula vieja por ahora — bug conocido si el linked record no muestra
+  // el ID. Para titular se usa traerFincasPorIds() vía el campo FINCAS
+  // del generador.
   const formula = `FIND('${generadorId}', ARRAYJOIN({generador}, ',')) > 0`;
   const url = `/FINCAS?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
   const data = (await airtableFetch(url)) as {
@@ -148,15 +181,18 @@ export async function identificarAgricultor(
   ]);
 
   // CASO 1: número en GENERADOR → rol titular, traer todas sus fincas.
+  // Usamos el campo lookup `FINCAS` del generador (array de record IDs)
+  // en vez de filtrar FINCAS por el linked record `generador` — esa fórmula
+  // fallaba porque ARRAYJOIN sobre linked records devuelve display names.
   if (generadorPorMovil) {
-    const todasLasFincas = await listarFincasDeGenerador(generadorPorMovil.id);
+    const todasLasFincas = await traerFincasPorIds(generadorPorMovil.fincaIds);
     const fincasAprobadas = todasLasFincas.filter((f) => f.estado === "aprobado");
     return {
       estado:
         fincasAprobadas.length > 0 ? "conocido_con_fincas" : "conocido_sin_finca",
       rol: "titular",
       telefonoNormalizado: tel10,
-      generador: generadorPorMovil,
+      generador: generadorPorMovil.info,
       fincas: todasLasFincas,
     };
   }
