@@ -208,8 +208,17 @@ async function manejarCertNuevo(
   const coord = await coordinadorInfo(coordinadorId);
   const coordNombre = coord.nombre || "(coordinador)";
   const coordTel10 = coord.telefono ? normalizarMovilCO(coord.telefono) : "";
-  const coordLinea = coordTel10
-    ? `• Coordinador: ${coordNombre} (https://wa.me/57${coordTel10})`
+  const consecutivo = Number(result.fullRecord.fields.consecutivo) || 0;
+  const waMsg = consecutivo
+    ? encodeURIComponent(
+        `Hola, te escribo por mi solicitud de certificado #${consecutivo} (finca ${fincaNombre}).`
+      )
+    : "";
+  const waUrl = coordTel10
+    ? `https://wa.me/57${coordTel10}${waMsg ? `?text=${waMsg}` : ""}`
+    : "";
+  const coordLinea = waUrl
+    ? `• Coordinador: ${coordNombre} (${waUrl})`
     : `• Coordinador: ${coordNombre}`;
   const total = rigidos + flexibles + metalicos + embalaje;
   const triplelavadoLbl = asString(body.triplelavado) || "PENDIENTE";
