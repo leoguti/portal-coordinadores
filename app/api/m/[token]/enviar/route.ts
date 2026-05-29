@@ -121,6 +121,8 @@ interface ResultadoOk {
   /** Resumen humano de los datos enviados — se envía al agricultor por WA
    *  para que pueda revisar errores antes de la aprobación del coord. */
   resumen?: string;
+  /** wa.me corto del coord para contactarlo (solo en cert-nuevo). */
+  coordContactoWaUrl?: string;
 }
 
 function fmtNumKg(n: number): string {
@@ -208,18 +210,11 @@ async function manejarCertNuevo(
   const coord = await coordinadorInfo(coordinadorId);
   const coordNombre = coord.nombre || "(coordinador)";
   const coordTel10 = coord.telefono ? normalizarMovilCO(coord.telefono) : "";
-  const consecutivo = Number(result.fullRecord.fields.consecutivo) || 0;
-  const waMsg = consecutivo
-    ? encodeURIComponent(
-        `Hola, te escribo por mi solicitud de certificado #${consecutivo} (finca ${fincaNombre}).`
-      )
-    : "";
-  const waUrl = coordTel10
-    ? `https://wa.me/57${coordTel10}${waMsg ? `?text=${waMsg}` : ""}`
-    : "";
-  const coordLinea = waUrl
-    ? `• Coordinador: ${coordNombre} (${waUrl})`
-    : `• Coordinador: ${coordNombre}`;
+  // wa.me corto (sin ?text= largo) — el texto pre-relleno inflaba el URL
+  // y se veía horrible en el WhatsApp del agricultor. El agricultor
+  // escribe su propio mensaje al tap.
+  const coordContactoWaUrl = coordTel10 ? `wa.me/57${coordTel10}` : "";
+  const coordLinea = `• Coordinador: ${coordNombre}`;
   const total = rigidos + flexibles + metalicos + embalaje;
   const triplelavadoLbl = asString(body.triplelavado) || "PENDIENTE";
   const lugar = asString(body.lugardevolucion) || "(no especificado)";
@@ -244,6 +239,7 @@ async function manejarCertNuevo(
     mensaje:
       "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
     resumen: lineas.join("\n"),
+    coordContactoWaUrl,
   };
 }
 
@@ -543,6 +539,7 @@ export async function POST(
           tipo,
           consecutivo: result.consecutivo,
           resumen: result.resumen,
+          coordContactoWaUrl: result.coordContactoWaUrl,
         });
         console.log(`[m/enviar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       } catch (err) {

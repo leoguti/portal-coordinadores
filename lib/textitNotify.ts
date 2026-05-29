@@ -277,6 +277,9 @@ export interface SolicitudRecibidaParams {
   /** Resumen de los datos enviados, mostrado al agricultor para que pueda
    *  detectar errores antes de que el coord revise. */
   resumen?: string;
+  /** wa.me corto del coord para contactarlo si detecta un error. Se incluye
+   *  como call-to-action debajo del resumen. */
+  coordContactoWaUrl?: string;
 }
 
 export async function notificarSolicitudRecibida(
@@ -317,9 +320,15 @@ export async function notificarSolicitudRecibida(
   const partes = [titulo];
   if (p.resumen && p.resumen.trim()) {
     partes.push(`📋 *Estos son los datos que registramos:*\n${p.resumen.trim()}`);
-    partes.push(
-      "_Si ves un error, escríbele a tu coordinador antes de que apruebe._"
-    );
+    if (p.coordContactoWaUrl) {
+      partes.push(
+        `_Si ves un error, escríbele a tu coordinador antes:_\n👉 ${p.coordContactoWaUrl}`
+      );
+    } else {
+      partes.push(
+        "_Si ves un error, escríbele a tu coordinador antes de que apruebe._"
+      );
+    }
   }
   partes.push(detalle);
 
