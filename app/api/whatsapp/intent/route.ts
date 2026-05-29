@@ -243,15 +243,31 @@ function mensajeOkParaIntent(
   const esEmpresa = (identidad.generador?.tipopersona || "")
     .toLowerCase()
     .includes("juridic");
+  const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
   switch (intent) {
-    case "cert-nuevo":
+    case "cert-nuevo": {
+      // Si tiene una sola finca aprobada, personalizamos el mensaje para
+      // que el agricultor confirme visualmente cuál finca se va a usar
+      // antes de abrir el formulario.
+      if (fincasAprobadas.length === 1) {
+        const f = fincasAprobadas[0];
+        return `Vamos a generar tu certificado para la finca *${f.nombre}*.`;
+      }
+      if (fincasAprobadas.length > 1) {
+        return `Vamos a generar tu certificado. Tienes ${fincasAprobadas.length} fincas — elige una en el formulario.`;
+      }
       return "Vamos a generar tu certificado.";
-    case "editar-finca":
+    }
+    case "editar-finca": {
+      if (fincasAprobadas.length === 1) {
+        return `Vamos a actualizar los datos de la finca *${fincasAprobadas[0].nombre}*.`;
+      }
       return "Vamos a actualizar los datos de tu finca.";
+    }
     case "editar-generador":
       return esEmpresa
-        ? "Vamos a actualizar los datos de la empresa."
-        : "Vamos a actualizar tus datos personales.";
+        ? `Vamos a actualizar los datos de la empresa *${identidad.generador?.nombre || ""}*.`
+        : `Vamos a actualizar tus datos personales.`;
     case "crear-finca":
       return "Vamos a registrar tu nueva finca.";
     case "registro-generador":
