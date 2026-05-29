@@ -454,7 +454,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
         {nombrefinca ? (
           <View style={s.genRow}>
             <View style={[s.cell, { width: "16%" }]}>
-              <Text style={s.labelText}>Finca</Text>
+              <Text style={s.labelText}>Finca / Dirección</Text>
             </View>
             <View style={[s.cell, { width: "84%" }]}>
               <Text style={s.valueBold}>{nombrefinca}</Text>
