@@ -274,6 +274,9 @@ export interface SolicitudRecibidaParams {
   telefono: string;
   tipo: "cert" | "registro-generador" | "crear-finca" | "editar-finca" | "editar-generador";
   consecutivo?: number;
+  /** Resumen de los datos enviados, mostrado al agricultor para que pueda
+   *  detectar errores antes de que el coord revise. */
+  resumen?: string;
 }
 
 export async function notificarSolicitudRecibida(
@@ -311,7 +314,16 @@ export async function notificarSolicitudRecibida(
       break;
   }
 
-  const texto = `${titulo}\n\n${detalle}`;
+  const partes = [titulo];
+  if (p.resumen && p.resumen.trim()) {
+    partes.push(`📋 *Estos son los datos que registramos:*\n${p.resumen.trim()}`);
+    partes.push(
+      "_Si ves un error, escríbele a tu coordinador antes de que apruebe._"
+    );
+  }
+  partes.push(detalle);
+
+  const texto = partes.join("\n\n");
   return enviarBroadcastTelefono(p.telefono, texto);
 }
 

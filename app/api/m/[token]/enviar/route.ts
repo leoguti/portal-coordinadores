@@ -117,6 +117,22 @@ interface ResultadoOk {
   mensaje: string;
   /** Consecutivo del cert recién creado (solo aplica a cert-nuevo). */
   consecutivo?: number;
+  /** Resumen humano de los datos enviados — se envía al agricultor por WA
+   *  para que pueda revisar errores antes de la aprobación del coord. */
+  resumen?: string;
+}
+
+function fmtNumKg(n: number): string {
+  return `${n} kg`;
+}
+
+function buscarNombreFincaEnContexto(
+  contexto: Record<string, unknown>,
+  fincaId: string
+): string | null {
+  const fincas = asArray<{ id: string; nombre: string }>(contexto.fincas);
+  const m = fincas.find((f) => f.id === fincaId);
+  return m?.nombre || null;
 }
 
 async function manejarCertNuevo(
@@ -171,6 +187,22 @@ async function manejarCertNuevo(
     }
   );
 
+  const fincaNombre = buscarNombreFincaEnContexto(t.contexto, fincaId) || "(finca)";
+  const total = rigidos + flexibles + metalicos + embalaje;
+  const triplelavadoLbl = asString(body.triplelavado) || "PENDIENTE";
+  const lugar = asString(body.lugardevolucion) || "(no especificado)";
+  const fechaLbl = fechadevolucion;
+  const lineas = [
+    `• Finca: ${fincaNombre}`,
+    `• Rígidos: ${fmtNumKg(rigidos)}`,
+    `• Flexibles: ${fmtNumKg(flexibles)}`,
+    `• Metálicos: ${fmtNumKg(metalicos)}`,
+    `• Embalaje: ${fmtNumKg(embalaje)}`,
+    `• Total: ${fmtNumKg(total)}`,
+    `• Triple lavado: ${triplelavadoLbl}`,
+    `• Devolución: ${lugar}`,
+    `• Fecha devolución: ${fechaLbl}`,
+  ];
   return {
     ok: true,
     intent: "cert-nuevo",
@@ -178,6 +210,7 @@ async function manejarCertNuevo(
     consecutivo: Number(result.fullRecord.fields.consecutivo) || undefined,
     mensaje:
       "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
+    resumen: lineas.join("\n"),
   };
 }
 
@@ -218,12 +251,21 @@ async function manejarEditarFinca(
     solicitud_origen: "whatsapp",
   });
 
+  const lineas: string[] = [];
+  if ("nombre" in cambios) lineas.push(`• Nombre: ${cambios.nombre}`);
+  if ("movil" in cambios) lineas.push(`• Móvil: ${cambios.movil}`);
+  if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
+  if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
+  if ("cultivos" in cambios)
+    lineas.push(`• Cultivos: ${(cambios.cultivos as string[]).length} seleccionados`);
+
   return {
     ok: true,
     intent: "editar-finca",
     recordId: t.recordId,
     mensaje:
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
+    resumen: lineas.join("\n"),
   };
 }
 
@@ -259,12 +301,22 @@ async function manejarEditarGenerador(
     solicitud_origen: "whatsapp",
   });
 
+  const lineas: string[] = [];
+  if ("nombre" in cambios) lineas.push(`• Nombre: ${cambios.nombre}`);
+  if ("tipo" in cambios) lineas.push(`• Tipo actividad: ${cambios.tipo}`);
+  if ("direccion_sede" in cambios)
+    lineas.push(`• Dirección: ${cambios.direccion_sede || "(vacía)"}`);
+  if ("movil" in cambios) lineas.push(`• Móvil: ${cambios.movil}`);
+  if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
+  if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
+
   return {
     ok: true,
     intent: "editar-generador",
     recordId: t.recordId,
     mensaje:
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
+    resumen: lineas.join("\n"),
   };
 }
 
@@ -295,12 +347,19 @@ async function manejarCrearFinca(
   if (cultivos.length > 0) fields.cultivos = cultivos;
 
   const created = await createRecord("FINCAS", fields);
+  const lineas = [
+    `• Nombre finca: ${nombre}`,
+    `• Móvil: ${movil}`,
+  ];
+  if (email) lineas.push(`• Email: ${email}`);
+  if (cultivos.length > 0) lineas.push(`• Cultivos: ${cultivos.length} seleccionados`);
   return {
     ok: true,
     intent: "crear-finca",
     recordId: created.id,
     mensaje:
       "Solicitud enviada. Tu coordinador aprobará la finca antes de que puedas generar certificados.",
+    resumen: lineas.join("\n"),
   };
 }
 
@@ -363,12 +422,25 @@ async function manejarRegistroGenerador(
     await createRecord("FINCAS", fincaFields);
   }
 
+  const lineas = [
+    `• Nombre / razón social: ${nombre}`,
+    `• Cédula / NIT: ${nit}`,
+    `• Tipo persona: ${tipopersona}`,
+    `• Tipo actividad: ${tipo}`,
+  ];
+  if (direccion) lineas.push(`• Dirección: ${direccion}`);
+  lineas.push(`• Móvil: ${movil}`);
+  if (email) lineas.push(`• Email: ${email}`);
+  if (fincaBody && asString(fincaBody.nombre)) {
+    lineas.push(`• Primera finca: ${asString(fincaBody.nombre)}`);
+  }
   return {
     ok: true,
     intent: "registro-generador",
     recordId: created.id,
     mensaje:
       "Solicitud de registro enviada. Tu coordinador la aprobará para que puedas empezar a generar certificados.",
+    resumen: lineas.join("\n"),
   };
 }
 
@@ -437,6 +509,7 @@ export async function POST(
           telefono: t.telefonoValidado,
           tipo,
           consecutivo: result.consecutivo,
+          resumen: result.resumen,
         });
         console.log(`[m/enviar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       } catch (err) {
