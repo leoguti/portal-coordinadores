@@ -1,22 +1,43 @@
 /**
  * Helper para mandar mensajes de WhatsApp al agricultor fuera de flow,
- * vía la API de TextIt (`POST /api/v2/broadcasts.json`).
+ * vía la API de TextIt.
  *
- * Lo usan los endpoints /aprobar, /rechazar, /anular para avisar al
- * agricultor el resultado de su solicitud. Falla silencioso (loggea pero
- * no rompe) — la notificación es nice-to-have, no debe bloquear la acción
- * principal.
+ * Dos vías:
+ *   1) `enviarBroadcastTelefono` — `POST /api/v2/broadcasts.json`.
+ *      Solo funciona dentro del 24h. Se usa para confirmaciones inmediatas
+ *      (notificarSolicitudRecibida) donde el agricultor acaba de escribir.
+ *
+ *   2) `enviarAvisoActualizacionSolicitud` — `POST /api/v2/flow_starts.json`,
+ *      dispara el flow `31-aviso-cierre` que internamente decide:
+ *        - dentro del 24h → manda texto libre (fallback del nodo)
+ *        - fuera del 24h → manda template aprobado `actualizacion_solicitud`
+ *      Esto es OBLIGATORIO para avisos de cierre (aprobado/rechazado/anulado)
+ *      porque el agricultor puede no haber escrito al bot en >24h.
+ *
+ *      ¿Por qué un flow y no la API directa? La API pública de TextIt
+ *      (BroadcastWriteSerializer) NO acepta `template` ni `template_variables`
+ *      — esos campos del modelo Broadcast son privados a la UI. La única
+ *      forma de disparar una plantilla aprobada por API es vía flow que
+ *      tenga el nodo "Send WhatsApp Template" configurado.
+ *
+ * El flow `31-aviso-cierre` tiene un único nodo "Send Message" con la
+ * plantilla `actualizacion_solicitud` (es) seleccionada y 3 variables
+ * leyendo `@trigger.params.var1`, `@trigger.params.var2`, `@trigger.params.var3`.
  *
  * Configuración:
- *   TEXTIT_API_TOKEN   — bearer de la cuenta de TextIt
- *   TEXTIT_API_URL     — default https://textit.com/api/v2
+ *   TEXTIT_API_TOKEN              — bearer de la cuenta de TextIt
+ *   TEXTIT_API_URL                — default https://textit.com/api/v2
  *   TEXTIT_CHANNEL_UUID (opcional) — para forzar canal específico
- *                                    (WhatsApp Business vs Telegram)
+ *   TEXTIT_FLOW_AVISO_CIERRE_UUID — UUID del flow `31-aviso-cierre`
+ *
+ * Falla silencioso (loggea pero no rompe) — la notificación es nice-to-have,
+ * no debe bloquear la acción principal.
  */
 
 const TEXTIT_API_TOKEN = process.env.TEXTIT_API_TOKEN;
 const TEXTIT_API_URL = (process.env.TEXTIT_API_URL || "https://textit.com/api/v2").replace(/\/$/, "");
 const TEXTIT_CHANNEL_UUID = process.env.TEXTIT_CHANNEL_UUID || "";
+const TEXTIT_FLOW_AVISO_CIERRE_UUID = process.env.TEXTIT_FLOW_AVISO_CIERRE_UUID || "";
 
 export interface BroadcastResult {
   ok: boolean;
@@ -92,6 +113,93 @@ export async function enviarBroadcastTelefono(
   }
 }
 
+/**
+ * Dispara el flow `31-aviso-cierre` en TextIt, que envía la plantilla
+ * aprobada `actualizacion_solicitud` (UTILITY, es) al agricultor. Funciona
+ * dentro y fuera del 24h:
+ *   - Dentro del 24h, el nodo del flow tiene texto libre como fallback.
+ *   - Fuera del 24h, TextIt manda el template aprobado a 360Dialog.
+ *
+ * Variables del template (cuerpo aprobado por Meta):
+ *   {{1}} = descriptor de la solicitud (ej. "#1234 de certificado",
+ *           "de registro como generador", "de nueva finca \"Las Flores\"")
+ *   {{2}} = estado en participio (ej. "aprobada", "rechazada", "anulada")
+ *   {{3}} = detalle libre (ej. "Descarga el PDF: https://...",
+ *           "Motivo: faltó foto", "Ya puedes generar certificados...")
+ *
+ * Si TEXTIT_FLOW_AVISO_CIERRE_UUID no está configurado, retorna ok:false
+ * (útil para entornos dev/test).
+ */
+export async function enviarAvisoActualizacionSolicitud(
+  telefono: string,
+  var1: string,
+  var2: string,
+  var3: string
+): Promise<BroadcastResult> {
+  if (!TEXTIT_API_TOKEN) {
+    console.warn("[textitNotify] TEXTIT_API_TOKEN no configurado — skip");
+    return { ok: false, message: "TEXTIT_API_TOKEN no configurado" };
+  }
+  if (!TEXTIT_FLOW_AVISO_CIERRE_UUID) {
+    console.warn(
+      "[textitNotify] TEXTIT_FLOW_AVISO_CIERRE_UUID no configurado — skip"
+    );
+    return {
+      ok: false,
+      message: "TEXTIT_FLOW_AVISO_CIERRE_UUID no configurado",
+    };
+  }
+  const tel10 = telefono.replace(/\D/g, "").slice(-10);
+  if (tel10.length !== 10) {
+    return { ok: false, message: `Teléfono inválido: ${telefono}` };
+  }
+  // TextIt rechaza el "+" en URNs (mismo motivo que en broadcasts).
+  const urn = `whatsapp:57${tel10}`;
+
+  const body: Record<string, unknown> = {
+    flow: TEXTIT_FLOW_AVISO_CIERRE_UUID,
+    urns: [urn],
+    restart_participants: true,
+    params: {
+      var1,
+      var2,
+      var3,
+    },
+  };
+
+  try {
+    const r = await fetch(`${TEXTIT_API_URL}/flow_starts.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${TEXTIT_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error(
+        `[textitNotify] flow_starts falló (${r.status}):`,
+        JSON.stringify(data).slice(0, 300)
+      );
+      return {
+        ok: false,
+        message: `TextIt ${r.status}: ${JSON.stringify(data).slice(0, 100)}`,
+      };
+    }
+    return {
+      ok: true,
+      message: "Flow aviso-cierre disparado",
+    };
+  } catch (err) {
+    console.error("[textitNotify] Error flow_starts:", err);
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 // ─── Plantillas ────────────────────────────────────────────────────────────
 
 export interface AprobadoCertParams {
@@ -104,20 +212,16 @@ export interface AprobadoCertParams {
 export async function notificarCertAprobado(
   p: AprobadoCertParams
 ): Promise<BroadcastResult> {
-  // NO usar attachments en broadcast (TextIt los rechaza por su forma de
-  // procesar archivos remotos). En cambio, incluimos el link del PDF como
-  // última línea — WhatsApp genera preview clickeable y al ser R2 el
-  // enlace es permanente.
-  const lineas = [
-    `✅ ¡Tu certificado #${p.consecutivo} fue aprobado!`,
-    `Coordinador: ${p.nombreCoordinador}`,
-  ];
-  if (p.pdfUrl) {
-    lineas.push("", "📄 Descarga el PDF:", p.pdfUrl);
-  } else {
-    lineas.push("", "El PDF te llegará también por email.");
-  }
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  // Vía flow `31-aviso-cierre` para que TextIt mande template fuera del 24h.
+  // Wording del template (aprobado en Meta):
+  //   "Tu solicitud {{1}} fue {{2}}.\n\n{{3}}"
+  const var1 = `#${p.consecutivo} de certificado`;
+  const var2 = "aprobada";
+  const detalle = p.pdfUrl
+    ? `Descarga el PDF: ${p.pdfUrl}`
+    : "El PDF te llegará también por email.";
+  const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export interface RechazadoCertParams {
@@ -130,17 +234,12 @@ export interface RechazadoCertParams {
 export async function notificarCertRechazado(
   p: RechazadoCertParams
 ): Promise<BroadcastResult> {
-  const lineas = [
-    p.consecutivo
-      ? `❌ Tu solicitud de certificado #${p.consecutivo} fue rechazada.`
-      : "❌ Tu solicitud de certificado fue rechazada.",
-    `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    `Motivo: ${p.motivo}`,
-    "",
-    "Si necesitas más información, escríbele a tu coordinador.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = p.consecutivo
+    ? `#${p.consecutivo} de certificado`
+    : "de certificado";
+  const var2 = "rechazada";
+  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si necesitas más información, escríbele a tu coordinador.`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export interface AnuladoCertParams {
@@ -153,15 +252,10 @@ export interface AnuladoCertParams {
 export async function notificarCertAnulado(
   p: AnuladoCertParams
 ): Promise<BroadcastResult> {
-  const lineas = [
-    `⚠️ Tu certificado #${p.consecutivo} fue ANULADO.`,
-    `Por: ${p.nombreCoordinador}`,
-    "",
-    `Motivo: ${p.motivo}`,
-    "",
-    "Este certificado ya no es válido. Si necesitas uno nuevo, contacta a tu coordinador.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = `#${p.consecutivo} de certificado`;
+  const var2 = "anulada";
+  const var3 = `Motivo: ${p.motivo}. Por: ${p.nombreCoordinador}. Este certificado ya no es válido. Si necesitas uno nuevo, contacta a tu coordinador.`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export interface GenericoParams {
@@ -228,14 +322,10 @@ export async function notificarGeneradorAprobado(p: {
   nombre: string;
   nombreCoordinador: string;
 }): Promise<BroadcastResult> {
-  const lineas = [
-    `✅ Tu registro como generador fue aprobado.`,
-    `Nombre: ${p.nombre}`,
-    `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    "Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = "de registro como generador";
+  const var2 = "aprobada";
+  const var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export async function notificarGeneradorRechazado(p: {
@@ -244,15 +334,10 @@ export async function notificarGeneradorRechazado(p: {
   motivo: string;
   nombreCoordinador: string;
 }): Promise<BroadcastResult> {
-  const lineas = [
-    `❌ Tu solicitud de registro como generador fue rechazada.`,
-    `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    `Motivo: ${p.motivo}`,
-    "",
-    "Si tienes dudas, escríbele a tu coordinador.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = "de registro como generador";
+  const var2 = "rechazada";
+  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export async function notificarFincaAprobada(p: {
@@ -261,19 +346,15 @@ export async function notificarFincaAprobada(p: {
   nombreCoordinador: string;
   esRevision?: boolean;
 }): Promise<BroadcastResult> {
-  const titulo = p.esRevision
-    ? `✅ Los cambios en tu finca fueron aprobados.`
-    : `✅ Tu nueva finca fue aprobada.`;
-  const lineas = [
-    titulo,
-    `Finca: ${p.nombreFinca}`,
-    `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    p.esRevision
-      ? "Los datos actualizados ya están firmes."
-      : "Ya puedes generar certificados para esta finca.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = p.esRevision
+    ? `de cambios en la finca "${p.nombreFinca}"`
+    : `de nueva finca "${p.nombreFinca}"`;
+  const var2 = "aprobada";
+  const detalle = p.esRevision
+    ? "Los datos actualizados ya están firmes."
+    : "Ya puedes generar certificados para esta finca.";
+  const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
 
 export async function notificarFincaRechazada(p: {
@@ -281,14 +362,12 @@ export async function notificarFincaRechazada(p: {
   nombreFinca: string;
   motivo: string;
   nombreCoordinador: string;
+  esRevision?: boolean;
 }): Promise<BroadcastResult> {
-  const lineas = [
-    `❌ Tu solicitud sobre la finca "${p.nombreFinca}" fue rechazada.`,
-    `Coordinador: ${p.nombreCoordinador}`,
-    "",
-    `Motivo: ${p.motivo}`,
-    "",
-    "Si tienes dudas, escríbele a tu coordinador.",
-  ];
-  return enviarBroadcastTelefono(p.telefono, lineas.join("\n"));
+  const var1 = p.esRevision
+    ? `de cambios en la finca "${p.nombreFinca}"`
+    : `de nueva finca "${p.nombreFinca}"`;
+  const var2 = "rechazada";
+  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
+  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
 }
