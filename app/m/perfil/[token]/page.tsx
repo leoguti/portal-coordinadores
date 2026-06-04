@@ -52,6 +52,7 @@ interface Payload {
   fincas: Finca[];
   coordinadores: Coordinador[];
   coordinadorSugerido: { id: string; nombre: string } | null;
+  hayCambiosEnRevision: boolean;
 }
 
 interface MunicipioVal {
@@ -263,6 +264,28 @@ export default function PerfilPage({
   return (
     <MagicLinkLayout titulo={tituloPagina} subtitulo={subtitulo}>
       <form onSubmit={onSubmit}>
+        {/* AVISO: cambios requieren aprobación del coordinador */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+          <p className="text-sm text-blue-900">
+            <strong>📋 Importante:</strong> los cambios que hagas aquí{" "}
+            <strong>no se aplican de inmediato</strong>. Primero tu
+            coordinador los revisa, y solo cuando los apruebe quedan firmes.
+            Si los rechaza, vuelven a los datos anteriores.
+          </p>
+        </div>
+
+        {/* AVISO: hay cambios pendientes de aprobación */}
+        {payload.hayCambiosEnRevision && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+            <p className="text-sm text-amber-900">
+              <strong>⏳ Ya enviaste cambios que tu coordinador está
+              revisando.</strong>{" "}
+              Lo que ves abajo incluye esos cambios pendientes. Si los editas
+              de nuevo, vas a reemplazar lo que está en revisión.
+            </p>
+          </div>
+        )}
+
         {/* CARD EMPRESA */}
         <FormCard>
           <button
@@ -543,7 +566,7 @@ export default function PerfilPage({
 
         <StickyBottomButton loading={submitting}>
           {tieneCambios
-            ? "Guardar todos los cambios"
+            ? "Enviar cambios para aprobación"
             : "Toca \"Editar\" en cualquier sección para empezar"}
         </StickyBottomButton>
       </form>

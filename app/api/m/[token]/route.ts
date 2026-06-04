@@ -122,6 +122,10 @@ interface PayloadEditarPerfil extends PayloadBase {
   generador: DatosGenerador;
   fincas: DatosFinca[];
   coordinadorSugerido: { id: string; nombre: string } | null;
+  /** True si alguna parte (empresa o alguna finca) tiene cambios_pendientes
+   *  en revisión por el coordinador. La página lo usa para avisar al
+   *  agricultor que sus últimos cambios todavía no están firmes. */
+  hayCambiosEnRevision: boolean;
 }
 
 interface PayloadCrearFinca extends PayloadBase {
@@ -534,6 +538,21 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         const f = await cargarFinca(fid);
         if (f) fincas.push(f);
       }
+      // Detectar si alguno ya tiene cambios en revisión (campo
+      // cambios_pendientes con JSON válido). Para la advertencia visual.
+      const genRaw = await getRecord("GENERADORES", generador.id);
+      const empresaPendiente =
+        Object.keys(diffPendientes(genRaw?.fields.cambios_pendientes)).length >
+        0;
+      let fincaPendiente = false;
+      for (const fid of fincaIds) {
+        const fr = await getRecord("FINCAS", fid);
+        if (Object.keys(diffPendientes(fr?.fields.cambios_pendientes)).length > 0) {
+          fincaPendiente = true;
+          break;
+        }
+      }
+      const hayCambiosEnRevision = empresaPendiente || fincaPendiente;
       const [coordinadores, coordinadorSugerido] = await Promise.all([
         getCoordinadoresActivos(),
         coordinadorSugeridoParaGenerador(generador.id),
@@ -545,6 +564,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         fincas,
         coordinadores,
         coordinadorSugerido,
+        hayCambiosEnRevision,
       };
     }
 
