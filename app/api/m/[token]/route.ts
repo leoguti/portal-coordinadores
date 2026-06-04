@@ -171,7 +171,13 @@ async function cargarFinca(id: string): Promise<DatosFinca | null> {
   const f = await getRecord("FINCAS", id);
   if (!f) return null;
   const ff = f.fields;
-  const diff = diffPendientes(ff.cambios_pendientes);
+  // Solo aplicar el diff si el record realmente está en revisión.
+  // Hay records con cambios_pendientes residual de antes del refactor.
+  const estado = String(ff.estado || "");
+  const diff =
+    estado === "pendiente_revision"
+      ? diffPendientes(ff.cambios_pendientes)
+      : {};
   const nombre = String(("nombre" in diff ? diff.nombre : ff.nombre) || "");
   const movil = String(("movil" in diff ? diff.movil : ff.movil) || "");
   const email = String(("email" in diff ? diff.email : ff.email) || "");
@@ -316,7 +322,11 @@ async function cargarGenerador(id: string): Promise<DatosGenerador | null> {
   const g = await getRecord("GENERADORES", id);
   if (!g) return null;
   const gf = g.fields;
-  const diff = diffPendientes(gf.cambios_pendientes);
+  const estado = String(gf.estado || "");
+  const diff =
+    estado === "pendiente_revision"
+      ? diffPendientes(gf.cambios_pendientes)
+      : {};
   const nombre = String(("nombre" in diff ? diff.nombre : gf.nombre) || "");
   const tipo = String(("tipo" in diff ? diff.tipo : gf.tipo) || "");
   const direccion = String(
@@ -538,16 +548,24 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         const f = await cargarFinca(fid);
         if (f) fincas.push(f);
       }
-      // Detectar si alguno ya tiene cambios en revisión (campo
-      // cambios_pendientes con JSON válido). Para la advertencia visual.
+      // Detectar si alguno ya tiene cambios en revisión. Importante:
+      // solo cuenta si el estado del record es pendiente_revision —
+      // hay registros viejos con cambios_pendientes residual (de antes
+      // del refactor de staging) cuyo estado quedó en aprobado.
       const genRaw = await getRecord("GENERADORES", generador.id);
+      const genEstado = String(genRaw?.fields.estado || "");
       const empresaPendiente =
+        genEstado === "pendiente_revision" &&
         Object.keys(diffPendientes(genRaw?.fields.cambios_pendientes)).length >
-        0;
+          0;
       let fincaPendiente = false;
       for (const fid of fincaIds) {
         const fr = await getRecord("FINCAS", fid);
-        if (Object.keys(diffPendientes(fr?.fields.cambios_pendientes)).length > 0) {
+        const fEstado = String(fr?.fields.estado || "");
+        if (
+          fEstado === "pendiente_revision" &&
+          Object.keys(diffPendientes(fr?.fields.cambios_pendientes)).length > 0
+        ) {
           fincaPendiente = true;
           break;
         }
