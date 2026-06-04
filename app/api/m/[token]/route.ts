@@ -114,6 +114,7 @@ interface PayloadEditarFinca extends PayloadBase {
 interface PayloadEditarGenerador extends PayloadBase {
   intent: "editar-generador";
   generador: DatosGenerador;
+  coordinadorSugerido: { id: string; nombre: string } | null;
 }
 
 interface PayloadCrearFinca extends PayloadBase {
@@ -226,6 +227,39 @@ async function coordinadorSugeridoParaFinca(
       ? String(nombreArr[0] || "")
       : String(nombreArr || "");
     return { id, nombre };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Devuelve el coord del último cert APROBADO de cualquier finca del
+ * generador. Sirve para sugerir quién debería revisar cambios al
+ * generador (modelo: el coord que más le trabaja). Null si no tiene
+ * historial.
+ */
+async function coordinadorSugeridoParaGenerador(
+  generadorId: string
+): Promise<{ id: string; nombre: string } | null> {
+  try {
+    const gen = await getRecord("GENERADORES", generadorId);
+    if (!gen) return null;
+    // Reverse-lookup: campo FINCAS en GENERADORES (ya usado por
+    // whatsappResolver) — array de record IDs de las fincas hijas.
+    const fincaIds = Array.isArray(gen.fields.FINCAS)
+      ? (gen.fields.FINCAS as string[]).map(String)
+      : [];
+    if (fincaIds.length === 0) return null;
+    // Pedimos el sugerido de cada finca en paralelo, tomamos el primero
+    // que devuelva algo. Como cada uno ya viene ordenado por fecha desc
+    // dentro de su finca, esto da el coord del último cert aprobado del
+    // generador en cualquiera de sus fincas. Para máxima precisión
+    // habría que combinar todos y reordenar; en la práctica el primer
+    // resultado coincide en la mayoría de casos (1 coord por generador).
+    const resultados = await Promise.all(
+      fincaIds.map((fid) => coordinadorSugeridoParaFinca(fid))
+    );
+    return resultados.find((r) => r !== null) || null;
   } catch {
     return null;
   }
@@ -411,7 +445,17 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
     case "editar-generador": {
       const generador = t.recordId ? await cargarGenerador(t.recordId) : null;
       if (!generador) throw new Error("Generador no encontrado");
-      return { ...base, intent: "editar-generador", generador };
+      const [coordinadores, coordinadorSugerido] = await Promise.all([
+        getCoordinadoresActivos(),
+        coordinadorSugeridoParaGenerador(generador.id),
+      ]);
+      return {
+        ...base,
+        intent: "editar-generador",
+        generador,
+        coordinadores,
+        coordinadorSugerido,
+      };
     }
 
     case "crear-finca": {

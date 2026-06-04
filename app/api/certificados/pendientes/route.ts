@@ -247,7 +247,7 @@ export async function GET(request: Request) {
     }
 
     if (tipo === "generadores") {
-      const filtros = [`{estado}='pendiente'`];
+      const filtros = [`OR({estado}='pendiente', {estado}='pendiente_revision')`];
       if (coordinadorId) {
         filtros.push(
           `FIND('${coordinadorId}', ARRAYJOIN({coordinador_solicitado})) > 0`

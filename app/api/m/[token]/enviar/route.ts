@@ -336,6 +336,11 @@ async function manejarEditarGenerador(
     throw new Error("No se enviaron cambios");
   }
 
+  const coordinadorId = asString(body.coordinadorId);
+  if (!coordinadorId) {
+    throw new Error("Falta coordinadorId que revisará el cambio");
+  }
+
   const cambiosPendientes = {
     cambios,
     enviadoEn: nowIso(),
@@ -348,6 +353,7 @@ async function manejarEditarGenerador(
     cambios_pendientes: JSON.stringify(cambiosPendientes),
     fecha_solicitud: nowIso(),
     solicitud_origen: "whatsapp",
+    coordinador_solicitado: [coordinadorId],
   });
 
   const lineas: string[] = [];
