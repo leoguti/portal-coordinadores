@@ -24,6 +24,7 @@ interface CertItem {
   coordinadorNombre: string;
   generadorNombre: string;
   generadorCedula: string;
+  generadorTipoPersona: string;
   fincaNombre: string;
   municipioDevolucion: string;
   createdTime: string;
@@ -307,7 +308,14 @@ function CertCard({
             #{c.consecutivo || "—"} · {c.generadorNombre || "Sin nombre"}
           </h3>
           <div className="text-xs text-gray-700 space-y-0.5">
-            <p><span className="text-gray-500">Cédula:</span> {c.generadorCedula || "—"}</p>
+            <p>
+              <span className="text-gray-500">
+                {(c.generadorTipoPersona || "").toLowerCase().includes("juridic")
+                  ? "NIT:"
+                  : "Cédula:"}
+              </span>{" "}
+              {c.generadorCedula || "—"}
+            </p>
             <p><span className="text-gray-500">Finca:</span> {c.fincaNombre || "—"}</p>
             <p><span className="text-gray-500">Municipio:</span> {c.municipioDevolucion || "—"}</p>
           </div>

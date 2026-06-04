@@ -85,6 +85,7 @@ export async function GET(request: Request) {
       certs: Array<{
         nombregenerador?: string;
         generadorCedula?: string;
+        generadorTipoPersona?: string;
         fincaNombre?: string;
         fincaId?: string;
       }>
@@ -132,13 +133,16 @@ export async function GET(request: Request) {
             .filter((x): x is string => !!x)
         )
       );
-      const genById = new Map<string, { nombre: string; nit: string }>();
+      const genById = new Map<
+        string,
+        { nombre: string; nit: string; tipopersona: string }
+      >();
       for (let i = 0; i < genIds.length; i += CHUNK) {
         const chunk = genIds.slice(i, i + CHUNK);
         const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
         const p = new URLSearchParams();
         p.set("filterByFormula", formula);
-        for (const f of ["nombre", "nit"]) p.append("fields[]", f);
+        for (const f of ["nombre", "nit", "tipopersona"]) p.append("fields[]", f);
         p.set("pageSize", "100");
         const r = await fetch(
           `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/GENERADORES?${p}`,
@@ -150,6 +154,7 @@ export async function GET(request: Request) {
           genById.set(rec.id, {
             nombre: String(rec.fields.nombre || ""),
             nit: String(rec.fields.nit || ""),
+            tipopersona: String(rec.fields.tipopersona || ""),
           });
         }
       }
@@ -158,11 +163,12 @@ export async function GET(request: Request) {
         const fincaInfo = fincaById.get(c.fincaId);
         if (!fincaInfo) continue;
         if (!c.fincaNombre) c.fincaNombre = fincaInfo.nombre;
-        if (!c.nombregenerador && fincaInfo.generadorId) {
+        if (fincaInfo.generadorId) {
           const gen = genById.get(fincaInfo.generadorId);
           if (gen) {
-            c.nombregenerador = gen.nombre;
+            if (!c.nombregenerador) c.nombregenerador = gen.nombre;
             if (!c.generadorCedula) c.generadorCedula = gen.nit;
+            if (!c.generadorTipoPersona) c.generadorTipoPersona = gen.tipopersona;
           }
         }
       }
@@ -219,6 +225,7 @@ export async function GET(request: Request) {
           coordinadorNombre: asStr(f.nombrecoordinador),
           nombregenerador: asStr(f.nombregenerador),
           generadorCedula: asStr(f.cedulagenerador),
+          generadorTipoPersona: "",
           generadorNombre: asStr(f.nombregenerador),
           fincaId: fincaIds[0] || "",
           fincaNombre: "",
