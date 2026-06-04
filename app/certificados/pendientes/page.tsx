@@ -82,7 +82,7 @@ export default function PendientesPage() {
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [actionMode, setActionMode] = useState<"aprobar" | "rechazar" | null>(null);
   const [motivo, setMotivo] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const isAdmin = isAdminOrSupervisor(session?.user?.rol);
 
@@ -111,7 +111,7 @@ export default function PendientesPage() {
   }, [status, load]);
 
   async function doAction(id: string, accion: "aprobar" | "rechazar", motivoTxt = "") {
-    setSubmitting(true);
+    setSubmittingId(id);
     try {
       const tabla =
         tab === "cert" ? "certificados" : tab === "generadores" ? "generadores" : "fincas";
@@ -132,7 +132,7 @@ export default function PendientesPage() {
     } catch {
       alert("Error de red");
     } finally {
-      setSubmitting(false);
+      setSubmittingId(null);
     }
   }
 
@@ -207,7 +207,7 @@ export default function PendientesPage() {
                     setActionFor(c.id);
                     setActionMode("rechazar");
                   }}
-                  submitting={submitting}
+                  submitting={submittingId === c.id}
                 />
               ))}
             {tab === "generadores" &&
@@ -220,7 +220,7 @@ export default function PendientesPage() {
                     setActionFor(g.id);
                     setActionMode("rechazar");
                   }}
-                  submitting={submitting}
+                  submitting={submittingId === g.id}
                 />
               ))}
             {tab === "fincas" &&
@@ -233,7 +233,7 @@ export default function PendientesPage() {
                     setActionFor(f.id);
                     setActionMode("rechazar");
                   }}
-                  submitting={submitting}
+                  submitting={submittingId === f.id}
                 />
               ))}
           </div>
@@ -264,7 +264,7 @@ export default function PendientesPage() {
                     setMotivo("");
                   }}
                   className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                  disabled={submitting}
+                  disabled={submittingId === actionFor}
                 >
                   Cancelar
                 </button>
@@ -272,10 +272,12 @@ export default function PendientesPage() {
                   onClick={() =>
                     doAction(actionFor, "rechazar", motivo.trim())
                   }
-                  disabled={submitting || motivo.trim().length < 10}
+                  disabled={
+                    submittingId === actionFor || motivo.trim().length < 10
+                  }
                   className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded-lg"
                 >
-                  {submitting ? "Rechazando…" : "Confirmar rechazo"}
+                  {submittingId === actionFor ? "Rechazando…" : "Confirmar rechazo"}
                 </button>
               </div>
             </div>
@@ -362,7 +364,7 @@ function CertCard({
           disabled={submitting}
           className="flex-1 bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white text-sm font-medium py-2 rounded-lg"
         >
-          ✓ Aprobar
+          {submitting ? "Aprobando…" : "✓ Aprobar"}
         </button>
         <button
           onClick={onRechazar}
@@ -416,7 +418,7 @@ function GenCard({
           disabled={submitting}
           className="flex-1 bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white text-sm font-medium py-2 rounded-lg"
         >
-          ✓ Aprobar registro
+          {submitting ? "Aprobando…" : "✓ Aprobar registro"}
         </button>
         <button
           onClick={onRechazar}
@@ -494,7 +496,7 @@ function FincaCard({
           disabled={submitting}
           className="flex-1 bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white text-sm font-medium py-2 rounded-lg"
         >
-          ✓ Aprobar
+          {submitting ? "Aprobando…" : "✓ Aprobar"}
         </button>
         <button
           onClick={onRechazar}
