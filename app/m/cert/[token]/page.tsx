@@ -20,6 +20,7 @@ interface Finca {
   nombre: string;
   generadorId: string;
   cultivos: { id: string; nombre: string }[];
+  coordinadorSugerido: { id: string; nombre: string } | null;
 }
 interface FincaCompleta {
   id: string;
@@ -44,6 +45,7 @@ interface Payload {
   generador: Generador | null;
   fincasDisponibles: Finca[];
   coordinadores: Coordinador[];
+  coordinadorSugerido: { id: string; nombre: string } | null;
 }
 
 interface MunicipioVal {
@@ -63,6 +65,8 @@ export default function CertNuevoPage({
   // Estado del formulario
   const [fincaId, setFincaId] = useState("");
   const [coordinadorId, setCoordinadorId] = useState("");
+  const [coordinadorBloqueado, setCoordinadorBloqueado] = useState(true);
+  const [confirmandoCambioCoord, setConfirmandoCambioCoord] = useState(false);
   const [municipioDevolucion, setMunicipioDevolucion] = useState<MunicipioVal | null>(null);
   const [lugar, setLugar] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
@@ -77,6 +81,26 @@ export default function CertNuevoPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitOk, setSubmitOk] = useState<string | null>(null);
 
+  // Si cambia la finca, recalcular el coord sugerido para esa finca.
+  useEffect(() => {
+    if (!payload || !fincaId) return;
+    const finca = payload.fincasDisponibles.find((f) => f.id === fincaId);
+    const sugerido = finca?.coordinadorSugerido || null;
+    const sugeridoActivo =
+      sugerido && payload.coordinadores.some((c) => c.id === sugerido.id);
+    if (sugeridoActivo && sugerido) {
+      setCoordinadorId(sugerido.id);
+      setCoordinadorBloqueado(true);
+      setConfirmandoCambioCoord(false);
+    } else {
+      // Sin sugerido para esta finca: abrir selector libre.
+      setCoordinadorId("");
+      setCoordinadorBloqueado(false);
+      setConfirmandoCambioCoord(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fincaId]);
+
   // Cargar datos del magic-link
   useEffect(() => {
     fetch(`/api/m/${token}`)
@@ -88,8 +112,23 @@ export default function CertNuevoPage({
         }
         setPayload(data as Payload);
         const p = data as Payload;
-        if (p.fincasDisponibles?.length === 1) setFincaId(p.fincasDisponibles[0].id);
-        else if (p.finca) setFincaId(p.finca.id);
+        let fid = "";
+        if (p.fincasDisponibles?.length === 1) fid = p.fincasDisponibles[0].id;
+        else if (p.finca) fid = p.finca.id;
+        if (fid) setFincaId(fid);
+        // Pre-llenar coord sugerido si la finca pre-seleccionada lo tiene.
+        const fincaInicial = p.fincasDisponibles?.find((f) => f.id === fid);
+        const sugerido = fincaInicial?.coordinadorSugerido || p.coordinadorSugerido;
+        // El sugerido tiene que estar también en la lista de coordinadores
+        // activos; si no, abrimos el selector libre.
+        const sugeridoActivo =
+          sugerido && p.coordinadores.some((c) => c.id === sugerido.id);
+        if (sugeridoActivo && sugerido) {
+          setCoordinadorId(sugerido.id);
+          setCoordinadorBloqueado(true);
+        } else {
+          setCoordinadorBloqueado(false);
+        }
       })
       .catch(() => setLoadError("Error de red"));
   }, [token]);
@@ -233,18 +272,85 @@ export default function CertNuevoPage({
           )}
 
           <Field label="Coordinador que te atiende" required>
-            <select
-              value={coordinadorId}
-              onChange={(e) => setCoordinadorId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
-            >
-              <option value="">— Selecciona tu coordinador —</option>
-              {payload.coordinadores.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
+            {coordinadorBloqueado && coordinadorId ? (
+              <>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 flex items-center gap-2">
+                  <span className="text-emerald-600">✓</span>
+                  <span className="text-emerald-900 font-medium">
+                    {payload.coordinadores.find((c) => c.id === coordinadorId)
+                      ?.nombre || "—"}
+                  </span>
+                </div>
+                {!confirmandoCambioCoord ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmandoCambioCoord(true)}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-1.5"
+                  >
+                    ¿Te atiende otro coordinador? Cambiar
+                  </button>
+                ) : (
+                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                    <p className="text-xs text-amber-900 mb-2">
+                      ¿Seguro que el coordinador que te atiende cambió? Elegir
+                      otro puede generar errores en la entrega del PDF.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoordinadorBloqueado(false);
+                          setConfirmandoCambioCoord(false);
+                        }}
+                        className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-md font-medium"
+                      >
+                        Sí, cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmandoCambioCoord(false)}
+                        className="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md font-medium"
+                      >
+                        Mantener
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <select
+                  value={coordinadorId}
+                  onChange={(e) => setCoordinadorId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
+                >
+                  <option value="">— Selecciona tu coordinador —</option>
+                  {payload.coordinadores.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+                {payload.fincasDisponibles.find((f) => f.id === fincaId)
+                  ?.coordinadorSugerido && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sug = payload.fincasDisponibles.find(
+                        (f) => f.id === fincaId
+                      )?.coordinadorSugerido;
+                      if (sug) {
+                        setCoordinadorId(sug.id);
+                        setCoordinadorBloqueado(true);
+                      }
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-1.5"
+                  >
+                    Volver al coordinador sugerido
+                  </button>
+                )}
+              </>
+            )}
           </Field>
 
           <Field label="Fecha de devolución" required hint="No puede ser futura ni mayor a 120 días">

@@ -100,7 +100,9 @@ interface PayloadCertNuevo extends PayloadBase {
     nombre: string;
     generadorId: string;
     cultivos: { id: string; nombre: string }[];
+    coordinadorSugerido: { id: string; nombre: string } | null;
   }[];
+  coordinadorSugerido: { id: string; nombre: string } | null;
 }
 
 interface PayloadEditarFinca extends PayloadBase {
@@ -157,6 +159,47 @@ async function cargarFinca(id: string): Promise<DatosFinca | null> {
     movil: String(ff.movil || ""),
     email: String(ff.email || ""),
   };
+}
+
+/**
+ * Devuelve el coordinador del último certificado APROBADO de la finca.
+ * Si la finca no tiene historial, devuelve null. Usado como sugerencia
+ * por defecto en cert-nuevo para evitar que el agricultor elija un coord
+ * incorrecto.
+ */
+async function coordinadorSugeridoParaFinca(
+  fincaId: string
+): Promise<{ id: string; nombre: string } | null> {
+  try {
+    const formula = `AND({estado}='aprobado', FIND('${fincaId}', ARRAYJOIN({FINCAS})))`;
+    const p = new URLSearchParams();
+    p.set("filterByFormula", formula);
+    p.set("maxRecords", "1");
+    p.set("sort[0][field]", "fecha_solicitud");
+    p.set("sort[0][direction]", "desc");
+    p.append("fields[]", "id_coordinador");
+    p.append("fields[]", "nombrecoordinador");
+    const r = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Certificados?${p}`,
+      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+    );
+    if (!r.ok) return null;
+    const d = (await r.json()) as {
+      records: Array<{ fields: Record<string, unknown> }>;
+    };
+    const rec = d.records?.[0];
+    if (!rec) return null;
+    const idArr = rec.fields.id_coordinador;
+    const id = Array.isArray(idArr) ? String(idArr[0] || "") : String(idArr || "");
+    if (!id) return null;
+    const nombreArr = rec.fields.nombrecoordinador;
+    const nombre = Array.isArray(nombreArr)
+      ? String(nombreArr[0] || "")
+      : String(nombreArr || "");
+    return { id, nombre };
+  } catch {
+    return null;
+  }
 }
 
 async function cargarGenerador(id: string): Promise<DatosGenerador | null> {
@@ -255,6 +298,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         nombre: string;
         generadorId: string;
         cultivos: { id: string; nombre: string }[];
+        coordinadorSugerido: { id: string; nombre: string } | null;
       }[] = [];
       let fincaPrincipal: DatosFinca | null = null;
       let generadorPrincipal: DatosGenerador | null = null;
@@ -277,6 +321,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
               nombre: f.nombre,
               generadorId: genId,
               cultivos: f.cultivos,
+              coordinadorSugerido: null,
             });
           }
         } else {
@@ -285,10 +330,22 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
             nombre: f.nombre,
             generadorId: generadorPrincipal.id,
             cultivos: f.cultivos,
+            coordinadorSugerido: null,
           });
         }
       }
+      // Sugerir coordinador por finca según el último cert aprobado.
+      await Promise.all(
+        fincasDisponibles.map(async (fd) => {
+          fd.coordinadorSugerido = await coordinadorSugeridoParaFinca(fd.id);
+        })
+      );
       const coordinadores = await getCoordinadoresActivos();
+      // Top-level: si hay una finca pre-seleccionada, exponer su sugerido.
+      const coordinadorSugerido = fincaPrincipal
+        ? fincasDisponibles.find((fd) => fd.id === fincaPrincipal!.id)
+            ?.coordinadorSugerido || null
+        : null;
       return {
         ...base,
         intent: "cert-nuevo",
@@ -296,6 +353,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         generador: generadorPrincipal,
         fincasDisponibles,
         coordinadores,
+        coordinadorSugerido,
       };
     }
 
