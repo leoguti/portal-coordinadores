@@ -166,12 +166,41 @@ async function cargarFinca(id: string): Promise<DatosFinca | null> {
  * Si la finca no tiene historial, devuelve null. Usado como sugerencia
  * por defecto en cert-nuevo para evitar que el agricultor elija un coord
  * incorrecto.
+ *
+ * Implementación: la fórmula vieja `FIND('<fincaId>', ARRAYJOIN({FINCAS}))`
+ * fallaba porque ARRAYJOIN sobre linked records devuelve display names,
+ * no record IDs (mismo bug que se arregló en whatsappResolver). Ahora
+ * leemos el reverse-lookup de la finca para obtener los IDs de sus certs
+ * y buscamos entre esos.
  */
 async function coordinadorSugeridoParaFinca(
   fincaId: string
 ): Promise<{ id: string; nombre: string } | null> {
   try {
-    const formula = `AND({estado}='aprobado', FIND('${fincaId}', ARRAYJOIN({FINCAS})))`;
+    const finca = await getRecord("FINCAS", fincaId);
+    if (!finca) return null;
+    // Detectar el campo reverse-lookup de certificados (puede llamarse
+    // "certificados", "Certificados", etc.). Filtramos por contenido:
+    // array de strings que empiezan con "rec".
+    let certIds: string[] = [];
+    for (const [key, val] of Object.entries(finca.fields)) {
+      if (
+        /cert/i.test(key) &&
+        Array.isArray(val) &&
+        val.length > 0 &&
+        typeof val[0] === "string" &&
+        (val[0] as string).startsWith("rec")
+      ) {
+        certIds = (val as string[]).map(String);
+        break;
+      }
+    }
+    if (certIds.length === 0) return null;
+    // Si hay muchos certs, cortamos a 200 — suficiente para encontrar
+    // el más reciente y mantiene el filterByFormula bajo el límite.
+    const chunk = certIds.slice(0, 200);
+    const orParts = chunk.map((id) => `RECORD_ID()='${id}'`).join(",");
+    const formula = `AND({estado}='aprobado', OR(${orParts}))`;
     const p = new URLSearchParams();
     p.set("filterByFormula", formula);
     p.set("maxRecords", "1");
