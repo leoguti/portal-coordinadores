@@ -338,15 +338,55 @@ export async function notificarSolicitudRecibida(
 
 // ─── Plantillas Generador / Finca ──────────────────────────────────────────
 
+/**
+ * Helper: intenta enviar texto libre formateado (con bullets/bold/emojis).
+ * Si TextIt lo rechaza (ej. fuera de ventana de 24h), cae al template via
+ * flow 31 con vars planos.
+ */
+async function enviarConFallback(
+  telefono: string,
+  textoLibre: string,
+  var1: string,
+  var2: string,
+  var3: string
+): Promise<BroadcastResult> {
+  const r = await enviarBroadcastTelefono(telefono, textoLibre);
+  if (r.ok) return r;
+  console.warn(
+    `[textitNotify] Broadcast directo falló (${r.message}), reintentando con template via flow`
+  );
+  return enviarAvisoActualizacionSolicitud(telefono, var1, var2, var3);
+}
+
 export async function notificarGeneradorAprobado(p: {
   telefono: string;
   nombre: string;
   nombreCoordinador: string;
+  esRevision?: boolean;
 }): Promise<BroadcastResult> {
-  const var1 = "de registro como generador";
-  const var2 = "aprobada";
-  const var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  let textoLibre: string;
+  let var1: string;
+  let var3: string;
+  if (p.esRevision) {
+    textoLibre =
+      `✅ *¡Tus cambios fueron aprobados!*\n\n` +
+      `📋 *Datos actualizados:*\n` +
+      `• Nombre: *${p.nombre}*\n` +
+      `• Coordinador: ${p.nombreCoordinador}\n\n` +
+      `Tus datos ya están firmes. 👍`;
+    var1 = "de cambios en tus datos";
+    var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Tus datos actualizados ya están firmes.`;
+  } else {
+    textoLibre =
+      `🎉 *¡Tu registro fue aprobado!*\n\n` +
+      `📋 *Datos:*\n` +
+      `• Nombre: *${p.nombre}*\n` +
+      `• Coordinador: ${p.nombreCoordinador}\n\n` +
+      `Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar. 👋`;
+    var1 = "de registro como generador";
+    var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.`;
+  }
+  return enviarConFallback(p.telefono, textoLibre, var1, "aprobada", var3);
 }
 
 export async function notificarGeneradorRechazado(p: {
@@ -354,11 +394,31 @@ export async function notificarGeneradorRechazado(p: {
   nombre: string;
   motivo: string;
   nombreCoordinador: string;
+  esRevision?: boolean;
 }): Promise<BroadcastResult> {
-  const var1 = "de registro como generador";
-  const var2 = "rechazada";
-  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  let textoLibre: string;
+  let var1: string;
+  let var3: string;
+  if (p.esRevision) {
+    textoLibre =
+      `❌ *Tus cambios fueron rechazados.*\n\n` +
+      `📋 *Detalle:*\n` +
+      `• Motivo: ${p.motivo}\n` +
+      `• Coordinador: ${p.nombreCoordinador}\n\n` +
+      `Tus datos vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador. 💬`;
+    var1 = "de cambios en tus datos";
+    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Tus datos vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador.`;
+  } else {
+    textoLibre =
+      `❌ *Tu registro fue rechazado.*\n\n` +
+      `📋 *Detalle:*\n` +
+      `• Motivo: ${p.motivo}\n` +
+      `• Coordinador: ${p.nombreCoordinador}\n\n` +
+      `Si tienes dudas, escríbele a tu coordinador. 💬`;
+    var1 = "de registro como generador";
+    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
+  }
+  return enviarConFallback(p.telefono, textoLibre, var1, "rechazada", var3);
 }
 
 export async function notificarFincaAprobada(p: {
@@ -367,15 +427,23 @@ export async function notificarFincaAprobada(p: {
   nombreCoordinador: string;
   esRevision?: boolean;
 }): Promise<BroadcastResult> {
+  const textoLibre = p.esRevision
+    ? `✅ *¡Los cambios en tu finca fueron aprobados!*\n\n` +
+      `🌱 *Finca:* ${p.nombreFinca}\n` +
+      `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+      `Los datos actualizados ya están firmes. 👍`
+    : `🎉 *¡Tu finca fue aprobada!*\n\n` +
+      `🌱 *Finca:* ${p.nombreFinca}\n` +
+      `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+      `Ya puedes generar certificados para esta finca. 👋`;
   const var1 = p.esRevision
     ? `de cambios en la finca "${p.nombreFinca}"`
     : `de nueva finca "${p.nombreFinca}"`;
-  const var2 = "aprobada";
   const detalle = p.esRevision
     ? "Los datos actualizados ya están firmes."
     : "Ya puedes generar certificados para esta finca.";
   const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  return enviarConFallback(p.telefono, textoLibre, var1, "aprobada", var3);
 }
 
 export async function notificarFincaRechazada(p: {
@@ -385,10 +453,20 @@ export async function notificarFincaRechazada(p: {
   nombreCoordinador: string;
   esRevision?: boolean;
 }): Promise<BroadcastResult> {
+  const textoLibre = p.esRevision
+    ? `❌ *Los cambios en tu finca fueron rechazados.*\n\n` +
+      `🌱 *Finca:* ${p.nombreFinca}\n` +
+      `📋 *Motivo:* ${p.motivo}\n` +
+      `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+      `Los datos de la finca vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador. 💬`
+    : `❌ *Tu finca fue rechazada.*\n\n` +
+      `🌱 *Finca:* ${p.nombreFinca}\n` +
+      `📋 *Motivo:* ${p.motivo}\n` +
+      `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+      `Si tienes dudas, escríbele a tu coordinador. 💬`;
   const var1 = p.esRevision
     ? `de cambios en la finca "${p.nombreFinca}"`
     : `de nueva finca "${p.nombreFinca}"`;
-  const var2 = "rechazada";
   const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  return enviarConFallback(p.telefono, textoLibre, var1, "rechazada", var3);
 }

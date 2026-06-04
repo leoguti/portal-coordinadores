@@ -64,6 +64,7 @@ export async function POST(
     return NextResponse.json({ error: res.error }, { status: 500 });
   }
 
+  const esRevision = estado === "pendiente_revision";
   after(async () => {
     try {
       const tel = String(rec.fields.movil || "");
@@ -75,6 +76,7 @@ export async function POST(
           nombre: String(rec.fields.nombre || ""),
           motivo,
           nombreCoordinador: nombreCoord,
+          esRevision,
         });
         console.log(`[gen/${id}/rechazar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       }

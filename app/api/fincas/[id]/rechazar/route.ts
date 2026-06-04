@@ -86,6 +86,7 @@ export async function POST(
           nombreFinca: String(rec.fields.nombre || ""),
           motivo,
           nombreCoordinador: nombreCoord,
+          esRevision: estado === "pendiente_revision",
         });
         console.log(`[finca/${id}/rechazar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       }

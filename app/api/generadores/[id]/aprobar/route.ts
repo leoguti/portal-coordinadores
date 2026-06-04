@@ -86,6 +86,9 @@ export async function POST(
   }
 
   // Notificar al agricultor por WhatsApp (background, no bloquea respuesta).
+  const esRevision = estado === "pendiente_revision";
+  // Usar el nombre del diff aplicado si está, sino el del record.
+  const nombreActual = (cambiosAAplicar.nombre as string) || String(f.nombre || "");
   after(async () => {
     try {
       const tel = String(f.movil || "");
@@ -93,8 +96,9 @@ export async function POST(
         const nombreCoord = await getCoordinadorNombre(coordId);
         const r = await notificarGeneradorAprobado({
           telefono: tel,
-          nombre: String(f.nombre || ""),
+          nombre: nombreActual,
           nombreCoordinador: nombreCoord,
+          esRevision,
         });
         console.log(`[gen/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       }
