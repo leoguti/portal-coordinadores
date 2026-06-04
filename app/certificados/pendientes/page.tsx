@@ -83,6 +83,7 @@ export default function PendientesPage() {
   const [actionMode, setActionMode] = useState<"aprobar" | "rechazar" | null>(null);
   const [motivo, setMotivo] = useState("");
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [counts, setCounts] = useState<{ cert: number; generadores: number; fincas: number } | null>(null);
 
   const isAdmin = isAdminOrSupervisor(session?.user?.rol);
 
@@ -106,9 +107,26 @@ export default function PendientesPage() {
       .finally(() => setLoading(false));
   }, [tab]);
 
+  const loadCounts = useCallback(() => {
+    fetch("/api/certificados/pendientes/counts")
+      .then(async (r) => {
+        if (!r.ok) return;
+        const data = await r.json();
+        setCounts({
+          cert: Number(data.cert) || 0,
+          generadores: Number(data.generadores) || 0,
+          fincas: Number(data.fincas) || 0,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
-    if (status === "authenticated") load();
-  }, [status, load]);
+    if (status === "authenticated") {
+      load();
+      loadCounts();
+    }
+  }, [status, load, loadCounts]);
 
   async function doAction(id: string, accion: "aprobar" | "rechazar", motivoTxt = "") {
     setSubmittingId(id);
@@ -129,6 +147,7 @@ export default function PendientesPage() {
       setActionMode(null);
       setMotivo("");
       load();
+      loadCounts();
     } catch {
       alert("Error de red");
     } finally {
@@ -159,25 +178,41 @@ export default function PendientesPage() {
         <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden mb-4">
           {(
             [
-              { v: "cert" as Tab, l: "Certificados" },
-              { v: "generadores" as Tab, l: "Generadores" },
-              { v: "fincas" as Tab, l: "Fincas" },
+              { v: "cert" as Tab, l: "Certificados", n: counts?.cert },
+              { v: "generadores" as Tab, l: "Generadores", n: counts?.generadores },
+              { v: "fincas" as Tab, l: "Fincas", n: counts?.fincas },
             ]
-          ).map((t, idx) => (
-            <button
-              key={t.v}
-              onClick={() => setTab(t.v)}
-              className={`px-4 py-2 text-sm font-medium ${
-                idx > 0 ? "border-l border-gray-300" : ""
-              } ${
-                tab === t.v
-                  ? "bg-[#00d084] text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {t.l}
-            </button>
-          ))}
+          ).map((t, idx) => {
+            const isActive = tab === t.v;
+            return (
+              <button
+                key={t.v}
+                onClick={() => setTab(t.v)}
+                className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
+                  idx > 0 ? "border-l border-gray-300" : ""
+                } ${
+                  isActive
+                    ? "bg-[#00d084] text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {t.l}
+                {typeof t.n === "number" && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? "bg-white/25 text-white"
+                        : t.n > 0
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {t.n}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {loading && (

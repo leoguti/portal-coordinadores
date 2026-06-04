@@ -60,8 +60,8 @@ export async function GET() {
     ? `AND({estado}='pendiente', FIND('${coord}', ARRAYJOIN({id_coordinador})) > 0)`
     : `{estado}='pendiente'`;
   const filtGen = coord
-    ? `AND({estado}='pendiente', FIND('${coord}', ARRAYJOIN({coordinador_solicitado})) > 0)`
-    : `{estado}='pendiente'`;
+    ? `AND(OR({estado}='pendiente', {estado}='pendiente_revision'), FIND('${coord}', ARRAYJOIN({coordinador_solicitado})) > 0)`
+    : `OR({estado}='pendiente', {estado}='pendiente_revision')`;
   const filtFinca = coord
     ? `AND(OR({estado}='pendiente', {estado}='pendiente_revision'), FIND('${coord}', ARRAYJOIN({coordinador_id})) > 0)`
     : `OR({estado}='pendiente', {estado}='pendiente_revision')`;
