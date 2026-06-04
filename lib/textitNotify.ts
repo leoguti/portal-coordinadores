@@ -280,6 +280,9 @@ export interface SolicitudRecibidaParams {
   /** wa.me corto del coord para contactarlo si detecta un error. Se incluye
    *  como call-to-action debajo del resumen. */
   coordContactoWaUrl?: string;
+  /** Nombre del coordinador asignado — se intercala en el detalle para
+   *  que el agricultor sepa exactamente quién va a revisar la solicitud. */
+  nombreCoordinador?: string;
 }
 
 export async function notificarSolicitudRecibida(
@@ -287,35 +290,38 @@ export async function notificarSolicitudRecibida(
 ): Promise<BroadcastResult> {
   let titulo = "✅ ¡Recibimos tu solicitud!";
   let detalle = "";
+  const coord = p.nombreCoordinador ? `*${p.nombreCoordinador}*` : "tu coordinador";
+  // Variantes de "tu coordinador" en mayúscula y minúscula según contexto:
+  const coordCap = p.nombreCoordinador
+    ? `Tu coordinador *${p.nombreCoordinador}*`
+    : "Tu coordinador";
 
   switch (p.tipo) {
     case "cert":
       titulo = "✅ ¡Recibimos tu solicitud de certificado!";
       detalle = p.consecutivo
-        ? `Solicitud #${p.consecutivo}. Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`
-        : "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
+        ? `Solicitud #${p.consecutivo}. ${coordCap} la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`
+        : `${coordCap} la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`;
       break;
     case "registro-generador":
       titulo = "✅ ¡Recibimos tu solicitud de registro!";
-      detalle =
-        "Tu coordinador revisará tus datos y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋";
+      detalle = `${coordCap} revisará tus datos y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋`;
       break;
     case "crear-finca":
       titulo = "✅ ¡Recibimos tu solicitud de nueva finca!";
-      detalle =
-        "Tu coordinador la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋";
+      detalle = `${coordCap} la revisará y aprobará. Te aviso por aquí cuando esté lista. 👋`;
       break;
     case "editar-finca":
       titulo = "✅ ¡Recibimos tu solicitud de cambios en la finca!";
-      detalle =
-        "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
+      detalle = `${coordCap} los revisará. Te aviso por aquí cuando estén aprobados. 👋`;
       break;
     case "editar-generador":
       titulo = "✅ ¡Recibimos tu solicitud de cambios en tus datos!";
-      detalle =
-        "Tu coordinador los revisará. Te aviso por aquí cuando estén aprobados. 👋";
+      detalle = `${coordCap} los revisará. Te aviso por aquí cuando estén aprobados. 👋`;
       break;
   }
+  // Silenciar warning de unused — coord queda disponible si quieren usarla.
+  void coord;
 
   const partes = [titulo];
   if (p.resumen && p.resumen.trim()) {

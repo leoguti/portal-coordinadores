@@ -127,6 +127,9 @@ interface ResultadoOk {
   resumen?: string;
   /** wa.me corto del coord para contactarlo (solo en cert-nuevo). */
   coordContactoWaUrl?: string;
+  /** Nombre del coord asignado — usado en el aviso "Recibimos…" para que
+   *  el agricultor sepa exactamente quién va a revisar. */
+  nombreCoordinador?: string;
 }
 
 function fmtNumKg(n: number): string {
@@ -700,6 +703,7 @@ export async function POST(
           consecutivo: result.consecutivo,
           resumen: result.resumen,
           coordContactoWaUrl: result.coordContactoWaUrl,
+          nombreCoordinador: result.nombreCoordinador,
         });
         console.log(`[m/enviar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
       } catch (err) {
