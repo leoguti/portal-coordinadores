@@ -76,6 +76,31 @@ function armarRespuestaTitular(
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
   const nombreCorto = truncar(generador.nombre, 40);
   const esJuridica = esEmpresa(generador.tipopersona);
+  const generadorEnRevision = generador.estado === "pendiente_revision";
+
+  // Generador con cambios pendientes de aprobación — bloquear cert porque
+  // saldría con datos no aprobados. Solo permitir editar datos (refrescar
+  // los cambios) o hablar con coord.
+  if (generadorEnRevision) {
+    const saludo = `Hola ${nombreCorto} 👋`;
+    const sujeto = esJuridica
+      ? "los cambios que enviaste para tu empresa"
+      : "los cambios que enviaste para tus datos";
+    const intro =
+      `Tu coordinador está revisando ${sujeto}.\n\n` +
+      `No puedes generar certificados hasta que apruebe los cambios. Te aviso por aquí cuando estén listos.`;
+    const opciones: MenuOpcion[] = [
+      {
+        numero: 1,
+        intent: "editar-perfil",
+        label: esJuridica
+          ? "1️⃣ Revisar / actualizar mis datos"
+          : "1️⃣ Revisar / actualizar mis datos",
+      },
+      { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
+    ];
+    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+  }
 
   // Sin fincas todavía o todas en revisión por el coord
   if (fincasAprobadas.length === 0) {

@@ -47,6 +47,10 @@ function validateApiKey(request: NextRequest): boolean {
 function opcionesParaIdentidad(identidad: IdentidadAgricultor): MenuIntent[] {
   // Titular
   if (identidad.rol === "titular") {
+    // Generador con cambios pendientes → menú reducido (sin cert).
+    if (identidad.generador?.estado === "pendiente_revision") {
+      return ["editar-perfil", "contactar-coord"];
+    }
     const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
     if (fincasAprobadas.length === 0) {
       // Si TIENE fincas pero todas en revisión → bloqueado, menú reducido
