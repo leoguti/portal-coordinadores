@@ -252,10 +252,13 @@ export default function PerfilPage({
   const esEmpresa = (payload.generador.tipopersona || "")
     .toLowerCase()
     .includes("juridic");
-  const tituloPagina = esEmpresa ? "Mis datos" : "Mis datos";
+  const tituloPagina = "Mis datos";
   const subtitulo = esEmpresa
     ? `${payload.generador.nombre} · NIT ${payload.generador.nit}`
     : `${payload.generador.nombre} · CC ${payload.generador.nit}`;
+  const tituloCardEmpresa = esEmpresa ? "Mi empresa" : "Mis datos personales";
+  const tituloCardFincas =
+    fincas.length === 1 ? "Mi finca" : `Mis fincas (${fincas.length})`;
 
   return (
     <MagicLinkLayout titulo={tituloPagina} subtitulo={subtitulo}>
@@ -269,7 +272,7 @@ export default function PerfilPage({
           >
             <div>
               <h2 className="font-medium text-gray-900">
-                {esEmpresa ? "Mi empresa" : "Mis datos personales"}
+                {tituloCardEmpresa}
                 {empresa.dirty && (
                   <span className="ml-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
                     modificado
@@ -353,7 +356,7 @@ export default function PerfilPage({
         {/* CARDS FINCAS */}
         <FormCard>
           <h2 className="font-medium text-gray-900 mb-3">
-            Mis fincas ({fincas.length})
+            {tituloCardFincas}
           </h2>
           {fincas.length === 0 ? (
             <p className="text-sm text-gray-500">

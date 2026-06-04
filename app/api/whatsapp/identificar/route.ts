@@ -129,6 +129,21 @@ function armarRespuestaTitular(
     return baseResp(identidad, saludo, intro, opciones, generador.nombre);
   }
 
+  // Label de "Actualizar mis datos" según tipopersona + nº de fincas.
+  // Evitamos la palabra "empresa" para personas naturales (la mayoría son
+  // unipersonales con 1 finca y no se identifican como empresa).
+  const labelActualizar = (numero: number) => {
+    const n = `${numero}️⃣`;
+    if (esJuridica) {
+      return fincasAprobadas.length === 1
+        ? `${n} Actualizar datos de la empresa y la finca`
+        : `${n} Actualizar datos de la empresa y mis fincas`;
+    }
+    return fincasAprobadas.length === 1
+      ? `${n} Actualizar mis datos y los de mi finca`
+      : `${n} Actualizar mis datos y los de mis fincas`;
+  };
+
   // Una sola finca
   if (fincasAprobadas.length === 1) {
     const finca = fincasAprobadas[0];
@@ -139,11 +154,7 @@ function armarRespuestaTitular(
       : `Te tengo registrado con la finca *${nombreFinca}*.\n\n¿Qué quieres hacer?`;
     const opciones: MenuOpcion[] = [
       { numero: 1, intent: "cert-nuevo", label: "1️⃣ Solicitar un nuevo certificado" },
-      {
-        numero: 2,
-        intent: "editar-perfil",
-        label: "2️⃣ Actualizar mis datos (empresa y fincas)",
-      },
+      { numero: 2, intent: "editar-perfil", label: labelActualizar(2) },
       { numero: 3, intent: "crear-finca", label: "3️⃣ Registrar otra finca" },
       { numero: 4, intent: "contactar-coord", label: "4️⃣ Hablar con un coordinador" },
     ];
@@ -157,11 +168,7 @@ function armarRespuestaTitular(
     : `Tienes registradas ${fincasAprobadas.length} fincas.\n\n¿Qué quieres hacer?`;
   const opciones: MenuOpcion[] = [
     { numero: 1, intent: "cert-nuevo", label: "1️⃣ Solicitar un nuevo certificado" },
-    {
-      numero: 2,
-      intent: "editar-perfil",
-      label: "2️⃣ Actualizar mis datos (empresa y fincas)",
-    },
+    { numero: 2, intent: "editar-perfil", label: labelActualizar(2) },
     { numero: 3, intent: "crear-finca", label: "3️⃣ Registrar otra finca" },
     { numero: 4, intent: "contactar-coord", label: "4️⃣ Hablar con un coordinador" },
   ];

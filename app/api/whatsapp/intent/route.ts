@@ -280,14 +280,18 @@ async function mensajeOkParaIntent(
         : `Vamos a actualizar tus datos personales.`;
     case "editar-perfil": {
       const partes = ["Vamos a actualizar tus datos."];
+      const labelMia = esEmpresa ? "tu empresa" : "tus datos personales";
+      const labelFincas =
+        fincasAprobadas.length === 1 ? "tu finca" : "tus fincas";
       partes.push(
-        "Vas a ver tu empresa y todas tus fincas en una sola página — edita lo que necesites."
+        `Vas a ver ${labelMia} y ${labelFincas} en una sola página — edita lo que necesites.`
       );
       if (fincasAprobadas.length > 0) {
         const nombres = fincasAprobadas
           .map((f) => `• ${f.nombre}`)
           .join("\n");
-        partes.push(`\n🌱 *Tus fincas:*\n${nombres}`);
+        const titFincas = fincasAprobadas.length === 1 ? "Tu finca" : "Tus fincas";
+        partes.push(`\n🌱 *${titFincas}:*\n${nombres}`);
       }
       return partes.join("\n");
     }
