@@ -35,6 +35,10 @@ function intentToNotifTipo(
       return "editar-finca";
     case "editar-generador":
       return "editar-generador";
+    case "editar-perfil":
+      // El aviso al agricultor reutiliza el wording de "editar-generador"
+      // por simplicidad — el resumen del cuerpo aclara qué cambió.
+      return "editar-generador";
     case "crear-finca":
       return "crear-finca";
     case "registro-generador":
@@ -375,6 +379,131 @@ async function manejarEditarGenerador(
   };
 }
 
+async function manejarEditarPerfil(
+  t: EdicionToken,
+  body: Record<string, unknown>
+): Promise<ResultadoOk> {
+  if (!t.recordId) throw new Error("Token sin recordId");
+  const coordinadorId = asString(body.coordinadorId);
+  if (!coordinadorId) {
+    throw new Error("Falta coordinadorId que revisará el cambio");
+  }
+
+  const empresaInput = (body.empresa as Record<string, unknown> | null) || null;
+  const fincasInput = asArray<Record<string, unknown>>(body.fincas);
+
+  if (!empresaInput && fincasInput.length === 0) {
+    throw new Error("No se enviaron cambios");
+  }
+
+  const resumenLineas: string[] = [];
+
+  // Empresa (opcional)
+  if (empresaInput) {
+    const cambiosEmpresa: Record<string, unknown> = {};
+    for (const k of ["nombre", "movil", "email", "tipo"]) {
+      if (k in empresaInput && empresaInput[k] != null)
+        cambiosEmpresa[k] = asString(empresaInput[k]);
+    }
+    if ("direccion" in empresaInput)
+      cambiosEmpresa.direccion_sede = asString(empresaInput.direccion);
+    if (
+      "municipioId" in empresaInput &&
+      typeof empresaInput.municipioId === "string" &&
+      empresaInput.municipioId
+    ) {
+      cambiosEmpresa.municipio = [empresaInput.municipioId];
+    }
+    if (Object.keys(cambiosEmpresa).length > 0) {
+      const cambiosPendientes = {
+        cambios: cambiosEmpresa,
+        enviadoEn: nowIso(),
+        desde: "whatsapp_magic_link",
+      };
+      await patchRecord("GENERADORES", t.recordId, {
+        ...cambiosEmpresa,
+        estado: "pendiente_revision",
+        cambios_pendientes: JSON.stringify(cambiosPendientes),
+        fecha_solicitud: nowIso(),
+        solicitud_origen: "whatsapp",
+        coordinador_solicitado: [coordinadorId],
+      });
+      resumenLineas.push("📋 Cambios en la empresa:");
+      if ("nombre" in cambiosEmpresa)
+        resumenLineas.push(`  • Nombre: ${cambiosEmpresa.nombre}`);
+      if ("tipo" in cambiosEmpresa)
+        resumenLineas.push(`  • Tipo: ${cambiosEmpresa.tipo}`);
+      if ("direccion_sede" in cambiosEmpresa)
+        resumenLineas.push(
+          `  • Dirección: ${cambiosEmpresa.direccion_sede || "(vacía)"}`
+        );
+      if ("movil" in cambiosEmpresa)
+        resumenLineas.push(`  • Móvil: ${cambiosEmpresa.movil}`);
+      if ("email" in cambiosEmpresa)
+        resumenLineas.push(`  • Email: ${cambiosEmpresa.email || "(vacío)"}`);
+      if ("municipio" in cambiosEmpresa)
+        resumenLineas.push(`  • Municipio: (actualizado)`);
+    }
+  }
+
+  // Fincas (opcional, multi)
+  for (const f of fincasInput) {
+    const fincaId = asString(f.id);
+    if (!fincaId) continue;
+    const cambiosFinca: Record<string, unknown> = {};
+    for (const k of ["nombre", "movil", "email"]) {
+      if (k in f && f[k] != null) cambiosFinca[k] = asString(f[k]);
+    }
+    if ("municipioId" in f && typeof f.municipioId === "string" && f.municipioId) {
+      cambiosFinca.municipio = [f.municipioId];
+    }
+    if ("cultivosIds" in f) {
+      const ids = asArray<string>(f.cultivosIds).filter(Boolean);
+      if (ids.length > 0) cambiosFinca.cultivos = ids;
+    }
+    if (Object.keys(cambiosFinca).length === 0) continue;
+    const cambiosPendientes = {
+      cambios: cambiosFinca,
+      enviadoEn: nowIso(),
+      desde: "whatsapp_magic_link",
+    };
+    await patchRecord("FINCAS", fincaId, {
+      ...cambiosFinca,
+      estado: "pendiente_revision",
+      cambios_pendientes: JSON.stringify(cambiosPendientes),
+      fecha_solicitud: nowIso(),
+      solicitud_origen: "whatsapp",
+    });
+    const nombreFinca = (cambiosFinca.nombre as string) || fincaId;
+    resumenLineas.push(`🌱 Cambios en finca *${nombreFinca}*:`);
+    if ("nombre" in cambiosFinca)
+      resumenLineas.push(`  • Nombre: ${cambiosFinca.nombre}`);
+    if ("movil" in cambiosFinca)
+      resumenLineas.push(`  • Móvil: ${cambiosFinca.movil}`);
+    if ("email" in cambiosFinca)
+      resumenLineas.push(`  • Email: ${cambiosFinca.email || "(vacío)"}`);
+    if ("municipio" in cambiosFinca)
+      resumenLineas.push(`  • Municipio: (actualizado)`);
+    if ("cultivos" in cambiosFinca)
+      resumenLineas.push(
+        `  • Cultivos: ${(cambiosFinca.cultivos as string[]).length} seleccionados`
+      );
+  }
+
+  if (resumenLineas.length === 0) {
+    throw new Error("No se detectaron cambios reales");
+  }
+
+  return {
+    ok: true,
+    intent: "editar-perfil",
+    recordId: t.recordId,
+    mensaje:
+      "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
+    resumen: resumenLineas.join("\n"),
+  };
+}
+
 async function manejarCrearFinca(
   t: EdicionToken,
   body: Record<string, unknown>
@@ -541,6 +670,9 @@ export async function POST(
         break;
       case "editar-generador":
         result = await manejarEditarGenerador(t, body);
+        break;
+      case "editar-perfil":
+        result = await manejarEditarPerfil(t, body);
         break;
       case "crear-finca":
         result = await manejarCrearFinca(t, body);

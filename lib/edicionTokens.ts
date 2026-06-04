@@ -20,6 +20,7 @@ export type Intent =
   | "cert-nuevo"
   | "editar-finca"
   | "editar-generador"
+  | "editar-perfil"
   | "crear-finca"
   | "registro-generador";
 

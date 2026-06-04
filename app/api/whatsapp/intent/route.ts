@@ -29,6 +29,7 @@ type MenuIntent =
   | "cert-nuevo"
   | "editar-datos-personales"
   | "editar-finca"
+  | "editar-perfil"
   | "crear-finca"
   | "registro-generador"
   | "contactar-coord";
@@ -55,10 +56,10 @@ function opcionesParaIdentidad(identidad: IdentidadAgricultor): MenuIntent[] {
       // Si NO tiene fincas → puede crear su primera
       return ["crear-finca", "editar-datos-personales", "contactar-coord"];
     }
+    // Caso normal: con fincas aprobadas, menú colapsado a 4 opciones.
     return [
       "cert-nuevo",
-      "editar-datos-personales",
-      "editar-finca",
+      "editar-perfil",
       "crear-finca",
       "contactar-coord",
     ];
@@ -91,6 +92,8 @@ function intentRealParaMenu(
       return "editar-generador";
     case "editar-finca":
       return "editar-finca";
+    case "editar-perfil":
+      return "editar-perfil";
   }
 }
 
@@ -103,6 +106,8 @@ function urlParaIntent(intent: Intent, token: string): string {
       return `${base}/m/finca/${token}`;
     case "editar-generador":
       return `${base}/m/generador/${token}`;
+    case "editar-perfil":
+      return `${base}/m/perfil/${token}`;
     case "crear-finca":
       return `${base}/m/nueva-finca/${token}`;
     case "registro-generador":
@@ -124,6 +129,8 @@ function recordIdParaToken(
       // en el form si hay varias).
       return identidad.fincas[0]?.id || null;
     case "editar-generador":
+      return identidad.generador?.id || null;
+    case "editar-perfil":
       return identidad.generador?.id || null;
     case "crear-finca":
       return identidad.generador?.id || null;
@@ -271,6 +278,19 @@ async function mensajeOkParaIntent(
       return esEmpresa
         ? `Vamos a actualizar los datos de la empresa *${identidad.generador?.nombre || ""}*.`
         : `Vamos a actualizar tus datos personales.`;
+    case "editar-perfil": {
+      const partes = ["Vamos a actualizar tus datos."];
+      partes.push(
+        "Vas a ver tu empresa y todas tus fincas en una sola página — edita lo que necesites."
+      );
+      if (fincasAprobadas.length > 0) {
+        const nombres = fincasAprobadas
+          .map((f) => `• ${f.nombre}`)
+          .join("\n");
+        partes.push(`\n🌱 *Tus fincas:*\n${nombres}`);
+      }
+      return partes.join("\n");
+    }
     case "crear-finca":
       return "Vamos a registrar tu nueva finca.";
     case "registro-generador":

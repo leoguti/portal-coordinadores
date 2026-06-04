@@ -117,6 +117,13 @@ interface PayloadEditarGenerador extends PayloadBase {
   coordinadorSugerido: { id: string; nombre: string } | null;
 }
 
+interface PayloadEditarPerfil extends PayloadBase {
+  intent: "editar-perfil";
+  generador: DatosGenerador;
+  fincas: DatosFinca[];
+  coordinadorSugerido: { id: string; nombre: string } | null;
+}
+
 interface PayloadCrearFinca extends PayloadBase {
   intent: "crear-finca";
   generador: DatosGenerador;
@@ -130,6 +137,7 @@ type Payload =
   | PayloadCertNuevo
   | PayloadEditarFinca
   | PayloadEditarGenerador
+  | PayloadEditarPerfil
   | PayloadCrearFinca
   | PayloadRegistroGenerador;
 
@@ -453,6 +461,40 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         ...base,
         intent: "editar-generador",
         generador,
+        coordinadores,
+        coordinadorSugerido,
+      };
+    }
+
+    case "editar-perfil": {
+      const generador = t.recordId ? await cargarGenerador(t.recordId) : null;
+      if (!generador) throw new Error("Generador no encontrado");
+      // Sacamos las fincas del contexto (poblado al crear el token con la
+      // identidad del titular). Si no, fallback a las del campo FINCAS del
+      // generador.
+      let fincaIds: string[] = Array.isArray(t.contexto.fincas)
+        ? (t.contexto.fincas as Array<{ id: string }>).map((f) => f.id)
+        : [];
+      if (fincaIds.length === 0) {
+        const gen = await getRecord("GENERADORES", generador.id);
+        fincaIds = Array.isArray(gen?.fields.FINCAS)
+          ? (gen!.fields.FINCAS as string[]).map(String)
+          : [];
+      }
+      const fincas: DatosFinca[] = [];
+      for (const fid of fincaIds) {
+        const f = await cargarFinca(fid);
+        if (f) fincas.push(f);
+      }
+      const [coordinadores, coordinadorSugerido] = await Promise.all([
+        getCoordinadoresActivos(),
+        coordinadorSugeridoParaGenerador(generador.id),
+      ]);
+      return {
+        ...base,
+        intent: "editar-perfil",
+        generador,
+        fincas,
         coordinadores,
         coordinadorSugerido,
       };
