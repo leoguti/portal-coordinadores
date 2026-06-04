@@ -58,6 +58,25 @@ function asArrStr(v: unknown): string[] {
   return Array.isArray(v) ? (v as unknown[]).map((x) => String(x)) : [];
 }
 
+/**
+ * Parsea cambios_pendientes JSON y devuelve el diff de cambios (los
+ * campos que el agricultor propuso modificar). Vacío si no hay JSON
+ * válido. Usado para "preview" en el listado de pendientes.
+ */
+function parseCambiosPendientes(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(String(raw)) as {
+      cambios?: Record<string, unknown>;
+    };
+    return parsed.cambios && typeof parsed.cambios === "object"
+      ? parsed.cambios
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.coordinatorRecordId) {
@@ -264,25 +283,43 @@ export async function GET(request: Request) {
         "municipio",
         "movil",
         "email",
+        "estado",
         "fecha_solicitud",
         "solicitud_origen",
         "coordinador_solicitado",
+        "cambios_pendientes",
       ]);
       const items = records.map((r) => {
         const f = r.fields;
+        const diff = parseCambiosPendientes(f.cambios_pendientes);
+        // Para auto-registro nuevo (estado=pendiente) los campos del record
+        // ya tienen los valores propuestos. Para revisión, el diff los
+        // sobreescribe — eso es lo que el agricultor pidió cambiar.
+        const get = (key: string, fallback: string): string =>
+          key in diff ? String(diff[key] ?? "") : fallback;
+        const getArr = (key: string, fallback: string[]): string[] => {
+          if (!(key in diff)) return fallback;
+          const v = diff[key];
+          return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
+        };
         return {
           id: r.id,
-          nombre: asStr(f.nombre),
+          nombre: get("nombre", asStr(f.nombre)),
           nit: asStr(f.nit),
           tipopersona: asStr(f.tipopersona),
-          tipo: asStr(f.tipo),
-          direccion: asStr(f.direccion_sede),
-          municipioId: asArrStr(f.municipio)[0] || null,
-          movil: asStr(f.movil),
-          email: asStr(f.email),
+          tipo: get("tipo", asStr(f.tipo)),
+          direccion: get("direccion_sede", asStr(f.direccion_sede)),
+          municipioId:
+            getArr("municipio", asArrStr(f.municipio))[0] || null,
+          movil: get("movil", asStr(f.movil)),
+          email: get("email", asStr(f.email)),
+          estado: asStr(f.estado),
           fechaSolicitud: asStr(f.fecha_solicitud),
           origen: asStr(f.solicitud_origen),
-          coordinadorSolicitadoId: asArrStr(f.coordinador_solicitado)[0] || null,
+          coordinadorSolicitadoId:
+            asArrStr(f.coordinador_solicitado)[0] || null,
+          tieneCambios: Object.keys(diff).length > 0,
+          camposCambiados: Object.keys(diff),
           createdTime: r.createdTime,
         };
       });
@@ -314,19 +351,30 @@ export async function GET(request: Request) {
       ]);
       const items = records.map((r) => {
         const f = r.fields;
+        const diff = parseCambiosPendientes(f.cambios_pendientes);
+        const get = (key: string, fallback: string): string =>
+          key in diff ? String(diff[key] ?? "") : fallback;
+        const getArr = (key: string, fallback: string[]): string[] => {
+          if (!(key in diff)) return fallback;
+          const v = diff[key];
+          return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
+        };
         return {
           id: r.id,
-          nombre: asStr(f.nombre),
+          nombre: get("nombre", asStr(f.nombre)),
           generadorId: asArrStr(f.generador)[0] || null,
-          municipioId: asArrStr(f.municipio)[0] || null,
-          movil: asStr(f.movil),
-          email: asStr(f.email),
-          cultivosIds: asArrStr(f.cultivos),
+          municipioId:
+            getArr("municipio", asArrStr(f.municipio))[0] || null,
+          movil: get("movil", asStr(f.movil)),
+          email: get("email", asStr(f.email)),
+          cultivosIds: getArr("cultivos", asArrStr(f.cultivos)),
           estado: asStr(f.estado),
           fechaSolicitud: asStr(f.fecha_solicitud),
           origen: asStr(f.solicitud_origen),
           cambiosPendientes: asStr(f.cambios_pendientes),
           coordinadorId: asArrStr(f.coordinador_id)[0] || null,
+          tieneCambios: Object.keys(diff).length > 0,
+          camposCambiados: Object.keys(diff),
           createdTime: r.createdTime,
         };
       });

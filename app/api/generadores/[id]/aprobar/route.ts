@@ -57,10 +57,29 @@ export async function POST(
     }
   }
 
+  // Si está en pendiente_revision con cambios_pendientes, aplicar el diff.
+  // (Si es pendiente — auto-registro nuevo — los campos ya tienen los valores
+  // reales en el record.)
+  const cambiosAAplicar: Record<string, unknown> = {};
+  const cpRaw = f.cambios_pendientes ? String(f.cambios_pendientes) : "";
+  if (cpRaw && estado === "pendiente_revision") {
+    try {
+      const parsed = JSON.parse(cpRaw) as { cambios?: Record<string, unknown> };
+      if (parsed.cambios && typeof parsed.cambios === "object") {
+        Object.assign(cambiosAAplicar, parsed.cambios);
+      }
+    } catch {
+      // JSON inválido — seguir con aprobación pero log
+      console.warn(`[gen/${id}/aprobar] cambios_pendientes JSON inválido`);
+    }
+  }
+
   const res = await airtablePatchRecord("GENERADORES", id, {
+    ...cambiosAAplicar,
     estado: "aprobado",
     fecha_aprobacion: new Date().toISOString(),
     aprobado_por: [coordId],
+    cambios_pendientes: "",
   });
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: 500 });

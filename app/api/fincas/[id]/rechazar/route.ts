@@ -51,11 +51,14 @@ export async function POST(
     }
   }
 
+  // Rechazo descarta los cambios propuestos (staging) — los campos del
+  // record quedan con los valores previos a la edición.
   const res = await airtablePatchRecord("FINCAS", id, {
     estado: "rechazado",
     motivo_rechazo: motivo,
     fecha_rechazo: new Date().toISOString(),
     rechazado_por: [coordId],
+    cambios_pendientes: "",
   });
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: 500 });

@@ -39,9 +39,24 @@ export async function POST(
 
   const esRevision = estado === "pendiente_revision";
 
-  // En pendiente_revision los cambios ya están aplicados (el form los hizo
-  // PATCH al enviar). Solo limpiamos cambios_pendientes y marcamos estado.
+  // Si está en pendiente_revision con cambios_pendientes, aplicar el diff
+  // ahora. (En auto-registro nuevo "pendiente", los campos ya son los
+  // valores reales.)
+  const cambiosAAplicar: Record<string, unknown> = {};
+  const cpRaw = f.cambios_pendientes ? String(f.cambios_pendientes) : "";
+  if (cpRaw && esRevision) {
+    try {
+      const parsed = JSON.parse(cpRaw) as { cambios?: Record<string, unknown> };
+      if (parsed.cambios && typeof parsed.cambios === "object") {
+        Object.assign(cambiosAAplicar, parsed.cambios);
+      }
+    } catch {
+      console.warn(`[finca/${id}/aprobar] cambios_pendientes JSON inválido`);
+    }
+  }
+
   const res = await airtablePatchRecord("FINCAS", id, {
+    ...cambiosAAplicar,
     estado: "aprobado",
     fecha_aprobacion: new Date().toISOString(),
     aprobado_por: [coordId],

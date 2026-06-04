@@ -143,30 +143,65 @@ type Payload =
 
 // ─── Fetchers ──────────────────────────────────────────────────────────────
 
+/**
+ * Lee cambios_pendientes y devuelve los campos que el agricultor
+ * propuso modificar. Se aplica encima de los valores actuales del
+ * record para que cuando el agricultor vuelva a entrar al form vea lo
+ * último que envió.
+ */
+function diffPendientes(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(String(raw)) as {
+      cambios?: Record<string, unknown>;
+    };
+    return parsed.cambios && typeof parsed.cambios === "object"
+      ? parsed.cambios
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 async function cargarFinca(id: string): Promise<DatosFinca | null> {
   const f = await getRecord("FINCAS", id);
   if (!f) return null;
   const ff = f.fields;
+  const diff = diffPendientes(ff.cambios_pendientes);
+  const nombre = String(("nombre" in diff ? diff.nombre : ff.nombre) || "");
+  const movil = String(("movil" in diff ? diff.movil : ff.movil) || "");
+  const email = String(("email" in diff ? diff.email : ff.email) || "");
+  // Municipio: el diff guarda [id] (array). Si está, usar ese.
+  const municipioArr = (
+    "municipio" in diff ? diff.municipio : ff.municipio
+  ) as unknown;
+  const municipioId = Array.isArray(municipioArr)
+    ? String(municipioArr[0] || "") || null
+    : null;
   let municipioLabel: string | null = null;
-  const municipioId = Array.isArray(ff.municipio) ? String(ff.municipio[0]) : null;
   if (municipioId) {
     const m = await getRecord("MUNICIPIOS", municipioId);
     municipioLabel = m ? String(m.fields?.mundep || "") : null;
   }
-  const cultivoIds = Array.isArray(ff.cultivos) ? (ff.cultivos as string[]) : [];
+  const cultivoIds = (
+    "cultivos" in diff ? diff.cultivos : ff.cultivos
+  ) as unknown;
+  const cultivosList = Array.isArray(cultivoIds)
+    ? (cultivoIds as unknown[]).map(String)
+    : [];
   const cultivos: { id: string; nombre: string }[] = [];
-  for (const cid of cultivoIds) {
+  for (const cid of cultivosList) {
     const c = await getRecord("CULTIVOS", cid);
     if (c) cultivos.push({ id: cid, nombre: String(c.fields?.nombre || "") });
   }
   return {
     id: f.id,
-    nombre: String(ff.nombre || ""),
+    nombre,
     municipioId,
     municipioLabel,
     cultivos,
-    movil: String(ff.movil || ""),
-    email: String(ff.email || ""),
+    movil,
+    email,
   };
 }
 
@@ -277,23 +312,36 @@ async function cargarGenerador(id: string): Promise<DatosGenerador | null> {
   const g = await getRecord("GENERADORES", id);
   if (!g) return null;
   const gf = g.fields;
+  const diff = diffPendientes(gf.cambios_pendientes);
+  const nombre = String(("nombre" in diff ? diff.nombre : gf.nombre) || "");
+  const tipo = String(("tipo" in diff ? diff.tipo : gf.tipo) || "");
+  const direccion = String(
+    ("direccion_sede" in diff ? diff.direccion_sede : gf.direccion_sede) || ""
+  );
+  const movil = String(("movil" in diff ? diff.movil : gf.movil) || "");
+  const email = String(("email" in diff ? diff.email : gf.email) || "");
+  const municipioArr = (
+    "municipio" in diff ? diff.municipio : gf.municipio
+  ) as unknown;
+  const municipioId = Array.isArray(municipioArr)
+    ? String(municipioArr[0] || "") || null
+    : null;
   let municipioLabel: string | null = null;
-  const municipioId = Array.isArray(gf.municipio) ? String(gf.municipio[0]) : null;
   if (municipioId) {
     const m = await getRecord("MUNICIPIOS", municipioId);
     municipioLabel = m ? String(m.fields?.mundep || "") : null;
   }
   return {
     id: g.id,
-    nombre: String(gf.nombre || ""),
+    nombre,
     nit: String(gf.nit || ""),
     tipopersona: String(gf.tipopersona || ""),
-    tipo: String(gf.tipo || ""),
-    direccion: String(gf.direccion_sede || ""),
+    tipo,
+    direccion,
     municipioId,
     municipioLabel,
-    movil: String(gf.movil || ""),
-    email: String(gf.email || ""),
+    movil,
+    email,
   };
 }
 

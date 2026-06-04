@@ -296,8 +296,8 @@ async function manejarEditarFinca(
     desde: "whatsapp_magic_link",
   };
 
+  // Staging: NO aplicar al record. Solo guardar diff.
   await patchRecord("FINCAS", t.recordId, {
-    ...cambios,
     estado: "pendiente_revision",
     cambios_pendientes: JSON.stringify(cambiosPendientes),
     fecha_solicitud: nowIso(),
@@ -351,8 +351,8 @@ async function manejarEditarGenerador(
     desde: "whatsapp_magic_link",
   };
 
+  // Staging: NO aplicar al record. Solo guardar diff.
   await patchRecord("GENERADORES", t.recordId, {
-    ...cambios,
     estado: "pendiente_revision",
     cambios_pendientes: JSON.stringify(cambiosPendientes),
     fecha_solicitud: nowIso(),
@@ -420,8 +420,8 @@ async function manejarEditarPerfil(
         enviadoEn: nowIso(),
         desde: "whatsapp_magic_link",
       };
+      // Staging: NO aplicamos cambios al record — solo el diff.
       await patchRecord("GENERADORES", t.recordId, {
-        ...cambiosEmpresa,
         estado: "pendiente_revision",
         cambios_pendientes: JSON.stringify(cambiosPendientes),
         fecha_solicitud: nowIso(),
@@ -467,8 +467,10 @@ async function manejarEditarPerfil(
       enviadoEn: nowIso(),
       desde: "whatsapp_magic_link",
     };
+    // Staging: NO aplicamos los cambios al record. Solo guardamos el
+    // diff en cambios_pendientes — aprobar lo aplicará, rechazar lo
+    // descartará.
     await patchRecord("FINCAS", fincaId, {
-      ...cambiosFinca,
       estado: "pendiente_revision",
       cambios_pendientes: JSON.stringify(cambiosPendientes),
       fecha_solicitud: nowIso(),
