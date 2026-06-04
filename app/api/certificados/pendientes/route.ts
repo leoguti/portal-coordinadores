@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { getCultivosMap } from "@/lib/cultivosCache";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -75,6 +76,76 @@ function parseCambiosPendientes(raw: unknown): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+const LABEL_CAMPO: Record<string, string> = {
+  nombre: "Nombre",
+  movil: "Móvil",
+  email: "Email",
+  tipo: "Tipo",
+  direccion_sede: "Dirección",
+  direccion: "Dirección",
+  municipio: "Municipio",
+  cultivos: "Cultivos",
+};
+
+/**
+ * Convierte el diff crudo en pares legibles para mostrar al coord
+ * (resuelve IDs de municipios y cultivos a nombres).
+ */
+async function legibleizarDiff(
+  diff: Record<string, unknown>,
+  municipiosMap: Map<string, string>,
+  cultivosMap: Map<string, string>
+): Promise<Array<{ label: string; valor: string }>> {
+  const out: Array<{ label: string; valor: string }> = [];
+  for (const [k, v] of Object.entries(diff)) {
+    const label = LABEL_CAMPO[k] || k;
+    let valor: string;
+    if (k === "municipio" && Array.isArray(v)) {
+      const id = String((v as unknown[])[0] || "");
+      valor = municipiosMap.get(id) || id || "—";
+    } else if (k === "cultivos" && Array.isArray(v)) {
+      const ids = (v as unknown[]).map(String);
+      const nombres = ids.map((id) => cultivosMap.get(id) || id);
+      valor = nombres.join(", ");
+    } else if (Array.isArray(v)) {
+      valor = (v as unknown[]).join(", ");
+    } else {
+      valor = v == null || v === "" ? "(vacío)" : String(v);
+    }
+    out.push({ label, valor });
+  }
+  return out;
+}
+
+/**
+ * Resuelve un set de IDs de municipios → mapa id→label en una request.
+ * Vacío si no hay IDs.
+ */
+async function fetchMunicipiosMap(
+  ids: string[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (ids.length === 0) return map;
+  const orParts = ids.map((id) => `RECORD_ID()='${id}'`).join(",");
+  const formula = `OR(${orParts})`;
+  const p = new URLSearchParams();
+  p.set("filterByFormula", formula);
+  p.set("pageSize", "100");
+  p.append("fields[]", "mundep");
+  const r = await fetch(
+    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/MUNICIPIOS?${p}`,
+    { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+  );
+  if (!r.ok) return map;
+  const d = (await r.json()) as {
+    records: Array<{ id: string; fields: Record<string, unknown> }>;
+  };
+  for (const rec of d.records || []) {
+    map.set(rec.id, String(rec.fields.mundep || ""));
+  }
+  return map;
 }
 
 export async function GET(request: Request) {
@@ -289,40 +360,58 @@ export async function GET(request: Request) {
         "coordinador_solicitado",
         "cambios_pendientes",
       ]);
-      const items = records.map((r) => {
-        const f = r.fields;
-        const diff = parseCambiosPendientes(f.cambios_pendientes);
-        // Para auto-registro nuevo (estado=pendiente) los campos del record
-        // ya tienen los valores propuestos. Para revisión, el diff los
-        // sobreescribe — eso es lo que el agricultor pidió cambiar.
-        const get = (key: string, fallback: string): string =>
-          key in diff ? String(diff[key] ?? "") : fallback;
-        const getArr = (key: string, fallback: string[]): string[] => {
-          if (!(key in diff)) return fallback;
-          const v = diff[key];
-          return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
-        };
-        return {
-          id: r.id,
-          nombre: get("nombre", asStr(f.nombre)),
-          nit: asStr(f.nit),
-          tipopersona: asStr(f.tipopersona),
-          tipo: get("tipo", asStr(f.tipo)),
-          direccion: get("direccion_sede", asStr(f.direccion_sede)),
-          municipioId:
-            getArr("municipio", asArrStr(f.municipio))[0] || null,
-          movil: get("movil", asStr(f.movil)),
-          email: get("email", asStr(f.email)),
-          estado: asStr(f.estado),
-          fechaSolicitud: asStr(f.fecha_solicitud),
-          origen: asStr(f.solicitud_origen),
-          coordinadorSolicitadoId:
-            asArrStr(f.coordinador_solicitado)[0] || null,
-          tieneCambios: Object.keys(diff).length > 0,
-          camposCambiados: Object.keys(diff),
-          createdTime: r.createdTime,
-        };
-      });
+      // Recolectar IDs de municipios y cultivos en los diffs para
+      // resolver labels en una sola tanda.
+      const munIds = new Set<string>();
+      for (const r of records) {
+        const diff = parseCambiosPendientes(r.fields.cambios_pendientes);
+        if (Array.isArray(diff.municipio)) {
+          (diff.municipio as unknown[]).forEach((id) => munIds.add(String(id)));
+        }
+      }
+      const [cultivosMap, municipiosMap] = await Promise.all([
+        getCultivosMap().catch(() => new Map<string, string>()),
+        fetchMunicipiosMap(Array.from(munIds)),
+      ]);
+      const items = await Promise.all(
+        records.map(async (r) => {
+          const f = r.fields;
+          const diff = parseCambiosPendientes(f.cambios_pendientes);
+          const get = (key: string, fallback: string): string =>
+            key in diff ? String(diff[key] ?? "") : fallback;
+          const getArr = (key: string, fallback: string[]): string[] => {
+            if (!(key in diff)) return fallback;
+            const v = diff[key];
+            return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
+          };
+          const diffLegible = await legibleizarDiff(
+            diff,
+            municipiosMap,
+            cultivosMap
+          );
+          return {
+            id: r.id,
+            nombre: get("nombre", asStr(f.nombre)),
+            nit: asStr(f.nit),
+            tipopersona: asStr(f.tipopersona),
+            tipo: get("tipo", asStr(f.tipo)),
+            direccion: get("direccion_sede", asStr(f.direccion_sede)),
+            municipioId:
+              getArr("municipio", asArrStr(f.municipio))[0] || null,
+            movil: get("movil", asStr(f.movil)),
+            email: get("email", asStr(f.email)),
+            estado: asStr(f.estado),
+            fechaSolicitud: asStr(f.fecha_solicitud),
+            origen: asStr(f.solicitud_origen),
+            coordinadorSolicitadoId:
+              asArrStr(f.coordinador_solicitado)[0] || null,
+            tieneCambios: Object.keys(diff).length > 0,
+            camposCambiados: Object.keys(diff),
+            diffLegible,
+            createdTime: r.createdTime,
+          };
+        })
+      );
       items.sort((a, b) => (b.fechaSolicitud > a.fechaSolicitud ? 1 : -1));
       return NextResponse.json({ tipo: "generadores", items });
     }
@@ -349,35 +438,54 @@ export async function GET(request: Request) {
         "cambios_pendientes",
         "coordinador_id",
       ]);
-      const items = records.map((r) => {
-        const f = r.fields;
-        const diff = parseCambiosPendientes(f.cambios_pendientes);
-        const get = (key: string, fallback: string): string =>
-          key in diff ? String(diff[key] ?? "") : fallback;
-        const getArr = (key: string, fallback: string[]): string[] => {
-          if (!(key in diff)) return fallback;
-          const v = diff[key];
-          return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
-        };
-        return {
-          id: r.id,
-          nombre: get("nombre", asStr(f.nombre)),
-          generadorId: asArrStr(f.generador)[0] || null,
-          municipioId:
-            getArr("municipio", asArrStr(f.municipio))[0] || null,
-          movil: get("movil", asStr(f.movil)),
-          email: get("email", asStr(f.email)),
-          cultivosIds: getArr("cultivos", asArrStr(f.cultivos)),
-          estado: asStr(f.estado),
-          fechaSolicitud: asStr(f.fecha_solicitud),
-          origen: asStr(f.solicitud_origen),
-          cambiosPendientes: asStr(f.cambios_pendientes),
-          coordinadorId: asArrStr(f.coordinador_id)[0] || null,
-          tieneCambios: Object.keys(diff).length > 0,
-          camposCambiados: Object.keys(diff),
-          createdTime: r.createdTime,
-        };
-      });
+      const munIds = new Set<string>();
+      for (const r of records) {
+        const diff = parseCambiosPendientes(r.fields.cambios_pendientes);
+        if (Array.isArray(diff.municipio)) {
+          (diff.municipio as unknown[]).forEach((id) => munIds.add(String(id)));
+        }
+      }
+      const [cultivosMap, municipiosMap] = await Promise.all([
+        getCultivosMap().catch(() => new Map<string, string>()),
+        fetchMunicipiosMap(Array.from(munIds)),
+      ]);
+      const items = await Promise.all(
+        records.map(async (r) => {
+          const f = r.fields;
+          const diff = parseCambiosPendientes(f.cambios_pendientes);
+          const get = (key: string, fallback: string): string =>
+            key in diff ? String(diff[key] ?? "") : fallback;
+          const getArr = (key: string, fallback: string[]): string[] => {
+            if (!(key in diff)) return fallback;
+            const v = diff[key];
+            return Array.isArray(v) ? (v as unknown[]).map(String) : fallback;
+          };
+          const diffLegible = await legibleizarDiff(
+            diff,
+            municipiosMap,
+            cultivosMap
+          );
+          return {
+            id: r.id,
+            nombre: get("nombre", asStr(f.nombre)),
+            generadorId: asArrStr(f.generador)[0] || null,
+            municipioId:
+              getArr("municipio", asArrStr(f.municipio))[0] || null,
+            movil: get("movil", asStr(f.movil)),
+            email: get("email", asStr(f.email)),
+            cultivosIds: getArr("cultivos", asArrStr(f.cultivos)),
+            estado: asStr(f.estado),
+            fechaSolicitud: asStr(f.fecha_solicitud),
+            origen: asStr(f.solicitud_origen),
+            cambiosPendientes: asStr(f.cambios_pendientes),
+            coordinadorId: asArrStr(f.coordinador_id)[0] || null,
+            tieneCambios: Object.keys(diff).length > 0,
+            camposCambiados: Object.keys(diff),
+            diffLegible,
+            createdTime: r.createdTime,
+          };
+        })
+      );
       items.sort((a, b) => (b.fechaSolicitud > a.fechaSolicitud ? 1 : -1));
       return NextResponse.json({ tipo: "fincas", items });
     }

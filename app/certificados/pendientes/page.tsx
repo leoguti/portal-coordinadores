@@ -38,8 +38,10 @@ interface GenItem {
   direccion: string;
   movil: string;
   email: string;
+  estado: string;
   fechaSolicitud: string;
   origen: string;
+  diffLegible?: Array<{ label: string; valor: string }>;
   createdTime: string;
 }
 interface FincaItem {
@@ -51,6 +53,7 @@ interface FincaItem {
   fechaSolicitud: string;
   origen: string;
   cambiosPendientes: string;
+  diffLegible?: Array<{ label: string; valor: string }>;
   createdTime: string;
 }
 
@@ -433,12 +436,39 @@ function GenCard({
   onRechazar: () => void;
   submitting: boolean;
 }) {
+  const esRevision = g.estado === "pendiente_revision";
+  const diffLegible = g.diffLegible || [];
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-      <h3 className="font-medium text-gray-900">{g.nombre || "Sin nombre"}</h3>
-      <p className="text-xs text-gray-500 mb-2">
-        {g.tipopersona} · {g.tipo} · NIT/CC {g.nit || "—"}
-      </p>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <h3 className="font-medium text-gray-900">{g.nombre || "Sin nombre"}</h3>
+          <p className="text-xs text-gray-500">
+            {g.tipopersona} · {g.tipo} · NIT/CC {g.nit || "—"}
+          </p>
+        </div>
+        <span
+          className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+            esRevision
+              ? "bg-orange-100 text-orange-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          {esRevision ? "Revisar cambios" : "Nuevo registro"}
+        </span>
+      </div>
+      {esRevision && diffLegible.length > 0 && (
+        <div className="bg-orange-50 rounded p-3 text-sm space-y-1 mb-3">
+          <p className="text-xs text-orange-800 font-semibold mb-1">
+            Cambios solicitados:
+          </p>
+          {diffLegible.map((d, idx) => (
+            <p key={`${d.label}-${idx}`}>
+              <span className="text-orange-700">{d.label}:</span> {d.valor}
+            </p>
+          ))}
+        </div>
+      )}
       <div className="text-sm text-gray-700 space-y-1 mb-3">
         <p><span className="text-gray-500">Dirección:</span> {g.direccion || "—"}</p>
         <p><span className="text-gray-500">Móvil:</span> {g.movil || "—"}</p>
@@ -478,13 +508,8 @@ function FincaCard({
   onRechazar: () => void;
   submitting: boolean;
 }) {
-  let diff: { cambios?: Record<string, unknown> } | null = null;
-  try {
-    diff = f.cambiosPendientes ? JSON.parse(f.cambiosPendientes) : null;
-  } catch {
-    diff = null;
-  }
   const esRevision = f.estado === "pendiente_revision";
+  const diffLegible = f.diffLegible || [];
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -506,15 +531,14 @@ function FincaCard({
         </span>
       </div>
 
-      {esRevision && diff?.cambios && (
+      {esRevision && diffLegible.length > 0 && (
         <div className="bg-orange-50 rounded p-3 text-sm space-y-1 mb-3">
           <p className="text-xs text-orange-800 font-semibold mb-1">
             Cambios solicitados:
           </p>
-          {Object.entries(diff.cambios).map(([k, v]) => (
-            <p key={k}>
-              <span className="text-orange-700">{k}:</span>{" "}
-              {Array.isArray(v) ? v.join(", ") : String(v ?? "—")}
+          {diffLegible.map((d, idx) => (
+            <p key={`${d.label}-${idx}`}>
+              <span className="text-orange-700">{d.label}:</span> {d.valor}
             </p>
           ))}
         </div>
