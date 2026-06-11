@@ -267,6 +267,7 @@ async function manejarCertNuevo(
       "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
     resumen: lineas.join("\n"),
     coordContactoWaUrl,
+    nombreCoordinador: coord.nombre || undefined,
   };
 }
 
@@ -372,6 +373,7 @@ async function manejarEditarGenerador(
   if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
   if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
 
+  const coord = await coordinadorInfo(coordinadorId);
   return {
     ok: true,
     intent: "editar-generador",
@@ -379,6 +381,7 @@ async function manejarEditarGenerador(
     mensaje:
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
     resumen: lineas.join("\n"),
+    nombreCoordinador: coord.nombre || undefined,
   };
 }
 
@@ -499,6 +502,7 @@ async function manejarEditarPerfil(
     throw new Error("No se detectaron cambios reales");
   }
 
+  const coord = await coordinadorInfo(coordinadorId);
   return {
     ok: true,
     intent: "editar-perfil",
@@ -506,6 +510,7 @@ async function manejarEditarPerfil(
     mensaje:
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
     resumen: resumenLineas.join("\n"),
+    nombreCoordinador: coord.nombre || undefined,
   };
 }
 
@@ -623,6 +628,12 @@ async function manejarRegistroGenerador(
   if (fincaBody && asString(fincaBody.nombre)) {
     lineas.push(`• Primera finca: ${asString(fincaBody.nombre)}`);
   }
+  // Nombre del coord que revisará (el solicitado o el fallback).
+  const coordEfectivoId =
+    coordinadorSolicitadoId || WHATSAPP_FALLBACK_COORDINADOR_ID || "";
+  const coord = coordEfectivoId
+    ? await coordinadorInfo(coordEfectivoId)
+    : { nombre: "", telefono: "" };
   return {
     ok: true,
     intent: "registro-generador",
@@ -630,6 +641,7 @@ async function manejarRegistroGenerador(
     mensaje:
       "Solicitud de registro enviada. Tu coordinador la aprobará para que puedas empezar a generar certificados.",
     resumen: lineas.join("\n"),
+    nombreCoordinador: coord.nombre || undefined,
   };
 }
 
