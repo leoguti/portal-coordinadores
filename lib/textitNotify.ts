@@ -209,20 +209,64 @@ export interface AprobadoCertParams {
   nombreCoordinador: string;
 }
 
+/**
+ * Sube un archivo remoto al storage de TextIt (POST /media.json) y
+ * devuelve el attachment listo ("content_type:url"). La API de
+ * broadcasts NO acepta URLs externas como adjunto ("No such object",
+ * verificado 2026-06-11) — solo media de su propio storage.
+ */
+async function subirMediaTextIt(
+  fileUrl: string,
+  filename: string
+): Promise<string | null> {
+  if (!TEXTIT_API_TOKEN) return null;
+  try {
+    const archivo = await fetch(fileUrl, { cache: "no-store" });
+    if (!archivo.ok) return null;
+    const blob = await archivo.blob();
+    const form = new FormData();
+    form.append("file", blob, filename);
+    const r = await fetch(`${TEXTIT_API_URL}/media.json`, {
+      method: "POST",
+      headers: { Authorization: `Token ${TEXTIT_API_TOKEN}` },
+      body: form,
+    });
+    if (!r.ok) {
+      console.warn(`[textitNotify] media.json falló (${r.status})`);
+      return null;
+    }
+    const d = (await r.json()) as { content_type?: string; url?: string };
+    if (!d.content_type || !d.url) return null;
+    return `${d.content_type}:${d.url}`;
+  } catch (err) {
+    console.warn("[textitNotify] subirMediaTextIt error:", err);
+    return null;
+  }
+}
+
 export async function notificarCertAprobado(
   p: AprobadoCertParams
 ): Promise<BroadcastResult> {
-  // Dentro de 24h: texto bonito + PDF como documento adjunto.
+  // Dentro de 24h: texto bonito + PDF como documento adjunto (subido al
+  // storage de TextIt — no acepta URLs externas).
   // Fuera de 24h: template plano del flow 31 con el link en var3
   // (el template de Meta no soporta adjuntos).
+  let attachment: string | null = null;
+  if (p.pdfUrl && (await ventana24hAbierta(p.telefono))) {
+    attachment = await subirMediaTextIt(
+      p.pdfUrl,
+      `certificado_${p.consecutivo}.pdf`
+    );
+  }
   const textoLibre =
     `🎉 *¡Tu certificado fue aprobado!*\n\n` +
     `📄 *Certificado #${p.consecutivo}*\n` +
     `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
-    (p.pdfUrl
+    (attachment
       ? `Aquí tienes tu certificado en PDF. 👇`
-      : `El PDF te llegará también por email.`);
-  const attachments = p.pdfUrl ? [`application/pdf:${p.pdfUrl}`] : undefined;
+      : p.pdfUrl
+        ? `Descárgalo aquí: ${p.pdfUrl}`
+        : `El PDF te llegará también por email.`);
 
   const var1 = `#${p.consecutivo} de certificado`;
   const var2 = "aprobada";
@@ -230,7 +274,14 @@ export async function notificarCertAprobado(
     ? `Descarga el PDF: ${p.pdfUrl}`
     : "El PDF te llegará también por email.";
   const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
-  return enviarConFallback(p.telefono, textoLibre, var1, var2, var3, attachments);
+  return enviarConFallback(
+    p.telefono,
+    textoLibre,
+    var1,
+    var2,
+    var3,
+    attachment ? [attachment] : undefined
+  );
 }
 
 export interface RechazadoCertParams {
