@@ -455,6 +455,16 @@ function armarRespuesta(
   return armarRespuestaDesconocido(identidad);
 }
 
+/**
+ * GET — keep-warm ping. Un monitor externo (UptimeRobot) lo llama cada
+ * 5 min para evitar cold starts de esta función: TextIt corta el webhook
+ * si tardamos demasiado (6/52 runs fallaron con status 0 entre el 1-10
+ * de junio, todos arranques en frío). No toca Airtable ni requiere auth.
+ */
+export async function GET() {
+  return NextResponse.json({ ok: true, warm: true });
+}
+
 export async function POST(request: NextRequest) {
   if (!validateApiKey(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
