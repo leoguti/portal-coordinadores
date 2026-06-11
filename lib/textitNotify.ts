@@ -212,16 +212,25 @@ export interface AprobadoCertParams {
 export async function notificarCertAprobado(
   p: AprobadoCertParams
 ): Promise<BroadcastResult> {
-  // Vía flow `31-aviso-cierre` para que TextIt mande template fuera del 24h.
-  // Wording del template (aprobado en Meta):
-  //   "Tu solicitud {{1}} fue {{2}}.\n\n{{3}}"
+  // Dentro de 24h: texto bonito + PDF como documento adjunto.
+  // Fuera de 24h: template plano del flow 31 con el link en var3
+  // (el template de Meta no soporta adjuntos).
+  const textoLibre =
+    `🎉 *¡Tu certificado fue aprobado!*\n\n` +
+    `📄 *Certificado #${p.consecutivo}*\n` +
+    `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+    (p.pdfUrl
+      ? `Aquí tienes tu certificado en PDF. 👇`
+      : `El PDF te llegará también por email.`);
+  const attachments = p.pdfUrl ? [`application/pdf:${p.pdfUrl}`] : undefined;
+
   const var1 = `#${p.consecutivo} de certificado`;
   const var2 = "aprobada";
   const detalle = p.pdfUrl
     ? `Descarga el PDF: ${p.pdfUrl}`
     : "El PDF te llegará también por email.";
   const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  return enviarConFallback(p.telefono, textoLibre, var1, var2, var3, attachments);
 }
 
 export interface RechazadoCertParams {
@@ -234,12 +243,18 @@ export interface RechazadoCertParams {
 export async function notificarCertRechazado(
   p: RechazadoCertParams
 ): Promise<BroadcastResult> {
+  const solicitudLbl = p.consecutivo ? `#${p.consecutivo}` : "";
+  const textoLibre =
+    `❌ *Tu solicitud de certificado ${solicitudLbl} fue rechazada.*\n\n` +
+    `📋 *Motivo:* ${p.motivo}\n` +
+    `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
+    `Si necesitas más información, escríbele a tu coordinador. 💬`;
   const var1 = p.consecutivo
     ? `#${p.consecutivo} de certificado`
     : "de certificado";
   const var2 = "rechazada";
   const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si necesitas más información, escríbele a tu coordinador.`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  return enviarConFallback(p.telefono, textoLibre, var1, var2, var3);
 }
 
 export interface AnuladoCertParams {
@@ -252,10 +267,15 @@ export interface AnuladoCertParams {
 export async function notificarCertAnulado(
   p: AnuladoCertParams
 ): Promise<BroadcastResult> {
+  const textoLibre =
+    `⚠️ *Tu certificado #${p.consecutivo} fue anulado.*\n\n` +
+    `📋 *Motivo:* ${p.motivo}\n` +
+    `👤 *Anulado por:* ${p.nombreCoordinador}\n\n` +
+    `Este certificado ya no es válido. Si necesitas uno nuevo, contacta a tu coordinador. 💬`;
   const var1 = `#${p.consecutivo} de certificado`;
   const var2 = "anulada";
   const var3 = `Motivo: ${p.motivo}. Por: ${p.nombreCoordinador}. Este certificado ya no es válido. Si necesitas uno nuevo, contacta a tu coordinador.`;
-  return enviarAvisoActualizacionSolicitud(p.telefono, var1, var2, var3);
+  return enviarConFallback(p.telefono, textoLibre, var1, var2, var3);
 }
 
 export interface GenericoParams {
@@ -383,16 +403,19 @@ async function ventana24hAbierta(telefono: string): Promise<boolean> {
 /**
  * Envía texto libre formateado (bullets/bold/emojis) si la ventana de
  * 24h está abierta; si no, va directo al template aprobado vía flow 31.
+ * `attachments` (formato "mimetype:url") solo aplican a la vía texto
+ * libre — el template es de texto plano, ahí va el link dentro de var3.
  */
 async function enviarConFallback(
   telefono: string,
   textoLibre: string,
   var1: string,
   var2: string,
-  var3: string
+  var3: string,
+  attachments?: string[]
 ): Promise<BroadcastResult> {
   if (await ventana24hAbierta(telefono)) {
-    const r = await enviarBroadcastTelefono(telefono, textoLibre);
+    const r = await enviarBroadcastTelefono(telefono, textoLibre, attachments);
     if (r.ok) return r;
     console.warn(
       `[textitNotify] Broadcast directo falló (${r.message}), reintentando con template via flow`
