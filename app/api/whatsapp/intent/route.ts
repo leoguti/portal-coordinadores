@@ -70,6 +70,11 @@ function opcionesParaIdentidad(identidad: IdentidadAgricultor): MenuIntent[] {
   }
   // Admin de finca
   if (identidad.rol === "admin_finca") {
+    const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
+    // Todas sus fincas en revisión → no puede pedir cert, solo editar o coord.
+    if (fincasAprobadas.length === 0) {
+      return ["editar-finca", "contactar-coord"];
+    }
     return ["cert-nuevo", "editar-finca", "contactar-coord"];
   }
   // Desconocido
@@ -124,10 +129,13 @@ function recordIdParaToken(
   identidad: IdentidadAgricultor
 ): string | null {
   switch (intent) {
-    case "cert-nuevo":
-      // Si tiene 1 finca, la pre-seleccionamos. Si tiene varias, el form
-      // muestra selector — guardamos null y el contexto trae la lista.
-      return identidad.fincas.length === 1 ? identidad.fincas[0].id : null;
+    case "cert-nuevo": {
+      // Solo fincas APROBADAS pueden recibir cert. Si queda 1, la
+      // pre-seleccionamos; si hay varias, selector en el form (el contexto
+      // también va filtrado a aprobadas).
+      const aprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
+      return aprobadas.length === 1 ? aprobadas[0].id : null;
+    }
     case "editar-finca":
       // Admin_finca: única finca que matcheó. Titular: la primera (selector
       // en el form si hay varias).
@@ -198,10 +206,17 @@ export async function POST(request: NextRequest) {
     }
 
     const recordId = recordIdParaToken(resolved, identidad);
+    // Para cert-nuevo el contexto solo lleva fincas APROBADAS — el form
+    // arma su selector desde acá y una finca en revisión no debe aparecer
+    // (el backend de /enviar también lo valida, esto es UX).
+    const fincasParaContexto =
+      resolved === "cert-nuevo"
+        ? identidad.fincas.filter((f) => f.estado === "aprobado")
+        : identidad.fincas;
     const contexto: Record<string, unknown> = {
       rol: identidad.rol,
       estado_inicial: identidad.estado,
-      fincas: identidad.fincas.map((f) => ({
+      fincas: fincasParaContexto.map((f) => ({
         id: f.id,
         nombre: f.nombre,
         generadorId: f.generadorId,

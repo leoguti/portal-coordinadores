@@ -203,30 +203,67 @@ function armarRespuestaTitular(
 function armarRespuestaAdminFinca(
   identidad: IdentidadAgricultor
 ): RespuestaIdentificar {
-  const finca = identidad.fincas[0];
+  const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
+  const finca = fincasAprobadas[0] || identidad.fincas[0];
   const generador = identidad.generador;
   const nombreFinca = truncar(finca?.nombre || "tu finca", 30);
   const nombreGen = generador ? truncar(generador.nombre, 40) : null;
   const esJuridica = generador ? esEmpresa(generador.tipopersona) : false;
 
   const saludo = `Hola 👋`;
+
+  // Todas las fincas que administra están en revisión → bloquear cert.
+  if (fincasAprobadas.length === 0 && identidad.fincas.length > 0) {
+    const nombresFincas = identidad.fincas
+      .map((f) => f.nombre)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(", ");
+    const intro =
+      `Tu coordinador está revisando los cambios de ${
+        identidad.fincas.length === 1 ? "tu finca" : "tus fincas"
+      }${nombresFincas ? ` (${nombresFincas})` : ""}.\n\n` +
+      `No puedes generar certificados hasta que apruebe los cambios. Te aviso por aquí cuando estén listos.`;
+    const opciones: MenuOpcion[] = [
+      {
+        numero: 1,
+        intent: "editar-finca",
+        label: `1️⃣ Revisar / actualizar datos de la finca`,
+      },
+      { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
+    ];
+    return baseResp(identidad, saludo, intro, opciones, generador?.nombre || null);
+  }
+
+  // Si administra varias fincas, mencionarlas (cert va a la aprobada;
+  // si hay varias aprobadas, el form deja elegir).
+  const fincasLinea =
+    fincasAprobadas.length > 1
+      ? `Eres responsable de ${fincasAprobadas.length} fincas: ${fincasAprobadas
+          .map((f) => f.nombre)
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(", ")}.`
+      : `Eres responsable de la finca *${nombreFinca}*`;
+
   const intro = nombreGen
     ? esJuridica
-      ? `Eres responsable de la finca *${nombreFinca}*\n(parte de la empresa ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de ${nombreGen}, contacta a la empresa.\n\n¿Qué quieres hacer?`
-      : `Eres responsable de la finca *${nombreFinca}*\n(registrada a nombre de ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de los datos personales del titular, contáctalo a él.\n\n¿Qué quieres hacer?`
-    : `Eres responsable de la finca *${nombreFinca}*.\n\n¿Qué quieres hacer?`;
+      ? `${fincasLinea}\n(parte de la empresa ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de ${nombreGen}, contacta a la empresa.\n\n¿Qué quieres hacer?`
+      : `${fincasLinea}\n(registrada a nombre de ${nombreGen}).\n\nSolo puedes gestionar lo de tu finca. Para cambios de los datos personales del titular, contáctalo a él.\n\n¿Qué quieres hacer?`
+    : `${fincasLinea}.\n\n¿Qué quieres hacer?`;
+
+  const labelCert =
+    fincasAprobadas.length > 1
+      ? "1️⃣ Solicitar un certificado"
+      : `1️⃣ Solicitar certificado para ${nombreFinca}`;
+  const labelEditar =
+    identidad.fincas.length > 1
+      ? "2️⃣ Actualizar datos de una finca"
+      : `2️⃣ Actualizar datos de ${nombreFinca}`;
 
   const opciones: MenuOpcion[] = [
-    {
-      numero: 1,
-      intent: "cert-nuevo",
-      label: `1️⃣ Solicitar certificado para ${nombreFinca}`,
-    },
-    {
-      numero: 2,
-      intent: "editar-finca",
-      label: `2️⃣ Actualizar datos de ${nombreFinca}`,
-    },
+    { numero: 1, intent: "cert-nuevo", label: labelCert },
+    { numero: 2, intent: "editar-finca", label: labelEditar },
     { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
   ];
   return baseResp(identidad, saludo, intro, opciones, generador?.nombre || null);
