@@ -416,7 +416,21 @@ function baseResp(
 ): RespuestaIdentificar {
   // El saludo NO se incluye en menu_texto: el flow 30 lo manda por separado
   // como `saludo_personalizado`. Si se incluyera acá, sale duplicado.
-  const menu_texto = [intro, bloquePendientes, opciones.map((o) => o.label).join("\n")]
+  // El bloque de pendientes va ANTES de "¿Qué quieres hacer?" para que la
+  // pregunta quede pegada a las opciones.
+  const PREGUNTA = "¿Qué quieres hacer?";
+  let introBase = intro;
+  let pregunta = "";
+  if (bloquePendientes && intro.trimEnd().endsWith(PREGUNTA)) {
+    introBase = intro.trimEnd().slice(0, -PREGUNTA.length).trimEnd();
+    pregunta = PREGUNTA;
+  }
+  const menu_texto = [
+    introBase,
+    bloquePendientes,
+    pregunta,
+    opciones.map((o) => o.label).join("\n"),
+  ]
     .filter(Boolean)
     .join("\n\n");
   return {
