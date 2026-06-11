@@ -36,6 +36,9 @@ export interface FincaInfo {
   /** IDs de los cultivos linked. El consumer resuelve a nombres con
    *  getCultivosMap() según necesite. */
   cultivoIds: string[];
+  /** IDs de certificados linked (reverse lookup en FINCAS). Usado para
+   *  listar procesos pendientes en el menú del bot. */
+  certIds: string[];
 }
 
 export interface GeneradorInfo {
@@ -71,6 +74,21 @@ function mapFincaRecord(r: { id: string; fields: Record<string, unknown> }): Fin
   const cultivoIds = Array.isArray(ff.cultivos)
     ? (ff.cultivos as string[]).map(String)
     : [];
+  // Reverse lookup de certificados: el nombre exacto del campo varía
+  // ("Certificados", "certificados", …) — detectamos por contenido.
+  let certIds: string[] = [];
+  for (const [key, val] of Object.entries(ff)) {
+    if (
+      /certificado/i.test(key) &&
+      Array.isArray(val) &&
+      val.length > 0 &&
+      typeof val[0] === "string" &&
+      (val[0] as string).startsWith("rec")
+    ) {
+      certIds = (val as string[]).map(String);
+      break;
+    }
+  }
   return {
     id: r.id,
     nombre: String(ff.nombre || "").trim(),
@@ -78,6 +96,7 @@ function mapFincaRecord(r: { id: string; fields: Record<string, unknown> }): Fin
     estado: String(ff.estado || "aprobado"),
     completitudOk: Boolean(ff.municipio && cultivoIds.length > 0),
     cultivoIds,
+    certIds,
   };
 }
 

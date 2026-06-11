@@ -25,6 +25,8 @@ import {
 } from "@/lib/whatsappResolver";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
+const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
 
 interface MenuOpcion {
   numero: number;
@@ -64,13 +66,95 @@ function truncar(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
+/**
+ * Consulta los certificados en estado 'pendiente' de las fincas del
+ * agricultor y devuelve líneas legibles ("Certificado #94112 (finca X)").
+ * Usa los certIds del reverse lookup (ARRAYJOIN sobre linked records no
+ * sirve para filtrar por ID).
+ */
+async function consultarCertsPendientes(
+  identidad: IdentidadAgricultor
+): Promise<string[]> {
+  // Map certId → nombre de finca para etiquetar el resultado.
+  const fincaPorCert = new Map<string, string>();
+  for (const f of identidad.fincas) {
+    for (const cid of f.certIds) fincaPorCert.set(cid, f.nombre);
+  }
+  // Los certs más recientes quedan al final del linked record — tomamos
+  // los últimos 50 por finca para mantener la fórmula corta.
+  const certIds = identidad.fincas
+    .flatMap((f) => f.certIds.slice(-50))
+    .slice(0, 150);
+  if (certIds.length === 0) return [];
+  try {
+    const orParts = certIds.map((id) => `RECORD_ID()='${id}'`).join(",");
+    const formula = `AND({estado}='pendiente', OR(${orParts}))`;
+    const p = new URLSearchParams();
+    p.set("filterByFormula", formula);
+    p.set("pageSize", "10");
+    p.append("fields[]", "consecutivo");
+    const r = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Certificados?${p}`,
+      { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }, cache: "no-store" }
+    );
+    if (!r.ok) return [];
+    const d = (await r.json()) as {
+      records: Array<{ id: string; fields: Record<string, unknown> }>;
+    };
+    return (d.records || []).map((rec) => {
+      const consecutivo = rec.fields.consecutivo
+        ? `#${rec.fields.consecutivo}`
+        : "";
+      const finca = fincaPorCert.get(rec.id);
+      return `Certificado ${consecutivo}${finca ? ` (${finca})` : ""}`.trim();
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Arma el bloque "⏳ En revisión" que se muestra al entrar, para que el
+ * agricultor sepa de una vez qué procesos tiene pendientes. `soloCerts`
+ * se usa en menús bloqueados cuyo intro ya explica la revisión de
+ * fincas/datos (evita duplicar).
+ */
+function armarBloquePendientes(
+  identidad: IdentidadAgricultor,
+  certsPendientes: string[],
+  opts?: { soloCerts?: boolean }
+): string {
+  const items: string[] = [];
+  if (!opts?.soloCerts) {
+    if (identidad.generador?.estado === "pendiente_revision") {
+      const esJuridica = esEmpresa(identidad.generador.tipopersona);
+      items.push(
+        esJuridica
+          ? "• Cambios en los datos de la empresa"
+          : "• Cambios en tus datos personales"
+      );
+    }
+    for (const f of identidad.fincas) {
+      if (f.estado === "pendiente_revision") {
+        items.push(`• Cambios en la finca ${f.nombre || "(sin nombre)"}`);
+      } else if (f.estado === "pendiente") {
+        items.push(`• Registro de la finca ${f.nombre || "(sin nombre)"}`);
+      }
+    }
+  }
+  items.push(...certsPendientes.map((c) => `• ${c}`));
+  if (items.length === 0) return "";
+  return `⏳ *En revisión por tu coordinador:*\n${items.join("\n")}`;
+}
+
 function esEmpresa(tipopersona: string): boolean {
   const t = tipopersona.toLowerCase();
   return t === "juridica" || t === "jurídica" || t.includes("juridic");
 }
 
 function armarRespuestaTitular(
-  identidad: IdentidadAgricultor
+  identidad: IdentidadAgricultor,
+  certsPendientes: string[]
 ): RespuestaIdentificar {
   const generador = identidad.generador!;
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
@@ -99,7 +183,12 @@ function armarRespuestaTitular(
       },
       { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
     ];
-    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+    // El intro ya explica la revisión del generador — el bloque solo
+    // agrega certs pendientes si los hay.
+    const bloque = armarBloquePendientes(identidad, certsPendientes, {
+      soloCerts: true,
+    });
+    return baseResp(identidad, saludo, intro, opciones, generador.nombre, bloque);
   }
 
   // Sin fincas todavía o todas en revisión por el coord
@@ -151,8 +240,24 @@ function armarRespuestaTitular(
         { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
       ];
     }
-    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+    // El intro ya explica la revisión de fincas — el bloque solo agrega
+    // certs pendientes.
+    const bloqueCerts = armarBloquePendientes(identidad, certsPendientes, {
+      soloCerts: true,
+    });
+    return baseResp(
+      identidad,
+      saludo,
+      intro,
+      opciones,
+      generador.nombre,
+      bloqueCerts
+    );
   }
+
+  // Bloque de procesos pendientes (fincas en revisión, certs sin aprobar)
+  // para los menús normales — el agricultor lo ve de una al entrar.
+  const bloquePend = armarBloquePendientes(identidad, certsPendientes);
 
   // Label de "Actualizar mis datos" según tipopersona + nº de fincas.
   // Evitamos la palabra "empresa" para personas naturales (la mayoría son
@@ -183,7 +288,7 @@ function armarRespuestaTitular(
       { numero: 3, intent: "crear-finca", label: "3️⃣ Registrar otra finca" },
       { numero: 4, intent: "contactar-coord", label: "4️⃣ Hablar con un coordinador" },
     ];
-    return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+    return baseResp(identidad, saludo, intro, opciones, generador.nombre, bloquePend);
   }
 
   // Varias fincas
@@ -197,11 +302,12 @@ function armarRespuestaTitular(
     { numero: 3, intent: "crear-finca", label: "3️⃣ Registrar otra finca" },
     { numero: 4, intent: "contactar-coord", label: "4️⃣ Hablar con un coordinador" },
   ];
-  return baseResp(identidad, saludo, intro, opciones, generador.nombre);
+  return baseResp(identidad, saludo, intro, opciones, generador.nombre, bloquePend);
 }
 
 function armarRespuestaAdminFinca(
-  identidad: IdentidadAgricultor
+  identidad: IdentidadAgricultor,
+  certsPendientes: string[]
 ): RespuestaIdentificar {
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
   const finca = fincasAprobadas[0] || identidad.fincas[0];
@@ -232,8 +338,20 @@ function armarRespuestaAdminFinca(
       },
       { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
     ];
-    return baseResp(identidad, saludo, intro, opciones, generador?.nombre || null);
+    const bloqueCerts = armarBloquePendientes(identidad, certsPendientes, {
+      soloCerts: true,
+    });
+    return baseResp(
+      identidad,
+      saludo,
+      intro,
+      opciones,
+      generador?.nombre || null,
+      bloqueCerts
+    );
   }
+
+  const bloquePend = armarBloquePendientes(identidad, certsPendientes);
 
   // Si administra varias fincas, mencionarlas (cert va a la aprobada;
   // si hay varias aprobadas, el form deja elegir).
@@ -266,7 +384,14 @@ function armarRespuestaAdminFinca(
     { numero: 2, intent: "editar-finca", label: labelEditar },
     { numero: 3, intent: "contactar-coord", label: "3️⃣ Hablar con un coordinador" },
   ];
-  return baseResp(identidad, saludo, intro, opciones, generador?.nombre || null);
+  return baseResp(
+    identidad,
+    saludo,
+    intro,
+    opciones,
+    generador?.nombre || null,
+    bloquePend
+  );
 }
 
 function armarRespuestaDesconocido(
@@ -286,11 +411,14 @@ function baseResp(
   saludo: string,
   intro: string,
   opciones: MenuOpcion[],
-  nombre: string | null
+  nombre: string | null,
+  bloquePendientes = ""
 ): RespuestaIdentificar {
   // El saludo NO se incluye en menu_texto: el flow 30 lo manda por separado
   // como `saludo_personalizado`. Si se incluyera acá, sale duplicado.
-  const menu_texto = `${intro}\n\n${opciones.map((o) => o.label).join("\n")}`;
+  const menu_texto = [intro, bloquePendientes, opciones.map((o) => o.label).join("\n")]
+    .filter(Boolean)
+    .join("\n\n");
   return {
     estado: identidad.estado,
     rol: identidad.rol,
@@ -302,9 +430,14 @@ function baseResp(
   };
 }
 
-function armarRespuesta(identidad: IdentidadAgricultor): RespuestaIdentificar {
-  if (identidad.rol === "titular") return armarRespuestaTitular(identidad);
-  if (identidad.rol === "admin_finca") return armarRespuestaAdminFinca(identidad);
+function armarRespuesta(
+  identidad: IdentidadAgricultor,
+  certsPendientes: string[]
+): RespuestaIdentificar {
+  if (identidad.rol === "titular")
+    return armarRespuestaTitular(identidad, certsPendientes);
+  if (identidad.rol === "admin_finca")
+    return armarRespuestaAdminFinca(identidad, certsPendientes);
   return armarRespuestaDesconocido(identidad);
 }
 
@@ -324,7 +457,8 @@ export async function POST(request: NextRequest) {
     }
 
     const identidad = await identificarAgricultor(telefono);
-    const respuesta = armarRespuesta(identidad);
+    const certsPendientes = await consultarCertsPendientes(identidad);
+    const respuesta = armarRespuesta(identidad, certsPendientes);
     console.log(
       `[whatsapp/identificar] tel=${respuesta.telefonoNormalizado} rol=${respuesta.rol} estado=${respuesta.estado}`
     );
