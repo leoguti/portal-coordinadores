@@ -114,11 +114,12 @@ export default function EditarGeneradorPage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // movil NO se envía: es la identidad del bot, solo lo cambia
+          // el coordinador desde el portal.
           nombre: nombre.trim(),
           tipo: tipo.trim(),
           direccion: direccion.trim(),
           municipioId: municipio?.id || null,
-          movil: movil.trim(),
           email: email.trim(),
           coordinadorId,
         }),
@@ -219,14 +220,15 @@ export default function EditarGeneradorPage({
             />
           </Field>
 
-          <Field label="Móvil">
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={movil}
-              onChange={(e) => setMovil(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
-            />
+          <Field label="Móvil (número de contacto principal)">
+            <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-base text-gray-700">
+              {movil || "—"}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              🔒 Este número es tu identificación en WhatsApp y no se puede
+              cambiar desde aquí. Si necesitas cambiarlo, escríbele a tu
+              coordinador.
+            </p>
           </Field>
 
           <Field label="Email">

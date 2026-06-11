@@ -189,12 +189,13 @@ export default function PerfilPage({
     try {
       const body: Record<string, unknown> = { coordinadorId };
       if (empresa?.dirty) {
+        // movil NO se envía: el número del titular es la identidad del
+        // bot y solo lo cambia el coordinador desde el portal.
         body.empresa = {
           nombre: empresa.nombre.trim(),
           tipo: empresa.tipo.trim(),
           direccion: empresa.direccion.trim(),
           municipioId: empresa.municipio?.id || null,
-          movil: empresa.movil.trim(),
           email: empresa.email.trim(),
         };
       }
@@ -355,14 +356,15 @@ export default function PerfilPage({
                   placeholder="Busca el municipio…"
                 />
               </Field>
-              <Field label="Móvil">
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={empresa.movil}
-                  onChange={(e) => updateEmpresa({ movil: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
-                />
+              <Field label="Móvil (número de contacto principal)">
+                <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-base text-gray-700">
+                  {empresa.movil || "—"}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  🔒 Este número es tu identificación en WhatsApp y no se puede
+                  cambiar desde aquí. Si necesitas cambiarlo, escríbele a tu
+                  coordinador.
+                </p>
               </Field>
               <Field label="Email">
                 <input

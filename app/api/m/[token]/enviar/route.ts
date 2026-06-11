@@ -332,8 +332,11 @@ async function manejarEditarGenerador(
 ): Promise<ResultadoOk> {
   if (!t.recordId) throw new Error("Token sin recordId");
   const cambios: Record<string, unknown> = {};
-  // Campos editables: nombre, dirección, móvil, email, tipo. NO: nit, tipopersona.
-  for (const k of ["nombre", "movil", "email", "tipo"]) {
+  // Campos editables: nombre, dirección, email, tipo. NO: nit, tipopersona,
+  // ni MOVIL — el móvil del titular es la identidad del bot (decisión
+  // 2026-06-11, opción A): cambiarlo solo puede hacerlo el coordinador
+  // desde el portal tras verificar por su canal.
+  for (const k of ["nombre", "email", "tipo"]) {
     if (k in body && body[k] != null) cambios[k] = asString(body[k]);
   }
   if ("direccion" in body) cambios.direccion_sede = asString(body.direccion);
@@ -369,7 +372,6 @@ async function manejarEditarGenerador(
   if ("tipo" in cambios) lineas.push(`• Tipo actividad: ${cambios.tipo}`);
   if ("direccion_sede" in cambios)
     lineas.push(`• Dirección: ${cambios.direccion_sede || "(vacía)"}`);
-  if ("movil" in cambios) lineas.push(`• Móvil: ${cambios.movil}`);
   if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
   if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
 
@@ -404,10 +406,11 @@ async function manejarEditarPerfil(
 
   const resumenLineas: string[] = [];
 
-  // Empresa (opcional)
+  // Empresa (opcional). El móvil del titular NO es editable por acá —
+  // es la identidad del bot (decisión 2026-06-11, opción A).
   if (empresaInput) {
     const cambiosEmpresa: Record<string, unknown> = {};
-    for (const k of ["nombre", "movil", "email", "tipo"]) {
+    for (const k of ["nombre", "email", "tipo"]) {
       if (k in empresaInput && empresaInput[k] != null)
         cambiosEmpresa[k] = asString(empresaInput[k]);
     }
@@ -443,8 +446,6 @@ async function manejarEditarPerfil(
         resumenLineas.push(
           `  • Dirección: ${cambiosEmpresa.direccion_sede || "(vacía)"}`
         );
-      if ("movil" in cambiosEmpresa)
-        resumenLineas.push(`  • Móvil: ${cambiosEmpresa.movil}`);
       if ("email" in cambiosEmpresa)
         resumenLineas.push(`  • Email: ${cambiosEmpresa.email || "(vacío)"}`);
       if ("municipio" in cambiosEmpresa)
