@@ -345,9 +345,44 @@ export async function notificarSolicitudRecibida(
 // ─── Plantillas Generador / Finca ──────────────────────────────────────────
 
 /**
- * Helper: intenta enviar texto libre formateado (con bullets/bold/emojis).
- * Si TextIt lo rechaza (ej. fuera de ventana de 24h), cae al template via
- * flow 31 con vars planos.
+ * ¿Está abierta la ventana de 24h de WhatsApp para este teléfono?
+ *
+ * La ventana se abre cada vez que el contacto escribe; `last_seen_on` de
+ * TextIt registra exactamente eso. Margen de 23h para no enviar al filo.
+ *
+ * IMPORTANTE (verificado 2026-06-11 con prueba real): un broadcast de
+ * texto libre fuera de ventana NO falla en la API — devuelve 200 y el
+ * mensaje muere asíncrono con status=failed. Por eso hay que decidir
+ * ANTES de enviar; el fallback por HTTP status nunca se dispara.
+ *
+ * Si no se puede determinar (contacto no existe, error de red), se asume
+ * CERRADA → template, que funciona en cualquier caso.
+ */
+async function ventana24hAbierta(telefono: string): Promise<boolean> {
+  if (!TEXTIT_API_TOKEN) return false;
+  const tel10 = telefono.replace(/\D/g, "").slice(-10);
+  if (tel10.length !== 10) return false;
+  try {
+    const r = await fetch(
+      `${TEXTIT_API_URL}/contacts.json?urn=${encodeURIComponent(`whatsapp:57${tel10}`)}`,
+      { headers: { Authorization: `Token ${TEXTIT_API_TOKEN}` }, cache: "no-store" }
+    );
+    if (!r.ok) return false;
+    const d = (await r.json()) as {
+      results: Array<{ last_seen_on?: string | null }>;
+    };
+    const lastSeen = d.results?.[0]?.last_seen_on;
+    if (!lastSeen) return false;
+    const horas = (Date.now() - new Date(lastSeen).getTime()) / 3_600_000;
+    return horas < 23;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Envía texto libre formateado (bullets/bold/emojis) si la ventana de
+ * 24h está abierta; si no, va directo al template aprobado vía flow 31.
  */
 async function enviarConFallback(
   telefono: string,
@@ -356,11 +391,17 @@ async function enviarConFallback(
   var2: string,
   var3: string
 ): Promise<BroadcastResult> {
-  const r = await enviarBroadcastTelefono(telefono, textoLibre);
-  if (r.ok) return r;
-  console.warn(
-    `[textitNotify] Broadcast directo falló (${r.message}), reintentando con template via flow`
-  );
+  if (await ventana24hAbierta(telefono)) {
+    const r = await enviarBroadcastTelefono(telefono, textoLibre);
+    if (r.ok) return r;
+    console.warn(
+      `[textitNotify] Broadcast directo falló (${r.message}), reintentando con template via flow`
+    );
+  } else {
+    console.log(
+      `[textitNotify] Ventana 24h cerrada para ${telefono.slice(-4)} — template directo`
+    );
+  }
   return enviarAvisoActualizacionSolicitud(telefono, var1, var2, var3);
 }
 
