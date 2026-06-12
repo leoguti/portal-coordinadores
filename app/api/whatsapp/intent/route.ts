@@ -18,6 +18,7 @@ import {
   identificarAgricultor,
   type IdentidadAgricultor,
 } from "@/lib/whatsappResolver";
+import { identificarCoordinadorPorTelefono } from "@/lib/coordinadorResolver";
 import { crearToken, type Intent } from "@/lib/edicionTokens";
 import { getCultivosMap } from "@/lib/cultivosCache";
 
@@ -111,6 +112,9 @@ function urlParaIntent(intent: Intent, token: string): string {
   switch (intent) {
     case "cert-nuevo":
       return `${base}/m/cert/${token}`;
+    case "cert-coordinador":
+      // No se alcanza: el flujo coordinador se resuelve antes en el POST.
+      return `${base}/m/cert-coord/${token}`;
     case "editar-finca":
       return `${base}/m/finca/${token}`;
     case "editar-generador":
@@ -148,6 +152,9 @@ function recordIdParaToken(
       return identidad.generador?.id || null;
     case "registro-generador":
       return null;
+    case "cert-coordinador":
+      // No se alcanza: el flujo coordinador se resuelve antes en el POST.
+      return null;
   }
 }
 
@@ -179,6 +186,42 @@ export async function POST(request: NextRequest) {
         { error: "Faltan campos `telefono` y `opcion` (numérico ≥ 1)" },
         { status: 400 }
       );
+    }
+
+    // Coordinador PRIMERO — misma precedencia que /identificar (en vivo,
+    // el Rol puede cambiar). Su menú tiene una sola opción: generar cert.
+    const coord = await identificarCoordinadorPorTelefono(telefono);
+    if (coord) {
+      if (opcion !== 1) {
+        return NextResponse.json(
+          {
+            error: "Opción fuera de rango",
+            mensaje_ok: "Por favor responde 1 para generar un certificado.",
+          },
+          { status: 400 }
+        );
+      }
+      const token = await crearToken({
+        intent: "cert-coordinador",
+        recordId: coord.id,
+        telefonoValidado: coord.telefono,
+        contexto: {
+          rol: "coordinador",
+          coordinador: { id: coord.id, nombre: coord.nombre },
+        },
+        ttlMinutes: TTL_MIN,
+      });
+      const base = PORTAL_BASE.replace(/\/$/, "");
+      console.log(
+        `[whatsapp/intent] tel=${coord.telefono} rol=coordinador intent=cert-coordinador token=${token.token.slice(0, 8)}…`
+      );
+      return NextResponse.json({
+        url: `${base}/m/cert-coord/${token.token}`,
+        expira_min: TTL_MIN,
+        mensaje_ok:
+          "Vamos a generar un certificado. En el formulario busca al agricultor por su cédula o nombre. El certificado sale aprobado de una vez, a tu nombre.",
+        intent: "cert-coordinador",
+      });
     }
 
     const identidad = await identificarAgricultor(telefono);
@@ -318,6 +361,9 @@ async function mensajeOkParaIntent(
       return "Vamos a registrar tu nueva finca.";
     case "registro-generador":
       return "Vamos a registrarte como agricultor.";
+    case "cert-coordinador":
+      // No se alcanza: el flujo coordinador se resuelve antes en el POST.
+      return "Vamos a generar un certificado.";
   }
 }
 

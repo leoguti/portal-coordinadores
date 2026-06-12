@@ -21,8 +21,14 @@ import {
   type EdicionToken,
   type Intent,
 } from "@/lib/edicionTokens";
-import { crearRegistroCertificado } from "@/lib/certificadosCore";
-import { notificarSolicitudRecibida } from "@/lib/textitNotify";
+import {
+  crearRegistroCertificado,
+  crearCertificadoCompleto,
+} from "@/lib/certificadosCore";
+import {
+  notificarSolicitudRecibida,
+  notificarCertAprobado,
+} from "@/lib/textitNotify";
 import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 function intentToNotifTipo(
@@ -43,10 +49,16 @@ function intentToNotifTipo(
       return "crear-finca";
     case "registro-generador":
       return "registro-generador";
+    case "cert-coordinador":
+      // No se usa: el aviso de cert-coordinador es notificarCertAprobado
+      // (con PDF), manejado aparte en el after() del POST.
+      return "cert";
   }
 }
 
-export const maxDuration = 30;
+// El cert del coordinador genera el PDF inline (render + Blob + R2) — igual
+// presupuesto que /api/certificados/generar.
+export const maxDuration = 60;
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -122,6 +134,8 @@ interface ResultadoOk {
   mensaje: string;
   /** Consecutivo del cert recién creado (solo aplica a cert-nuevo). */
   consecutivo?: number;
+  /** URL permanente del PDF (solo cert-coordinador, para el aviso WA). */
+  pdfUrl?: string;
   /** Resumen humano de los datos enviados — se envía al agricultor por WA
    *  para que pueda revisar errores antes de la aprobación del coord. */
   resumen?: string;
@@ -268,6 +282,74 @@ async function manejarCertNuevo(
     resumen: lineas.join("\n"),
     coordContactoWaUrl,
     nombreCoordinador: coord.nombre || undefined,
+  };
+}
+
+/**
+ * Certificado generado por un COORDINADOR desde WhatsApp (intent
+ * cert-coordinador). A diferencia de cert-nuevo:
+ *   - La finca puede ser CUALQUIERA (el token del coordinador es la auth).
+ *   - Sale en estado "aprobado" de una vez, con PDF inline — paridad con el
+ *     portal del coordinador.
+ *   - coordinadorId = recordId del token (no viene del body).
+ */
+async function manejarCertCoordinador(
+  t: EdicionToken,
+  body: Record<string, unknown>
+): Promise<ResultadoOk> {
+  const coordinadorId = t.recordId;
+  if (!coordinadorId) throw new Error("Token sin coordinador");
+
+  const fincaId = asString(body.fincaId);
+  const municipioDevolucionId = asString(body.municipioDevolucionId);
+  const fechadevolucion = asString(body.fechadevolucion);
+  if (!fincaId) throw new Error("Falta seleccionar la finca");
+  if (!municipioDevolucionId) throw new Error("Falta el municipio de devolución");
+  if (!fechadevolucion) throw new Error("Falta la fecha de recolección");
+
+  const rigidos = asNumber(body.rigidos);
+  const flexibles = asNumber(body.flexibles);
+  const metalicos = asNumber(body.metalicos);
+  const embalaje = asNumber(body.embalaje);
+  if (rigidos + flexibles + metalicos + embalaje <= 0) {
+    throw new Error("El total de kilos debe ser mayor a 0");
+  }
+  const triplelavado = asString(body.triplelavado);
+  if (!["SI", "NO", "NO APLICA"].includes(triplelavado)) {
+    throw new Error("Indica si se hizo triple lavado");
+  }
+
+  const result = await crearCertificadoCompleto(
+    {
+      fincaId,
+      coordinadorId,
+      municipioDevolucionId,
+      rigidos,
+      flexibles,
+      metalicos,
+      embalaje,
+      triplelavado,
+      lugardevolucion: asString(body.lugardevolucion),
+      fechadevolucion,
+      observaciones: asString(body.observaciones),
+    },
+    {
+      estado: "aprobado",
+      solicitudOrigen: "whatsapp",
+      fechaSolicitud: nowIso(),
+      after,
+    }
+  );
+
+  const coord = await coordinadorInfo(coordinadorId);
+  return {
+    ok: true,
+    intent: "cert-coordinador",
+    recordId: result.recordId,
+    consecutivo: result.consecutivo || undefined,
+    pdfUrl: result.r2Url || result.pdfUrl || undefined,
+    nombreCoordinador: coord.nombre || undefined,
+    mensaje: `Certificado #${result.consecutivo} generado y aprobado. Te llega el PDF por WhatsApp en un momento.`,
   };
 }
 
@@ -698,6 +780,9 @@ export async function POST(
       case "registro-generador":
         result = await manejarRegistroGenerador(t, body);
         break;
+      case "cert-coordinador":
+        result = await manejarCertCoordinador(t, body);
+        break;
       default:
         throw new Error(`Intent desconocido: ${t.intent}`);
     }
@@ -705,10 +790,26 @@ export async function POST(
       `[m/enviar] intent=${t.intent} record=${result.recordId} tel=${t.telefonoValidado}`
     );
 
-    // Notificar al agricultor por WhatsApp que recibimos su solicitud
-    // (background — no bloquea la respuesta del POST).
+    // Notificar por WhatsApp (background — no bloquea la respuesta del POST).
+    // cert-coordinador: el cert ya salió aprobado → mandar directamente el
+    // PDF al coordinador (mismo aviso bonito de la aprobación).
+    // Resto de intents: aviso "Recibimos tu solicitud…" al agricultor.
     after(async () => {
       try {
+        if (t.intent === "cert-coordinador") {
+          if (result.consecutivo && result.pdfUrl) {
+            const r = await notificarCertAprobado({
+              telefono: t.telefonoValidado,
+              consecutivo: result.consecutivo,
+              pdfUrl: result.pdfUrl,
+              nombreCoordinador: result.nombreCoordinador || "Coordinador",
+            });
+            console.log(
+              `[m/enviar wa coord] ${r.ok ? "OK" : "FAIL"}: ${r.message}`
+            );
+          }
+          return;
+        }
         const tipo = intentToNotifTipo(t.intent);
         const r = await notificarSolicitudRecibida({
           telefono: t.telefonoValidado,

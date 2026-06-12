@@ -137,13 +137,19 @@ interface PayloadRegistroGenerador extends PayloadBase {
   intent: "registro-generador";
 }
 
+interface PayloadCertCoordinador extends PayloadBase {
+  intent: "cert-coordinador";
+  coordinador: { id: string; nombre: string };
+}
+
 type Payload =
   | PayloadCertNuevo
   | PayloadEditarFinca
   | PayloadEditarGenerador
   | PayloadEditarPerfil
   | PayloadCrearFinca
-  | PayloadRegistroGenerador;
+  | PayloadRegistroGenerador
+  | PayloadCertCoordinador;
 
 // ─── Fetchers ──────────────────────────────────────────────────────────────
 
@@ -599,6 +605,19 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         intent: "registro-generador",
         coordinadores,
       };
+    }
+
+    case "cert-coordinador": {
+      // El coordinador genera certs para cualquier agricultor — la búsqueda
+      // del generador la hace el form vía /api/m/[token]/buscar-generador.
+      const ctx = t.contexto as {
+        coordinador?: { id: string; nombre: string };
+      };
+      const coordinador = ctx.coordinador?.id
+        ? ctx.coordinador
+        : { id: t.recordId || "", nombre: "" };
+      if (!coordinador.id) throw new Error("Token sin coordinador");
+      return { ...base, intent: "cert-coordinador", coordinador };
     }
   }
 }

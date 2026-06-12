@@ -23,6 +23,10 @@ import {
   identificarAgricultor,
   type IdentidadAgricultor,
 } from "@/lib/whatsappResolver";
+import {
+  identificarCoordinadorPorTelefono,
+  type CoordinadorWA,
+} from "@/lib/coordinadorResolver";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
@@ -32,6 +36,7 @@ interface MenuOpcion {
   numero: number;
   intent:
     | "cert-nuevo"
+    | "cert-coordinador"
     | "editar-datos-personales"
     | "editar-finca"
     | "editar-perfil"
@@ -43,7 +48,7 @@ interface MenuOpcion {
 
 interface RespuestaIdentificar {
   estado: "conocido_con_fincas" | "conocido_sin_finca" | "desconocido";
-  rol: "titular" | "admin_finca" | "desconocido";
+  rol: "titular" | "admin_finca" | "desconocido" | "coordinador";
   telefonoNormalizado: string;
   nombre: string | null;
   saludo_personalizado: string;
@@ -394,6 +399,39 @@ function armarRespuestaAdminFinca(
   );
 }
 
+/**
+ * Menú para coordinadores (Rol="Coordinador" en Airtable, consultado en
+ * vivo — el rol puede cambiar en cualquier momento). Un coordinador puede
+ * generar certificados para CUALQUIER agricultor desde su WhatsApp.
+ */
+function armarRespuestaCoordinador(
+  coord: CoordinadorWA
+): RespuestaIdentificar {
+  const nombreCorto = truncar(coord.nombre || "Coordinador", 40);
+  const saludo = `Hola ${nombreCorto} 👋`;
+  const intro =
+    `Te tengo registrado como *coordinador(a)*.\n\n¿Qué quieres hacer?`;
+  const opciones: MenuOpcion[] = [
+    {
+      numero: 1,
+      intent: "cert-coordinador",
+      label: "1️⃣ Generar un certificado (cualquier agricultor)",
+    },
+  ];
+  const menu_texto = [intro, opciones.map((o) => o.label).join("\n")].join(
+    "\n\n"
+  );
+  return {
+    estado: "conocido_con_fincas",
+    rol: "coordinador",
+    telefonoNormalizado: coord.telefono,
+    nombre: coord.nombre,
+    saludo_personalizado: saludo,
+    menu_texto,
+    opciones,
+  };
+}
+
 function armarRespuestaDesconocido(
   identidad: IdentidadAgricultor
 ): RespuestaIdentificar {
@@ -478,6 +516,18 @@ export async function POST(request: NextRequest) {
         { error: "Falta el campo `telefono` en el body" },
         { status: 400 }
       );
+    }
+
+    // Coordinador PRIMERO (gana sobre titular/admin_finca): hay coords que
+    // registraron fincas de agricultores con su propio número. La lista se
+    // consulta en vivo en Airtable (el Rol puede cambiar en cualquier momento).
+    const coord = await identificarCoordinadorPorTelefono(telefono);
+    if (coord) {
+      const respuesta = armarRespuestaCoordinador(coord);
+      console.log(
+        `[whatsapp/identificar] tel=${respuesta.telefonoNormalizado} rol=coordinador (${coord.nombre})`
+      );
+      return NextResponse.json(respuesta);
     }
 
     const identidad = await identificarAgricultor(telefono);
