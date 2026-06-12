@@ -15,6 +15,7 @@ import CrearGeneradorForm, {
   type GeneradorFincaInitial,
 } from "@/components/CrearGeneradorForm";
 import AgregarFincaForm from "@/components/AgregarFincaForm";
+import { rangoFechaDevolucion } from "@/lib/certificadosReglas";
 
 interface Resultado {
   consecutivo: number;
@@ -76,10 +77,7 @@ export default function CertificadosPage() {
   const [errorGenerar, setErrorGenerar] = useState<string | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
 
-  const hoy = new Date().toISOString().split("T")[0];
-  const hace90 = new Date();
-  hace90.setDate(hace90.getDate() - 90);
-  const minFecha = hace90.toISOString().split("T")[0];
+  const { min: minFecha, max: hoy } = rangoFechaDevolucion();
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");

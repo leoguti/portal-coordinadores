@@ -20,6 +20,7 @@ import {
   resolveGeneradorDataFromFinca,
   type ResolvedGeneradorData,
 } from "@/lib/fincaGeneradorResolver";
+import { validarFechaDevolucion } from "@/lib/certificadosReglas";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -233,6 +234,10 @@ export async function crearRegistroCertificado(
       "Faltan campos requeridos: (fincaId o ubicacionId), coordinadorId, municipioDevolucionId"
     );
   }
+
+  // Política de fechas unificada (las 3 vías pasan por aquí).
+  const errorFecha = validarFechaDevolucion(input.fechadevolucion || "");
+  if (errorFecha) throw new Error(errorFecha);
 
   // Resolver datos de finca (vía nueva) antes de crear, para fallar temprano.
   let resolved: ResolvedGeneradorData | null = null;

@@ -11,6 +11,8 @@ import MagicLinkLayout, {
   LoadingSpinner,
 } from "@/components/MagicLinkLayout";
 
+import { rangoFechaDevolucion } from "@/lib/certificadosReglas";
+
 const MunicipioSearch = dynamic(() => import("@/components/MunicipioSearch"), {
   ssr: false,
 });
@@ -139,10 +141,7 @@ export default function CertNuevoPage({
     (Number(metalicos) || 0) +
     (Number(embalaje) || 0);
 
-  const fechaMaxima = new Date().toISOString().slice(0, 10);
-  const fechaMinima = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const { min: fechaMinima, max: fechaMaxima } = rangoFechaDevolucion();
 
   function validar(): string | null {
     if (!fincaId) return "Selecciona una finca";
