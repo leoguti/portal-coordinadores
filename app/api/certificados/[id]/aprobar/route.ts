@@ -128,7 +128,13 @@ export async function POST(
           fincaIds[0]
         )
       : null;
-    const pdfProps = construirPdfProps(f, resolved);
+    // La fecha de aprobación es AHORA: el PDF se genera antes del PATCH que
+    // marca el estado, así que se pasa explícita (no existe aún en el record).
+    const fechaAprobacionIso = new Date().toISOString();
+    const pdfProps = construirPdfProps(f, resolved, {
+      generacion: String(f.fecha_solicitud || "") || rec.createdTime,
+      aprobacion: fechaAprobacionIso,
+    });
     if (!pdfProps.consecutivo) {
       return NextResponse.json(
         { error: "El certificado no tiene consecutivo asignado" },
@@ -158,7 +164,7 @@ export async function POST(
       body: JSON.stringify({
         fields: {
           estado: "aprobado",
-          fecha_aprobacion: new Date().toISOString(),
+          fecha_aprobacion: fechaAprobacionIso,
           aprobado_por: [coordId],
         },
         typecast: true,

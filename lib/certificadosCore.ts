@@ -92,6 +92,24 @@ export interface PDFGenerado {
 
 // ─── Helpers internos ──────────────────────────────────────────────────────
 
+/** Formatea un ISO timestamp a fecha/hora legible en zona Bogotá: "12/06/2026 14:32". */
+export function formatearFechaBogota(iso: string | undefined | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(",", "");
+}
+
 async function uploadToR2(pdfBuffer: Buffer, filename: string): Promise<string> {
   const s3 = new S3Client({
     region: "auto",
@@ -286,7 +304,16 @@ export async function crearRegistroCertificado(
     throw new Error(`Airtable read failed: ${errorText}`);
   }
   const fullRecord = await readResponse.json();
-  const pdfProps = construirPdfProps(fullRecord.fields, resolved);
+
+  // Fechas del pie de página del PDF. En el flujo directo (portal/Telegram,
+  // estado aprobado de una) generación y aprobación coinciden con la creación
+  // del registro. En el flujo con aprobación (WhatsApp) el PDF NO se genera
+  // aquí sino en /aprobar, que pasa sus propias fechas.
+  const esAprobadoDirecto = (opts.estado || "aprobado") === "aprobado";
+  const pdfProps = construirPdfProps(fullRecord.fields, resolved, {
+    generacion: opts.fechaSolicitud || fullRecord.createdTime,
+    aprobacion: esAprobadoDirecto ? fullRecord.createdTime : undefined,
+  });
 
   return { recordId, fullRecord, pdfProps, resolved };
 }
@@ -298,7 +325,8 @@ export async function crearRegistroCertificado(
  */
 export function construirPdfProps(
   fields: Record<string, unknown>,
-  resolved: ResolvedGeneradorData | null
+  resolved: ResolvedGeneradorData | null,
+  fechas?: { generacion?: string; aprobacion?: string }
 ): CertificadoPDFProps {
   const f = fields as Record<string, unknown>;
   const firstStr = (v: unknown): string => {
@@ -329,6 +357,12 @@ export function construirPdfProps(
     movilcoordinador: firstStr(f.movilcoordinador),
     emailcoordinador: firstStr(f.emailcoordinador),
     observaciones: String(f.observaciones || ""),
+    fechageneracion: formatearFechaBogota(
+      fechas?.generacion || String(f.fecha_solicitud || "")
+    ),
+    fechaaprobacion: formatearFechaBogota(
+      fechas?.aprobacion || String(f.fecha_aprobacion || "")
+    ),
   };
 }
 

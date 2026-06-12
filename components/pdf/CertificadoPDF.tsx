@@ -41,6 +41,9 @@ export interface CertificadoPDFProps {
   emailcoordinador: string;
   // Otros
   observaciones: string;
+  // Pie de página (ya formateadas para mostrar, ej. "12/06/2026 14:32")
+  fechageneracion?: string;
+  fechaaprobacion?: string;
 }
 
 // ---------- Gestores data (static, same for every certificate) ----------
@@ -360,6 +363,15 @@ const s = StyleSheet.create({
   authLineBold: {
     fontFamily: "Helvetica-Bold",
   },
+
+  // Pie de página con fechas de generación/aprobación
+  pieFechas: {
+    marginTop: 6,
+    fontSize: 6,
+    fontFamily: "Helvetica-Oblique",
+    color: "#888888",
+    textAlign: "center",
+  },
 });
 
 // ---------- Component ----------
@@ -388,6 +400,8 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
     emailcoordinador,
     observaciones,
     nombrefinca,
+    fechageneracion,
+    fechaaprobacion,
   } = props;
 
   return (
@@ -708,11 +722,11 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           <View style={[s.cell, s.cellBorderRight, { width: "20%" }]}>
             <Text style={s.labelText}>Municipio / Depto :</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "40%" }]}>
+          <View style={[s.cell, s.cellBorderRight, { width: "35%" }]}>
             <Text style={s.valueBold}>{municipiodevolucion}</Text>
           </View>
-          <View style={[s.cell, s.cellBorderRight, { width: "10%" }]}>
-            <Text style={s.labelText}>Fecha</Text>
+          <View style={[s.cell, s.cellBorderRight, { width: "15%" }]}>
+            <Text style={s.labelText}>Fecha de Recolección</Text>
           </View>
           <View style={[s.cell, { width: "30%" }]}>
             <Text style={s.valueText}>{fechadevolucion}</Text>
@@ -759,6 +773,18 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>{movilcoordinador}</Text>
           </View>
         </View>
+
+        {/* Pie de página: fechas de generación y aprobación */}
+        {(fechageneracion || fechaaprobacion) && (
+          <Text style={s.pieFechas}>
+            {[
+              fechageneracion ? `Documento generado: ${fechageneracion}` : "",
+              fechaaprobacion ? `Aprobado: ${fechaaprobacion}` : "",
+            ]
+              .filter(Boolean)
+              .join("   ·   ")}
+          </Text>
+        )}
       </Page>
     </Document>
   );

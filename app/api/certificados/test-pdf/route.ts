@@ -33,6 +33,8 @@ export async function GET() {
       movilcoordinador: "318 6986460",
       emailcoordinador: "",
       observaciones: "",
+      fechageneracion: "20/05/2025 09:14",
+      fechaaprobacion: "24/05/2025 16:02",
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
