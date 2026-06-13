@@ -28,6 +28,16 @@ function fmtMesAno(iso: string | null): string {
   return `${MESES_ES[mi]} de ${y}`;
 }
 
+// El total viene de Postgres como numeric → node-pg lo serializa como string
+// ("485.000"). Lo mostramos como kilos enteros con el mismo formato que el PDF
+// ("485 kg"), igual que la columna "Total (kg)" del listado actual.
+function fmtKilos(total: number | string | null): string {
+  if (total == null) return "—";
+  const n = Number(total);
+  if (!Number.isFinite(n)) return "—";
+  return `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(n)} kg`;
+}
+
 interface Certificado {
   id: string;
   consecutivo: number | null;
@@ -36,7 +46,7 @@ interface Certificado {
   municipiodevolucion: string | null;
   fechadevolucion: string | null;
   ano: number | null;
-  total: number | null;
+  total: number | string | null;
   triplelavado: string | null;
   certificadopdf_r2_url: string | null;
   certificadopdf_filename: string | null;
@@ -263,7 +273,7 @@ export default function HistoricoCertificados() {
                       Año
                     </th>
                     <th className="px-4 py-3 font-medium text-gray-600 text-right">
-                      Envases
+                      Total (kg)
                     </th>
                     <th className="px-4 py-3 font-medium text-gray-600 text-center">
                       PDF
@@ -310,8 +320,8 @@ export default function HistoricoCertificados() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-900">
-                        {c.total ?? 0}
+                      <td className="px-4 py-3 text-right font-mono text-gray-900 whitespace-nowrap">
+                        {fmtKilos(c.total)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {c.certificadopdf_r2_url ? (
