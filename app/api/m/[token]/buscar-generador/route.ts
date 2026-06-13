@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { leerToken, estaConsumido, estaExpirado } from "@/lib/edicionTokens";
+import { resolveGeneradorDataFromFinca } from "@/lib/fincaGeneradorResolver";
 
 export const maxDuration = 30;
 
@@ -44,8 +45,38 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") || "").trim();
   const generadorId = (searchParams.get("generador") || "").trim();
+  const fincaPreviewId = (searchParams.get("finca") || "").trim();
 
   try {
+    // ── Preview de los datos que saldrán en el certificado ────────────────
+    // Usa el MISMO resolver que la emisión real, para que lo que ve el
+    // coordinador sea idéntico a lo que se imprime en el PDF.
+    if (fincaPreviewId) {
+      try {
+        const r = await resolveGeneradorDataFromFinca(
+          AIRTABLE_API_KEY,
+          AIRTABLE_BASE_ID,
+          fincaPreviewId
+        );
+        return NextResponse.json({
+          preview: {
+            nombregenerador: r.nombregenerador,
+            cedulagenerador: r.cedulagenerador,
+            tipogenerador: r.tipogenerador,
+            direcciongenerador: r.direcciongenerador,
+            municipiogenerador: r.municipiogenerador,
+            cultivogenerador: r.cultivogenerador,
+            movilgenerador: r.movilgenerador,
+            emailgenerador: r.emailgenerador,
+            fincaNombre: r.fincaNombre,
+          },
+        });
+      } catch (err) {
+        console.error("[m/buscar-generador] preview:", err);
+        return NextResponse.json({ preview: null });
+      }
+    }
+
     // ── Fincas de un generador ────────────────────────────────────────────
     if (generadorId) {
       const genRes = await at(`/GENERADORES/${generadorId}`);

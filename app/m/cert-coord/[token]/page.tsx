@@ -45,6 +45,18 @@ interface FincaResult {
   cultivos: string[];
 }
 
+interface CertPreview {
+  nombregenerador: string;
+  cedulagenerador: string;
+  tipogenerador: string;
+  direcciongenerador: string;
+  municipiogenerador: string;
+  cultivogenerador: string;
+  movilgenerador: string;
+  emailgenerador: string;
+  fincaNombre: string;
+}
+
 export default function CertCoordinadorPage({
   params,
 }: {
@@ -64,6 +76,9 @@ export default function CertCoordinadorPage({
   // Paso 2: finca
   const [fincas, setFincas] = useState<FincaResult[] | null>(null);
   const [fincaId, setFincaId] = useState("");
+  // Preview de los datos que saldrán en el certificado (solo lectura).
+  const [preview, setPreview] = useState<CertPreview | null>(null);
+  const [cargandoPreview, setCargandoPreview] = useState(false);
 
   // Paso 3: datos del cert
   const [rigidos, setRigidos] = useState("");
@@ -125,11 +140,37 @@ export default function CertCoordinadorPage({
     };
   }, [query, token, generador]);
 
+  // Cargar el preview de los datos del certificado cuando se elige la finca.
+  useEffect(() => {
+    if (!fincaId) {
+      setPreview(null);
+      return;
+    }
+    let cancelado = false;
+    setCargandoPreview(true);
+    setPreview(null);
+    fetch(`/api/m/${token}/buscar-generador?finca=${encodeURIComponent(fincaId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelado) setPreview(data.preview || null);
+      })
+      .catch(() => {
+        if (!cancelado) setPreview(null);
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoPreview(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [fincaId, token]);
+
   async function seleccionarGenerador(g: GeneradorResult) {
     setGenerador(g);
     setResultados([]);
     setFincas(null);
     setFincaId("");
+    setPreview(null);
     try {
       const r = await fetch(
         `/api/m/${token}/buscar-generador?generador=${encodeURIComponent(g.id)}`
@@ -147,6 +188,7 @@ export default function CertCoordinadorPage({
     setGenerador(null);
     setFincas(null);
     setFincaId("");
+    setPreview(null);
     setQuery("");
   }
 
@@ -230,7 +272,9 @@ export default function CertCoordinadorPage({
     );
   }
 
-  const fincaSeleccionada = fincas?.find((f) => f.id === fincaId) || null;
+  const esJuridicaPreview = (generador?.tipopersona || "")
+    .toLowerCase()
+    .includes("juridic");
 
   return (
     <MagicLinkLayout
@@ -338,10 +382,52 @@ export default function CertCoordinadorPage({
                   </select>
                 )}
               </Field>
-              {fincaSeleccionada && fincaSeleccionada.cultivos.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  🌱 Cultivos: {fincaSeleccionada.cultivos.join(", ")}
+              {/* Preview de los datos que se imprimirán en el certificado. */}
+              {fincaId && cargandoPreview && (
+                <p className="text-xs text-gray-400 mt-2">
+                  Cargando datos del certificado…
                 </p>
+              )}
+              {preview && (
+                <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700">
+                      📄 Datos que aparecerán en el certificado
+                    </p>
+                  </div>
+                  <dl className="divide-y divide-gray-100">
+                    {(
+                      [
+                        [esJuridicaPreview ? "Razón social" : "Nombre", preview.nombregenerador],
+                        [esJuridicaPreview ? "NIT" : "Cédula", preview.cedulagenerador],
+                        ["Finca", preview.fincaNombre],
+                        ["Dirección", preview.direcciongenerador],
+                        ["Municipio", preview.municipiogenerador],
+                        ["Cultivos", preview.cultivogenerador],
+                        ["Móvil", preview.movilgenerador],
+                        ["Email", preview.emailgenerador],
+                      ] as const
+                    ).map(([label, valor]) => (
+                      <div
+                        key={label}
+                        className="flex gap-2 px-3 py-1.5 text-sm"
+                      >
+                        <dt className="text-gray-500 w-24 shrink-0">{label}</dt>
+                        <dd className="text-gray-900 break-words min-w-0">
+                          {valor || "—"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="bg-amber-50 border-t border-amber-200 px-3 py-2">
+                    <p className="text-xs text-amber-800">
+                      ✏️ ¿Algún dato incorrecto? Por ahora estos datos solo se
+                      pueden corregir desde el <strong>portal en un
+                      computador</strong> (portal.campolimpio.org), no desde
+                      aquí.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           )}
