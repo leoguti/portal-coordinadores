@@ -35,6 +35,8 @@ export default function TerceroEditPage() {
   const [faltantes, setFaltantes] = useState<string[]>([]);
   const [nitInvalido, setNitInvalido] = useState(false);
   const [completo, setCompleto] = useState(false);
+  const [listoCajaMenor, setListoCajaMenor] = useState(false);
+  const [listoOS, setListoOS] = useState(false);
   const [uploading, setUploading] = useState<"cedula" | "camara" | "rut" | "bancaria" | null>(null);
 
   useEffect(() => {
@@ -63,6 +65,8 @@ export default function TerceroEditPage() {
     setFaltantes(data.completitud?.faltantes || []);
     setNitInvalido(data.completitud?.nitInvalido || false);
     setCompleto(data.completitud?.completo || false);
+    setListoCajaMenor(data.completitud?.listoCajaMenor ?? false);
+    setListoOS(data.completitud?.listoOrdenServicio ?? false);
     setLoading(false);
   };
 
@@ -119,6 +123,8 @@ export default function TerceroEditPage() {
       setFaltantes(data.completitud?.faltantes || []);
       setNitInvalido(data.completitud?.nitInvalido || false);
       setCompleto(data.completitud?.completo || false);
+      setListoCajaMenor(data.completitud?.listoCajaMenor ?? false);
+      setListoOS(data.completitud?.listoOrdenServicio ?? false);
     } else {
       // Mostrar mensaje específico del backend (NIT_DV_INVALIDO con sugerencia,
       // o errores de formato de dirección/correo/móvil).
@@ -164,6 +170,25 @@ export default function TerceroEditPage() {
     }
   };
 
+  // Borra un adjunto: PATCH el campo con el array sin ese archivo.
+  const handleDeleteAttachment = async (
+    patchKey: string,
+    files: Attachment[],
+    att: Attachment
+  ) => {
+    if (!confirm(`¿Quitar el archivo "${att.filename}"?`)) return;
+    const next = files
+      .filter((a) => (a.id || a.url) !== (att.id || att.url))
+      .map((a) => (a.id ? { id: a.id } : { url: a.url }));
+    const res = await fetch(`/api/terceros/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [patchKey]: next }),
+    });
+    if (res.ok) await load();
+    else alert("No se pudo quitar el archivo");
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -181,25 +206,39 @@ export default function TerceroEditPage() {
           <h1 className="text-xl font-bold text-gray-900 mt-1">{razonSocial || "Tercero"}</h1>
         </div>
 
-        {/* Estado de completitud */}
-        <div className={`rounded-xl p-4 border ${completo ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
-          <div className="flex items-start gap-3">
-            <span className="text-lg">{completo ? "✓" : "⚠"}</span>
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-semibold ${completo ? "text-green-800" : "text-amber-800"}`}>
-                {completo ? "Tercero completo" : "Faltan datos"}
-              </p>
-              {!completo && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {faltantes.map((f) => (
-                    <span key={f} className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              )}
+        {/* Estado de completitud — lista de chequeo por propósito */}
+        <div className={`rounded-xl p-4 border ${listoOS ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            ¿Para qué está listo este tercero?
+          </p>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-base leading-none">{listoCajaMenor ? "✅" : "⬜"}</span>
+              <span className={listoCajaMenor ? "text-green-800 font-medium" : "text-gray-700"}>
+                Caja Menor
+              </span>
+              <span className="text-xs text-gray-400">— requiere datos básicos</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-base leading-none">{listoOS ? "✅" : "⬜"}</span>
+              <span className={listoOS ? "text-green-800 font-medium" : "text-gray-700"}>
+                Órdenes de Servicio
+              </span>
+              <span className="text-xs text-gray-400">— requiere datos + documentos</span>
             </div>
           </div>
+          {!listoOS && faltantes.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-amber-200">
+              <p className="text-xs text-amber-800 mb-1.5">Para completar falta:</p>
+              <div className="flex flex-wrap gap-1">
+                {faltantes.map((f) => (
+                  <span key={f} className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Formulario */}
@@ -315,119 +354,100 @@ export default function TerceroEditPage() {
 
         {/* Documentos */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <h2 className="text-sm font-bold text-gray-900">Documentos</h2>
+          {(() => {
+            const items = [
+              { field: "rut" as const, patchKey: "rutPdf", title: "RUT", files: rutPdf, aplica: true },
+              { field: "bancaria" as const, patchKey: "certificacionBancariaPdf", title: "Certificación bancaria", files: certificacionBancariaPdf, aplica: true },
+              { field: "cedula" as const, patchKey: "cedulaPdf", title: "Cédula escaneada", files: cedulaPdf, aplica: tipoPersona === "Natural" },
+              { field: "camara" as const, patchKey: "certificadoCamaraPdf", title: "Certificado Cámara de Comercio", files: certificadoCamaraPdf, aplica: tipoPersona === "Jurídica" },
+            ];
+            const aplicables = items.filter((it) => it.aplica);
+            const cargados = aplicables.filter((it) => it.files.length > 0).length;
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-gray-900">Documentos para Órdenes de Servicio</h2>
+                  <span className={`text-xs font-semibold ${cargados === aplicables.length ? "text-green-700" : "text-amber-600"}`}>
+                    {cargados} de {aplicables.length} cargados
+                  </span>
+                </div>
 
-          {/* RUT — obligatorio para todos */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                RUT <span className="text-amber-600">(obligatorio)</span>
-              </span>
-              <span className="text-xs text-gray-400">{rutPdf.length} archivo(s)</span>
-            </div>
-            {rutPdf.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {rutPdf.map((a, i) => (
-                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
-                    📎 {a.filename}
-                  </a>
-                ))}
-              </div>
-            )}
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              onChange={(e) => e.target.files?.[0] && handleUpload("rut", e.target.files[0])}
-              disabled={uploading === "rut"}
-              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
-            />
-            {uploading === "rut" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
-          </div>
+                {items.map((it) => {
+                  const tiene = it.files.length > 0;
+                  const subiendo = uploading === it.field;
+                  // Estado visual de la lista de chequeo.
+                  const borde = !it.aplica
+                    ? "border-gray-200 bg-gray-50"
+                    : tiene
+                      ? "border-green-300 bg-green-50"
+                      : "border-amber-300 bg-amber-50";
+                  return (
+                    <div key={it.field} className={`rounded-lg border p-3 ${borde}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none">
+                          {!it.aplica ? "○" : tiene ? "✅" : "⬜"}
+                        </span>
+                        <span className="text-sm font-medium text-gray-800 flex-1">{it.title}</span>
+                        {it.aplica ? (
+                          tiene ? (
+                            <span className="text-xs font-semibold text-green-700">Cargado</span>
+                          ) : (
+                            <span className="text-xs font-semibold text-amber-600">Pendiente</span>
+                          )
+                        ) : (
+                          <span className="text-xs text-gray-400">No aplica</span>
+                        )}
+                      </div>
 
-          {/* Certificación bancaria — obligatoria */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Certificación bancaria <span className="text-amber-600">(obligatoria para pagos)</span>
-              </span>
-              <span className="text-xs text-gray-400">{certificacionBancariaPdf.length} archivo(s)</span>
-            </div>
-            {certificacionBancariaPdf.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {certificacionBancariaPdf.map((a, i) => (
-                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
-                    📎 {a.filename}
-                  </a>
-                ))}
-              </div>
-            )}
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              onChange={(e) => e.target.files?.[0] && handleUpload("bancaria", e.target.files[0])}
-              disabled={uploading === "bancaria"}
-              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
-            />
-            {uploading === "bancaria" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
-          </div>
+                      {/* Archivos cargados con opción de quitar */}
+                      {tiene && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {it.files.map((a, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-white border border-green-200 text-gray-700 max-w-[230px]">
+                              <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" title={a.filename}>
+                                📎 {a.filename}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAttachment(it.patchKey, it.files, a)}
+                                className="text-gray-400 hover:text-red-600 flex-shrink-0"
+                                title="Quitar archivo"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {tiene && it.files.length > 1 && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          ⚠ Hay {it.files.length} archivos en este documento. Deja solo el correcto y quita los demás.
+                        </p>
+                      )}
 
-          {/* Cédula (Natural) */}
-          <div className={`rounded-lg border p-3 ${tipoPersona === "Natural" ? "bg-amber-50 border-amber-200" : "border-gray-200"}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Cédula escaneada {tipoPersona === "Natural" && <span className="text-amber-600">(requerido)</span>}
-              </span>
-              <span className="text-xs text-gray-400">{cedulaPdf.length} archivo(s)</span>
-            </div>
-            {cedulaPdf.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {cedulaPdf.map((a, i) => (
-                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
-                    📎 {a.filename}
-                  </a>
-                ))}
-              </div>
-            )}
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              onChange={(e) => e.target.files?.[0] && handleUpload("cedula", e.target.files[0])}
-              disabled={uploading === "cedula"}
-              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
-            />
-            {uploading === "cedula" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
-          </div>
-
-          {/* Cámara de Comercio (Jurídica) */}
-          <div className={`rounded-lg border p-3 ${tipoPersona === "Jurídica" ? "bg-amber-50 border-amber-200" : "border-gray-200"}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Certificado Cámara de Comercio {tipoPersona === "Jurídica" && <span className="text-amber-600">(requerido)</span>}
-              </span>
-              <span className="text-xs text-gray-400">{certificadoCamaraPdf.length} archivo(s)</span>
-            </div>
-            {certificadoCamaraPdf.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {certificadoCamaraPdf.map((a, i) => (
-                  <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-[200px]">
-                    📎 {a.filename}
-                  </a>
-                ))}
-              </div>
-            )}
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              onChange={(e) => e.target.files?.[0] && handleUpload("camara", e.target.files[0])}
-              disabled={uploading === "camara"}
-              className="block text-xs text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-xs file:bg-white file:cursor-pointer"
-            />
-            {uploading === "camara" && <p className="text-xs text-gray-500 mt-1">Subiendo...</p>}
-          </div>
+                      {/* Acción de subida — solo si aplica */}
+                      {it.aplica && (
+                        <div className="mt-2">
+                          <label className="inline-flex items-center gap-2 text-xs">
+                            <span className={`px-3 py-1.5 rounded border cursor-pointer ${tiene ? "border-gray-300 bg-white text-gray-600 hover:bg-gray-50" : "border-green-600 bg-green-600 text-white hover:bg-green-700"}`}>
+                              {subiendo ? "Subiendo..." : tiene ? "Reemplazar / subir otro" : "Seleccionar archivo"}
+                            </span>
+                            <input
+                              type="file"
+                              accept=".pdf,image/*"
+                              onChange={(e) => e.target.files?.[0] && handleUpload(it.field, e.target.files[0])}
+                              disabled={subiendo}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })()}
         </div>
 
         {/* Planillas de seguridad social (solo naturales) */}
