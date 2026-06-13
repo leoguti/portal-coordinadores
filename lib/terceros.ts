@@ -82,26 +82,21 @@ export function esCelular(telRaw: unknown): boolean {
   return d.length === 10 && d.startsWith("3");
 }
 
-// Tipos de vía aceptados por la nomenclatura DIAN (normalizados, sin acentos).
-const VIA_URBANO = [
-  "CL", "CALLE",
-  "CR", "CRA", "KR", "CARRERA",
-  "AV", "AVENIDA", "AVDA",
-  "AC", // avenida calle
-  "AK", // avenida carrera
-  "DG", "DIAGONAL",
-  "TV", "TRANSV", "TRANSVERSAL",
-  "AUT", "AUTOPISTA",
-  "CIRCULAR", "CIRCUNVALAR", "CQ",
-  "MZ", "MANZANA",
-];
-const VIA_RURAL = [
-  "VRD", "VDA", "VEREDA",
-  "CGTO", "CORREGIMIENTO",
-  "FCA", "FINCA",
-  "KM", "KILOMETRO",
-  "PD", "PREDIO",
-  "SECTOR",
+// Palabras "localizadoras": tipos de via DIAN + terminos comunes de direcciones
+// reales (barrios, manzanas, conjuntos, rural). Normalizados, sin acentos.
+const LOCALIZADORES = [
+  // Vias urbanas formales
+  "CL", "CALLE", "CR", "CRA", "KR", "CARRERA", "AV", "AVENIDA", "AVDA",
+  "AC", "AK", "DG", "DIAGONAL", "TV", "TRANSV", "TRANSVERSAL",
+  "AUT", "AUTOPISTA", "CIRCULAR", "CIRCUNVALAR", "CQ", "VIA",
+  // Direcciones populares / urbanizaciones
+  "BARRIO", "BRR", "BR", "MANZANA", "MZ", "MZN", "MNZ", "CASA", "CS",
+  "CONJUNTO", "CONJ", "URBANIZACION", "URB", "ETAPA", "LOTE", "LT", "LOT",
+  "BLOQUE", "BL", "TORRE", "TO", "TORR", "EDIFICIO", "ED", "EDIF",
+  "APARTAMENTO", "APTO", "APT", "AP", "INTERIOR", "INT", "SUPERMANZANA", "SMZ",
+  // Rural
+  "VRD", "VDA", "VEREDA", "CGTO", "CORREGIMIENTO", "FCA", "FINCA",
+  "KM", "KMS", "KILOMETRO", "PD", "PREDIO", "SECTOR", "PARCELA", "PARCELACION",
 ];
 
 function normalizarDireccion(dir: string): string {
@@ -113,46 +108,37 @@ function normalizarDireccion(dir: string): string {
 }
 
 /**
- * Valida que una dirección cumpla mínimamente el estándar DIAN: debe tener un
- * tipo de vía reconocido y (en zona urbana) números. Rechaza lo obviamente
- * falso ("vereda", "el centro", una sola palabra). NO valida el formato
- * perfecto — para eso existe el generador oficial MUISCA de la DIAN.
+ * Valida minimamente una direccion para frenar entradas obviamente falsas
+ * ("vereda", "casa", una sola palabra), sin rechazar direcciones reales como
+ * "Barrio Villa Claudia Mz H Casa 18" o "VRD El Roble Km 4".
+ *
+ * Regla permisiva: al menos 2 palabras Y (un numero O una palabra localizadora
+ * reconocida). NO valida el formato DIAN perfecto - para eso esta el generador
+ * oficial MUISCA de la DIAN.
  */
 export function validarDireccionDian(dirRaw: unknown): Validacion {
   const dir = String(dirRaw ?? "").trim();
   if (!dir) return { ok: false, motivo: "Falta la dirección" };
 
   const norm = normalizarDireccion(dir);
-  const tokens = norm.split(/[\s.,-]+/).filter(Boolean);
+  const tokens = norm.split(/[\s.,#\u00b0\u00ba-]+/).filter(Boolean);
   if (tokens.length < 2) {
     return {
       ok: false,
-      motivo: "Muy corta: usa tipo de vía + números (ej. CL 13 65 95)",
+      motivo: "Muy corta: indica la direccion completa (ej. CL 13 65 95 o Barrio X Mz H Casa 18)",
     };
   }
 
-  const hasUrbano = tokens.some((t) => VIA_URBANO.includes(t));
-  const hasRural = tokens.some((t) => VIA_RURAL.includes(t));
-  const numeros = (norm.match(/\d+/g) || []).length;
+  const tieneLocalizador = tokens.some((t) => LOCALIZADORES.includes(t));
+  const tieneNumero = /\d/.test(norm);
 
-  if (!hasUrbano && !hasRural) {
+  if (!tieneLocalizador && !tieneNumero) {
     return {
       ok: false,
-      motivo:
-        "Falta el tipo de vía (Calle, Carrera, Avenida, Vereda, Km, ...). Ej. CL 13 65 95",
+      motivo: "Agrega el tipo de via y el numero (ej. CL 13 65 95, o Vereda El Roble Km 4)",
     };
   }
 
-  // Urbana: exige números (Calle 13 # 65-95 → al menos 2 grupos numéricos).
-  if (hasUrbano && !hasRural && numeros < 2) {
-    return {
-      ok: false,
-      motivo: "Una dirección urbana debe llevar números. Ej. CL 13 65 95",
-    };
-  }
-
-  // Rural: basta con tipo de vía + nombre/kilómetro (ya garantizado por
-  // tokens.length >= 2). Rechazamos solo el tipo de vía solo, ya cubierto arriba.
   return { ok: true };
 }
 
