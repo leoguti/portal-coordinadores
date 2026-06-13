@@ -32,12 +32,13 @@ export default function TerceroEditPage() {
   const [certificadoCamaraPdf, setCertificadoCamaraPdf] = useState<Attachment[]>([]);
   const [rutPdf, setRutPdf] = useState<Attachment[]>([]);
   const [certificacionBancariaPdf, setCertificacionBancariaPdf] = useState<Attachment[]>([]);
+  const [otrosDocumentos, setOtrosDocumentos] = useState<Attachment[]>([]);
   const [faltantes, setFaltantes] = useState<string[]>([]);
   const [nitInvalido, setNitInvalido] = useState(false);
   const [completo, setCompleto] = useState(false);
   const [listoCajaMenor, setListoCajaMenor] = useState(false);
   const [listoOS, setListoOS] = useState(false);
-  const [uploading, setUploading] = useState<"cedula" | "camara" | "rut" | "bancaria" | null>(null);
+  const [uploading, setUploading] = useState<"cedula" | "camara" | "rut" | "bancaria" | "otros" | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -62,6 +63,7 @@ export default function TerceroEditPage() {
     setCertificadoCamaraPdf(f.certificado_camara_pdf || []);
     setRutPdf(f.rut_pdf || []);
     setCertificacionBancariaPdf(f.certificacion_bancaria_pdf || []);
+    setOtrosDocumentos(f.otros_documentos || []);
     setFaltantes(data.completitud?.faltantes || []);
     setNitInvalido(data.completitud?.nitInvalido || false);
     setCompleto(data.completitud?.completo || false);
@@ -148,12 +150,13 @@ export default function TerceroEditPage() {
     }
   };
 
-  const handleUpload = async (field: "cedula" | "camara" | "rut" | "bancaria", file: File) => {
+  const handleUpload = async (field: "cedula" | "camara" | "rut" | "bancaria" | "otros", file: File) => {
     setUploading(field);
     const fieldName =
       field === "cedula" ? "cedula_pdf" :
       field === "camara" ? "certificado_camara_pdf" :
       field === "rut" ? "rut_pdf" :
+      field === "otros" ? "otros_documentos" :
       "certificacion_bancaria_pdf";
     const formData = new FormData();
     formData.append("file", file);
@@ -481,6 +484,57 @@ export default function TerceroEditPage() {
                     </div>
                   );
                 })}
+
+                {/* Otros documentos — bucket abierto, sin categorizar */}
+                <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base leading-none">🗂️</span>
+                    <span className="text-sm font-medium text-gray-800 flex-1">
+                      Otros documentos
+                      <span className="ml-1 text-xs font-normal text-gray-400">
+                        (cualquier documento adicional)
+                      </span>
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {otrosDocumentos.length > 0 ? `${otrosDocumentos.length} archivo(s)` : "Ninguno"}
+                    </span>
+                  </div>
+
+                  {otrosDocumentos.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {otrosDocumentos.map((a, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-50 border border-gray-200 text-gray-700 max-w-[230px]">
+                          <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" title={a.filename}>
+                            📎 {a.filename}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAttachment("otrosDocumentos", otrosDocumentos, a)}
+                            className="text-gray-400 hover:text-red-600 flex-shrink-0"
+                            title="Quitar archivo"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-2">
+                    <label className="inline-flex items-center gap-2 text-xs">
+                      <span className="px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 cursor-pointer">
+                        {uploading === "otros" ? "Subiendo..." : "+ Agregar documento"}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => e.target.files?.[0] && handleUpload("otros", e.target.files[0])}
+                        disabled={uploading === "otros"}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
               </>
             );
           })()}

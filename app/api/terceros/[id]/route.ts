@@ -95,6 +95,9 @@ export async function PATCH(
   if (body.certificacionBancariaPdf !== undefined) {
     fields.certificacion_bancaria_pdf = body.certificacionBancariaPdf;
   }
+  if (body.otrosDocumentos !== undefined) {
+    fields.otros_documentos = body.otrosDocumentos;
+  }
   if (body.coordinadorResponsableId !== undefined) {
     fields.coordinador_responsable = body.coordinadorResponsableId ? [body.coordinadorResponsableId] : [];
   }
