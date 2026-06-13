@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,14 @@ import {
 const TIPOS_PERSONA = ["Natural", "Jurídica"] as const;
 
 export default function NuevoTerceroPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevoTerceroInner />
+    </Suspense>
+  );
+}
+
+function NuevoTerceroInner() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
