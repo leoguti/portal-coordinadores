@@ -391,27 +391,38 @@ export default function TerceroEditPage() {
                 {items.map((it) => {
                   const tiene = it.files.length > 0;
                   const subiendo = uploading === it.field;
-                  // Estado visual de la lista de chequeo.
-                  const borde = !it.aplica
-                    ? "border-gray-200 bg-gray-50"
-                    : tiene
+                  // Estado: obligatorio+cargado=verde, obligatorio+vacío=ámbar,
+                  // opcional+cargado=gris (extra), opcional+vacío=muted.
+                  const borde = it.aplica
+                    ? tiene
                       ? "border-green-300 bg-green-50"
-                      : "border-amber-300 bg-amber-50";
+                      : "border-amber-300 bg-amber-50"
+                    : tiene
+                      ? "border-gray-300 bg-white"
+                      : "border-gray-200 bg-gray-50";
+                  const icono = it.aplica ? (tiene ? "✅" : "⬜") : tiene ? "📎" : "○";
                   return (
                     <div key={it.field} className={`rounded-lg border p-3 ${borde}`}>
                       <div className="flex items-center gap-2">
-                        <span className="text-base leading-none">
-                          {!it.aplica ? "○" : tiene ? "✅" : "⬜"}
+                        <span className="text-base leading-none">{icono}</span>
+                        <span className="text-sm font-medium text-gray-800 flex-1">
+                          {it.title}
+                          {!it.aplica && (
+                            <span className="ml-1 text-xs font-normal text-gray-400">
+                              (no obligatorio para {tipoPersona === "Jurídica" ? "empresas" : "personas naturales"})
+                            </span>
+                          )}
                         </span>
-                        <span className="text-sm font-medium text-gray-800 flex-1">{it.title}</span>
                         {it.aplica ? (
                           tiene ? (
                             <span className="text-xs font-semibold text-green-700">Cargado</span>
                           ) : (
                             <span className="text-xs font-semibold text-amber-600">Pendiente</span>
                           )
+                        ) : tiene ? (
+                          <span className="text-xs font-semibold text-gray-500">Opcional</span>
                         ) : (
-                          <span className="text-xs text-gray-400">No aplica</span>
+                          <span className="text-xs text-gray-400">No requerido</span>
                         )}
                       </div>
 
@@ -441,23 +452,32 @@ export default function TerceroEditPage() {
                         </p>
                       )}
 
-                      {/* Acción de subida — solo si aplica */}
-                      {it.aplica && (
-                        <div className="mt-2">
-                          <label className="inline-flex items-center gap-2 text-xs">
-                            <span className={`px-3 py-1.5 rounded border cursor-pointer ${tiene ? "border-gray-300 bg-white text-gray-600 hover:bg-gray-50" : "border-green-600 bg-green-600 text-white hover:bg-green-700"}`}>
-                              {subiendo ? "Subiendo..." : tiene ? "Reemplazar / subir otro" : "Seleccionar archivo"}
-                            </span>
-                            <input
-                              type="file"
-                              accept=".pdf,image/*"
-                              onChange={(e) => e.target.files?.[0] && handleUpload(it.field, e.target.files[0])}
-                              disabled={subiendo}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-                      )}
+                      {/* Acción de subida. Obligatorio+vacío = botón verde; el
+                          resto (ya cargado u opcional) = botón sutil. */}
+                      <div className="mt-2">
+                        <label className="inline-flex items-center gap-2 text-xs">
+                          <span className={`px-3 py-1.5 rounded border cursor-pointer ${
+                            it.aplica && !tiene
+                              ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
+                              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}>
+                            {subiendo
+                              ? "Subiendo..."
+                              : tiene
+                                ? "Reemplazar / subir otro"
+                                : it.aplica
+                                  ? "Seleccionar archivo"
+                                  : "Adjuntar (opcional)"}
+                          </span>
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => e.target.files?.[0] && handleUpload(it.field, e.target.files[0])}
+                            disabled={subiendo}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
                     </div>
                   );
                 })}
