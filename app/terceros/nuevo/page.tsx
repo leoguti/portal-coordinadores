@@ -9,7 +9,7 @@ import MunicipioSearch from "@/components/MunicipioSearch";
 import {
   validarDireccionDian,
   validarEmail,
-  validarMovilCelular,
+  validarTelefono,
 } from "@/lib/terceros";
 
 const TIPOS_PERSONA = ["Natural", "Jurídica"] as const;
@@ -50,7 +50,7 @@ function NuevoTerceroInner() {
     [correo]
   );
   const movilCheck = useMemo(
-    () => (movil.trim() ? validarMovilCelular(movil) : null),
+    () => (movil.trim() ? validarTelefono(movil) : null),
     [movil]
   );
 
@@ -221,14 +221,14 @@ function NuevoTerceroInner() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
-                Móvil (celular)
-                <span className="ml-1 text-[10px] text-gray-400">(para notificarle pagos)</span>
+                Móvil / Teléfono
+                <span className="ml-1 text-[10px] text-gray-400">(fijo o celular; para notificarle pagos)</span>
               </label>
               <input
                 type="tel"
                 value={movil}
                 onChange={(e) => setMovil(e.target.value.replace(/\D/g, ""))}
-                placeholder="3001234567"
+                placeholder="Celular 3001234567 o fijo 6012345"
                 className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 ${
                   movilCheck && !movilCheck.ok
                     ? "border-red-400 bg-red-50 focus:ring-red-400"

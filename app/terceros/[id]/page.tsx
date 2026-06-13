@@ -206,25 +206,41 @@ export default function TerceroEditPage() {
           <h1 className="text-xl font-bold text-gray-900 mt-1">{razonSocial || "Tercero"}</h1>
         </div>
 
-        {/* Estado de completitud — lista de chequeo por propósito */}
+        {/* Estado de completitud — insignias de estado por propósito */}
         <div className={`rounded-xl p-4 border ${listoOS ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            ¿Para qué está listo este tercero?
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Estado de este tercero
           </p>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-base leading-none">{listoCajaMenor ? "✅" : "⬜"}</span>
-              <span className={listoCajaMenor ? "text-green-800 font-medium" : "text-gray-700"}>
-                Caja Menor
-              </span>
-              <span className="text-xs text-gray-400">— requiere datos básicos</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-gray-800">Caja Menor</span>
+                <span className="block text-xs text-gray-400">Requiere solo los datos básicos</span>
+              </div>
+              {listoCajaMenor ? (
+                <span className="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                  ✓ Listo
+                </span>
+              ) : (
+                <span className="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                  Faltan datos
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-base leading-none">{listoOS ? "✅" : "⬜"}</span>
-              <span className={listoOS ? "text-green-800 font-medium" : "text-gray-700"}>
-                Órdenes de Servicio
-              </span>
-              <span className="text-xs text-gray-400">— requiere datos + documentos</span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-gray-800">Órdenes de Servicio</span>
+                <span className="block text-xs text-gray-400">Requiere datos + documentos</span>
+              </div>
+              {listoOS ? (
+                <span className="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                  ✓ Listo
+                </span>
+              ) : (
+                <span className="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                  Falta completar
+                </span>
+              )}
             </div>
           </div>
           {!listoOS && faltantes.length > 0 && (

@@ -59,19 +59,27 @@ export function validarEmail(correoRaw: unknown): boolean {
 }
 
 /**
- * Celular colombiano: 10 dígitos que empiezan por 3. Es el formato necesario
- * para enviar SMS/WhatsApp de notificación de pago.
+ * Teléfono colombiano: acepta fijo (7-8 dígitos) o celular (10 dígitos). Las
+ * empresas suelen tener fijo; a futuro, las notificaciones de pago por
+ * SMS/WhatsApp irán solo a los que sean celular (ver `esCelular`), y al resto
+ * por correo.
  */
-export function validarMovilCelular(movilRaw: unknown): Validacion {
-  const d = String(movilRaw ?? "").replace(/\D/g, "");
-  if (!d) return { ok: false, motivo: "Falta el móvil" };
-  if (d.length !== 10 || !d.startsWith("3")) {
+export function validarTelefono(telRaw: unknown): Validacion {
+  const d = String(telRaw ?? "").replace(/\D/g, "");
+  if (!d) return { ok: false, motivo: "Falta el teléfono" };
+  if (d.length < 7 || d.length > 10) {
     return {
       ok: false,
-      motivo: "Debe ser un celular de 10 dígitos que empieza por 3 (ej. 3001234567)",
+      motivo: "Debe ser un teléfono válido: fijo (7-8 dígitos) o celular (10 dígitos)",
     };
   }
   return { ok: true };
+}
+
+/** True si el teléfono es un celular colombiano (10 dígitos, empieza por 3). */
+export function esCelular(telRaw: unknown): boolean {
+  const d = String(telRaw ?? "").replace(/\D/g, "");
+  return d.length === 10 && d.startsWith("3");
 }
 
 // Tipos de vía aceptados por la nomenclatura DIAN (normalizados, sin acentos).
@@ -169,7 +177,7 @@ export function validarCamposEscritura(input: {
     }
   }
   if (input.movil !== undefined && String(input.movil).trim()) {
-    const v = validarMovilCelular(input.movil);
+    const v = validarTelefono(input.movil);
     if (!v.ok) errores.push({ campo: "movil", motivo: v.motivo! });
   }
   return errores;
@@ -204,8 +212,8 @@ export function evaluarCompletitud(fields: TerceroFields): CompletitudResult {
     faltantesDatos.push("Correo con formato inválido");
   }
   const movil = fields.Movil;
-  if (movil !== undefined && movil !== null && String(movil).trim() && !validarMovilCelular(movil).ok) {
-    faltantesDatos.push("Móvil inválido (celular de 10 dígitos)");
+  if (movil !== undefined && movil !== null && String(movil).trim() && !validarTelefono(movil).ok) {
+    faltantesDatos.push("Teléfono inválido");
   }
   const dir = fields.Direccion;
   if (typeof dir === "string" && dir.trim() && !validarDireccionDian(dir).ok) {
