@@ -178,13 +178,34 @@ export default function TerceroSearch({
               )}
             </button>
           ))}
+          <a
+            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block border-t border-gray-100 px-4 py-2 text-sm text-green-700 font-medium hover:bg-green-50"
+          >
+            + ¿No está? Crear nuevo tercero
+          </a>
         </div>
       )}
 
-      {/* No results message */}
+      {/* No results message + crear nuevo */}
       {showDropdown && search.length >= 2 && results.length === 0 && !loading && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-gray-500 text-sm">
-          No se encontraron terceros
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-sm">
+          <p className="text-gray-500">
+            No se encontró ningún tercero con «{search}».
+          </p>
+          <a
+            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-green-700 font-medium hover:underline"
+          >
+            <span className="text-base leading-none">+</span> Crear «{search}» como nuevo tercero
+          </a>
+          <span className="block text-xs text-gray-400 mt-1">
+            Se abre en otra pestaña. Al terminar, vuelve aquí y búscalo.
+          </span>
         </div>
       )}
 

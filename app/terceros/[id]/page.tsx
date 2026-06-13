@@ -120,14 +120,22 @@ export default function TerceroEditPage() {
       setNitInvalido(data.completitud?.nitInvalido || false);
       setCompleto(data.completitud?.completo || false);
     } else {
-      // Mostrar mensaje específico del backend (ej. NIT_DV_INVALIDO con sugerencia)
+      // Mostrar mensaje específico del backend (NIT_DV_INVALIDO con sugerencia,
+      // o errores de formato de dirección/correo/móvil).
       try {
         const err = await res.json();
-        alert(
-          err.mensaje
-            ? `${err.mensaje}${err.sugerencia ? "\n\n" + err.sugerencia : ""}`
-            : "Error al guardar"
-        );
+        if (err.error === "VALIDACION" && Array.isArray(err.errores)) {
+          alert(
+            "Revisa estos campos antes de guardar:\n\n" +
+              err.errores.map((e: { motivo: string }) => `• ${e.motivo}`).join("\n")
+          );
+        } else {
+          alert(
+            err.mensaje
+              ? `${err.mensaje}${err.sugerencia ? "\n\n" + err.sugerencia : ""}`
+              : "Error al guardar"
+          );
+        }
       } catch {
         alert("Error al guardar");
       }

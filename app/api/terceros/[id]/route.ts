@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { evaluarCompletitud } from "@/lib/terceros";
+import { evaluarCompletitud, validarCamposEscritura } from "@/lib/terceros";
 import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
@@ -149,6 +149,21 @@ export async function PATCH(
         );
       }
     }
+  }
+
+  // Validación de formato de dirección (DIAN), correo y móvil. Solo se valida
+  // lo que viene en el body con valor; estos campos son clave para exógena y
+  // para las notificaciones de pago a terceros.
+  const erroresFormato = validarCamposEscritura({
+    direccion: body.direccion,
+    correo: body.correo,
+    movil: body.movil,
+  });
+  if (erroresFormato.length > 0) {
+    return NextResponse.json(
+      { error: "VALIDACION", errores: erroresFormato },
+      { status: 400 }
+    );
   }
 
   const res = await fetch(`https://api.airtable.com/v0/${BASE}/Terceros/${id}`, {

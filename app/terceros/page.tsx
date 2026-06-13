@@ -23,21 +23,13 @@ interface Tercero {
   completo: boolean;
   faltantes: string[];
   nitInvalido: boolean;
+  listoCajaMenor: boolean;
+  listoOrdenServicio: boolean;
+  faltantesDatos: string[];
+  faltantesDocumentos: string[];
 }
 
 type FiltroUso = "con_os" | "con_caja" | "en_uso" | "sin_uso" | "todos";
-
-// Labels de los campos de datos básicos (vienen de lib/terceros.ts). Los
-// colapsamos en un solo ítem "Datos" del checklist para no abrumar la tarjeta.
-const DATA_LABELS = [
-  "Razón Social / Nombre",
-  "NIT / Cédula",
-  "Dirección",
-  "Teléfono / Móvil",
-  "Correo electrónico",
-  "Municipio",
-  "Tipo de persona (Natural/Jurídica)",
-];
 
 type CheckStatus = "ok" | "missing" | "warn";
 interface CheckItem {
@@ -46,41 +38,42 @@ interface CheckItem {
   detail?: string;
 }
 
-// Convierte los `faltantes` crudos en un checklist visual de pocos ítems.
+// Convierte los faltantes en un checklist visual de pocos ítems, separando
+// datos básicos (Caja Menor) de documentos (Órdenes de Servicio).
 function buildChecklist(t: Tercero): CheckItem[] {
-  const f = new Set(t.faltantes);
+  const datos = new Set(t.faltantesDatos || []);
+  const docs = new Set(t.faltantesDocumentos || []);
   const items: CheckItem[] = [];
 
-  // 1) Datos básicos (todos los campos de texto/municipio en un solo ítem).
-  const datosFaltan = DATA_LABELS.filter((l) => f.has(l));
+  // 1) Datos básicos (presencia + formato correo/móvil/dirección) en un ítem.
   items.push({
     label: "Datos",
-    status: datosFaltan.length === 0 ? "ok" : "missing",
-    detail: datosFaltan.length ? `Falta: ${datosFaltan.join(", ")}` : undefined,
+    status: datos.size === 0 ? "ok" : "missing",
+    detail: datos.size ? `Revisar: ${[...datos].join(", ")}` : undefined,
   });
 
   // 2) Documento de identidad según tipo de persona.
   if (t.tipoPersona === "Jurídica") {
     items.push({
       label: "Cám. Comercio",
-      status: f.has("Certificado Cámara de Comercio") ? "missing" : "ok",
+      status: docs.has("Certificado Cámara de Comercio") ? "missing" : "ok",
     });
   } else if (t.tipoPersona === "Natural") {
     items.push({
       label: "Cédula",
-      status: f.has("Cédula escaneada") ? "missing" : "ok",
+      status: docs.has("Cédula escaneada") ? "missing" : "ok",
     });
   }
 
   // 3) Documentos obligatorios para todos.
-  items.push({ label: "RUT", status: f.has("RUT") ? "missing" : "ok" });
+  items.push({ label: "RUT", status: docs.has("RUT") ? "missing" : "ok" });
   items.push({
     label: "Bancaria",
-    status: f.has("Certificación bancaria") ? "missing" : "ok",
+    status: docs.has("Certificación bancaria") ? "missing" : "ok",
   });
 
   // 4) NIT con dígito inválido: solo se muestra cuando hay problema (ámbar).
-  if (t.nitInvalido || f.has("NIT con dígito verificador inválido")) {
+  if (t.nitInvalido) {
     items.push({
       label: "NIT",
       status: "warn",
@@ -204,12 +197,20 @@ export default function TercerosPage() {
   return (
     <AuthenticatedLayout>
       <div className="max-w-5xl mx-auto p-6 space-y-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Terceros (Proveedores)</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Completa los datos y documentos de cada tercero. Mientras estén
-            incompletos, no podrás crear Órdenes de Servicio con ellos.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Terceros (Proveedores)</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Completa los datos y documentos de cada tercero. Mientras estén
+              incompletos, no podrás crear Órdenes de Servicio con ellos.
+            </p>
+          </div>
+          <Link
+            href="/terceros/nuevo"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <span className="text-base leading-none">+</span> Agregar tercero
+          </Link>
         </div>
 
         {/* Encabezado accionable */}
@@ -346,12 +347,23 @@ export default function TercerosPage() {
                         )}
                         {t.correo && <span className="text-xs text-gray-400 truncate">{t.correo}</span>}
                       </div>
-                      {/* Checklist visual (solo si está incompleto) */}
+                      {/* Estado por propósito + checklist (solo si incompleto para OS) */}
                       {!t.completo && (
-                        <div className="ml-5 mt-1.5 flex flex-wrap gap-1">
-                          {buildChecklist(t).map((item) => (
-                            <ChecklistPill key={item.label} item={item} />
-                          ))}
+                        <div className="ml-5 mt-1.5 space-y-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                            <span className={t.listoCajaMenor ? "text-green-700" : "text-red-600"}>
+                              {t.listoCajaMenor ? "🟢 Listo para Caja Menor" : "⚠ Faltan datos básicos"}
+                            </span>
+                            <span className="text-gray-400">
+                              🔵 Órdenes de Servicio:{" "}
+                              {t.listoCajaMenor ? "faltan documentos" : "faltan datos y documentos"}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {buildChecklist(t).map((item) => (
+                              <ChecklistPill key={item.label} item={item} />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

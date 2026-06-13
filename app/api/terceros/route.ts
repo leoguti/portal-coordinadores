@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { evaluarCompletitud } from "@/lib/terceros";
+import { evaluarCompletitud, validarCamposEscritura } from "@/lib/terceros";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 interface TerceroRecord {
   id: string;
@@ -185,6 +186,10 @@ export async function GET(request: Request) {
           completo: completitud.completo,
           faltantes: completitud.faltantes,
           nitInvalido: completitud.nitInvalido,
+          listoCajaMenor: completitud.listoCajaMenor,
+          listoOrdenServicio: completitud.listoOrdenServicio,
+          faltantesDatos: completitud.faltantesDatos,
+          faltantesDocumentos: completitud.faltantesDocumentos,
         };
       });
 
@@ -218,5 +223,130 @@ export async function GET(request: Request) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Crea un nuevo tercero. Lo puede hacer cualquier coordinador autenticado; el
+ * coordinador queda como responsable. Solo exige identidad mínima (razón social,
+ * NIT/cédula y tipo de persona); el resto se puede completar después. Valida el
+ * formato de dirección (DIAN), correo y móvil cuando vienen con valor.
+ */
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const apiKey = process.env.AIRTABLE_API_KEY!;
+    const baseId = process.env.AIRTABLE_BASE_ID!;
+    const body = await request.json();
+
+    const razonSocial = String(body.razonSocial ?? "").trim();
+    const nit = String(body.nit ?? "").trim();
+    const tipoPersona = body.tipoPersona;
+
+    // Identidad mínima para poder crear.
+    if (!razonSocial) {
+      return NextResponse.json(
+        { error: "Falta la razón social / nombre" },
+        { status: 400 }
+      );
+    }
+    if (!nit) {
+      return NextResponse.json({ error: "Falta el NIT / cédula" }, { status: 400 });
+    }
+    if (tipoPersona !== "Natural" && tipoPersona !== "Jurídica") {
+      return NextResponse.json(
+        { error: "Indica el tipo de persona (Natural o Jurídica)" },
+        { status: 400 }
+      );
+    }
+
+    // NIT de jurídicas debe traer dígito de verificación válido.
+    if (tipoPersona === "Jurídica" && !validarNitJuridica(nit)) {
+      const limpio = nit.replace(/[^\d]/g, "");
+      const base = nit.includes("-")
+        ? nit.split("-")[0].replace(/[^\d]/g, "")
+        : limpio.length >= 9
+          ? limpio.slice(0, -1)
+          : limpio;
+      const dvSugerido =
+        base.length >= 8 && base.length <= 15 ? calcularDigitoVerificador(base) : null;
+      return NextResponse.json(
+        {
+          error: "NIT_DV_INVALIDO",
+          mensaje:
+            "Para personas jurídicas el NIT debe incluir el dígito de verificación correcto.",
+          sugerencia:
+            dvSugerido !== null ? `El NIT correcto sería: ${base}-${dvSugerido}` : undefined,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Formato de dirección / correo / móvil (solo lo que venga con valor).
+    const erroresFormato = validarCamposEscritura({
+      direccion: body.direccion,
+      correo: body.correo,
+      movil: body.movil,
+    });
+    if (erroresFormato.length > 0) {
+      return NextResponse.json(
+        { error: "VALIDACION", errores: erroresFormato },
+        { status: 400 }
+      );
+    }
+
+    // Armar fields para Airtable.
+    const fields: Record<string, unknown> = {
+      RazonSocial: razonSocial,
+      NIT: nit,
+      tipo_persona: tipoPersona,
+    };
+    if (body.direccion) fields.Direccion = String(body.direccion).trim();
+    if (body.correo) fields["Correo Electrónico"] = String(body.correo).trim();
+    if (body.movil != null && String(body.movil).trim()) {
+      fields.Movil = Number(String(body.movil).replace(/\D/g, ""));
+    }
+    if (body.observaciones) fields.Observaciones = String(body.observaciones).trim();
+    if (body.municipioId) fields.Municipio = [body.municipioId];
+
+    // El coordinador que lo crea queda como responsable.
+    const coordinadorId = session.user.coordinatorRecordId;
+    if (coordinadorId) fields.coordinador_responsable = [coordinadorId];
+
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/Terceros`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields, typecast: true }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error("[terceros/POST]", detail);
+      return NextResponse.json(
+        { error: "Error al crear el tercero", detail },
+        { status: 500 }
+      );
+    }
+
+    const created = await res.json();
+    // Invalidar cache en memoria para que aparezca en búsquedas.
+    tercerosCache = null;
+
+    const completitud = evaluarCompletitud(created.fields || fields);
+    return NextResponse.json({
+      id: created.id,
+      razonSocial,
+      completitud,
+    });
+  } catch (error) {
+    console.error("Error creating tercero:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
