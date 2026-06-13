@@ -282,6 +282,7 @@ function ListarCertificadosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     userId,
+    vista,
     ano,
     mes,
     generador?.id,
