@@ -945,7 +945,7 @@ export async function createOrdenServicio(
   params: CreateOrdenParams,
   coordinatorData?: { name: string; email: string },
   beneficiarioData?: { razonSocial: string; nit: string; direccion: string; email?: string }
-): Promise<Orden> {
+): Promise<Orden | { validationError: string }> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
@@ -969,9 +969,12 @@ export async function createOrdenServicio(
     const { evaluarCompletitud } = await import("./terceros");
     const completitud = evaluarCompletitud(terceroFields);
     if (!completitud.completo) {
-      throw new Error(
-        `El tercero "${terceroFields.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`
-      );
+      // Validación de cara al usuario: se devuelve (no se lanza) para que el
+      // mensaje llegue intacto al cliente — los errores lanzados desde un
+      // server action se redactan en producción.
+      return {
+        validationError: `El tercero "${terceroFields.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`,
+      };
     }
 
     // ─── Validación: Planilla de SS del mes (solo Personas Naturales) ────────
@@ -995,9 +998,9 @@ export async function createOrdenServicio(
             (r.fields.archivo || []).length > 0
         );
         if (!valida) {
-          throw new Error(
-            `"${terceroFields.RazonSocial}" es Persona Natural y no tiene planilla de Seguridad Social (con archivo PDF) para el mes ${mesPeriodo}. Súbela en el perfil del tercero antes de crear la OS.`
-          );
+          return {
+            validationError: `"${terceroFields.RazonSocial}" es Persona Natural y no tiene planilla de Seguridad Social (con archivo PDF) para el mes ${mesPeriodo}. Súbela en el perfil del tercero antes de crear la OS.`,
+          };
         }
       } else {
         console.warn("[planillas] error consultando PlanillasSS, se permite OS:", await planillasRes.text());

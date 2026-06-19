@@ -318,6 +318,13 @@ export default function NuevaOrdenV2Page() {
         }
       );
 
+      // El backend devuelve un motivo de validación (tercero incompleto, falta
+      // planilla SS del mes, etc.) en vez de crear la orden. Lo mostramos tal cual.
+      if ("validationError" in ordenData) {
+        setError(ordenData.validationError);
+        return;
+      }
+
       // Upload soporte de bascula files
       if (soporteBascula.length > 0) {
         for (let i = 0; i < soporteBascula.length; i++) {
