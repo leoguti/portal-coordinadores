@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { REQUISITO_PLANILLA_SS } from "@/lib/featureFlags";
 
 interface Completitud {
   completo: boolean;
@@ -50,7 +51,8 @@ export default function TerceroCompletitudWarning({
   if (loading) return null;
 
   const incompleto = completitud && !completitud.completo;
-  const faltaPlanilla = planilla && planilla.aplica && !planilla.ok;
+  // El requisito de planilla SS está desactivado temporalmente (ver lib/featureFlags.ts).
+  const faltaPlanilla = REQUISITO_PLANILLA_SS && planilla && planilla.aplica && !planilla.ok;
 
   if (!incompleto && !faltaPlanilla) return null;
 

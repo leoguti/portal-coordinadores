@@ -978,7 +978,9 @@ export async function createOrdenServicio(
     }
 
     // ─── Validación: Planilla de SS del mes (solo Personas Naturales) ────────
-    if (terceroFields.tipo_persona === "Natural") {
+    // Desactivable con el flag REQUISITO_PLANILLA_SS (ver lib/featureFlags.ts).
+    const { REQUISITO_PLANILLA_SS } = await import("./featureFlags");
+    if (REQUISITO_PLANILLA_SS && terceroFields.tipo_persona === "Natural") {
       // Mes del pago ≈ mes de la fecha_pedido (formato YYYY-MM)
       const fechaStr = params.fechaPedido || new Date().toISOString().slice(0, 10);
       const mesPeriodo = fechaStr.slice(0, 7);
