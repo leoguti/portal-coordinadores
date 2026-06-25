@@ -168,13 +168,12 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
         const COLOMBIA_BOUNDS = L.latLngBounds([[-4.4, -82.2], [13.7, -66.7]]);
 
         if (focusColombia) {
-          // Base plana en grises (sin tiles): oculta el verde del mapa base
-          // para que los datos en verde resalten.
-          L.rectangle(L.latLngBounds([[-85, -180], [85, 180]]), {
-            stroke: false,
-            fillColor: "#e2e8f0", // slate-200 (el "afuera")
-            fillOpacity: 1,
-            interactive: false,
+          // Mapa base suave en escala de grises (CartoDB Positron): da contexto
+          // geográfico sin el verde del mapa estándar, para que resalten los datos.
+          L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+            attribution: "&copy; OpenStreetMap &copy; CARTO",
+            subdomains: "abcd",
+            maxZoom: 19,
           }).addTo(map);
         } else {
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -189,24 +188,16 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           const data = actividadesMap.get(codigo);
           const count = data?.cantidad || 0;
 
-          // Sin actividades
+          // Sin actividades: transparente (deja ver el mapa base suave),
+          // con un borde leve para insinuar la silueta del país.
           if (count === 0) {
-            // Modo ejecutivo: silueta de Colombia en blanco; normal: transparente
-            return focusColombia
-              ? {
-                  fillColor: "#ffffff",
-                  fillOpacity: 1,
-                  weight: 0.4,
-                  opacity: 1,
-                  color: "#cbd5e1", // slate-300 border
-                }
-              : {
-                  fillColor: "transparent",
-                  fillOpacity: 0,
-                  weight: 0.3,
-                  opacity: 0.5,
-                  color: "#9CA3AF", // gray-400
-                };
+            return {
+              fillColor: "transparent",
+              fillOpacity: 0,
+              weight: focusColombia ? 0.4 : 0.3,
+              opacity: focusColombia ? 0.6 : 0.5,
+              color: focusColombia ? "#94a3b8" : "#9CA3AF", // slate-400 / gray-400
+            };
           }
 
           // Con actividades: color de relleno
@@ -215,7 +206,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             weight: 1,
             opacity: 1,
             color: "#166534", // green-800 border
-            fillOpacity: focusColombia ? 0.95 : 0.8,
+            fillOpacity: focusColombia ? 0.9 : 0.8,
           };
         };
 
@@ -376,7 +367,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
       <div
         ref={mapContainerRef}
         className="w-full h-[600px] rounded-lg"
-        style={focusColombia ? { backgroundColor: "#e2e8f0" } : undefined}
+        style={focusColombia ? { backgroundColor: "#f1f5f9" } : undefined}
       />
     </div>
   );
