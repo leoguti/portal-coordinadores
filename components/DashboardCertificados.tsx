@@ -286,13 +286,14 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
 
           {/* Top cultivos + Top depto */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <TopBarBlock title="Top cultivos por kilos" rows={data.porCultivo.map((r) => ({ name: r.cultivo, kg: r.kg, certs: r.certs }))} csvName={`cultivos-${year}.csv`} />
-            <TopBarBlock title="Top departamentos por kilos" rows={data.porDepto.map((r) => ({ name: r.depto, kg: r.kg, certs: r.certs }))} csvName={`departamentos-${year}.csv`} color="#0ea5e9" />
+            <TopBarBlock title={board ? "Top cultivos (% del total)" : "Top cultivos por kilos"} rows={data.porCultivo.map((r) => ({ name: r.cultivo, kg: r.kg, certs: r.certs }))} csvName={`cultivos-${year}.csv`} asPercent={board} />
+            <TopBarBlock title={board ? "Top departamentos (% del total)" : "Top departamentos por kilos"} rows={data.porDepto.map((r) => ({ name: r.depto, kg: r.kg, certs: r.certs }))} csvName={`departamentos-${year}.csv`} color="#0ea5e9" asPercent={board} />
           </div>
 
           {/* Top municipios + Materiales */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <TopBarBlock title="Top municipios de devolución" rows={data.porMunicipio.map((r) => ({ name: r.mun, kg: r.kg, certs: r.certs }))} csvName={`municipios-${year}.csv`} color="#a855f7" />
+            <TopBarBlock title="Top municipios de devolución" rows={data.porMunicipio.map((r) => ({ name: r.mun, kg: r.kg, certs: r.certs }))} csvName={`municipios-${year}.csv`} color="#a855f7" asPercent={board} />
+            {!board && (
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-700">Composición de materiales (kg)</h3>
@@ -313,6 +314,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Heatmap cultivo × depto — oculto en modo junta directiva */}
@@ -464,8 +466,9 @@ function KpiCard({ label, value, subtitle, delta }: { label: string; value: stri
   );
 }
 
-function TopBarBlock({ title, rows, csvName, color = "#16a34a" }: { title: string; rows: { name: string; kg: number; certs: number }[]; csvName: string; color?: string; }) {
-  const data = rows.slice(0, 10);
+function TopBarBlock({ title, rows, csvName, color = "#16a34a", asPercent = false }: { title: string; rows: { name: string; kg: number; certs: number }[]; csvName: string; color?: string; asPercent?: boolean; }) {
+  const total = rows.reduce((s, r) => s + (r.kg || 0), 0);
+  const data = rows.slice(0, 10).map((r) => ({ ...r, pct: total > 0 ? (r.kg / total) * 100 : 0 }));
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-2">
@@ -479,10 +482,10 @@ function TopBarBlock({ title, rows, csvName, color = "#16a34a" }: { title: strin
           <ResponsiveContainer>
             <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="#eee" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtKg(v)} />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => (asPercent ? `${Number(v).toFixed(0)}%` : fmtKg(v))} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={130} />
-              <Tooltip formatter={(v) => `${fmtInt(Number(v) || 0)} kg`} />
-              <Bar dataKey="kg" fill={color} radius={[0, 4, 4, 0]} />
+              <Tooltip formatter={(v) => (asPercent ? `${(Number(v) || 0).toFixed(1)}%` : `${fmtInt(Number(v) || 0)} kg`)} />
+              <Bar dataKey={asPercent ? "pct" : "kg"} fill={color} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

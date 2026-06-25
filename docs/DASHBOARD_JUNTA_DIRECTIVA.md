@@ -65,6 +65,10 @@ Se MANTIENE la pestaña, pero con estos ajustes:
 
 14. **Salidas por Proceso — fila TOTAL: quitar el kg.** Faltaba envolver el `kg` de la fila TOTAL (mostraba `971.514 kg 100%`); ahora en modo board solo muestra `100%`.
 
+15. **Certificados — ajuste sobre el punto 9 (ya NO se deja tal cual).** En modo board:
+    - **Retirar el pie "Composición de materiales (kg)"**.
+    - **Top cultivos / Top departamentos / Top municipios**: graficar **% del total** en vez de kg (eje, tooltip y título "(% del total)"). El % es sobre la suma de la categoría. `TopBarBlock` ahora acepta `asPercent`.
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)
