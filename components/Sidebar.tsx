@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { isJunta } from "@/lib/roles";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard-ejecutivo", icon: "📊", roles: ["Administrador", "Supervisor"] },
@@ -76,8 +77,10 @@ export default function Sidebar({
 
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
-          {navItems
-            .filter((item) => item.roles.includes(userRol))
+          {(isJunta(userRol)
+            ? navItems.filter((item) => item.href === "/dashboard-junta")
+            : navItems.filter((item) => item.roles.includes(userRol))
+          )
             .map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 

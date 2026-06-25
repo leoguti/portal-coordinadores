@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { isAdminOrSupervisor } from "@/lib/roles";
+import { isAdminOrSupervisor, isJunta } from "@/lib/roles";
 
 const spinner = (
   <div className="flex items-center justify-center py-20">
@@ -23,7 +23,7 @@ export default function DashboardPage() {
 
   const rol = session?.user?.rol;
   const canViewAll = isAdminOrSupervisor(rol);
-  const isJuntaRole = rol === "Junta";
+  const isJuntaRole = isJunta(rol);
 
   useEffect(() => {
     if (status === "unauthenticated") {

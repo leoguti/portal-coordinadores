@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { isJunta } from "@/lib/roles";
 import { getCultivosMap } from "@/lib/cultivosCache";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
@@ -138,7 +139,7 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const rol = session.user?.rol;
   // "Junta" ve todos los certificados igual que admin (solo lectura del board)
-  const isAdmin = rol === "Administrador" || rol === "Supervisor" || rol === "Junta";
+  const isAdmin = rol === "Administrador" || rol === "Supervisor" || isJunta(rol);
   const isCoordinador = rol === "Coordinador";
   if (!isAdmin && !isCoordinador) {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
