@@ -334,13 +334,15 @@ export default function DashboardEjecutivo({
               </div>
             </>
           )}
-          <button
-            onClick={() => startTransition(() => setExpandRecol(!expandRecol))}
-            className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
-          >
-            {expandRecol ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
-          </button>
-          {expandRecol && (
+          {!board && (
+            <button
+              onClick={() => startTransition(() => setExpandRecol(!expandRecol))}
+              className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
+            >
+              {expandRecol ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
+            </button>
+          )}
+          {!board && expandRecol && (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -426,13 +428,15 @@ export default function DashboardEjecutivo({
               </strong>
             </span>
           </div>
-          <button
-            onClick={() => startTransition(() => setExpandSens(!expandSens))}
-            className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
-          >
-            {expandSens ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
-          </button>
-          {expandSens && (
+          {!board && (
+            <button
+              onClick={() => startTransition(() => setExpandSens(!expandSens))}
+              className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
+            >
+              {expandSens ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
+            </button>
+          )}
+          {!board && expandSens && (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -522,13 +526,15 @@ export default function DashboardEjecutivo({
             </div>
             <span className="whitespace-nowrap">Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
           </div>
-          <button
-            onClick={() => startTransition(() => setExpandEval(!expandEval))}
-            className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
-          >
-            {expandEval ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
-          </button>
-          {expandEval && (
+          {!board && (
+            <button
+              onClick={() => startTransition(() => setExpandEval(!expandEval))}
+              className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
+            >
+              {expandEval ? "▾ Ocultar detalle" : "▸ Ver por coordinador"}
+            </button>
+          )}
+          {!board && expandEval && (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -804,9 +810,11 @@ export default function DashboardEjecutivo({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">TOTAL</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-mono font-bold text-gray-900">
-                      {fmt(totalProceso)} kg
-                    </span>
+                    {!board && (
+                      <span className="text-sm font-mono font-bold text-gray-900">
+                        {fmt(totalProceso)} kg
+                      </span>
+                    )}
                     <span className="text-xs text-gray-500 w-10 text-right">100%</span>
                   </div>
                 </div>

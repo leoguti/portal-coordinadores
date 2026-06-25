@@ -59,6 +59,12 @@ Se MANTIENE la pestaña, pero con estos ajustes:
 
 > Nota: la indicación general "quitar los kilos de certificados" se concreta en los puntos 7–12; el bloque del punto 9 explícitamente se conserva con kilos.
 
+### Ajustes post-revisión (2026-06-25)
+
+13. **Tarjetas de Meta: quitar el "Ver por coordinador".** En las tres tarjetas (Recolección, Sensibilización, Evaluaciones) se oculta el botón "▸ Ver por coordinador" y su tabla de desglose. Las tarjetas conservan sus cifras de cabecera (Sensibilizados/Meta, WhatsApp/Presenciales/Total/Meta), pero sin el detalle por coordinador. → **Confirma supuesto #1: Sensibilización y Evaluaciones se quedan con cifras.**
+
+14. **Salidas por Proceso — fila TOTAL: quitar el kg.** Faltaba envolver el `kg` de la fila TOTAL (mostraba `971.514 kg 100%`); ahora en modo board solo muestra `100%`.
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)
