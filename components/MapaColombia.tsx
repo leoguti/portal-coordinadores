@@ -20,6 +20,11 @@ interface MapaColombiaProps {
   actividadesPorMunicipio: MunicipioActividades[];
   /** Título de la leyenda (por defecto "Mis actividades"). */
   leyendaTitulo?: string;
+  /**
+   * Modo ejecutivo: encuadra a Colombia (incl. San Andrés), atenúa el resto del
+   * mundo con una máscara y dibuja la silueta del país. Por defecto false.
+   */
+  focusColombia?: boolean;
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -37,7 +42,7 @@ const getColorByNormalizedValue = (normalized: number): string => {
   return COLOR_SCALE[index];
 };
 
-export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades" }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,9 +164,23 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
         
         mapRef.current = map;
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap",
-        }).addTo(map);
+        // Bounds fijos de Colombia incluyendo el archipiélago de San Andrés
+        const COLOMBIA_BOUNDS = L.latLngBounds([[-4.4, -82.2], [13.7, -66.7]]);
+
+        if (focusColombia) {
+          // Base plana en grises (sin tiles): oculta el verde del mapa base
+          // para que los datos en verde resalten.
+          L.rectangle(L.latLngBounds([[-85, -180], [85, 180]]), {
+            stroke: false,
+            fillColor: "#e2e8f0", // slate-200 (el "afuera")
+            fillOpacity: 1,
+            interactive: false,
+          }).addTo(map);
+        } else {
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap",
+          }).addTo(map);
+        }
 
         // Función de estilo
         const style = (feature: Feature<Geometry, { PRECIND_ID: string }> | undefined) => {
@@ -170,15 +189,24 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           const data = actividadesMap.get(codigo);
           const count = data?.cantidad || 0;
 
-          // Sin actividades: transparente, solo borde
+          // Sin actividades
           if (count === 0) {
-            return {
-              fillColor: "transparent",
-              fillOpacity: 0,
-              weight: 0.3,
-              opacity: 0.5,
-              color: "#9CA3AF", // gray-400
-            };
+            // Modo ejecutivo: silueta de Colombia en blanco; normal: transparente
+            return focusColombia
+              ? {
+                  fillColor: "#ffffff",
+                  fillOpacity: 1,
+                  weight: 0.4,
+                  opacity: 1,
+                  color: "#cbd5e1", // slate-300 border
+                }
+              : {
+                  fillColor: "transparent",
+                  fillOpacity: 0,
+                  weight: 0.3,
+                  opacity: 0.5,
+                  color: "#9CA3AF", // gray-400
+                };
           }
 
           // Con actividades: color de relleno
@@ -187,7 +215,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             weight: 1,
             opacity: 1,
             color: "#166534", // green-800 border
-            fillOpacity: 0.8,
+            fillOpacity: focusColombia ? 0.95 : 0.8,
           };
         };
 
@@ -230,21 +258,27 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
 
         geojsonLayerRef.current = geojsonLayer;
 
-        // Calcular bounds de municipios CON actividades y hacer zoom
-        const boundsGroup = L.featureGroup();
-        geoData.features.forEach((feature) => {
-          const codigo = (feature.properties as { PRECIND_ID: string }).PRECIND_ID;
-          if (actividadesMap.has(codigo)) {
-            // Crear una capa temporal solo para calcular bounds
-            const layer = L.geoJSON(feature);
-            boundsGroup.addLayer(layer);
-          }
-        });
+        if (focusColombia) {
+          // Encuadre fijo a Colombia (incl. San Andrés); no re-zoom al filtrar
+          map.fitBounds(COLOMBIA_BOUNDS, { padding: [10, 10] });
+          map.setMaxBounds(COLOMBIA_BOUNDS.pad(0.25));
+        } else {
+          // Calcular bounds de municipios CON actividades y hacer zoom
+          const boundsGroup = L.featureGroup();
+          geoData.features.forEach((feature) => {
+            const codigo = (feature.properties as { PRECIND_ID: string }).PRECIND_ID;
+            if (actividadesMap.has(codigo)) {
+              // Crear una capa temporal solo para calcular bounds
+              const layer = L.geoJSON(feature);
+              boundsGroup.addLayer(layer);
+            }
+          });
 
-        // Si hay municipios con actividades, ajustar zoom a ellos
-        if (boundsGroup.getLayers().length > 0) {
-          const bounds = boundsGroup.getBounds();
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+          // Si hay municipios con actividades, ajustar zoom a ellos
+          if (boundsGroup.getLayers().length > 0) {
+            const bounds = boundsGroup.getBounds();
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+          }
         }
         
         // Forzar recálculo del tamaño después de montar
@@ -339,7 +373,11 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
       </div>
 
       {/* Mapa */}
-      <div ref={mapContainerRef} className="w-full h-[600px] rounded-lg" />
+      <div
+        ref={mapContainerRef}
+        className="w-full h-[600px] rounded-lg"
+        style={focusColombia ? { backgroundColor: "#e2e8f0" } : undefined}
+      />
     </div>
   );
 }

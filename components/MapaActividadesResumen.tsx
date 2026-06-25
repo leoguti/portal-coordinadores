@@ -139,6 +139,7 @@ export default function MapaActividadesResumen({
         <MapaColombia
           actividadesPorMunicipio={actividadesPorMunicipio}
           leyendaTitulo={tipoSel || "Actividades"}
+          focusColombia
         />
       )}
     </div>

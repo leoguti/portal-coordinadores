@@ -79,6 +79,7 @@ Se MANTIENE la pestaña, pero con estos ajustes:
     - **MapaColombia.tsx:** extendido con props OPCIONALES `porTipo` (desglose en popup) y `leyendaTitulo`. `/mapa` sin cambios.
     - **Respeta el filtro año/mes del Resumen** (anual ⇒ meses 1–12).
     - Conversión DIVIPOLA decimal→5 dígitos igual que `/mapa` (limitación conocida con códigos de municipio terminados en 0; se mantiene por consistencia).
+    - **Modo ejecutivo `focusColombia`** (prop nueva en `MapaColombia`, solo el mapa de junta): mapa **plano en grises** (sin tiles de OpenStreetMap → se elimina el verde del mapa base para que resalten los datos verdes). Colombia = silueta blanca (municipios sin datos en blanco), datos en verde, "afuera" en gris (slate-200). **Encuadre fijo a Colombia incluyendo San Andrés** (`COLOMBIA_BOUNDS` + `maxBounds`); ya no hace re-zoom al cambiar el filtro. `/mapa` queda sin cambios (focusColombia=false por defecto).
 
 ---
 
