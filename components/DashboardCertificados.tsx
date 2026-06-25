@@ -253,12 +253,12 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
       {data && (
         <>
           {/* KPIs */}
-          <div className={`grid grid-cols-1 gap-3 ${board ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-1 gap-3 ${board ? "" : "md:grid-cols-3"}`}>
             <KpiCard label="Certificados" value={fmtInt(data.kpis.certs)} delta={data.kpis.deltaCertsPct} />
             {!board && (
               <KpiCard label="Kilos totales" value={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
             )}
-            <TripleLavadoCard tl={data.kpis.tripleLavado} />
+            {!board && <TripleLavadoCard tl={data.kpis.tripleLavado} />}
           </div>
 
           {/* Tendencia — oculto en modo junta directiva */}
@@ -357,8 +357,8 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             </div>
           )}
 
-          {/* Por coordinador */}
-          {data.porCoordinador.length > 1 && (
+          {/* Por coordinador — oculto en modo junta directiva */}
+          {!board && data.porCoordinador.length > 1 && (
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-700">Por coordinador</h3>

@@ -69,6 +69,10 @@ Se MANTIENE la pestaña, pero con estos ajustes:
     - **Retirar el pie "Composición de materiales (kg)"**.
     - **Top cultivos / Top departamentos / Top municipios**: graficar **% del total** en vez de kg (eje, tooltip y título "(% del total)"). El % es sobre la suma de la categoría. `TopBarBlock` ahora acepta `asPercent`.
 
+16. **Certificados — retirar tarjeta "Triple lavado"** (KPI). En board la fila de KPIs queda solo con "Certificados".
+
+17. **Certificados — retirar tabla "Por coordinador"** completa en modo board.
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)
