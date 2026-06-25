@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { canViewJunta } from "@/lib/roles";
 import { listAllActividades } from "@/lib/airtable";
 
 export const maxDuration = 60;
@@ -35,9 +34,8 @@ export async function GET(request: Request) {
     if (!session?.user?.coordinatorRecordId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    if (!canViewJunta(session.user.rol)) {
-      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
-    }
+    // Mapa de cobertura: visible para cualquier usuario autenticado
+    // (coordinadores, admin/supervisor y junta). Muestra cobertura nacional.
 
     const { searchParams } = new URL(request.url);
     const year = parseInt(

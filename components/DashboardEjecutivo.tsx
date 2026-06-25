@@ -825,15 +825,13 @@ export default function DashboardEjecutivo({
         );
       })()}
 
-      {/* SECTION: Mapa de actividades por municipio — solo junta directiva */}
-      {board && (
-        <MapaActividadesResumen
-          year={year}
-          mode={mode}
-          monthFrom={monthFrom}
-          monthTo={monthTo}
-        />
-      )}
+      {/* SECTION: Mapa de actividades por municipio — visible para todos */}
+      <MapaActividadesResumen
+        year={year}
+        mode={mode}
+        monthFrom={monthFrom}
+        monthTo={monthTo}
+      />
     </div>
   );
 }

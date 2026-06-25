@@ -91,6 +91,7 @@ Se MANTIENE la pestaña, pero con estos ajustes:
     - Conversión DIVIPOLA decimal→5 dígitos igual que `/mapa` (limitación conocida con códigos de municipio terminados en 0; se mantiene por consistencia).
     - **Modo ejecutivo `focusColombia`** (prop nueva en `MapaColombia`, solo el mapa de junta): **basemap suave en escala de grises (CartoDB Positron)** en vez de las tiles verdes de OpenStreetMap → da contexto geográfico sin verdes, para que resalten los datos. Municipios sin datos transparentes (con borde leve), datos en verde. **Encuadre fijo a Colombia incluyendo San Andrés** (`COLOMBIA_BOUNDS` + `maxBounds`); ya no hace re-zoom al cambiar el filtro. `/mapa` queda sin cambios (focusColombia=false por defecto).
     - **Modo `binario`** (prop nueva): se retira el degradado por volumen (choropleth). Solo distingue municipios CON actividades (un verde) vs SIN; el detalle (conteo + desglose por tipo) se ve en el popup al pasar el mouse. Leyenda "Con / Sin actividades".
+    - **Visible para TODOS los usuarios** (2026-06-25): el mapa va al final del dashboard de **todos** — junta, ejecutivo (`DashboardEjecutivo`, ya no solo en board) y coordinador (`DashboardCoordinador`). El endpoint `actividades-por-municipio` se abrió a **cualquier usuario autenticado** (quitado el guard `canViewJunta`); muestra **cobertura nacional** (todas las actividades) para todos. Props del wrapper ahora opcionales (default año actual, anual) para usarlo suelto.
 
 ---
 

@@ -29,16 +29,16 @@ interface ApiResp {
 const fmt = (n: number) => n.toLocaleString("es-CO");
 
 export default function MapaActividadesResumen({
-  year,
-  mode,
-  monthFrom,
-  monthTo,
+  year = new Date().getFullYear(),
+  mode = "anual",
+  monthFrom = 1,
+  monthTo = 12,
 }: {
-  year: number;
-  mode: "anual" | "mensual";
-  monthFrom: number;
-  monthTo: number;
-}) {
+  year?: number;
+  mode?: "anual" | "mensual";
+  monthFrom?: number;
+  monthTo?: number;
+} = {}) {
   const [data, setData] = useState<ApiResp | null>(null);
   const [loading, setLoading] = useState(true);
   const [tipoSel, setTipoSel] = useState("");

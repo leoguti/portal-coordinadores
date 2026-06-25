@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import MisMetas from "@/components/MisMetas";
+import MapaActividadesResumen from "@/components/MapaActividadesResumen";
 import {
   BarChart,
   Bar,
@@ -628,6 +629,9 @@ export default function DashboardCoordinador() {
           </div>
         )}
       </div>
+
+      {/* Mapa de cobertura de actividades por municipio (nacional) */}
+      <MapaActividadesResumen />
     </div>
   );
 }
