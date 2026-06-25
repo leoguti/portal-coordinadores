@@ -201,21 +201,25 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             {yearsList.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Desde mes</label>
-          <select value={monthFrom} onChange={(e) => setMonthFrom(parseInt(e.target.value))}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
-            {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Hasta mes</label>
-          <select value={monthTo} onChange={(e) => setMonthTo(Math.max(parseInt(e.target.value), monthFrom))}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
-            {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-        </div>
-        {showCoordSelect && (
+        {!board && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Desde mes</label>
+              <select value={monthFrom} onChange={(e) => setMonthFrom(parseInt(e.target.value))}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
+                {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Hasta mes</label>
+              <select value={monthTo} onChange={(e) => setMonthTo(Math.max(parseInt(e.target.value), monthFrom))}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
+                {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+          </>
+        )}
+        {!board && showCoordSelect && (
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Coordinador</label>
             <select value={coordSel} onChange={(e) => setCoordSel(e.target.value)}
@@ -225,23 +229,27 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             </select>
           </div>
         )}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Cultivo</label>
-          <select value={cultivoSel} onChange={(e) => setCultivoSel(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="">Todos</option>
-            {cultivosOpts.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
-          <select value={deptoSel} onChange={(e) => setDeptoSel(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="">Todos</option>
-            {deptosOpts.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        {(cultivoSel || deptoSel || coordSel) && (
+        {!board && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Cultivo</label>
+              <select value={cultivoSel} onChange={(e) => setCultivoSel(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Todos</option>
+                {cultivosOpts.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
+              <select value={deptoSel} onChange={(e) => setDeptoSel(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm max-w-[200px] focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Todos</option>
+                {deptosOpts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </>
+        )}
+        {!board && (cultivoSel || deptoSel || coordSel) && (
           <button onClick={() => { setCultivoSel(""); setDeptoSel(""); setCoordSel(""); }}
             className="text-xs px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700">Limpiar</button>
         )}
