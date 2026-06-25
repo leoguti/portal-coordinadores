@@ -180,6 +180,14 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             subdomains: "abcd",
             maxZoom: 19,
           }).addTo(map);
+          // Velo oscuro sobre todo el mapa: oscurece el exterior. Los municipios
+          // se dibujan ENCIMA y mantienen Colombia iluminada.
+          L.rectangle(L.latLngBounds([[-85, -180], [85, 180]]), {
+            stroke: false,
+            fillColor: "#334155", // slate-700
+            fillOpacity: 0.3,
+            interactive: false,
+          }).addTo(map);
         } else {
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "&copy; OpenStreetMap",
@@ -201,7 +209,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             if (binario) {
               return {
                 fillColor: "#ffffff",
-                fillOpacity: focusColombia ? 0.55 : 0,
+                fillOpacity: focusColombia ? 0.7 : 0,
                 weight: 0,
                 opacity: 0,
                 color: "#ffffff",
