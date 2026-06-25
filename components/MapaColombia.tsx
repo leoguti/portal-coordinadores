@@ -25,6 +25,11 @@ interface MapaColombiaProps {
    * mundo con una máscara y dibuja la silueta del país. Por defecto false.
    */
   focusColombia?: boolean;
+  /**
+   * Binario: en vez del degradado por volumen, solo distingue municipios CON
+   * actividades (un color) de los que NO tienen. El detalle se ve en el popup.
+   */
+  binario?: boolean;
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -42,7 +47,7 @@ const getColorByNormalizedValue = (normalized: number): string => {
   return COLOR_SCALE[index];
 };
 
-export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +207,8 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
 
           // Con actividades: color de relleno
           return {
-            fillColor: getColor(count),
+            // Binario: un solo verde; si no, degradado por volumen
+            fillColor: binario ? "#16a34a" : getColor(count),
             weight: 1,
             opacity: 1,
             color: "#166534", // green-800 border
@@ -346,7 +352,21 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
       {/* Leyenda */}
       <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-4">
         <h4 className="font-medium text-gray-900 mb-2 text-sm">{leyendaTitulo}</h4>
-        {legendRanges.length > 0 ? (
+        {binario ? (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded border border-green-800"
+                style={{ backgroundColor: "#16a34a" }}
+              />
+              <span className="text-xs text-gray-600">Con actividades</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
+              <span className="text-xs text-gray-600">Sin actividades</span>
+            </div>
+          </div>
+        ) : legendRanges.length > 0 ? (
           <div className="space-y-1">
             {legendRanges.map(({ color, label }) => (
               <div key={color} className="flex items-center gap-2">
