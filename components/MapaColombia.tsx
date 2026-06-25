@@ -193,14 +193,14 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           const data = actividadesMap.get(codigo);
           const count = data?.cantidad || 0;
 
-          // Sin actividades: transparente (deja ver el mapa base suave),
-          // con un borde leve para insinuar la silueta del país.
+          // Sin actividades: en binario, totalmente invisibles (solo el mapa
+          // base); si no, transparente con borde leve para insinuar la silueta.
           if (count === 0) {
             return {
               fillColor: "transparent",
               fillOpacity: 0,
-              weight: focusColombia ? 0.4 : 0.3,
-              opacity: focusColombia ? 0.6 : 0.5,
+              weight: binario ? 0 : focusColombia ? 0.4 : 0.3,
+              opacity: binario ? 0 : focusColombia ? 0.6 : 0.5,
               color: focusColombia ? "#94a3b8" : "#9CA3AF", // slate-400 / gray-400
             };
           }
@@ -227,6 +227,10 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             };
             const codigo = props.PRECIND_ID;
             const data = actividadesMap.get(codigo);
+
+            // En binario, los municipios SIN actividades no reaccionan al hover
+            // (evita que queden "marcados" con borde).
+            if (binario && !data) return;
 
             layer.on({
               mouseover: (e) => {
