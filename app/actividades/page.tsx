@@ -53,6 +53,9 @@ export default function ActividadesPage() {
   const [selectedAno, setSelectedAno] = useState<string>("");
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
   const [selectedTipo, setSelectedTipo] = useState<string>("");
+  // Filtro "solo incompletas" (al hacer click en el cuadro de incompletas)
+  const [soloIncompletas, setSoloIncompletas] = useState(false);
+  const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -225,10 +228,22 @@ export default function ActividadesPage() {
   }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, canViewAll, session?.user?.coordinatorRecordId]);
 
   // Agrupar actividades por mes
+  // Lista visible: si "solo incompletas" está activo, restringe a las incompletas
+  // (y al tipo elegido, si se hizo click en un tipo). Los conteos de arriba se
+  // calculan sobre actividadesFiltradas (no se afectan).
+  const actividadesParaLista = React.useMemo(() => {
+    if (!soloIncompletas) return actividadesFiltradas;
+    return actividadesFiltradas.filter(
+      (a) =>
+        actividadIncompleta(a.fields) &&
+        (!tipoIncompletaFiltro || a.fields.Tipo === tipoIncompletaFiltro)
+    );
+  }, [actividadesFiltradas, soloIncompletas, tipoIncompletaFiltro]);
+
   const actividadesPorMes = React.useMemo(() => {
     const grupos: { [key: string]: Actividad[] } = {};
-    
-    actividadesFiltradas.forEach(actividad => {
+
+    actividadesParaLista.forEach(actividad => {
       if (actividad.fields.Fecha) {
         const fecha = new Date(actividad.fields.Fecha + 'T00:00:00');
         const monthKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
@@ -242,7 +257,7 @@ export default function ActividadesPage() {
 
     // Ordenar meses de más reciente a más antiguo
     return Object.entries(grupos).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [actividadesFiltradas]);
+  }, [actividadesParaLista]);
 
   const totalPaginasMes = Math.ceil(actividadesPorMes.length / MESES_POR_PAGINA);
   const mesesPaginados = actividadesPorMes.slice(
@@ -312,24 +327,25 @@ export default function ActividadesPage() {
     return porTipo;
   }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
 
-  // Conteo de actividades incompletas en el rango/filtro actual, con breakdown por tipo
+  // Conteo de actividades incompletas (TODOS los años pendientes), con desglose
+  // por tipo y por coordinador (este último útil para admin/supervisor).
   const incompletas = React.useMemo(() => {
     const porTipo: { [tipo: string]: number } = {};
+    const porCoordinador: { [id: string]: { name: string; count: number } } = {};
     let total = 0;
     actividadesFiltradas.forEach(actividad => {
-      if (!hayFiltrosActivos) {
-        if (!actividad.fields.Fecha) return;
-        const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
-        if (anoActividad !== anoVigente) return;
-      }
       if (actividadIncompleta(actividad.fields)) {
         const tipo = actividad.fields.Tipo || 'Sin tipo';
         porTipo[tipo] = (porTipo[tipo] || 0) + 1;
+        const cid = actividad.fields.Coordinador?.[0] || 'sin';
+        const cname = actividad.fields["Name (from Coordinador)"]?.[0] || 'Sin coordinador';
+        if (!porCoordinador[cid]) porCoordinador[cid] = { name: cname, count: 0 };
+        porCoordinador[cid].count++;
         total++;
       }
     });
-    return { total, porTipo };
-  }, [actividadesFiltradas, hayFiltrosActivos, anoVigente]);
+    return { total, porTipo, porCoordinador };
+  }, [actividadesFiltradas]);
 
   // Suma de metas mensuales aplicables al rango/filtro actual
   const metasAplicables = React.useMemo(() => {
@@ -712,6 +728,8 @@ export default function ActividadesPage() {
                   setSelectedAno("");
                   setSelectedMunicipio("");
                   setSelectedTipo("");
+                  setSoloIncompletas(false);
+                  setTipoIncompletaFiltro("");
                   setPaginaMes(0);
                 }}
                 className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -886,25 +904,96 @@ export default function ActividadesPage() {
                     </span>
                   </div>
                   {incompletas.total === 0 ? (
-                    <p className="text-sm text-gray-500 mt-3">Todas las actividades del período están completas. ✅</p>
+                    <p className="text-sm text-gray-500 mt-3">Todas las actividades están completas. ✅</p>
                   ) : (
                     <>
-                      <p className="text-xs text-gray-500 mt-2">Faltan archivos obligatorios (foto, listado o soporte de evaluaciones).</p>
+                      <p className="text-xs text-gray-500 mt-2">Faltan archivos obligatorios (foto, listado o soporte de evaluaciones). Haz click para verlas y completarlas.</p>
                       <div className="mt-3 space-y-1.5">
                         {Object.entries(incompletas.porTipo)
                           .sort((a, b) => b[1] - a[1])
-                          .map(([tipo, n]) => (
-                            <div key={tipo} className="flex items-center justify-between text-xs bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                              <span className="text-gray-700">{tipo}</span>
-                              <span className="font-bold text-amber-800">{n}</span>
-                            </div>
-                          ))}
+                          .map(([tipo, n]) => {
+                            const activo = soloIncompletas && tipoIncompletaFiltro === tipo;
+                            return (
+                              <button
+                                key={tipo}
+                                onClick={() => {
+                                  setSoloIncompletas(true);
+                                  setTipoIncompletaFiltro(tipo);
+                                  setPaginaMes(0);
+                                }}
+                                className={`w-full flex items-center justify-between text-xs px-2 py-1.5 rounded border transition-colors ${activo ? "bg-amber-200 border-amber-400" : "bg-amber-50 border-amber-100 hover:bg-amber-100"}`}
+                              >
+                                <span className="text-gray-700">{tipo}</span>
+                                <span className="font-bold text-amber-800">{n} ›</span>
+                              </button>
+                            );
+                          })}
                       </div>
+
+                      {/* Desglose por coordinador (admin/supervisor en vista global) */}
+                      {canViewAll && !selectedCoordinador && Object.keys(incompletas.porCoordinador).length > 0 && (
+                        <div className="mt-3 pt-2 border-t border-amber-100">
+                          <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">Por coordinador</p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {Object.entries(incompletas.porCoordinador)
+                              .sort((a, b) => b[1].count - a[1].count)
+                              .map(([id, info]) => (
+                                <button
+                                  key={id}
+                                  onClick={() => {
+                                    if (id !== "sin") setSelectedCoordinador(id);
+                                    setSoloIncompletas(true);
+                                    setTipoIncompletaFiltro("");
+                                    setPaginaMes(0);
+                                  }}
+                                  className="w-full flex items-center justify-between text-xs px-2 py-1 rounded hover:bg-gray-50"
+                                >
+                                  <span className="text-gray-600 truncate">{info.name}</span>
+                                  <span className="font-semibold text-amber-800 ml-2">{info.count} ›</span>
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setSoloIncompletas(true);
+                          setTipoIncompletaFiltro("");
+                          setPaginaMes(0);
+                        }}
+                        className="mt-3 w-full text-center text-xs font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 rounded py-1.5 transition-colors"
+                      >
+                        Ver todas las incompletas →
+                      </button>
                     </>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Banner de filtro "solo incompletas" */}
+            {soloIncompletas && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-300 rounded-lg px-4 py-2">
+                <span className="text-sm text-amber-800">
+                  Mostrando solo <strong>actividades incompletas</strong>
+                  {tipoIncompletaFiltro ? <> · tipo <strong>{tipoIncompletaFiltro}</strong></> : null}
+                  {" "}({actividadesParaLista.length})
+                </span>
+                <button
+                  onClick={() => { setSoloIncompletas(false); setTipoIncompletaFiltro(""); setPaginaMes(0); }}
+                  className="text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap"
+                >
+                  ✕ Quitar filtro
+                </button>
+              </div>
+            )}
+
+            {soloIncompletas && actividadesParaLista.length === 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+                No hay actividades incompletas con el filtro actual. 🎉
+              </div>
+            )}
 
             {/* Actividades por Mes */}
             {mesesPaginados.map(([monthKey, actividadesDelMes]) => {
