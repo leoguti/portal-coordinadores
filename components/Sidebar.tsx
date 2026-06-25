@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard-ejecutivo", icon: "📊", roles: ["Administrador", "Supervisor"] },
+  { name: "Junta Directiva", href: "/dashboard-junta", icon: "🏛️", roles: ["Administrador", "Supervisor"] },
   { name: "Dashboard", href: "/dashboard", icon: "📊", roles: ["Coordinador"] },
   { name: "Actividades", href: "/actividades", icon: "📋", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Kardex", href: "/kardex", icon: "📦", roles: ["Coordinador", "Administrador", "Supervisor"] },

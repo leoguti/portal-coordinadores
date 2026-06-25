@@ -91,9 +91,11 @@ interface Props {
   scope?: "all" | "mine";
   /** Lista de coordinadores para el selector (solo admin). */
   coordinadores?: { id: string; name: string }[];
+  /** Modo "Junta Directiva": oculta tendencia, kilos totales, heatmap, top generadores y columna de kilos. */
+  board?: boolean;
 }
 
-export default function DashboardCertificados({ scope = "all", coordinadores = [] }: Props) {
+export default function DashboardCertificados({ scope = "all", coordinadores = [], board = false }: Props) {
   const { data: session } = useSession();
   const role = session?.user?.rol;
   const isAdmin = role === "Administrador" || role === "Supervisor";
@@ -251,13 +253,16 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
       {data && (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className={`grid grid-cols-1 gap-3 ${board ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
             <KpiCard label="Certificados" value={fmtInt(data.kpis.certs)} delta={data.kpis.deltaCertsPct} />
-            <KpiCard label="Kilos totales" value={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
+            {!board && (
+              <KpiCard label="Kilos totales" value={`${fmtInt(data.kpis.kg)} kg`} delta={data.kpis.deltaKgPct} />
+            )}
             <TripleLavadoCard tl={data.kpis.tripleLavado} />
           </div>
 
-          {/* Tendencia */}
+          {/* Tendencia — oculto en modo junta directiva */}
+          {!board && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-700">Tendencia mensual de certificados ({year} vs {year - 1})</h3>
@@ -277,6 +282,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
               </ResponsiveContainer>
             </div>
           </div>
+          )}
 
           {/* Top cultivos + Top depto */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -309,8 +315,8 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             </div>
           </div>
 
-          {/* Heatmap cultivo × depto */}
-          {heatGrid.cultivos.length > 0 && heatGrid.deptos.length > 0 && (
+          {/* Heatmap cultivo × depto — oculto en modo junta directiva */}
+          {!board && heatGrid.cultivos.length > 0 && heatGrid.deptos.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-x-auto">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Cultivo × Departamento (kilos)</h3>
               <table className="text-xs border-collapse">
@@ -361,7 +367,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
                   <tr>
                     <th className="text-left py-2">Coordinador</th>
                     <th className="text-right py-2">Certificados</th>
-                    <th className="text-right py-2">Kilos</th>
+                    {!board && <th className="text-right py-2">Kilos</th>}
                     <th className="text-right py-2">% del total</th>
                   </tr>
                 </thead>
@@ -370,7 +376,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
                     <tr key={c.id}>
                       <td className="py-2 text-gray-800">{c.nombre}</td>
                       <td className="py-2 text-right tabular-nums">{fmtInt(c.certs)}</td>
-                      <td className="py-2 text-right tabular-nums font-medium">{fmtInt(c.kg)}</td>
+                      {!board && <td className="py-2 text-right tabular-nums font-medium">{fmtInt(c.kg)}</td>}
                       <td className="py-2 text-right text-gray-500">{data.kpis.kg ? ((c.kg / data.kpis.kg) * 100).toFixed(1) + "%" : "—"}</td>
                     </tr>
                   ))}
@@ -379,7 +385,8 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
             </div>
           )}
 
-          {/* Top generadores */}
+          {/* Top generadores — oculto en modo junta directiva */}
+          {!board && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-700">Top 20 generadores por kilos</h3>
@@ -408,6 +415,7 @@ export default function DashboardCertificados({ scope = "all", coordinadores = [
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </div>

@@ -113,7 +113,14 @@ const MES_NOMBRES = [
 ];
 
 // --- Main Component ---
-export default function DashboardEjecutivo({ userName }: { userName?: string }) {
+export default function DashboardEjecutivo({
+  userName,
+  board = false,
+}: {
+  userName?: string;
+  /** Modo "Junta Directiva": oculta cifras en kg y deja solo porcentajes. */
+  board?: boolean;
+}) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -187,13 +194,17 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
   const totalMatSalidas = materiales.reduce((s, m) => s + m.salidas, 0);
   const totalMatSaldo = materiales.reduce((s, m) => s + m.saldo, 0);
 
+  // % sobre el total (modo junta directiva)
+  const pctOf = (n: number, total: number) =>
+    total > 0 ? ((n / total) * 100).toFixed(1) + "%" : "0%";
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Dashboard Ejecutivo
+            {board ? "Dashboard Junta Directiva" : "Dashboard Ejecutivo"}
             {mode === "mensual" && stats.monthLabel && (
               <span className="text-gray-500 font-medium"> · {stats.monthLabel} {year}</span>
             )}
@@ -306,19 +317,23 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>
-              Entradas:{" "}
-              <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.entradas)} kg</strong>
-            </span>
-            <span>
-              Meta: <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.meta)} kg</strong>
-            </span>
-          </div>
-          <div className="text-xs text-gray-500">
-            Salidas:{" "}
-            <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.salidas)} kg</strong>
-          </div>
+          {!board && (
+            <>
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>
+                  Entradas:{" "}
+                  <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.entradas)} kg</strong>
+                </span>
+                <span>
+                  Meta: <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.meta)} kg</strong>
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Salidas:{" "}
+                <strong className="text-gray-900">{fmt(stats.metasRecoleccion.global.salidas)} kg</strong>
+              </div>
+            </>
+          )}
           <button
             onClick={() => startTransition(() => setExpandRecol(!expandRecol))}
             className="mt-3 text-xs text-[#00d084] hover:text-[#00b872] font-medium"
@@ -559,33 +574,35 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
         </div>
       </div>
 
-      {/* SECTION 2: KPIs rápidos */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">Entradas</p>
-          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.entradasKg)}</p>
-          <p className="text-xs text-gray-500">kg</p>
+      {/* SECTION 2: KPIs rápidos — oculto en modo junta directiva */}
+      {!board && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Entradas</p>
+            <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.entradasKg)}</p>
+            <p className="text-xs text-gray-500">kg</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Salidas</p>
+            <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.salidasKg)}</p>
+            <p className="text-xs text-gray-500">kg</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Saldo</p>
+            <p className={`text-2xl font-bold ${stats.kpis.saldoKg < 0 ? "text-red-600" : "text-gray-900"}`}>
+              {fmt(stats.kpis.saldoKg)}
+            </p>
+            <p className="text-xs text-gray-500">
+              kg neto
+              {stats.kpis.saldoInicialKg !== 0 && (
+                <span className="ml-1 text-gray-400">
+                  (saldo inicial: {fmt(stats.kpis.saldoInicialKg)})
+                </span>
+              )}
+            </p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">Salidas</p>
-          <p className="text-2xl font-bold text-gray-900">{fmt(stats.kpis.salidasKg)}</p>
-          <p className="text-xs text-gray-500">kg</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">Saldo</p>
-          <p className={`text-2xl font-bold ${stats.kpis.saldoKg < 0 ? "text-red-600" : "text-gray-900"}`}>
-            {fmt(stats.kpis.saldoKg)}
-          </p>
-          <p className="text-xs text-gray-500">
-            kg neto
-            {stats.kpis.saldoInicialKg !== 0 && (
-              <span className="ml-1 text-gray-400">
-                (saldo inicial: {fmt(stats.kpis.saldoInicialKg)})
-              </span>
-            )}
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* SECTION 3: Material por tipo */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
@@ -609,11 +626,17 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="text-left p-2.5 font-semibold text-gray-600 w-40">Material</th>
-                <th className="text-right p-2.5 font-semibold text-green-700 w-28">Entradas (kg)</th>
+                <th className="text-right p-2.5 font-semibold text-green-700 w-28">
+                  {board ? "Entradas (%)" : "Entradas (kg)"}
+                </th>
                 <th className="p-2.5 w-32"></th>
-                <th className="text-right p-2.5 font-semibold text-blue-700 w-28">Salidas (kg)</th>
+                <th className="text-right p-2.5 font-semibold text-blue-700 w-28">
+                  {board ? "Salidas (%)" : "Salidas (kg)"}
+                </th>
                 <th className="p-2.5 w-32"></th>
-                <th className="text-right p-2.5 font-semibold text-gray-600 w-28">Saldo (kg)</th>
+                {!board && (
+                  <th className="text-right p-2.5 font-semibold text-gray-600 w-28">Saldo (kg)</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -621,7 +644,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                 <tr key={m.key} className="border-b last:border-0 hover:bg-gray-50">
                   <td className="p-2.5 font-medium text-gray-900">{m.material}</td>
                   <td className="p-2.5 text-right text-green-700 font-mono text-xs">
-                    {fmt(m.entradas)}
+                    {board ? pctOf(m.entradas, totalMatEntradas) : fmt(m.entradas)}
                   </td>
                   <td className="p-2.5">
                     <div className="w-full bg-gray-100 rounded-full h-2">
@@ -632,7 +655,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     </div>
                   </td>
                   <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
-                    {fmt(m.salidas)}
+                    {board ? pctOf(m.salidas, totalMatSalidas) : fmt(m.salidas)}
                   </td>
                   <td className="p-2.5">
                     <div className="w-full bg-gray-100 rounded-full h-2">
@@ -642,9 +665,11 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                       />
                     </div>
                   </td>
-                  <td className="p-2.5 text-right font-mono text-xs font-bold text-gray-900">
-                    {fmt(m.saldo)}
-                  </td>
+                  {!board && (
+                    <td className="p-2.5 text-right font-mono text-xs font-bold text-gray-900">
+                      {fmt(m.saldo)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -652,23 +677,26 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
               <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
                 <td className="p-2.5">TOTAL</td>
                 <td className="p-2.5 text-right text-green-700 font-mono text-xs">
-                  {fmt(totalMatEntradas)}
+                  {board ? "100%" : fmt(totalMatEntradas)}
                 </td>
                 <td className="p-2.5"></td>
                 <td className="p-2.5 text-right text-blue-700 font-mono text-xs">
-                  {fmt(totalMatSalidas)}
+                  {board ? "100%" : fmt(totalMatSalidas)}
                 </td>
                 <td className="p-2.5"></td>
-                <td className="p-2.5 text-right font-mono text-xs">
-                  {fmt(totalMatSaldo)}
-                </td>
+                {!board && (
+                  <td className="p-2.5 text-right font-mono text-xs">
+                    {fmt(totalMatSaldo)}
+                  </td>
+                )}
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
 
-      {/* SECTION 4: Tendencia mensual */}
+      {/* SECTION 4: Tendencia mensual — oculto en modo junta directiva */}
+      {!board && (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
           Tendencia Mensual (últimos 12 meses)
@@ -705,6 +733,7 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
           </BarChart>
         </ResponsiveContainer>
       </div>
+      )}
 
       {/* SECTION: Salidas por Proceso */}
       {stats.salidasProceso.length > 0 && (() => {
@@ -751,9 +780,11 @@ export default function DashboardEjecutivo({ userName }: { userName?: string }) 
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-gray-700">{p.proceso}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-mono font-bold text-gray-900">
-                          {fmt(p.kg)} kg
-                        </span>
+                        {!board && (
+                          <span className="text-sm font-mono font-bold text-gray-900">
+                            {fmt(p.kg)} kg
+                          </span>
+                        )}
                         <span className="text-xs text-gray-500 w-10 text-right">{pct}%</span>
                       </div>
                     </div>
