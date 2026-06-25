@@ -193,14 +193,26 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           const data = actividadesMap.get(codigo);
           const count = data?.cantidad || 0;
 
-          // Sin actividades: en binario, totalmente invisibles (solo el mapa
-          // base); si no, transparente con borde leve para insinuar la silueta.
+          // Sin actividades
           if (count === 0) {
+            // Binario + focus: velo blanco suave (SIN borde) que ilumina la
+            // silueta de Colombia sobre el mapa base gris (el resto queda más
+            // apagado). No tiene borde → no quedan "marcados".
+            if (binario) {
+              return {
+                fillColor: "#ffffff",
+                fillOpacity: focusColombia ? 0.55 : 0,
+                weight: 0,
+                opacity: 0,
+                color: "#ffffff",
+              };
+            }
+            // Modo normal: transparente con borde leve.
             return {
               fillColor: "transparent",
               fillOpacity: 0,
-              weight: binario ? 0 : focusColombia ? 0.4 : 0.3,
-              opacity: binario ? 0 : focusColombia ? 0.6 : 0.5,
+              weight: focusColombia ? 0.4 : 0.3,
+              opacity: focusColombia ? 0.6 : 0.5,
               color: focusColombia ? "#94a3b8" : "#9CA3AF", // slate-400 / gray-400
             };
           }
