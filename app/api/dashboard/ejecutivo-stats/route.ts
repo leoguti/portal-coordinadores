@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { isAdminOrSupervisor } from "@/lib/roles";
+import { canViewJunta } from "@/lib/roles";
 import {
   getAllKardex,
   listAllActividades,
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     if (!session?.user?.coordinatorRecordId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    if (!isAdminOrSupervisor(session.user.rol)) {
+    if (!canViewJunta(session.user.rol)) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 

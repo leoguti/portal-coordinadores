@@ -14,7 +14,7 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       coordinatorRecordId?: string; // Airtable record ID
-      rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
+      rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
     };
   }
 
@@ -22,7 +22,7 @@ declare module "next-auth" {
     email?: string | null;
     name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
-    rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
+    rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
   }
 }
 
@@ -31,6 +31,6 @@ declare module "next-auth/jwt" {
     email?: string | null;
     name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
-    rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
+    rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
   }
 }

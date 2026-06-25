@@ -21,13 +21,21 @@ export default function DashboardPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"resumen" | "certificados">("resumen");
 
-  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const rol = session?.user?.rol;
+  const canViewAll = isAdminOrSupervisor(rol);
+  const isJuntaRole = rol === "Junta";
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  // El rol "Junta" solo accede al board de junta
+  if (isJuntaRole) {
+    router.push("/dashboard-junta");
+    return <AuthenticatedLayout>{spinner}</AuthenticatedLayout>;
+  }
 
   if (canViewAll) {
     router.push("/dashboard-ejecutivo");

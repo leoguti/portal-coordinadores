@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { isAdminOrSupervisor } from "@/lib/roles";
 
@@ -74,7 +75,7 @@ export default function DashboardEjecutivoPage() {
   return (
     <AuthenticatedLayout>
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto mb-4">
+      <div className="max-w-7xl mx-auto mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
           <button
             onClick={() => setTab("resumen")}
@@ -107,6 +108,14 @@ export default function DashboardEjecutivoPage() {
             Certificados
           </button>
         </div>
+
+        {/* Acceso al board de Junta Directiva (sin ítem de menú aparte) */}
+        <Link
+          href="/dashboard-junta"
+          className="inline-flex items-center gap-2 rounded-lg border border-[#00d084] bg-white px-4 py-2 text-sm font-medium text-[#00a868] shadow-sm transition-colors hover:bg-[#00d084] hover:text-white"
+        >
+          🏛️ Board Junta
+        </Link>
       </div>
 
       {tab === "resumen" && (

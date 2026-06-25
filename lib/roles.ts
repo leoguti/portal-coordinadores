@@ -12,3 +12,13 @@ export function isAdminOrSupervisor(rol?: string): boolean {
 export function isAdmin(rol?: string): boolean {
   return rol === "Administrador";
 }
+
+// Rol "Junta": solo accede al board de Junta Directiva.
+export function isJunta(rol?: string): boolean {
+  return rol === "Junta";
+}
+
+// Puede ver el board de Junta Directiva: Admin, Supervisor o Junta.
+export function canViewJunta(rol?: string): boolean {
+  return isAdminOrSupervisor(rol) || isJunta(rol);
+}

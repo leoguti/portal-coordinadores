@@ -22,7 +22,7 @@ interface CoordinadorFields {
   Name?: string;
   email?: string; // lowercase to match Airtable field name
   telefono?: string;
-  Rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
+  Rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
   Actividades?: string[];
   Certificados?: string[];
   Kardex?: string[];
@@ -207,7 +207,7 @@ export interface Coordinator {
   id: string;
   name?: string;
   email: string;
-  rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado";
+  rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
 }
 
 export interface Actividad {

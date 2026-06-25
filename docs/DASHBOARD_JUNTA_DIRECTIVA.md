@@ -11,6 +11,16 @@
   - `components/DashboardEjecutivo.tsx` → prop `board?: boolean`.
   - `components/DashboardCertificados.tsx` → prop `board?: boolean`.
 
+## Rol "Junta" (2026-06-25)
+
+Rol nuevo en Airtable (`Coordinadores.Rol = "Junta"`) que **solo** accede al board de junta.
+
+- **Acceso al board**: helper `canViewJunta(rol)` = Admin · Supervisor · Junta (`lib/roles.ts`). Aplicado en `app/dashboard-junta/page.tsx` y en los endpoints `ejecutivo-stats`, `ejecutivo-stats-mensual`, `actividades-por-municipio` y `certificados-stats` (Junta = "ve todo" como admin).
+- **Landing**: login entra por `/dashboard`; ese page redirige `Junta → /dashboard-junta` (igual que Admin/Supervisor → `/dashboard-ejecutivo`).
+- **Menú**: el rol Junta ve un único ítem "Dashboard" → `/dashboard-junta` (no ve el resto del menú). Se **eliminó** el ítem separado "Junta Directiva".
+- **Acceso para Admin/Supervisor**: botón **"🏛️ Board Junta"** dentro de `/dashboard-ejecutivo` (junto a los tabs) → `/dashboard-junta`. Así no hay un ítem de menú aparte.
+- Tipo `rol` ampliado con `"Junta"` en `types/next-auth.d.ts` y `lib/airtable.ts`. Login no bloquea Junta (solo bloquea `Desactivado`).
+
 ## Concepto
 
 Dashboard **nuevo y adicional**, basado en el **Dashboard Ejecutivo** actual (`/dashboard-ejecutivo`), orientado a la **Junta Directiva**. Se construye sobre la misma base pero con los cambios que se listan abajo.

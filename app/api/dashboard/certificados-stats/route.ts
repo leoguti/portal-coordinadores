@@ -137,7 +137,8 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const rol = session.user?.rol;
-  const isAdmin = rol === "Administrador" || rol === "Supervisor";
+  // "Junta" ve todos los certificados igual que admin (solo lectura del board)
+  const isAdmin = rol === "Administrador" || rol === "Supervisor" || rol === "Junta";
   const isCoordinador = rol === "Coordinador";
   if (!isAdmin && !isCoordinador) {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 });

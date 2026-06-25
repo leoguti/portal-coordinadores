@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
-import { isAdminOrSupervisor } from "@/lib/roles";
+import { canViewJunta } from "@/lib/roles";
 
 const spinner = (
   <div className="flex items-center justify-center py-20">
@@ -55,7 +55,7 @@ export default function DashboardJuntaPage() {
 
   if (!session) return null;
 
-  if (!isAdminOrSupervisor(session.user?.rol)) {
+  if (!canViewJunta(session.user?.rol)) {
     return (
       <AuthenticatedLayout>
         <div className="max-w-7xl mx-auto">
