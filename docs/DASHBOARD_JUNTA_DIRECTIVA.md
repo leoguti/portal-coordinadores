@@ -73,6 +73,13 @@ Se MANTIENE la pestaña, pero con estos ajustes:
 
 17. **Certificados — retirar tabla "Por coordinador"** completa en modo board.
 
+18. **Mapa de actividades por municipio (NUEVO)** — al fondo del tab Resumen (solo board). Decisión 2026-06-25: coloreado por **volumen + filtro de Tipo** (reusa `MapaColombia.tsx`).
+    - **Endpoint:** `GET /api/dashboard/actividades-por-municipio?year=&monthFrom=&monthTo=` (Admin/Supervisor). Agrega por DIVIPOLA: `{codigo, municipio, departamento, total, porTipo}` + lista de `tipos` + totals. Normaliza Tipo (trim; "Recoleccion"→"Recolección").
+    - **Wrapper:** `components/MapaActividadesResumen.tsx` — filtro Tipo (Todos + tipos), 3 KPIs (Municipios con presencia · Total actividades · Departamentos cubiertos), recolorea por volumen del tipo elegido.
+    - **MapaColombia.tsx:** extendido con props OPCIONALES `porTipo` (desglose en popup) y `leyendaTitulo`. `/mapa` sin cambios.
+    - **Respeta el filtro año/mes del Resumen** (anual ⇒ meses 1–12).
+    - Conversión DIVIPOLA decimal→5 dígitos igual que `/mapa` (limitación conocida con códigos de municipio terminados en 0; se mantiene por consistencia).
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)

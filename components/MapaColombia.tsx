@@ -12,10 +12,14 @@ interface MunicipioActividades {
   municipio: string;
   departamento: string;
   cantidad: number;
+  /** Desglose opcional por tipo de actividad (para el popup ejecutivo). */
+  porTipo?: Record<string, number>;
 }
 
 interface MapaColombiaProps {
   actividadesPorMunicipio: MunicipioActividades[];
+  /** Título de la leyenda (por defecto "Mis actividades"). */
+  leyendaTitulo?: string;
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -33,7 +37,7 @@ const getColorByNormalizedValue = (normalized: number): string => {
   return COLOR_SCALE[index];
 };
 
-export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades" }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -298,13 +302,25 @@ export default function MapaColombia({ actividadesPorMunicipio }: MapaColombiaPr
             <p className="text-lg font-semibold text-green-700">
               {hoveredMunicipio.cantidad} {hoveredMunicipio.cantidad === 1 ? "actividad" : "actividades"}
             </p>
+            {hoveredMunicipio.porTipo && Object.keys(hoveredMunicipio.porTipo).length > 0 && (
+              <div className="mt-2 space-y-0.5">
+                {Object.entries(hoveredMunicipio.porTipo)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([tipo, n]) => (
+                    <div key={tipo} className="flex justify-between gap-3 text-xs text-gray-600">
+                      <span>{tipo}</span>
+                      <span className="font-semibold text-gray-900">{n}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Leyenda */}
       <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-2 text-sm">Mis actividades</h4>
+        <h4 className="font-medium text-gray-900 mb-2 text-sm">{leyendaTitulo}</h4>
         {legendRanges.length > 0 ? (
           <div className="space-y-1">
             {legendRanges.map(({ color, label }) => (

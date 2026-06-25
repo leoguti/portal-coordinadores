@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Fragment, useTransition } from "react";
+import MapaActividadesResumen from "./MapaActividadesResumen";
 import {
   BarChart,
   Bar,
@@ -823,6 +824,16 @@ export default function DashboardEjecutivo({
           </div>
         );
       })()}
+
+      {/* SECTION: Mapa de actividades por municipio — solo junta directiva */}
+      {board && (
+        <MapaActividadesResumen
+          year={year}
+          mode={mode}
+          monthFrom={monthFrom}
+          monthTo={monthTo}
+        />
+      )}
     </div>
   );
 }
