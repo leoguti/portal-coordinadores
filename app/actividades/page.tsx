@@ -233,12 +233,19 @@ export default function ActividadesPage() {
   // calculan sobre actividadesFiltradas (no se afectan).
   const actividadesParaLista = React.useMemo(() => {
     if (!soloIncompletas) return actividadesFiltradas;
-    return actividadesFiltradas.filter(
-      (a) =>
-        actividadIncompleta(a.fields) &&
-        (!tipoIncompletaFiltro || a.fields.Tipo === tipoIncompletaFiltro)
-    );
-  }, [actividadesFiltradas, soloIncompletas, tipoIncompletaFiltro]);
+    const anoVig = new Date().getFullYear();
+    const hayFiltros = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
+    return actividadesFiltradas.filter((a) => {
+      if (!actividadIncompleta(a.fields)) return false;
+      if (tipoIncompletaFiltro && a.fields.Tipo !== tipoIncompletaFiltro) return false;
+      // Mismo criterio que el conteo: si no hay filtros, limitar al año vigente
+      if (!hayFiltros) {
+        if (!a.fields.Fecha) return false;
+        if (new Date(a.fields.Fecha + 'T00:00:00').getFullYear() !== anoVig) return false;
+      }
+      return true;
+    });
+  }, [actividadesFiltradas, soloIncompletas, tipoIncompletaFiltro, selectedAno, selectedMes, selectedMunicipio, selectedTipo, canViewAll, selectedCoordinador]);
 
   const actividadesPorMes = React.useMemo(() => {
     const grupos: { [key: string]: Actividad[] } = {};
@@ -334,6 +341,12 @@ export default function ActividadesPage() {
     const porCoordinador: { [id: string]: { name: string; count: number } } = {};
     let total = 0;
     actividadesFiltradas.forEach(actividad => {
+      // Respetar el filtro: si no hay filtros activos, limitar al año vigente
+      if (!hayFiltrosActivos) {
+        if (!actividad.fields.Fecha) return;
+        const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
+        if (anoActividad !== anoVigente) return;
+      }
       if (actividadIncompleta(actividad.fields)) {
         const tipo = actividad.fields.Tipo || 'Sin tipo';
         porTipo[tipo] = (porTipo[tipo] || 0) + 1;
@@ -1000,7 +1013,8 @@ export default function ActividadesPage() {
               const [year, month] = monthKey.split('-');
               const monthDate = new Date(parseInt(year), parseInt(month) - 1);
               const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
-              const isMonthExpanded = expandedMonths.has(monthKey);
+              // Con el filtro de incompletas activo, los meses se auto-expanden
+              const isMonthExpanded = expandedMonths.has(monthKey) || soloIncompletas;
               const totalActividades = actividadesDelMes.length;
               const resumenMes = getResumenMes(actividadesDelMes);
 
@@ -1419,7 +1433,7 @@ export default function ActividadesPage() {
                         <div className="divide-y divide-gray-200">
                           {coordEntries.map(([coordId, { nombre, actividades: actividadesCoord }]) => {
                             const coordKey = `${monthKey}::${coordId}`;
-                            const isCoordExpanded = expandedCoordinadores.has(coordKey);
+                            const isCoordExpanded = expandedCoordinadores.has(coordKey) || soloIncompletas;
                             const downloadKey = coordKey;
 
                             return (
