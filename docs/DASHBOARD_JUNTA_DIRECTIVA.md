@@ -99,6 +99,8 @@ Se MANTIENE la pestaña, pero con estos ajustes:
     - **MapaColombia:** prop nueva `esPorcentaje` (popup "X% del total nacional", leyenda con decimales). El velo blanco + no-hover de municipios sin datos ahora aplica a todo modo `focusColombia` (no solo binario). `/mapa` sin cambios.
     - Validado con datos reales 2026: 163 municipios, top Madrid-Cundinamarca 6,0%, top10 = 35%, 18 deptos.
 
+20. **Leyenda interactiva + quintiles** (2026-07-02, idea del usuario + mejora): en el choropleth la leyenda es **clickeable** — click en un rango "enciende" solo los municipios de ese rango (los demás se apagan con velo), click de nuevo o "✕ Ver todos" lo quita; muestra el conteo de municipios por rango. Además, en modo % la escala pasa de rangos lineales a **quintiles** (cada rango ≈ mismo número de municipios) porque la distribución sesgada dejaba casi todo en el primer verde pálido. Etiquetas con el min–max real de cada rango. Técnica: `styleFnRef` + `layer.setStyle()` re-estila sin recrear el mapa; `mouseout` restaura el estilo vigente (no `resetStyle`). `/mapa` conserva rangos lineales.
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)

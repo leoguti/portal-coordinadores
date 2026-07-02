@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import type { FeatureCollection, Feature, Geometry } from "geojson";
-import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON, Path } from "leaflet";
+import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON, Path, PathOptions, StyleFunction } from "leaflet";
 
 // Importar CSS de Leaflet estáticamente
 import "leaflet/dist/leaflet.css";
@@ -46,11 +46,6 @@ const COLOR_SCALE = [
   "#166534", // green-800
 ];
 
-// Función para obtener color basado en valor normalizado (0-1)
-const getColorByNormalizedValue = (normalized: number): string => {
-  const index = Math.min(Math.floor(normalized * COLOR_SCALE.length), COLOR_SCALE.length - 1);
-  return COLOR_SCALE[index];
-};
 
 export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
@@ -78,44 +73,138 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     return map;
   }, [actividadesPorMunicipio]);
 
-  // Calcular min/max para escala dinámica
-  const { minCount, maxCount, legendRanges } = useMemo(() => {
-    if (actividadesPorMunicipio.length === 0) {
-      return { minCount: 0, maxCount: 1, legendRanges: [] };
+  // Escala dinámica: asigna cada valor a uno de los 5 rangos (buckets).
+  // - esPorcentaje: QUINTILES (cada rango agrupa ~la misma cantidad de
+  //   municipios) — con distribuciones sesgadas el mapa diferencia mejor.
+  // - conteos (/mapa): rangos lineales, como siempre.
+  const { legendRanges, bucketOf } = useMemo(() => {
+    const counts = actividadesPorMunicipio.map((m) => m.cantidad).filter((c) => c > 0);
+    if (counts.length === 0) {
+      return {
+        legendRanges: [] as Array<{ color: string; label: string; n: number }>,
+        bucketOf: (_: number) => 0,
+      };
     }
-    
-    const counts = actividadesPorMunicipio.map(m => m.cantidad);
+
     const min = Math.min(...counts);
     const max = Math.max(...counts);
-    
-    // Crear rangos para la leyenda
-    const range = max - min || 1;
-    const step = range / COLOR_SCALE.length;
 
     // Con porcentajes usamos 1 decimal; con conteos, enteros
     const fmtVal = (n: number) =>
       esPorcentaje ? `${(Math.round(n * 10) / 10).toLocaleString("es-CO")}%` : String(Math.round(n));
 
-    const ranges = COLOR_SCALE.map((color, i) => {
-      const fromN = min + step * i;
-      const toN = i === COLOR_SCALE.length - 1 ? max : min + step * (i + 1);
-      const from = fmtVal(fromN);
-      const to = fmtVal(esPorcentaje ? toN : toN - 1);
-      return {
-        color,
-        label: from === to ? `${from}` : `${from} - ${to}`,
+    let bucketFn: (v: number) => number;
+    if (esPorcentaje) {
+      const sorted = [...counts].sort((a, b) => a - b);
+      const q = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+      const th = [q(0.2), q(0.4), q(0.6), q(0.8)];
+      bucketFn = (v: number) => {
+        for (let i = 0; i < th.length; i++) {
+          if (v <= th[i]) return i;
+        }
+        return COLOR_SCALE.length - 1;
       };
+    } else {
+      const range = max - min || 1;
+      bucketFn = (v: number) =>
+        Math.min(Math.floor(((v - min) / range) * COLOR_SCALE.length), COLOR_SCALE.length - 1);
+    }
+
+    // Etiquetas con el min/max REAL de cada rango + cuántos municipios caen ahí
+    const stats = COLOR_SCALE.map(() => ({ min: Infinity, max: -Infinity, n: 0 }));
+    counts.forEach((v) => {
+      const s = stats[bucketFn(v)];
+      s.min = Math.min(s.min, v);
+      s.max = Math.max(s.max, v);
+      s.n++;
     });
-    
-    return { minCount: min, maxCount: max, legendRanges: ranges };
+    const ranges = COLOR_SCALE.map((color, i) => {
+      const s = stats[i];
+      if (s.n === 0) return { color, label: "—", n: 0 };
+      const from = fmtVal(s.min);
+      const to = fmtVal(s.max);
+      return { color, label: from === to ? from : `${from} - ${to}`, n: s.n };
+    });
+
+    return { legendRanges: ranges, bucketOf: bucketFn };
   }, [actividadesPorMunicipio, esPorcentaje]);
 
+  // Rango seleccionado en la leyenda (null = todos)
+  const [rangoSel, setRangoSel] = useState<number | null>(null);
+
+  // Al cambiar los datos (dataset/filtro/periodo), quitar el filtro de rango
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRangoSel(null);
+  }, [actividadesMap]);
+
   // Función para obtener color según cantidad
-  const getColor = (count: number): string => {
-    if (maxCount === minCount) return COLOR_SCALE[COLOR_SCALE.length - 1];
-    const normalized = (count - minCount) / (maxCount - minCount);
-    return getColorByNormalizedValue(normalized);
+  const getColor = (count: number): string => COLOR_SCALE[bucketOf(count)];
+
+  // Estilo por municipio. Vive en el cuerpo (no en el efecto) para que el
+  // filtro por rango de la leyenda re-estile la capa SIN recrear el mapa.
+  const styleFeature = (feature: Feature<Geometry, { PRECIND_ID: string }> | undefined): PathOptions => {
+    if (!feature) return {};
+    const codigo = feature.properties?.PRECIND_ID;
+    const data = actividadesMap.get(codigo);
+    const count = data?.cantidad || 0;
+
+    // Sin actividades
+    if (count === 0) {
+      // Modo ejecutivo (focusColombia) o binario: velo blanco suave (SIN
+      // borde) que ilumina la silueta de Colombia sobre el mapa base gris.
+      if (focusColombia || binario) {
+        return {
+          fillColor: "#ffffff",
+          fillOpacity: focusColombia ? 0.7 : 0,
+          weight: 0,
+          opacity: 0,
+          color: "#ffffff",
+        };
+      }
+      // Modo normal: transparente con borde leve.
+      return {
+        fillColor: "transparent",
+        fillOpacity: 0,
+        weight: 0.3,
+        opacity: 0.5,
+        color: "#9CA3AF", // gray-400
+      };
+    }
+
+    // Filtro por rango de la leyenda: los municipios fuera del rango se apagan
+    if (!binario && rangoSel !== null && bucketOf(count) !== rangoSel) {
+      return {
+        fillColor: "#ffffff",
+        fillOpacity: focusColombia ? 0.55 : 0.15,
+        weight: 0.4,
+        opacity: 0.4,
+        color: "#cbd5e1", // slate-300
+      };
+    }
+
+    // Con actividades: color de relleno
+    return {
+      // Binario: un solo verde; si no, degradado por volumen
+      fillColor: binario ? "#16a34a" : getColor(count),
+      weight: 1,
+      opacity: 1,
+      color: "#166534", // green-800 border
+      fillOpacity: focusColombia ? 0.9 : 0.8,
+    };
   };
+  // Ref siempre apuntando al estilo vigente (lo usan mouseout y el re-estilado)
+  const styleFnRef = useRef(styleFeature);
+  styleFnRef.current = styleFeature;
+
+  // Re-estilar la capa cuando cambia el rango seleccionado
+  useEffect(() => {
+    const layer = geojsonLayerRef.current;
+    if (layer) {
+      layer.setStyle(((f: Feature<Geometry, { PRECIND_ID: string }> | undefined) =>
+        styleFnRef.current(f)) as StyleFunction);
+    }
+  }, [rangoSel]);
 
   // Cargar GeoJSON
   useEffect(() => {
@@ -205,51 +294,11 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           }).addTo(map);
         }
 
-        // Función de estilo
-        const style = (feature: Feature<Geometry, { PRECIND_ID: string }> | undefined) => {
-          if (!feature) return {};
-          const codigo = feature.properties?.PRECIND_ID;
-          const data = actividadesMap.get(codigo);
-          const count = data?.cantidad || 0;
-
-          // Sin actividades
-          if (count === 0) {
-            // Modo ejecutivo (focusColombia) o binario: velo blanco suave (SIN
-            // borde) que ilumina la silueta de Colombia sobre el mapa base gris.
-            // No tiene borde → no quedan "marcados".
-            if (focusColombia || binario) {
-              return {
-                fillColor: "#ffffff",
-                fillOpacity: focusColombia ? 0.7 : 0,
-                weight: 0,
-                opacity: 0,
-                color: "#ffffff",
-              };
-            }
-            // Modo normal: transparente con borde leve.
-            return {
-              fillColor: "transparent",
-              fillOpacity: 0,
-              weight: 0.3,
-              opacity: 0.5,
-              color: "#9CA3AF", // gray-400
-            };
-          }
-
-          // Con actividades: color de relleno
-          return {
-            // Binario: un solo verde; si no, degradado por volumen
-            fillColor: binario ? "#16a34a" : getColor(count),
-            weight: 1,
-            opacity: 1,
-            color: "#166534", // green-800 border
-            fillOpacity: focusColombia ? 0.9 : 0.8,
-          };
-        };
-
-        // Agregar GeoJSON con estilos y eventos
+        // Agregar GeoJSON con estilos y eventos (estilo vigente vía ref, para
+        // que el filtro por rango de la leyenda aplique sin recrear el mapa)
         const geojsonLayer = L.geoJSON(geoData, {
-          style: style as L.StyleFunction,
+          style: ((f: Feature<Geometry, { PRECIND_ID: string }> | undefined) =>
+            styleFnRef.current(f)) as L.StyleFunction,
           onEachFeature: (feature, layer) => {
             const props = feature.properties as {
               PRECIND_ID: string;
@@ -281,7 +330,11 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
                 });
               },
               mouseout: (e) => {
-                geojsonLayer.resetStyle(e.target as Path);
+                // Restaurar el estilo VIGENTE (respeta el filtro de rango
+                // activo; resetStyle volvería al estilo de creación)
+                (e.target as Path).setStyle(
+                  styleFnRef.current(feature as Feature<Geometry, { PRECIND_ID: string }>)
+                );
                 setHoveredMunicipio(null);
               },
             });
@@ -404,16 +457,37 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             </div>
           </div>
         ) : legendRanges.length > 0 ? (
-          <div className="space-y-1">
-            {legendRanges.map(({ color, label }) => (
-              <div key={color} className="flex items-center gap-2">
+          <div className="space-y-0.5">
+            <p className="text-[10px] text-gray-400 mb-1">Click en un rango para filtrar</p>
+            {legendRanges.map(({ color, label, n }, i) => (
+              <button
+                key={color}
+                onClick={() => setRangoSel(rangoSel === i ? null : i)}
+                disabled={n === 0}
+                className={`w-full flex items-center gap-2 px-1.5 py-1 rounded text-left transition-colors ${
+                  rangoSel === i
+                    ? "bg-green-50 ring-1 ring-green-400"
+                    : rangoSel !== null
+                      ? "opacity-40 hover:opacity-100 hover:bg-gray-50"
+                      : "hover:bg-gray-50"
+                } ${n === 0 ? "opacity-30 cursor-default" : "cursor-pointer"}`}
+              >
                 <div
-                  className="w-4 h-4 rounded border border-gray-300"
+                  className="w-4 h-4 rounded border border-gray-300 flex-shrink-0"
                   style={{ backgroundColor: color }}
                 />
                 <span className="text-xs text-gray-600">{label}</span>
-              </div>
+                <span className="text-[10px] text-gray-400 ml-auto pl-2">{n}</span>
+              </button>
             ))}
+            {rangoSel !== null && (
+              <button
+                onClick={() => setRangoSel(null)}
+                className="w-full text-center text-[11px] font-medium text-green-700 hover:text-green-900 pt-1"
+              >
+                ✕ Ver todos
+              </button>
+            )}
           </div>
         ) : (
           <p className="text-xs text-gray-500">Sin datos</p>
