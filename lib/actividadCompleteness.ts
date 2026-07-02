@@ -22,9 +22,14 @@ interface ActividadFieldsLike {
   Tipo?: string;
   Fecha?: string;
   "Personas Evaluadas"?: number;
+  CantidadEvaluaciones?: number;
   Fotografias?: AttachmentLike[];
   "Listado Asistencia"?: AttachmentLike[];
   Evaluaciones?: AttachmentLike[];
+  AprobacionSensibilizacion?: string;
+  AprobacionEvaluaciones?: string;
+  MotivoRechazoSensibilizacion?: string;
+  MotivoRechazoEvaluaciones?: string;
 }
 
 export interface CompletenessResult {
@@ -65,12 +70,80 @@ export function actividadIncompleta(
   return evaluarCompletitudActividad(fields).incompleta;
 }
 
+// ─── Aprobación admin (modelo "aprobado por defecto") ────────────────────────
+// Solo "Rechazada" tiene efecto: excluye el componente de cifras/informes y
+// habilita la corrección por el coordinador. Pendiente/Aprobada cuentan igual.
+
+/** ¿El componente de sensibilización fue rechazado por el admin? */
+export function sensibilizacionRechazada(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  return fields?.AprobacionSensibilizacion === "Rechazada";
+}
+
+/** ¿El componente de evaluaciones fue rechazado por el admin? */
+export function evaluacionesRechazadas(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  return fields?.AprobacionEvaluaciones === "Rechazada";
+}
+
+/** ¿Tiene algún componente rechazado? (habilita edición fuera de periodo) */
+export function tieneRechazo(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  return sensibilizacionRechazada(fields) || evaluacionesRechazadas(fields);
+}
+
+// Valores "efectivos" para cifras/metas/informes: el componente rechazado
+// aporta 0. Pendiente y Aprobada cuentan igual (modelo aprobado-por-defecto).
+
+/** Participantes que cuentan (0 si la sensibilización fue rechazada). */
+export function participantesAprobados(
+  fields: (ActividadFieldsLike & { "Cantidad de Participantes"?: number }) | undefined | null
+): number {
+  if (!fields || sensibilizacionRechazada(fields)) return 0;
+  return fields["Cantidad de Participantes"] || 0;
+}
+
+/** Personas evaluadas (presenciales) que cuentan (0 si evaluaciones rechazadas). */
+export function evaluadasAprobadas(
+  fields: ActividadFieldsLike | undefined | null
+): number {
+  if (!fields || evaluacionesRechazadas(fields)) return 0;
+  return fields["Personas Evaluadas"] || 0;
+}
+
+/** Evaluaciones por WhatsApp que cuentan (0 si evaluaciones rechazadas). */
+export function evaluacionesWAAprobadas(
+  fields: ActividadFieldsLike | undefined | null
+): number {
+  if (!fields || evaluacionesRechazadas(fields)) return 0;
+  return fields.CantidadEvaluaciones || 0;
+}
+
+/**
+ * ¿Fue corregida tras un rechazo? (volvió a Pendiente pero conserva el motivo
+ * del rechazo → marcador para la cola de re-revisión del admin)
+ */
+export function corregidaTrasRechazo(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  if (!fields) return false;
+  const sensCorregida =
+    fields.AprobacionSensibilizacion === "Pendiente" && !!fields.MotivoRechazoSensibilizacion?.trim();
+  const evalCorregida =
+    fields.AprobacionEvaluaciones === "Pendiente" && !!fields.MotivoRechazoEvaluaciones?.trim();
+  return sensCorregida || evalCorregida;
+}
+
 /**
  * Decide si una actividad puede ser editada por el coordinador.
- * Combina la regla de período de gracia con la excepción de incompletitud:
+ * Combina la regla de período de gracia con las excepciones:
  *  - Si está dentro del período → siempre OK
  *  - Si está fuera del período PERO está incompleta → OK (para que la completen)
- *  - Si está fuera del período Y completa → bloqueada
+ *  - Si está fuera del período PERO tiene un rechazo del admin → OK (para corregirla)
+ *  - Si está fuera del período, completa y sin rechazos → bloqueada
  */
 export function puedeEditarActividad(
   fields: ActividadFieldsLike | undefined | null
@@ -78,7 +151,7 @@ export function puedeEditarActividad(
   const fecha = fields?.Fecha;
   if (!fecha) return true; // sin fecha, no aplicamos restricción
   if (puedeModificarActividad(fecha)) return true;
-  return actividadIncompleta(fields);
+  return actividadIncompleta(fields) || tieneRechazo(fields);
 }
 
 /**

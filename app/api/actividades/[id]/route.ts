@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { puedeEditarActividad } from "@/lib/actividadCompleteness";
 import { puedeModificarActividad } from "@/lib/dateValidations";
+import { isAdmin } from "@/lib/roles";
 
 /**
  * GET /api/actividades/[id]
@@ -73,8 +74,109 @@ export async function GET(
 }
 
 /**
+ * PATCH /api/actividades/[id]
+ *
+ * Aprobación admin de actividades (modelo Caja Menor): aprobar o rechazar los
+ * componentes de sensibilización y evaluaciones POR SEPARADO.
+ * - Solo rol Administrador.
+ * - NO aplica el bloqueo de fechas (el admin revisa meses cerrados).
+ * - Rechazar exige motivo; aprobar limpia el motivo previo.
+ * Body: { action: "aprobar-sensibilizacion" | "rechazar-sensibilizacion"
+ *               | "aprobar-evaluaciones"   | "rechazar-evaluaciones",
+ *         motivo?: string }
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user?.coordinatorRecordId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdmin(session.user.rol)) {
+    return NextResponse.json(
+      { error: "Solo un Administrador puede aprobar o rechazar actividades" },
+      { status: 403 }
+    );
+  }
+
+  const { id } = await params;
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+
+  if (!apiKey || !baseId) {
+    return NextResponse.json({ error: "Airtable not configured" }, { status: 500 });
+  }
+
+  try {
+    const body = await request.json();
+    const action: string = body.action || "";
+    const motivo: string = (body.motivo || "").trim();
+
+    const ACTIONS: Record<string, Record<string, unknown>> = {
+      "aprobar-sensibilizacion": {
+        AprobacionSensibilizacion: "Aprobada",
+        MotivoRechazoSensibilizacion: null,
+      },
+      "rechazar-sensibilizacion": {
+        AprobacionSensibilizacion: "Rechazada",
+        MotivoRechazoSensibilizacion: motivo,
+      },
+      "aprobar-evaluaciones": {
+        AprobacionEvaluaciones: "Aprobada",
+        MotivoRechazoEvaluaciones: null,
+      },
+      "rechazar-evaluaciones": {
+        AprobacionEvaluaciones: "Rechazada",
+        MotivoRechazoEvaluaciones: motivo,
+      },
+    };
+
+    const fields = ACTIONS[action];
+    if (!fields) {
+      return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
+    }
+    if (action.startsWith("rechazar") && !motivo) {
+      return NextResponse.json(
+        { error: "El motivo es obligatorio al rechazar" },
+        { status: 400 }
+      );
+    }
+
+    const updateResponse = await fetch(
+      `https://api.airtable.com/v0/${baseId}/Actividades/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fields }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      if (updateResponse.status === 404) {
+        return NextResponse.json({ error: "Actividad no encontrada" }, { status: 404 });
+      }
+      const errorText = await updateResponse.text();
+      console.error(`Error en aprobación: ${updateResponse.status}`, errorText);
+      throw new Error(`Failed to update approval: ${updateResponse.status}`);
+    }
+
+    const updated = await updateResponse.json();
+    console.log(`Aprobación actualizada (${action}) en actividad ${id} por ${session.user.email}`);
+    return NextResponse.json({ success: true, actividad: updated });
+  } catch (error) {
+    console.error("Error en aprobación de actividad:", error);
+    return NextResponse.json({ error: "Failed to update approval" }, { status: 500 });
+  }
+}
+
+/**
  * PUT /api/actividades/[id]
- * 
+ *
  * Actualiza una actividad existente
  */
 export async function PUT(
@@ -178,6 +280,16 @@ export async function PUT(
     if (fotografias !== undefined) fields["Fotografias"] = fotografias;
     if (documentos !== undefined) fields["Listado Asistencia"] = documentos;
     if (evaluaciones !== undefined) fields["Evaluaciones"] = evaluaciones;
+
+    // Si el coordinador corrige una actividad RECHAZADA, el componente vuelve a
+    // "Pendiente" para re-revisión del admin. El motivo del rechazo se conserva
+    // como marcador de "corregida tras rechazo" (se limpia al aprobar).
+    if (existingActividad.fields?.AprobacionSensibilizacion === "Rechazada") {
+      fields["AprobacionSensibilizacion"] = "Pendiente";
+    }
+    if (existingActividad.fields?.AprobacionEvaluaciones === "Rechazada") {
+      fields["AprobacionEvaluaciones"] = "Pendiente";
+    }
 
     // Actualizar en Airtable
     const updateUrl = `https://api.airtable.com/v0/${baseId}/Actividades/${id}`;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
@@ -101,10 +102,10 @@ export async function GET(request: Request) {
       if (!mes) continue;
       const mi = parseInt(mes.split("-")[1], 10) - 1;
       if (mi < 0 || mi > 11) continue;
-      realSen[zona][mi] += a.fields["Cantidad de Participantes"] || 0;
+      realSen[zona][mi] += participantesAprobados(a.fields);
       realEva[zona][mi] +=
-        (a.fields.CantidadEvaluaciones || 0) +
-        (a.fields["Personas Evaluadas"] || 0);
+        (evaluacionesWAAprobadas(a.fields)) +
+        (evaluadasAprobadas(a.fields));
     }
 
     function construir(real: Acc, meta: Acc): Tabla {

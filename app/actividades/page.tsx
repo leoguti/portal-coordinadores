@@ -7,7 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
-import { puedeEditarActividad, actividadIncompleta } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import JSZip from "jszip";
 
@@ -1242,6 +1242,17 @@ export default function ActividadesPage() {
                                       )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
+                                      {/* Badges de revisión admin (independientes del ciclo de vida) */}
+                                      {tieneRechazo(actividad.fields) && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-300 mr-1" title="Rechazada por el administrador — revisa el motivo en el detalle">
+                                          ✗ Rechazada
+                                        </span>
+                                      )}
+                                      {corregidaTrasRechazo(actividad.fields) && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 mr-1" title="Corregida tras rechazo — pendiente de re-revisión">
+                                          ✏️ Corregida
+                                        </span>
+                                      )}
                                       {actividad.fields.Estado === "En curso" ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
                                           ⚠️ En Curso

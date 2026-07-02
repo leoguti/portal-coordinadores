@@ -8,6 +8,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import Link from "next/link";
 import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
 import { puedeEditarActividad, actividadIncompleta, getMensajeIncompleta } from "@/lib/actividadCompleteness";
+import { isAdmin } from "@/lib/roles";
 
 interface AirtableAttachment {
   id: string;
@@ -65,6 +66,34 @@ export default function ActividadDetailPage() {
     total: number; promedio: number;
     evaluaciones: { id: string; nombre: string; telefono: string; puntaje: number; timestamp: string; respuestaP1: string; respuestaP2: string; respuestaP3: string }[];
   } | null>(null);
+
+  // Aprobación admin (sensibilización / evaluaciones por separado)
+  const esAdmin = isAdmin(session?.user?.rol);
+  const [procesandoAprobacion, setProcesandoAprobacion] = useState<string | null>(null);
+  const [rechazoAbierto, setRechazoAbierto] = useState<"sensibilizacion" | "evaluaciones" | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [aprobacionError, setAprobacionError] = useState<string | null>(null);
+
+  async function handleAprobacion(action: string, motivo?: string) {
+    setProcesandoAprobacion(action);
+    setAprobacionError(null);
+    try {
+      const res = await fetch(`/api/actividades/${actividadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, motivo }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error en la aprobación");
+      setRechazoAbierto(null);
+      setMotivoRechazo("");
+      await fetchActividad();
+    } catch (e) {
+      setAprobacionError(e instanceof Error ? e.message : "Error en la aprobación");
+    } finally {
+      setProcesandoAprobacion(null);
+    }
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -243,6 +272,61 @@ export default function ActividadDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Panel de revisión para el informe (solo actividades de Sensibilización).
+            Todos ven el estado y el motivo; solo el Administrador ve los botones. */}
+        {actividad.fields.Tipo === "Sensibilización" && (() => {
+          const f = actividad.fields;
+          const tieneEvals =
+            (f["Personas Evaluadas"] || 0) > 0 ||
+            (f.CantidadEvaluaciones || 0) > 0 ||
+            (f.Evaluaciones || []).length > 0;
+          return (
+            <div className="bg-white rounded-lg shadow p-6 mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Revisión para el informe</h2>
+                <span className="text-xs text-gray-400">
+                  {esAdmin ? "Aprobada por defecto — rechaza lo que no cumple los requisitos" : ""}
+                </span>
+              </div>
+              {aprobacionError && (
+                <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  {aprobacionError}
+                </div>
+              )}
+              <div className={`grid grid-cols-1 ${tieneEvals ? "md:grid-cols-2" : ""} gap-4`}>
+                <BloqueAprobacion
+                  titulo="Sensibilización"
+                  slug="sensibilizacion"
+                  estado={f.AprobacionSensibilizacion || "Pendiente"}
+                  motivo={f.MotivoRechazoSensibilizacion}
+                  esAdmin={esAdmin}
+                  procesando={procesandoAprobacion}
+                  rechazoAbierto={rechazoAbierto}
+                  setRechazoAbierto={setRechazoAbierto}
+                  motivoRechazo={motivoRechazo}
+                  setMotivoRechazo={setMotivoRechazo}
+                  onAccion={handleAprobacion}
+                />
+                {tieneEvals && (
+                  <BloqueAprobacion
+                    titulo="Evaluaciones"
+                    slug="evaluaciones"
+                    estado={f.AprobacionEvaluaciones || "Pendiente"}
+                    motivo={f.MotivoRechazoEvaluaciones}
+                    esAdmin={esAdmin}
+                    procesando={procesandoAprobacion}
+                    rechazoAbierto={rechazoAbierto}
+                    setRechazoAbierto={setRechazoAbierto}
+                    motivoRechazo={motivoRechazo}
+                    setMotivoRechazo={setMotivoRechazo}
+                    onAccion={handleAprobacion}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -543,5 +627,116 @@ export default function ActividadDetailPage() {
         />
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+/** Bloque de aprobación de un componente (sensibilización o evaluaciones). */
+function BloqueAprobacion({
+  titulo,
+  slug,
+  estado,
+  motivo,
+  esAdmin,
+  procesando,
+  rechazoAbierto,
+  setRechazoAbierto,
+  motivoRechazo,
+  setMotivoRechazo,
+  onAccion,
+}: {
+  titulo: string;
+  slug: "sensibilizacion" | "evaluaciones";
+  estado: string;
+  motivo?: string;
+  esAdmin: boolean;
+  procesando: string | null;
+  rechazoAbierto: "sensibilizacion" | "evaluaciones" | null;
+  setRechazoAbierto: (v: "sensibilizacion" | "evaluaciones" | null) => void;
+  motivoRechazo: string;
+  setMotivoRechazo: (v: string) => void;
+  onAccion: (action: string, motivo?: string) => void;
+}) {
+  const corregida = estado === "Pendiente" && !!motivo?.trim();
+  const badge =
+    estado === "Aprobada"
+      ? "bg-green-100 text-green-800 border-green-300"
+      : estado === "Rechazada"
+        ? "bg-red-100 text-red-800 border-red-300"
+        : "bg-gray-100 text-gray-700 border-gray-300";
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-medium text-gray-900">{titulo}</span>
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge}`}>
+          {estado}
+        </span>
+      </div>
+
+      {corregida && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
+          ✏️ Corregida tras rechazo — pendiente de re-revisión
+        </p>
+      )}
+
+      {!!motivo?.trim() && (estado === "Rechazada" || corregida) && (
+        <div className={`text-sm rounded p-2 mb-2 border ${estado === "Rechazada" ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
+          <span className={`font-semibold ${estado === "Rechazada" ? "text-red-700" : "text-gray-600"}`}>
+            {estado === "Rechazada" ? "Motivo del rechazo:" : "Motivo del rechazo anterior:"}
+          </span>{" "}
+          <span className={estado === "Rechazada" ? "text-red-800" : "text-gray-700"}>{motivo}</span>
+        </div>
+      )}
+
+      {esAdmin && (
+        rechazoAbierto === slug ? (
+          <div className="space-y-2">
+            <textarea
+              value={motivoRechazo}
+              onChange={(e) => setMotivoRechazo(e.target.value)}
+              placeholder="Motivo del rechazo (obligatorio — el coordinador lo verá)"
+              className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400"
+              rows={2}
+            />
+            <div className="flex gap-2">
+              <button
+                disabled={!motivoRechazo.trim() || !!procesando}
+                onClick={() => onAccion(`rechazar-${slug}`, motivoRechazo)}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                Confirmar rechazo
+              </button>
+              <button
+                onClick={() => setRechazoAbierto(null)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            {estado !== "Aprobada" && (
+              <button
+                disabled={!!procesando}
+                onClick={() => onAccion(`aprobar-${slug}`)}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                ✓ Aprobar
+              </button>
+            )}
+            {estado !== "Rechazada" && (
+              <button
+                disabled={!!procesando}
+                onClick={() => { setRechazoAbierto(slug); setMotivoRechazo(""); }}
+                className="px-3 py-1.5 border border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                ✗ Rechazar
+              </button>
+            )}
+          </div>
+        )
+      )}
+    </div>
   );
 }

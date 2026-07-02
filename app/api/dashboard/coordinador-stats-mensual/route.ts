@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -111,15 +112,15 @@ export async function GET(request: Request) {
     // Sensibilización del rango
     const actSens = actividadesRango.filter((a) => a.fields.Tipo === "Sensibilización");
     const personasSensibilizadas = actSens.reduce(
-      (sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0),
+      (sum, a) => sum + (participantesAprobados(a.fields)),
       0
     );
     const personasEvaluadas = actSens.reduce(
-      (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      (sum, a) => sum + (evaluadasAprobadas(a.fields)),
       0
     );
     const totalEvaluacionesWA = actSens.reduce(
-      (sum, a) => sum + (a.fields["CantidadEvaluaciones"] || 0),
+      (sum, a) => sum + (evaluacionesWAAprobadas(a.fields)),
       0
     );
     const totalEvalCombinado = totalEvaluacionesWA + personasEvaluadas;

@@ -57,7 +57,7 @@ interface Stats {
     ordenesSinFacturar: number;
   };
   notificaciones: Array<{
-    tipo: "gasto" | "orden";
+    tipo: "gasto" | "orden" | "actividad";
     id: string;
     numero: number;
     estado: string;
@@ -585,13 +585,18 @@ export default function DashboardCoordinador() {
           <div className="divide-y divide-gray-100">
             {stats.notificaciones.map((notif) => {
               const esGasto = notif.tipo === "gasto";
+              const esActividad = notif.tipo === "actividad";
               return (
                 <div key={`${notif.tipo}-${notif.id}`} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-[#00d084]">
-                          {esGasto ? `Gasto #${notif.numero}` : `Orden #${notif.numero}`}
+                          {esGasto
+                            ? `Gasto #${notif.numero}`
+                            : esActividad
+                              ? `Actividad #${notif.numero}`
+                              : `Orden #${notif.numero}`}
                         </span>
                         <span
                           className={`px-2 py-0.5 text-xs font-bold rounded border ${
@@ -617,7 +622,13 @@ export default function DashboardCoordinador() {
                       )}
                     </div>
                     <Link
-                      href={esGasto ? `/caja-menor/${notif.id}` : `/ordenes-servicio`}
+                      href={
+                        esGasto
+                          ? `/caja-menor/${notif.id}`
+                          : esActividad
+                            ? `/actividades/${notif.id}`
+                            : `/ordenes-servicio`
+                      }
                       className="px-3 py-1.5 bg-[#00d084] text-white text-sm font-medium rounded hover:bg-[#00b872] transition-colors"
                     >
                       Ver

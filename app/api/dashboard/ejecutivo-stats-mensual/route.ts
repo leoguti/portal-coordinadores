@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { canViewJunta } from "@/lib/roles";
@@ -258,29 +259,29 @@ export async function GET(request: Request) {
       personasPorCoord.set(
         coordId,
         (personasPorCoord.get(coordId) || 0) +
-          (a.fields["Cantidad de Participantes"] || 0)
+          (participantesAprobados(a.fields))
       );
       evaluadasPorCoord.set(
         coordId,
         (evaluadasPorCoord.get(coordId) || 0) +
-          (a.fields["Personas Evaluadas"] || 0)
+          (evaluadasAprobadas(a.fields))
       );
       evaluacionesPorCoord.set(
         coordId,
         (evaluacionesPorCoord.get(coordId) || 0) +
-          (a.fields["CantidadEvaluaciones"] || 0)
+          (evaluacionesWAAprobadas(a.fields))
       );
     }
     const personasCapacitadas = actSensibilizacion.reduce(
-      (s, a) => s + (a.fields["Cantidad de Participantes"] || 0),
+      (s, a) => s + (participantesAprobados(a.fields)),
       0
     );
     const personasEvaluadas = actSensibilizacion.reduce(
-      (s, a) => s + (a.fields["Personas Evaluadas"] || 0),
+      (s, a) => s + (evaluadasAprobadas(a.fields)),
       0
     );
     const totalEvaluacionesWa = actSensibilizacion.reduce(
-      (s, a) => s + (a.fields["CantidadEvaluaciones"] || 0),
+      (s, a) => s + (evaluacionesWAAprobadas(a.fields)),
       0
     );
     const totalEvalCombinado = totalEvaluacionesWa + personasEvaluadas;

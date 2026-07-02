@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -91,10 +92,10 @@ export async function GET(request: Request) {
       if (!mes) continue;
       const i = parseInt(mes.split("-")[1], 10) - 1;
       if (i < 0 || i > 11) continue;
-      realSen[i] += a.fields["Cantidad de Participantes"] || 0;
+      realSen[i] += participantesAprobados(a.fields);
       realEva[i] +=
-        (a.fields.CantidadEvaluaciones || 0) +
-        (a.fields["Personas Evaluadas"] || 0);
+        (evaluacionesWAAprobadas(a.fields)) +
+        (evaluadasAprobadas(a.fields));
     }
 
     const now = new Date();

@@ -53,6 +53,8 @@ export async function GET(request: Request) {
 
     for (const act of actividades) {
       const f = act.fields;
+      // Las actividades rechazadas por el admin no cuentan en la cobertura
+      if (f.AprobacionSensibilizacion === "Rechazada") continue;
       const fecha = f.Fecha || "";
       const añoAct = f.Año || (fecha.length >= 4 ? fecha.slice(0, 4) : "");
       if (añoAct !== yearStr) continue;

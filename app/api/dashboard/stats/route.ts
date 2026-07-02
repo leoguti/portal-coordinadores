@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -53,9 +54,9 @@ export async function GET() {
     const actividadesAño = actividades.filter((a) => a.fields.Año === añoStr);
     const actividadesSensibilizacion = actividadesAño.filter((a) => a.fields.Tipo === "Sensibilización");
     const participantesSensibilizacion = actividadesSensibilizacion
-      .reduce((sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0), 0);
+      .reduce((sum, a) => sum + (participantesAprobados(a.fields)), 0);
     const personasEvaluadas = actividadesSensibilizacion
-      .reduce((sum, a) => sum + (a.fields["Personas Evaluadas"] || 0), 0);
+      .reduce((sum, a) => sum + (evaluadasAprobadas(a.fields)), 0);
 
     const metasData = {
       recoleccion: {
@@ -81,7 +82,7 @@ export async function GET() {
     ).length;
     const personasCapacitadas = actividadesAño
       .filter((a) => a.fields.Tipo === "Sensibilización")
-      .reduce((sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0), 0);
+      .reduce((sum, a) => sum + (participantesAprobados(a.fields)), 0);
 
     // --- ALERTAS ---
     const hoy = new Date();

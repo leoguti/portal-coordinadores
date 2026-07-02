@@ -58,6 +58,12 @@ interface ActividadFields {
   Cultivo?: string;
   "Perfil de Asistentes"?: string;
   Departamento?: string[];
+  // Aprobación admin (modelo "aprobado por defecto": solo Rechazada excluye de cifras)
+  AprobacionSensibilizacion?: "Pendiente" | "Aprobada" | "Rechazada";
+  AprobacionEvaluaciones?: "Pendiente" | "Aprobada" | "Rechazada";
+  MotivoRechazoSensibilizacion?: string;
+  MotivoRechazoEvaluaciones?: string;
+  Estado?: string; // "En curso" | "Completada"
   Fotografias?: Array<{
     id: string;
     url: string;

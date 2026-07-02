@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdminOrSupervisor } from "@/lib/roles";
@@ -79,11 +80,11 @@ export async function GET(request: Request) {
     );
     const eventosSensibilizacion = actSensibilizacion.length;
     const personasCapacitadas = actSensibilizacion.reduce(
-      (sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0),
+      (sum, a) => sum + (participantesAprobados(a.fields)),
       0
     );
     const personasEvaluadas = actSensibilizacion.reduce(
-      (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      (sum, a) => sum + (evaluadasAprobadas(a.fields)),
       0
     );
 
@@ -179,12 +180,12 @@ export async function GET(request: Request) {
       personasPorCoord.set(
         coordId,
         (personasPorCoord.get(coordId) || 0) +
-          (a.fields["Cantidad de Participantes"] || 0)
+          (participantesAprobados(a.fields))
       );
       evaluadasPorCoord.set(
         coordId,
         (evaluadasPorCoord.get(coordId) || 0) +
-          (a.fields["Personas Evaluadas"] || 0)
+          (evaluadasAprobadas(a.fields))
       );
     }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -59,15 +60,15 @@ export async function GET(request: Request) {
     const actividadesYear = actividades.filter((a) => a.fields.Año === yearStr);
     const actSens = actividadesYear.filter((a) => a.fields.Tipo === "Sensibilización");
     const personasSensibilizadas = actSens.reduce(
-      (sum, a) => sum + (a.fields["Cantidad de Participantes"] || 0),
+      (sum, a) => sum + (participantesAprobados(a.fields)),
       0
     );
     const personasEvaluadas = actSens.reduce(
-      (sum, a) => sum + (a.fields["Personas Evaluadas"] || 0),
+      (sum, a) => sum + (evaluadasAprobadas(a.fields)),
       0
     );
     const totalEvaluaciones = actSens.reduce(
-      (sum, a) => sum + (a.fields["CantidadEvaluaciones"] || 0),
+      (sum, a) => sum + (evaluacionesWAAprobadas(a.fields)),
       0
     );
 
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
 
     // --- Notificaciones ---
     const notificaciones: Array<{
-      tipo: "gasto" | "orden";
+      tipo: "gasto" | "orden" | "actividad";
       id: string;
       numero: number;
       estado: string;
@@ -159,6 +160,33 @@ export async function GET(request: Request) {
           estado: o.fields.Estado || "",
           observacion: o.fields.Observaciones || "",
           fecha: o.fields["Fecha de pedido"] || "",
+        });
+      });
+
+    // Actividades con algún componente rechazado por el admin
+    actividades
+      .filter(
+        (a) =>
+          a.fields.AprobacionSensibilizacion === "Rechazada" ||
+          a.fields.AprobacionEvaluaciones === "Rechazada"
+      )
+      .forEach((a) => {
+        const motivos = [
+          a.fields.AprobacionSensibilizacion === "Rechazada"
+            ? `Sensibilización: ${a.fields.MotivoRechazoSensibilizacion || "sin motivo"}`
+            : null,
+          a.fields.AprobacionEvaluaciones === "Rechazada"
+            ? `Evaluaciones: ${a.fields.MotivoRechazoEvaluaciones || "sin motivo"}`
+            : null,
+        ].filter(Boolean);
+        notificaciones.push({
+          tipo: "actividad",
+          id: a.id,
+          numero: a.fields.Consecutivo || 0,
+          estado: "Rechazada",
+          observacion: motivos.join(" · "),
+          fecha: a.fields.Fecha || "",
+          concepto: a.fields["Nombre de la Actividad"] || "",
         });
       });
 
