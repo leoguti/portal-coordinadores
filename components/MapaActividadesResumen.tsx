@@ -33,8 +33,16 @@ interface MunicipioShare {
   sharePct: number;
 }
 
+interface DepartamentoShare {
+  codigo: string;
+  nombre: string;
+  sharePct: number;
+  municipios: number;
+}
+
 interface RecoleccionResp {
   municipios: MunicipioShare[];
+  porDepartamento: DepartamentoShare[];
   totals: { municipios: number; departamentos: number; top10Pct: number };
 }
 
@@ -57,8 +65,10 @@ export default function MapaActividadesResumen({
   const [tipoSel, setTipoSel] = useState("");
   // Qué dato pinta el mapa: actividades (binario) o recolección (% del total)
   const [dataset, setDataset] = useState<"actividades" | "recoleccion">("actividades");
-  // Municipio enfocado desde el Top 5 (código DIVIPOLA)
+  // Municipio/departamento enfocado desde el Top (código DIVIPOLA)
   const [focoCodigo, setFocoCodigo] = useState<string | null>(null);
+  // Nivel del mapa de recolección: por municipio o por departamento
+  const [nivel, setNivel] = useState<"municipio" | "departamento">("municipio");
 
   const mf = mode === "anual" ? 1 : monthFrom;
   const mt = mode === "anual" ? 12 : monthTo;
@@ -181,46 +191,71 @@ export default function MapaActividadesResumen({
       {/* KPIs ejecutivos */}
       {esRecoleccion ? (
         <>
+          {/* Los KPIs de municipios/departamentos son el switch de nivel del mapa */}
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <Kpi label="Municipios con recolección" value={recol?.totals.municipios || 0} />
-            <Kpi label="Top 10 municipios concentran" value={recol?.totals.top10Pct || 0} sufijo="%" />
-            <Kpi label="Departamentos con recolección" value={recol?.totals.departamentos || 0} />
+            <KpiBoton
+              label="Municipios con recolección"
+              value={recol?.totals.municipios || 0}
+              activo={nivel === "municipio"}
+              hint="Ver mapa por municipio"
+              onClick={() => { setNivel("municipio"); setFocoCodigo(null); }}
+            />
+            <Kpi
+              label={nivel === "departamento" ? "Top 5 departamentos concentran" : "Top 10 municipios concentran"}
+              value={
+                nivel === "departamento"
+                  ? Math.round((recol?.porDepartamento || []).slice(0, 5).reduce((s, d) => s + d.sharePct, 0) * 10) / 10
+                  : recol?.totals.top10Pct || 0
+              }
+              sufijo="%"
+            />
+            <KpiBoton
+              label="Departamentos con recolección"
+              value={recol?.totals.departamentos || 0}
+              activo={nivel === "departamento"}
+              hint="Ver mapa por departamento"
+              onClick={() => { setNivel("departamento"); setFocoCodigo(null); }}
+            />
           </div>
 
-          {/* Top 10 municipios — click para volar al municipio en el mapa */}
-          {(recol?.municipios.length || 0) > 0 && (
+          {/* Top N — click para volar al municipio/departamento en el mapa */}
+          {nivel === "municipio" && (recol?.municipios.length || 0) > 0 && (
             <div className="mb-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">
                 Top 10 municipios · click para verlo en el mapa
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                {recol!.municipios.slice(0, 10).map((m, i) => {
-                  const activo = focoCodigo === m.codigo;
-                  return (
-                    <button
-                      key={m.codigo}
-                      onClick={() => setFocoCodigo(activo ? null : m.codigo)}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                        activo
-                          ? "border-[#00d084] bg-[#00d084]/10 ring-1 ring-[#00d084]"
-                          : "border-gray-200 bg-white hover:border-[#00d084] hover:bg-gray-50"
-                      }`}
-                    >
-                      <span className={`flex-shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
-                        activo ? "bg-[#00d084] text-white" : "bg-gray-100 text-gray-600"
-                      }`}>
-                        {i + 1}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-gray-900 truncate">{m.municipio}</span>
-                        <span className="block text-xs text-gray-500 truncate">{m.departamento}</span>
-                      </span>
-                      <span className="ml-auto text-sm font-bold text-green-700 whitespace-nowrap">
-                        {m.sharePct.toLocaleString("es-CO")}%
-                      </span>
-                    </button>
-                  );
-                })}
+                {recol!.municipios.slice(0, 10).map((m, i) => (
+                  <TopChip
+                    key={m.codigo}
+                    pos={i + 1}
+                    titulo={m.municipio}
+                    subtitulo={m.departamento}
+                    pct={m.sharePct}
+                    activo={focoCodigo === m.codigo}
+                    onClick={() => setFocoCodigo(focoCodigo === m.codigo ? null : m.codigo)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {nivel === "departamento" && (recol?.porDepartamento.length || 0) > 0 && (
+            <div className="mb-4">
+              <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">
+                Top 5 departamentos · click para verlo en el mapa
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                {recol!.porDepartamento.slice(0, 5).map((d, i) => (
+                  <TopChip
+                    key={d.codigo}
+                    pos={i + 1}
+                    titulo={d.nombre}
+                    subtitulo={`${d.municipios} ${d.municipios === 1 ? "municipio" : "municipios"}`}
+                    pct={d.sharePct}
+                    activo={focoCodigo === d.codigo}
+                    onClick={() => setFocoCodigo(focoCodigo === d.codigo ? null : d.codigo)}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -247,11 +282,14 @@ export default function MapaActividadesResumen({
           </div>
         ) : (
           <MapaColombia
+            key={`recol-${nivel}`}
             actividadesPorMunicipio={recoleccionPorMunicipio}
             leyendaTitulo="Recolección (% del total)"
             focusColombia
             esPorcentaje
             municipioFoco={focoCodigo}
+            nivelDepartamento={nivel === "departamento"}
+            departamentos={recol?.porDepartamento || []}
           />
         )
       ) : actividadesPorMunicipio.length === 0 ? (
@@ -276,5 +314,78 @@ function Kpi({ label, value, sufijo }: { label: string; value: number; sufijo?: 
       <p className="text-2xl font-bold text-gray-900">{fmt(value)}{sufijo || ""}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>
     </div>
+  );
+}
+
+/** KPI clickeable que actúa como switch de nivel del mapa. */
+function KpiBoton({
+  label,
+  value,
+  activo,
+  hint,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  activo: boolean;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-lg border p-3 text-center transition-colors ${
+        activo
+          ? "border-[#00d084] bg-[#00d084]/10 ring-1 ring-[#00d084]"
+          : "border-gray-100 bg-gray-50 hover:border-[#00d084] hover:bg-white"
+      }`}
+    >
+      <p className="text-2xl font-bold text-gray-900">{fmt(value)}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+      <p className={`text-[10px] mt-1 font-medium ${activo ? "text-[#00a868]" : "text-gray-400"}`}>
+        {activo ? "● Mostrando en el mapa" : `▸ ${hint}`}
+      </p>
+    </button>
+  );
+}
+
+/** Chip de ranking (Top N) clickeable para enfocar en el mapa. */
+function TopChip({
+  pos,
+  titulo,
+  subtitulo,
+  pct,
+  activo,
+  onClick,
+}: {
+  pos: number;
+  titulo: string;
+  subtitulo: string;
+  pct: number;
+  activo: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+        activo
+          ? "border-[#00d084] bg-[#00d084]/10 ring-1 ring-[#00d084]"
+          : "border-gray-200 bg-white hover:border-[#00d084] hover:bg-gray-50"
+      }`}
+    >
+      <span className={`flex-shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+        activo ? "bg-[#00d084] text-white" : "bg-gray-100 text-gray-600"
+      }`}>
+        {pos}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-gray-900 truncate">{titulo}</span>
+        <span className="block text-xs text-gray-500 truncate">{subtitulo}</span>
+      </span>
+      <span className="ml-auto text-sm font-bold text-green-700 whitespace-nowrap">
+        {pct.toLocaleString("es-CO")}%
+      </span>
+    </button>
   );
 }

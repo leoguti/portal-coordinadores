@@ -16,6 +16,15 @@ interface MunicipioActividades {
   porTipo?: Record<string, number>;
 }
 
+interface DepartamentoDato {
+  /** Código DIVIPOLA del departamento (2 dígitos, ej. "25"). */
+  codigo: string;
+  nombre: string;
+  sharePct: number;
+  /** Municipios con datos dentro del departamento. */
+  municipios: number;
+}
+
 interface MapaColombiaProps {
   actividadesPorMunicipio: MunicipioActividades[];
   /** Título de la leyenda (por defecto "Mis actividades"). */
@@ -38,8 +47,17 @@ interface MapaColombiaProps {
   /**
    * Código DIVIPOLA de un municipio a enfocar: el mapa vuela hasta él, lo
    * resalta y muestra su tarjeta. null/undefined = vista general.
+   * En nivel departamento, es el código de 2 dígitos del departamento.
    */
   municipioFoco?: string | null;
+  /**
+   * Nivel departamento: colorea todos los municipios de cada departamento con
+   * el valor departamental (bordes internos del color del relleno → se leen
+   * como un bloque). Requiere `departamentos`. Montar con key distinta al
+   * alternar nivel para regenerar los handlers.
+   */
+  nivelDepartamento?: boolean;
+  departamentos?: DepartamentoDato[];
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -52,7 +70,7 @@ const COLOR_SCALE = [
 ];
 
 
-export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false, municipioFoco = null }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false, municipioFoco = null, nivelDepartamento = false, departamentos = [] }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +80,10 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const geojsonLayerRef = useRef<LeafletGeoJSON | null>(null);
   const initializingRef = useRef(false);
-  // Vista inicial (para volver al quitar el foco) y capa enfocada actual
+  // Vista inicial (para volver al quitar el foco) y capas enfocadas actuales
+  // (1 capa en nivel municipio; todas las del departamento en nivel depto)
   const initialBoundsRef = useRef<LatLngBounds | null>(null);
-  const focoLayerRef = useRef<(Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> }) | null>(null);
+  const focoLayersRef = useRef<Array<Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> }>>([]);
 
   // Marcar como montado solo en cliente
   useEffect(() => {
@@ -81,12 +100,22 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     return map;
   }, [actividadesPorMunicipio]);
 
+  // Datos por departamento (código 2 dígitos) — solo nivel departamento
+  const deptMap = useMemo(() => {
+    const m = new Map<string, DepartamentoDato>();
+    departamentos.forEach((d) => m.set(d.codigo, d));
+    return m;
+  }, [departamentos]);
+
   // Escala dinámica: asigna cada valor a uno de los 5 rangos (buckets).
   // - esPorcentaje: QUINTILES (cada rango agrupa ~la misma cantidad de
   //   municipios) — con distribuciones sesgadas el mapa diferencia mejor.
   // - conteos (/mapa): rangos lineales, como siempre.
   const { legendRanges, bucketOf } = useMemo(() => {
-    const counts = actividadesPorMunicipio.map((m) => m.cantidad).filter((c) => c > 0);
+    const counts = (nivelDepartamento
+      ? departamentos.map((d) => d.sharePct)
+      : actividadesPorMunicipio.map((m) => m.cantidad)
+    ).filter((c) => c > 0);
     if (counts.length === 0) {
       return {
         legendRanges: [] as Array<{ color: string; label: string; n: number }>,
@@ -135,7 +164,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     });
 
     return { legendRanges: ranges, bucketOf: bucketFn };
-  }, [actividadesPorMunicipio, esPorcentaje]);
+  }, [actividadesPorMunicipio, esPorcentaje, nivelDepartamento, departamentos]);
 
   // Rango seleccionado en la leyenda (null = todos)
   const [rangoSel, setRangoSel] = useState<number | null>(null);
@@ -149,13 +178,18 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
   // Función para obtener color según cantidad
   const getColor = (count: number): string => COLOR_SCALE[bucketOf(count)];
 
+  // Valor a pintar para un polígono: municipio o su departamento
+  const getValor = (codigo5: string): number =>
+    nivelDepartamento
+      ? deptMap.get(codigo5.slice(0, 2))?.sharePct || 0
+      : actividadesMap.get(codigo5)?.cantidad || 0;
+
   // Estilo por municipio. Vive en el cuerpo (no en el efecto) para que el
   // filtro por rango de la leyenda re-estile la capa SIN recrear el mapa.
   const styleFeature = (feature: Feature<Geometry, { PRECIND_ID: string }> | undefined): PathOptions => {
     if (!feature) return {};
     const codigo = feature.properties?.PRECIND_ID;
-    const data = actividadesMap.get(codigo);
-    const count = data?.cantidad || 0;
+    const count = getValor(codigo);
 
     // Sin actividades
     if (count === 0) {
@@ -192,12 +226,14 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     }
 
     // Con actividades: color de relleno
+    const fill = binario ? "#16a34a" : getColor(count);
     return {
-      // Binario: un solo verde; si no, degradado por volumen
-      fillColor: binario ? "#16a34a" : getColor(count),
+      fillColor: fill,
       weight: 1,
       opacity: 1,
-      color: "#166534", // green-800 border
+      // Nivel departamento: borde del color del relleno → los municipios de un
+      // mismo departamento se leen como un solo bloque
+      color: nivelDepartamento ? fill : "#166534", // green-800 border
       fillOpacity: focusColombia ? 0.9 : 0.8,
     };
   };
@@ -214,18 +250,16 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     }
   }, [rangoSel]);
 
-  // Enfocar un municipio (Top 5, etc.): volar hasta él, resaltarlo y mostrar
-  // su tarjeta. Al quitar el foco, volver a la vista inicial.
+  // Enfocar un municipio o departamento (Top N): volar hasta él, resaltarlo y
+  // mostrar su tarjeta. Al quitar el foco, volver a la vista inicial.
   useEffect(() => {
     const map = mapRef.current;
     const gl = geojsonLayerRef.current;
     if (!map || !gl) return;
 
-    // Restaurar el municipio previamente enfocado
-    if (focoLayerRef.current) {
-      focoLayerRef.current.setStyle(styleFnRef.current(focoLayerRef.current.feature));
-      focoLayerRef.current = null;
-    }
+    // Restaurar las capas previamente enfocadas
+    focoLayersRef.current.forEach((l) => l.setStyle(styleFnRef.current(l.feature)));
+    focoLayersRef.current = [];
 
     if (!municipioFoco) {
       if (initialBoundsRef.current) {
@@ -235,22 +269,55 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
       return;
     }
 
-    let found: (Path & { feature?: Feature<Geometry, { PRECIND_ID: string }>; getBounds?: () => LatLngBounds }) | null = null;
+    type CapaMun = Path & {
+      feature?: Feature<Geometry, { PRECIND_ID: string }>;
+      getBounds?: () => LatLngBounds;
+      bringToFront?: () => void;
+    };
+    const matches: CapaMun[] = [];
     gl.eachLayer((l) => {
-      const layerConFeature = l as Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> };
-      if (layerConFeature.feature?.properties?.PRECIND_ID === municipioFoco) {
-        found = layerConFeature;
-      }
+      const capa = l as CapaMun;
+      const pid = capa.feature?.properties?.PRECIND_ID;
+      if (!pid) return;
+      const coincide = nivelDepartamento ? pid.slice(0, 2) === municipioFoco : pid === municipioFoco;
+      if (coincide) matches.push(capa);
     });
-    if (!found || !(found as { getBounds?: unknown }).getBounds) return;
+    if (matches.length === 0) return;
 
-    const capa = found as Path & { feature?: Feature<Geometry, { PRECIND_ID: string }>; getBounds: () => LatLngBounds; bringToFront: () => void };
-    focoLayerRef.current = capa;
-    map.flyToBounds(capa.getBounds(), { maxZoom: 9, padding: [60, 60] });
-    capa.setStyle({ weight: 3, color: "#1F2937", fillOpacity: 0.95 });
-    capa.bringToFront();
-    setHoveredMunicipio(actividadesMap.get(municipioFoco) || null);
-  }, [municipioFoco, actividadesMap]);
+    // Bounds combinados de todas las capas del foco
+    let bounds: LatLngBounds | null = null;
+    for (const capa of matches) {
+      const b = capa.getBounds?.();
+      if (!b) continue;
+      bounds = bounds ? bounds.extend(b) : b;
+    }
+    if (!bounds) return;
+
+    focoLayersRef.current = matches;
+    map.flyToBounds(bounds, { maxZoom: nivelDepartamento ? 8 : 9, padding: [60, 60] });
+    matches.forEach((capa) => {
+      capa.setStyle(
+        nivelDepartamento
+          ? { fillOpacity: 1 }
+          : { weight: 3, color: "#1F2937", fillOpacity: 0.95 }
+      );
+      capa.bringToFront?.();
+    });
+
+    if (nivelDepartamento) {
+      const d = deptMap.get(municipioFoco);
+      if (d) {
+        setHoveredMunicipio({
+          codigo: d.codigo,
+          municipio: d.nombre,
+          departamento: `${d.municipios} ${d.municipios === 1 ? "municipio" : "municipios"} con recolección`,
+          cantidad: d.sharePct,
+        });
+      }
+    } else {
+      setHoveredMunicipio(actividadesMap.get(municipioFoco) || null);
+    }
+  }, [municipioFoco, actividadesMap, nivelDepartamento, deptMap]);
 
   // Cargar GeoJSON
   useEffect(() => {
@@ -340,6 +407,9 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           }).addTo(map);
         }
 
+        // Capas por departamento (para hover/restauración del bloque completo)
+        const layersByDept = new Map<string, Array<Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> }>>();
+
         // Agregar GeoJSON con estilos y eventos (estilo vigente vía ref, para
         // que el filtro por rango de la leyenda aplique sin recrear el mapa)
         const geojsonLayer = L.geoJSON(geoData, {
@@ -352,6 +422,36 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
               DEPTO: string;
             };
             const codigo = props.PRECIND_ID;
+
+            // ── Nivel departamento: hover resalta el departamento completo ──
+            if (nivelDepartamento) {
+              const dc = codigo.slice(0, 2);
+              const arr = layersByDept.get(dc) || [];
+              arr.push(layer as Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> });
+              layersByDept.set(dc, arr);
+
+              const dd = deptMap.get(dc);
+              if (!dd) return; // departamento sin datos: sin hover
+
+              layer.on({
+                mouseover: () => {
+                  (layersByDept.get(dc) || []).forEach((l) => l.setStyle({ fillOpacity: 1 }));
+                  setHoveredMunicipio({
+                    codigo: dc,
+                    municipio: dd.nombre,
+                    departamento: `${dd.municipios} ${dd.municipios === 1 ? "municipio" : "municipios"} con recolección`,
+                    cantidad: dd.sharePct,
+                  });
+                },
+                mouseout: () => {
+                  (layersByDept.get(dc) || []).forEach((l) => l.setStyle(styleFnRef.current(l.feature)));
+                  setHoveredMunicipio(null);
+                },
+              });
+              return;
+            }
+
+            // ── Nivel municipio (comportamiento original) ──
             const data = actividadesMap.get(codigo);
 
             // En modo ejecutivo/binario, los municipios SIN datos no reaccionan
@@ -367,7 +467,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
                   fillOpacity: 0.9,
                 });
                 target.bringToFront();
-                
+
                 setHoveredMunicipio(data || {
                   codigo,
                   municipio: props.MUNICIPIO,
@@ -509,7 +609,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             <p className="text-[10px] text-gray-400 mb-1">Click en un rango para filtrar</p>
             <div className="flex items-center justify-between px-1.5 pb-0.5 text-[10px] text-gray-400">
               <span>Rango</span>
-              <span>Municipios</span>
+              <span>{nivelDepartamento ? "Departamentos" : "Municipios"}</span>
             </div>
             {legendRanges.map(({ color, label, n }, i) => (
               <button

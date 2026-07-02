@@ -14,19 +14,22 @@ interface MunicipioShare {
   sharePct: number;
 }
 
-/** Mapa recordId de MUNICIPIOS → { codigo DIVIPOLA 5 dígitos, municipio, departamento } */
+/** Mapa recordId de MUNICIPIOS → { codigo DIVIPOLA 5 dígitos, municipio, departamento, deptoCodigo 2 dígitos } */
 async function getMunicipiosMap(): Promise<
-  Map<string, { codigo: string; municipio: string; departamento: string }>
+  Map<string, { codigo: string; municipio: string; departamento: string; deptoCodigo: string }>
 > {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
-  const map = new Map<string, { codigo: string; municipio: string; departamento: string }>();
+  const map = new Map<
+    string,
+    { codigo: string; municipio: string; departamento: string; deptoCodigo: string }
+  >();
   if (!apiKey || !baseId) return map;
 
   let offset: string | undefined;
   do {
     const params = new URLSearchParams();
-    ["CODIGOMUN", "MUNICIPIO", "DEPARTAMENTO"].forEach((f) => params.append("fields[]", f));
+    ["CODIGOMUN", "MUNICIPIO", "DEPARTAMENTO", "CODIGODEPTO"].forEach((f) => params.append("fields[]", f));
     params.set("pageSize", "100");
     if (offset) params.set("offset", offset);
     const res = await fetch(
@@ -43,6 +46,7 @@ async function getMunicipiosMap(): Promise<
         codigo,
         municipio: r.fields?.MUNICIPIO || "",
         departamento: r.fields?.DEPARTAMENTO || "",
+        deptoCodigo: codigo.slice(0, 2),
       });
     }
     offset = data.offset;
@@ -76,11 +80,12 @@ export async function GET(request: Request) {
       getMunicipiosMap(),
     ]);
 
-    // kg por municipio (solo interno — jamás sale en la respuesta)
+    // kg por municipio y por departamento (solo interno — jamás sale en la respuesta)
     const kgPorMunicipio = new Map<
       string,
-      { municipio: string; departamento: string; kg: number }
+      { municipio: string; departamento: string; deptoCodigo: string; kg: number }
     >();
+    const kgPorDepto = new Map<string, { nombre: string; kg: number }>();
     let totalKg = 0;
 
     for (const k of allKardex) {
@@ -105,8 +110,15 @@ export async function GET(request: Request) {
         kgPorMunicipio.set(info.codigo, {
           municipio: info.municipio,
           departamento: info.departamento,
+          deptoCodigo: info.deptoCodigo,
           kg,
         });
+      }
+      const dAgg = kgPorDepto.get(info.deptoCodigo);
+      if (dAgg) {
+        dAgg.kg += kg;
+      } else {
+        kgPorDepto.set(info.deptoCodigo, { nombre: info.departamento, kg });
       }
       totalKg += kg;
     }
@@ -126,8 +138,24 @@ export async function GET(request: Request) {
     const top10Pct =
       Math.round(municipios.slice(0, 10).reduce((s, m) => s + m.sharePct, 0) * 10) / 10;
 
+    // Agregación por departamento: % sobre kg reales (sin error de redondeo)
+    // + cuántos municipios con recolección tiene cada uno
+    const munPorDepto = new Map<string, number>();
+    kgPorMunicipio.forEach((m) => {
+      munPorDepto.set(m.deptoCodigo, (munPorDepto.get(m.deptoCodigo) || 0) + 1);
+    });
+    const porDepartamento = [...kgPorDepto.entries()]
+      .map(([codigo, d]) => ({
+        codigo,
+        nombre: d.nombre,
+        sharePct: totalKg > 0 ? Math.round((d.kg / totalKg) * 1000) / 10 : 0,
+        municipios: munPorDepto.get(codigo) || 0,
+      }))
+      .sort((a, b) => b.sharePct - a.sharePct);
+
     return NextResponse.json({
       municipios,
+      porDepartamento,
       totals: {
         municipios: municipios.length,
         departamentos: departamentos.size,
