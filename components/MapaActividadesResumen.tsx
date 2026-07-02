@@ -57,6 +57,8 @@ export default function MapaActividadesResumen({
   const [tipoSel, setTipoSel] = useState("");
   // Qué dato pinta el mapa: actividades (binario) o recolección (% del total)
   const [dataset, setDataset] = useState<"actividades" | "recoleccion">("actividades");
+  // Municipio enfocado desde el Top 5 (código DIVIPOLA)
+  const [focoCodigo, setFocoCodigo] = useState<string | null>(null);
 
   const mf = mode === "anual" ? 1 : monthFrom;
   const mt = mode === "anual" ? 12 : monthTo;
@@ -74,6 +76,7 @@ export default function MapaActividadesResumen({
         setData(act);
         setRecol(rec);
         setTipoSel("");
+        setFocoCodigo(null);
       })
       .catch(() => {})
       .finally(() => {
@@ -139,7 +142,7 @@ export default function MapaActividadesResumen({
           {/* Toggle Actividades / Recolección */}
           <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
             <button
-              onClick={() => setDataset("actividades")}
+              onClick={() => { setDataset("actividades"); setFocoCodigo(null); }}
               className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                 !esRecoleccion ? "bg-[#00d084] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
@@ -147,7 +150,7 @@ export default function MapaActividadesResumen({
               Actividades
             </button>
             <button
-              onClick={() => setDataset("recoleccion")}
+              onClick={() => { setDataset("recoleccion"); setFocoCodigo(null); }}
               className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-300 ${
                 esRecoleccion ? "bg-[#00d084] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
@@ -177,11 +180,51 @@ export default function MapaActividadesResumen({
 
       {/* KPIs ejecutivos */}
       {esRecoleccion ? (
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <Kpi label="Municipios con recolección" value={recol?.totals.municipios || 0} />
-          <Kpi label="Top 10 municipios concentran" value={recol?.totals.top10Pct || 0} sufijo="%" />
-          <Kpi label="Departamentos con recolección" value={recol?.totals.departamentos || 0} />
-        </div>
+        <>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <Kpi label="Municipios con recolección" value={recol?.totals.municipios || 0} />
+            <Kpi label="Top 10 municipios concentran" value={recol?.totals.top10Pct || 0} sufijo="%" />
+            <Kpi label="Departamentos con recolección" value={recol?.totals.departamentos || 0} />
+          </div>
+
+          {/* Top 5 municipios — click para volar al municipio en el mapa */}
+          {(recol?.municipios.length || 0) > 0 && (
+            <div className="mb-4">
+              <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">
+                Top 5 municipios · click para verlo en el mapa
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                {recol!.municipios.slice(0, 5).map((m, i) => {
+                  const activo = focoCodigo === m.codigo;
+                  return (
+                    <button
+                      key={m.codigo}
+                      onClick={() => setFocoCodigo(activo ? null : m.codigo)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                        activo
+                          ? "border-[#00d084] bg-[#00d084]/10 ring-1 ring-[#00d084]"
+                          : "border-gray-200 bg-white hover:border-[#00d084] hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className={`flex-shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                        activo ? "bg-[#00d084] text-white" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-gray-900 truncate">{m.municipio}</span>
+                        <span className="block text-xs text-gray-500 truncate">{m.departamento}</span>
+                      </span>
+                      <span className="ml-auto text-sm font-bold text-green-700 whitespace-nowrap">
+                        {m.sharePct.toLocaleString("es-CO")}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="grid grid-cols-3 gap-4 mb-4">
           <Kpi label="Municipios con presencia" value={kpis.municipios} />
@@ -208,6 +251,7 @@ export default function MapaActividadesResumen({
             leyendaTitulo="Recolección (% del total)"
             focusColombia
             esPorcentaje
+            municipioFoco={focoCodigo}
           />
         )
       ) : actividadesPorMunicipio.length === 0 ? (

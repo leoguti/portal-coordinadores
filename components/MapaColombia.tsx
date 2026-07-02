@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import type { FeatureCollection, Feature, Geometry } from "geojson";
-import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON, Path, PathOptions, StyleFunction } from "leaflet";
+import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON, Path, PathOptions, StyleFunction, LatLngBounds } from "leaflet";
 
 // Importar CSS de Leaflet estáticamente
 import "leaflet/dist/leaflet.css";
@@ -35,6 +35,11 @@ interface MapaColombiaProps {
    * "X% del total nacional" y la leyenda usa decimales.
    */
   esPorcentaje?: boolean;
+  /**
+   * Código DIVIPOLA de un municipio a enfocar: el mapa vuela hasta él, lo
+   * resalta y muestra su tarjeta. null/undefined = vista general.
+   */
+  municipioFoco?: string | null;
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -47,7 +52,7 @@ const COLOR_SCALE = [
 ];
 
 
-export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false, municipioFoco = null }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +62,9 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const geojsonLayerRef = useRef<LeafletGeoJSON | null>(null);
   const initializingRef = useRef(false);
+  // Vista inicial (para volver al quitar el foco) y capa enfocada actual
+  const initialBoundsRef = useRef<LatLngBounds | null>(null);
+  const focoLayerRef = useRef<(Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> }) | null>(null);
 
   // Marcar como montado solo en cliente
   useEffect(() => {
@@ -206,6 +214,44 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     }
   }, [rangoSel]);
 
+  // Enfocar un municipio (Top 5, etc.): volar hasta él, resaltarlo y mostrar
+  // su tarjeta. Al quitar el foco, volver a la vista inicial.
+  useEffect(() => {
+    const map = mapRef.current;
+    const gl = geojsonLayerRef.current;
+    if (!map || !gl) return;
+
+    // Restaurar el municipio previamente enfocado
+    if (focoLayerRef.current) {
+      focoLayerRef.current.setStyle(styleFnRef.current(focoLayerRef.current.feature));
+      focoLayerRef.current = null;
+    }
+
+    if (!municipioFoco) {
+      if (initialBoundsRef.current) {
+        map.flyToBounds(initialBoundsRef.current, { padding: [10, 10] });
+      }
+      setHoveredMunicipio(null);
+      return;
+    }
+
+    let found: (Path & { feature?: Feature<Geometry, { PRECIND_ID: string }>; getBounds?: () => LatLngBounds }) | null = null;
+    gl.eachLayer((l) => {
+      const layerConFeature = l as Path & { feature?: Feature<Geometry, { PRECIND_ID: string }> };
+      if (layerConFeature.feature?.properties?.PRECIND_ID === municipioFoco) {
+        found = layerConFeature;
+      }
+    });
+    if (!found || !(found as { getBounds?: unknown }).getBounds) return;
+
+    const capa = found as Path & { feature?: Feature<Geometry, { PRECIND_ID: string }>; getBounds: () => LatLngBounds; bringToFront: () => void };
+    focoLayerRef.current = capa;
+    map.flyToBounds(capa.getBounds(), { maxZoom: 9, padding: [60, 60] });
+    capa.setStyle({ weight: 3, color: "#1F2937", fillOpacity: 0.95 });
+    capa.bringToFront();
+    setHoveredMunicipio(actividadesMap.get(municipioFoco) || null);
+  }, [municipioFoco, actividadesMap]);
+
   // Cargar GeoJSON
   useEffect(() => {
     async function loadData() {
@@ -347,6 +393,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           // Encuadre fijo a Colombia (incl. San Andrés); no re-zoom al filtrar
           map.fitBounds(COLOMBIA_BOUNDS, { padding: [10, 10] });
           map.setMaxBounds(COLOMBIA_BOUNDS.pad(0.25));
+          initialBoundsRef.current = COLOMBIA_BOUNDS;
         } else {
           // Calcular bounds de municipios CON actividades y hacer zoom
           const boundsGroup = L.featureGroup();
@@ -363,6 +410,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           if (boundsGroup.getLayers().length > 0) {
             const bounds = boundsGroup.getBounds();
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+            initialBoundsRef.current = bounds;
           }
         }
         
