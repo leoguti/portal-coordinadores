@@ -93,6 +93,12 @@ Se MANTIENE la pestaña, pero con estos ajustes:
     - **Modo `binario`** (prop nueva): se retira el degradado por volumen (choropleth). Solo distingue municipios CON actividades (un verde) vs SIN; el detalle (conteo + desglose por tipo) se ve en el popup al pasar el mouse. Leyenda "Con / Sin actividades".
     - **Visible para TODOS los usuarios** (2026-06-25): el mapa va al final del dashboard de **todos** — junta, ejecutivo (`DashboardEjecutivo`, ya no solo en board) y coordinador (`DashboardCoordinador`). El endpoint `actividades-por-municipio` se abrió a **cualquier usuario autenticado** (quitado el guard `canViewJunta`); muestra **cobertura nacional** (todas las actividades) para todos. Props del wrapper ahora opcionales (default año actual, anual) para usarlo suelto.
 
+19. **Capa de Recolección en el mapa (% del total nacional)** — decisión 2026-07-02 ("opción 1"): mostrar recolección **sin kilos**, como **participación % del total nacional**, en degradado de verdes.
+    - **Endpoint nuevo:** `GET /api/dashboard/recoleccion-por-municipio?year=&monthFrom=&monthTo=` — agrega kardex **ENTRADAS** por `MunicipioOrigen` (record ID → código DIVIPOLA vía campo `CODIGOMUN` de MUNICIPIOS). Los kg se usan solo internamente; la respuesta expone **solo `sharePct`** (1 decimal) + totals (`municipios`, `departamentos`, `top10Pct`). Cualquier usuario autenticado.
+    - **Wrapper:** toggle **"Actividades | Recolección"** en `MapaActividadesResumen`. En recolección: choropleth verde por % share, sin filtro de Tipo, KPIs = Municipios con recolección · Top 10 concentran X% · Departamentos con recolección.
+    - **MapaColombia:** prop nueva `esPorcentaje` (popup "X% del total nacional", leyenda con decimales). El velo blanco + no-hover de municipios sin datos ahora aplica a todo modo `focusColombia` (no solo binario). `/mapa` sin cambios.
+    - Validado con datos reales 2026: 163 municipios, top Madrid-Cundinamarca 6,0%, top10 = 35%, 18 deptos.
+
 ---
 
 ## Decisiones tomadas + supuestos aplicados (revisar)

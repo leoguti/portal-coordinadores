@@ -30,6 +30,11 @@ interface MapaColombiaProps {
    * actividades (un color) de los que NO tienen. El detalle se ve en el popup.
    */
   binario?: boolean;
+  /**
+   * Los valores de `cantidad` son porcentajes (% del total): el popup muestra
+   * "X% del total nacional" y la leyenda usa decimales.
+   */
+  esPorcentaje?: boolean;
 }
 
 // Escala de colores verdes (de claro a oscuro)
@@ -47,7 +52,7 @@ const getColorByNormalizedValue = (normalized: number): string => {
   return COLOR_SCALE[index];
 };
 
-export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false }: MapaColombiaProps) {
+export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = "Mis actividades", focusColombia = false, binario = false, esPorcentaje = false }: MapaColombiaProps) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +91,16 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     // Crear rangos para la leyenda
     const range = max - min || 1;
     const step = range / COLOR_SCALE.length;
-    
+
+    // Con porcentajes usamos 1 decimal; con conteos, enteros
+    const fmtVal = (n: number) =>
+      esPorcentaje ? `${(Math.round(n * 10) / 10).toLocaleString("es-CO")}%` : String(Math.round(n));
+
     const ranges = COLOR_SCALE.map((color, i) => {
-      const from = Math.round(min + step * i);
-      const to = i === COLOR_SCALE.length - 1 ? max : Math.round(min + step * (i + 1) - 1);
+      const fromN = min + step * i;
+      const toN = i === COLOR_SCALE.length - 1 ? max : min + step * (i + 1);
+      const from = fmtVal(fromN);
+      const to = fmtVal(esPorcentaje ? toN : toN - 1);
       return {
         color,
         label: from === to ? `${from}` : `${from} - ${to}`,
@@ -97,7 +108,7 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
     });
     
     return { minCount: min, maxCount: max, legendRanges: ranges };
-  }, [actividadesPorMunicipio]);
+  }, [actividadesPorMunicipio, esPorcentaje]);
 
   // Función para obtener color según cantidad
   const getColor = (count: number): string => {
@@ -203,10 +214,10 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
 
           // Sin actividades
           if (count === 0) {
-            // Binario + focus: velo blanco suave (SIN borde) que ilumina la
-            // silueta de Colombia sobre el mapa base gris (el resto queda más
-            // apagado). No tiene borde → no quedan "marcados".
-            if (binario) {
+            // Modo ejecutivo (focusColombia) o binario: velo blanco suave (SIN
+            // borde) que ilumina la silueta de Colombia sobre el mapa base gris.
+            // No tiene borde → no quedan "marcados".
+            if (focusColombia || binario) {
               return {
                 fillColor: "#ffffff",
                 fillOpacity: focusColombia ? 0.7 : 0,
@@ -219,9 +230,9 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             return {
               fillColor: "transparent",
               fillOpacity: 0,
-              weight: focusColombia ? 0.4 : 0.3,
-              opacity: focusColombia ? 0.6 : 0.5,
-              color: focusColombia ? "#94a3b8" : "#9CA3AF", // slate-400 / gray-400
+              weight: 0.3,
+              opacity: 0.5,
+              color: "#9CA3AF", // gray-400
             };
           }
 
@@ -248,9 +259,9 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
             const codigo = props.PRECIND_ID;
             const data = actividadesMap.get(codigo);
 
-            // En binario, los municipios SIN actividades no reaccionan al hover
-            // (evita que queden "marcados" con borde).
-            if (binario && !data) return;
+            // En modo ejecutivo/binario, los municipios SIN datos no reaccionan
+            // al hover (evita que queden "marcados" con borde).
+            if ((binario || focusColombia) && !data) return;
 
             layer.on({
               mouseover: (e) => {
@@ -355,7 +366,9 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
           <p className="text-sm text-gray-600">{hoveredMunicipio.departamento}</p>
           <div className="mt-2 pt-2 border-t">
             <p className="text-lg font-semibold text-green-700">
-              {hoveredMunicipio.cantidad} {hoveredMunicipio.cantidad === 1 ? "actividad" : "actividades"}
+              {esPorcentaje
+                ? `${hoveredMunicipio.cantidad.toLocaleString("es-CO")}% del total nacional`
+                : `${hoveredMunicipio.cantidad} ${hoveredMunicipio.cantidad === 1 ? "actividad" : "actividades"}`}
             </p>
             {hoveredMunicipio.porTipo && Object.keys(hoveredMunicipio.porTipo).length > 0 && (
               <div className="mt-2 space-y-0.5">
