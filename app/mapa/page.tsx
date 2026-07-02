@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { divipolaFromDecimal } from "@/lib/divipola";
 
 // Importar el mapa dinámicamente (Leaflet necesita window)
 const MapaColombia = dynamic(() => import("@/components/MapaColombia"), {
@@ -65,15 +66,11 @@ export default function MapaPage() {
         const porMunicipio = new Map<string, MunicipioActividades>();
         
         actividades.forEach((act: ActividadAirtable) => {
-          // Obtener el código DIVIPOLA del campo lookup
-          const codigoRaw = act.fields["CODIGOMUN Compilación (de Municipio)"];
-          if (!codigoRaw) return;
-          
-          // Convertir de formato decimal (25.486) a string de 5 dígitos (25486)
-          // El código viene como número decimal donde la parte entera es el depto
-          // y la parte decimal es el municipio, ej: 5.147 = 05147 (Carepa, Antioquia)
-          const codigoStr = String(codigoRaw).replace(".", "");
-          const codigo = codigoStr.padStart(5, "0"); // Asegurar 5 dígitos
+          // Obtener el código DIVIPOLA del campo lookup y convertirlo a 5
+          // dígitos (ej. 5.147 → "05147"; 25.43 → "25430"). La conversión es
+          // aritmética: por texto se pierde el cero final (bug Madrid 25430).
+          const codigo = divipolaFromDecimal(act.fields["CODIGOMUN Compilación (de Municipio)"]);
+          if (!codigo) return;
           
           const mundep = act.fields["mundep (from Municipio)"]?.[0] || "";
           const departamento = act.fields.Departamento?.[0] || "";

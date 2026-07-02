@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { listAllActividades } from "@/lib/airtable";
+import { divipolaFromDecimal } from "@/lib/divipola";
 
 export const maxDuration = 60;
 
@@ -64,10 +65,9 @@ export async function GET(request: Request) {
           : NaN;
       if (!Number.isNaN(mesNum) && (mesNum < monthFrom || mesNum > monthTo)) continue;
 
-      const codigoRaw = f["CODIGOMUN Compilación (de Municipio)"];
-      if (codigoRaw == null) continue;
-      // DIVIPOLA decimal (ej. 5.147) → "05147" (misma conversión que /mapa)
-      const codigo = String(codigoRaw).replace(".", "").padStart(5, "0");
+      // DIVIPOLA decimal (ej. 5.147 → "05147"; 25.43 → "25430")
+      const codigo = divipolaFromDecimal(f["CODIGOMUN Compilación (de Municipio)"]);
+      if (!codigo) continue;
 
       const mundep = f["mundep (from Municipio)"]?.[0] || "";
       const [municipio, departamento] = mundep.split(" - ");

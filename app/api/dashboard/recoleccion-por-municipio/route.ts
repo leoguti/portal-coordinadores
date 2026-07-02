@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getAllKardex } from "@/lib/airtable";
+import { divipolaFromDecimal } from "@/lib/divipola";
 
 export const maxDuration = 60;
 
@@ -35,10 +36,9 @@ async function getMunicipiosMap(): Promise<
     if (!res.ok) break;
     const data = await res.json();
     for (const r of data.records || []) {
-      const codigoRaw = r.fields?.CODIGOMUN;
-      if (codigoRaw == null) continue;
-      // DIVIPOLA decimal (ej. 73.563) → "73563" (misma conversión que /mapa)
-      const codigo = String(codigoRaw).replace(".", "").padStart(5, "0");
+      // DIVIPOLA decimal (ej. 73.563 → "73563"; 25.43 → "25430")
+      const codigo = divipolaFromDecimal(r.fields?.CODIGOMUN);
+      if (!codigo) continue;
       map.set(r.id, {
         codigo,
         municipio: r.fields?.MUNICIPIO || "",
