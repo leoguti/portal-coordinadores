@@ -507,6 +507,10 @@ export default function MapaColombia({ actividadesPorMunicipio, leyendaTitulo = 
         ) : legendRanges.length > 0 ? (
           <div className="space-y-0.5">
             <p className="text-[10px] text-gray-400 mb-1">Click en un rango para filtrar</p>
+            <div className="flex items-center justify-between px-1.5 pb-0.5 text-[10px] text-gray-400">
+              <span>Rango</span>
+              <span>Municipios</span>
+            </div>
             {legendRanges.map(({ color, label, n }, i) => (
               <button
                 key={color}

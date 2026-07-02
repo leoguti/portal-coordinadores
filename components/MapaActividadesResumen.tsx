@@ -187,14 +187,14 @@ export default function MapaActividadesResumen({
             <Kpi label="Departamentos con recolección" value={recol?.totals.departamentos || 0} />
           </div>
 
-          {/* Top 5 municipios — click para volar al municipio en el mapa */}
+          {/* Top 10 municipios — click para volar al municipio en el mapa */}
           {(recol?.municipios.length || 0) > 0 && (
             <div className="mb-4">
               <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">
-                Top 5 municipios · click para verlo en el mapa
+                Top 10 municipios · click para verlo en el mapa
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                {recol!.municipios.slice(0, 5).map((m, i) => {
+                {recol!.municipios.slice(0, 10).map((m, i) => {
                   const activo = focoCodigo === m.codigo;
                   return (
                     <button
