@@ -350,15 +350,12 @@ export async function GET(request: Request) {
     }
 
     if (tipo === "generadores") {
-      const filtros = [`OR({estado}='pendiente', {estado}='pendiente_revision')`];
-      if (coordinadorId) {
-        filtros.push(
-          `FIND('${coordinadorId}', ARRAYJOIN({coordinador_solicitado})) > 0`
-        );
-      }
-      const formula =
-        filtros.length === 1 ? filtros[0] : `AND(${filtros.join(",")})`;
-      const records = await fetchAll("GENERADORES", formula, [
+      // ⚠️ NO filtrar coordinador con FIND+ARRAYJOIN sobre el campo linked:
+      // ARRAYJOIN devuelve display names, no record IDs (bug conocido
+      // 2026-05-29, remordió 2026-07-08: la bandeja del coordinador salía
+      // vacía). Se filtra en código: la API devuelve los linked como IDs.
+      const formula = `OR({estado}='pendiente', {estado}='pendiente_revision')`;
+      let records = await fetchAll("GENERADORES", formula, [
         "nombre",
         "nit",
         "tipopersona",
@@ -373,6 +370,11 @@ export async function GET(request: Request) {
         "coordinador_solicitado",
         "cambios_pendientes",
       ]);
+      if (coordinadorId) {
+        records = records.filter((r) =>
+          asArrStr(r.fields.coordinador_solicitado).includes(coordinadorId)
+        );
+      }
       // Recolectar IDs de municipios y cultivos en los diffs para
       // resolver labels en una sola tanda.
       const munIds = new Set<string>();
@@ -430,15 +432,11 @@ export async function GET(request: Request) {
     }
 
     if (tipo === "fincas") {
-      const filtros = [`OR({estado}='pendiente', {estado}='pendiente_revision')`];
-      if (coordinadorId) {
-        filtros.push(
-          `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id})) > 0`
-        );
-      }
-      const formula =
-        filtros.length === 1 ? filtros[0] : `AND(${filtros.join(",")})`;
-      const records = await fetchAll("FINCAS", formula, [
+      // Mismo bug de ARRAYJOIN que en generadores (ver arriba) + las fincas
+      // nuevas del registro NO traen coordinador_id: su coordinador vive en
+      // el coordinador_solicitado del GENERADOR padre → se resuelve en código.
+      const formula = `OR({estado}='pendiente', {estado}='pendiente_revision')`;
+      let records = await fetchAll("FINCAS", formula, [
         "nombre",
         "generador",
         "municipio",
@@ -451,6 +449,36 @@ export async function GET(request: Request) {
         "cambios_pendientes",
         "coordinador_id",
       ]);
+      if (coordinadorId) {
+        // Directas: la finca tiene coordinador_id propio
+        const directas = records.filter((r) =>
+          asArrStr(r.fields.coordinador_id).includes(coordinadorId)
+        );
+        // Vía padre: fincas sin coordinador propio → mirar el generador
+        const sinCoord = records.filter(
+          (r) => asArrStr(r.fields.coordinador_id).length === 0
+        );
+        const genIds = [
+          ...new Set(sinCoord.flatMap((r) => asArrStr(r.fields.generador))),
+        ];
+        const coordDeGen = new Map<string, string[]>();
+        for (let i = 0; i < genIds.length; i += 50) {
+          const lote = genIds.slice(i, i + 50);
+          const fGen = `OR(${lote.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+          const gens = await fetchAll("GENERADORES", fGen, [
+            "coordinador_solicitado",
+          ]);
+          gens.forEach((g) =>
+            coordDeGen.set(g.id, asArrStr(g.fields.coordinador_solicitado))
+          );
+        }
+        const viaPadre = sinCoord.filter((r) =>
+          asArrStr(r.fields.generador).some((gid) =>
+            (coordDeGen.get(gid) || []).includes(coordinadorId)
+          )
+        );
+        records = [...directas, ...viaPadre];
+      }
       const munIds = new Set<string>();
       for (const r of records) {
         const diff = parseCambiosPendientes(r.fields.cambios_pendientes);
