@@ -175,6 +175,16 @@ async function manejarContactarCoord(
   return "Listo, un coordinador te contactará pronto.";
 }
 
+// Margen para cold starts + Neon/Airtable (TextIt espera la respuesta del
+// webhook; visto timeout en prueba 2026-07-08 justo tras un deploy).
+export const maxDuration = 30;
+
+// Keep-warm: /intent es una función SEPARADA de /identificar — el ping de
+// UptimeRobot a /identificar no la calienta. Ping a este GET la mantiene viva.
+export async function GET() {
+  return NextResponse.json({ ok: true, warm: true });
+}
+
 export async function POST(request: NextRequest) {
   if (!validateApiKey(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
