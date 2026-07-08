@@ -30,6 +30,10 @@ export default function MunicipioSearch({
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  // El usuario escribió texto pero NO eligió de la lista y salió del campo —
+  // el texto solo no selecciona nada (hallazgo prueba 2026-07-08: "Bogotá"
+  // escrito quedaba visible pero el formulario no pasaba, sin explicación).
+  const [sinSeleccion, setSinSeleccion] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +107,7 @@ export default function MunicipioSearch({
     setSearch("");
     setResults([]);
     setShowDropdown(false);
+    setSinSeleccion(false);
   };
 
   const clearSelection = () => {
@@ -138,13 +143,27 @@ export default function MunicipioSearch({
           ref={inputRef}
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            if (sinSeleccion) setSinSeleccion(false);
+          }}
           onKeyDown={handleKeyDown}
           onFocus={() => search.length >= 2 && results.length > 0 && setShowDropdown(true)}
+          onBlur={() => {
+            // Con retraso: si el blur fue por click en una opción de la lista,
+            // selectMunicipio limpia el estado antes de que esto evalúe.
+            setTimeout(() => {
+              setSinSeleccion((prev) => prev || Boolean(inputRef.current?.value?.trim()));
+            }, 250);
+          }}
           placeholder={placeholder}
           disabled={disabled}
           required={required && !value}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+          className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:border-transparent disabled:bg-gray-50 ${
+            sinSeleccion && search.trim()
+              ? "border-amber-500 focus:ring-amber-500 bg-amber-50"
+              : "border-gray-300 focus:ring-blue-500"
+          }`}
         />
         {loading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -176,6 +195,13 @@ export default function MunicipioSearch({
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-gray-500 text-sm">
           No se encontraron municipios
         </div>
+      )}
+
+      {/* Aviso: escribió pero no eligió de la lista */}
+      {sinSeleccion && search.trim().length > 0 && (
+        <p className="text-xs font-medium text-amber-700 mt-1">
+          ⚠️ Escribir el nombre no basta: toca el municipio en la lista para seleccionarlo.
+        </p>
       )}
 
       {/* Helper text */}
