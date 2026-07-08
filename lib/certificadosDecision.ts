@@ -20,6 +20,7 @@ import {
   notificarCertAprobado,
   notificarCertRechazado,
 } from "@/lib/textitNotify";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -326,11 +327,15 @@ export async function rechazarCertificado(
         const consecutivo = Number(rec.fields.consecutivo) || undefined;
         const nombreCoord =
           firstStr(rec.fields.nombrecoordinador) || "Coordinador";
+        const coordTel10 = normalizarMovilCO(
+          firstStr(rec.fields.movilcoordinador)
+        );
         const res = await notificarCertRechazado({
           telefono: tel,
           consecutivo,
           motivo,
           nombreCoordinador: nombreCoord,
+          coordContactoWaUrl: coordTel10 ? `wa.me/57${coordTel10}` : undefined,
         });
         console.log(
           `[cert/${id}/rechazar wa] ${res.ok ? "OK" : "FAIL"}: ${res.message}`

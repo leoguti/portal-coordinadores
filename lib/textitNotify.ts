@@ -289,22 +289,27 @@ export interface RechazadoCertParams {
   consecutivo?: number;
   motivo: string;
   nombreCoordinador: string;
+  /** wa.me corto del coord (sin ?text=) para resolver dudas del rechazo. */
+  coordContactoWaUrl?: string;
 }
 
 export async function notificarCertRechazado(
   p: RechazadoCertParams
 ): Promise<BroadcastResult> {
   const solicitudLbl = p.consecutivo ? `#${p.consecutivo}` : "";
+  const contacto = p.coordContactoWaUrl
+    ? `Si necesitas más información, escríbele a tu coordinador:\n👉 ${p.coordContactoWaUrl}`
+    : `Si necesitas más información, escríbele a tu coordinador. 💬`;
   const textoLibre =
     `❌ *Tu solicitud de certificado ${solicitudLbl} fue rechazada.*\n\n` +
     `📋 *Motivo:* ${p.motivo}\n` +
     `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
-    `Si necesitas más información, escríbele a tu coordinador. 💬`;
+    contacto;
   const var1 = p.consecutivo
     ? `#${p.consecutivo} de certificado`
     : "de certificado";
   const var2 = "rechazada";
-  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si necesitas más información, escríbele a tu coordinador.`;
+  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. ${p.coordContactoWaUrl ? `Si necesitas más información, escríbele a tu coordinador: ${p.coordContactoWaUrl}` : "Si necesitas más información, escríbele a tu coordinador."}`;
   return enviarConFallback(p.telefono, textoLibre, var1, var2, var3);
 }
 
