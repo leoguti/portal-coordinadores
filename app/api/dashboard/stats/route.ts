@@ -16,6 +16,10 @@ import {
  * GET /api/dashboard/stats — Métricas consolidadas del dashboard del coordinador
  * Retorna: metas, KPIs, alertas y notificaciones en una sola llamada
  */
+// Paginado pesado de Airtable (kardex/actividades/ordenes completos): sin
+// maxDuration la función moría por timeout → 500 (bug 2026-07-08).
+export const maxDuration = 60;
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

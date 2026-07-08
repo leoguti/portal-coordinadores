@@ -108,6 +108,58 @@ function html({ url, host, email }: { url: string; host: string; email: string }
  * - Uses Nodemailer SMTP for sending emails
  * - Validates email against Airtable Coordinadores table
  */
+// ─── Re-validación de rol con caché por instancia ───────────────────────────
+// El JWT NO se re-escribe en las llamadas de API (solo al refrescar la sesión
+// del cliente), así que `rolCheckedAt` puede tardar en persistir: sin caché,
+// CADA request del servidor consultaría Airtable (ráfagas → rate limit).
+// El caché limita a ~1 consulta por email por instancia por día.
+const ROL_REVALIDAR_MS = 24 * 60 * 60 * 1000;
+const rolRevalidacionCache = new Map<
+  string,
+  { ts: number; coordinator: { id: string; name?: string; rol?: string } | null }
+>();
+
+/**
+ * Consulta ESTRICTA del coordinador: distingue "respuesta definitiva de
+ * Airtable" (200, con o sin registros) de errores transitorios (429, red,
+ * timeout). Solo las definitivas se cachean y pueden invalidar sesiones.
+ */
+async function revalidarCoordinador(email: string): Promise<
+  | { definitivo: true; coordinator: { id: string; name?: string; rol?: string } | null }
+  | { definitivo: false }
+> {
+  const cached = rolRevalidacionCache.get(email);
+  if (cached && Date.now() - cached.ts < ROL_REVALIDAR_MS) {
+    return { definitivo: true, coordinator: cached.coordinator };
+  }
+
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return { definitivo: false };
+
+  try {
+    const normalizedEmail = email.toLowerCase().trim().replace(/"/g, "");
+    const filterFormula = `AND(LOWER({email})="${normalizedEmail}",{Rol}!="Desactivado")`;
+    const url = `https://api.airtable.com/v0/${baseId}/Coordinadores?filterByFormula=${encodeURIComponent(filterFormula)}&maxRecords=1`;
+    const r = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (!r.ok) return { definitivo: false }; // 429/5xx: transitorio, NO invalidar
+    const data = (await r.json()) as {
+      records?: Array<{ id: string; fields?: { Name?: string; Rol?: string } }>;
+    };
+    const rec = data.records?.[0];
+    const coordinator = rec
+      ? { id: rec.id, name: rec.fields?.Name, rol: rec.fields?.Rol }
+      : null;
+    rolRevalidacionCache.set(email, { ts: Date.now(), coordinator });
+    return { definitivo: true, coordinator };
+  } catch {
+    return { definitivo: false };
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   // Use in-memory adapter for verification tokens
   adapter: NeonAdapter(),
@@ -216,29 +268,26 @@ export const authOptions: NextAuthOptions = {
 
       // Re-validación periódica contra Airtable (revocación efectiva):
       // desactivar/eliminar al usuario en Coordinadores corta su sesión en
-      // ≤24 h. getCoordinatorByEmail excluye Rol="Desactivado" en la consulta.
-      const REVALIDAR_MS = 24 * 60 * 60 * 1000;
+      // ≤24 h. SOLO respuestas definitivas (HTTP 200) invalidan — un 429/
+      // timeout jamás debe tumbar la sesión (bug 2026-07-08: los dashboards
+      // disparan llamadas en paralelo → rate limit → "null" → 401 en cadena).
       const checkedAt = (token.rolCheckedAt as number | undefined) || 0;
-      if (token.email && Date.now() - checkedAt > REVALIDAR_MS) {
-        try {
-          const coordinator = await getCoordinatorByEmail(token.email);
-          if (coordinator) {
-            token.coordinatorRecordId = coordinator.id;
-            token.name = coordinator.name;
-            token.rol = coordinator.rol;
+      if (token.email && Date.now() - checkedAt > ROL_REVALIDAR_MS) {
+        const res = await revalidarCoordinador(token.email);
+        if (res.definitivo) {
+          if (res.coordinator) {
+            token.coordinatorRecordId = res.coordinator.id;
+            token.rol = res.coordinator.rol as typeof token.rol;
+            if (res.coordinator.name) token.name = res.coordinator.name;
           } else {
-            // Usuario desactivado o eliminado → sesión inutilizable (todas las
-            // APIs exigen coordinatorRecordId)
+            // Confirmado por Airtable (200 sin registros): revocado de verdad
             console.log(`JWT: usuario ${token.email} ya no autorizado — sesión invalidada`);
             delete token.coordinatorRecordId;
             delete token.rol;
           }
           token.rolCheckedAt = Date.now();
-        } catch (err) {
-          // Error transitorio de Airtable: no invalidar; reintentar en el
-          // próximo request (no actualizamos rolCheckedAt)
-          console.error("JWT: error re-validando rol (se reintenta):", err);
         }
+        // No definitivo (429/red/timeout): token intacto, se reintenta luego.
       }
       return token;
     },

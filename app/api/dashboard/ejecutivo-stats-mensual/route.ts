@@ -49,6 +49,10 @@ const MES_LABEL = [
  * - Metas: leídas directamente de MetasMensuales (NO se prorratean — cada mes
  *   tiene su propia meta cargada)
  */
+// Paginado pesado de Airtable (kardex/actividades/ordenes completos): sin
+// maxDuration la función moría por timeout → 500 (bug 2026-07-08).
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);

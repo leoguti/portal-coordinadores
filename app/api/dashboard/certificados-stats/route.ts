@@ -134,6 +134,10 @@ function matchesDepto(rec: CertRaw, deptosNorm: string[]): boolean {
 
 interface AggMap { certs: number; kg: number; }
 
+// Paginado pesado de Airtable (kardex/actividades/ordenes completos): sin
+// maxDuration la función moría por timeout → 500 (bug 2026-07-08).
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });

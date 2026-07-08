@@ -36,6 +36,10 @@ const MATERIAL_LABELS: Record<string, string> = {
  * Focused metrics for executive dashboard
  * Query: ?year=2026 (default: current year)
  */
+// Paginado pesado de Airtable (kardex/actividades/ordenes completos): sin
+// maxDuration la función moría por timeout → 500 (bug 2026-07-08).
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);

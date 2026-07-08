@@ -27,6 +27,10 @@ const MES_LABEL = [
  * - Metas: suma de las metas mensuales del coordinador en el rango
  * - Tendencia 12 meses: igual (siempre últimos 12 meses)
  */
+// Paginado pesado de Airtable (kardex/actividades/ordenes completos): sin
+// maxDuration la función moría por timeout → 500 (bug 2026-07-08).
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
