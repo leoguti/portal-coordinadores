@@ -19,6 +19,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+
+// TextIt espera la respuesta del webhook: dar margen a los lookups de Airtable
+// (auditoría 2026-07-08: ~6% de runs con timeout en este webhook).
+export const maxDuration = 30;
 import {
   identificarAgricultor,
   type IdentidadAgricultor,
