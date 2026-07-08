@@ -750,7 +750,25 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.labelText}>Observaciones</Text>
           </View>
           <View style={[s.cell, s.cellBorderRight, { width: "36%" }]}>
-            <Text style={s.valueText}>{observaciones}</Text>
+            {observaciones ? (
+              // Resaltado tipo marcador (como en el certificado del sistema
+              // anterior): fondo verde solo detrás del texto, no en la celda.
+              <Text
+                style={[
+                  s.valueText,
+                  {
+                    backgroundColor: "#b7efc5",
+                    alignSelf: "flex-start",
+                    paddingVertical: 1,
+                    paddingHorizontal: 3,
+                  },
+                ]}
+              >
+                {observaciones}
+              </Text>
+            ) : (
+              <Text style={s.valueText}> </Text>
+            )}
           </View>
           <View style={[s.cell, s.cellBorderRight, { width: "10%" }]}>
             <Text style={s.labelText}>email:</Text>
