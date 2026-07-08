@@ -148,8 +148,9 @@ interface ResultadoOk {
 }
 
 function fmtNumKg(n: number): string {
-  // Redondear: 10.1+20.2 = 30.299999999999997 (artefacto de punto flotante)
-  return `${Math.round((n + Number.EPSILON) * 100) / 100} kg`;
+  // Redondear a 3 decimales: 10.1+20.2 = 30.299999999999997 (artefacto de
+  // punto flotante); 3 decimales preserva gramos de báscula (76.981 kg)
+  return `${Math.round((n + Number.EPSILON) * 1000) / 1000} kg`;
 }
 
 function buscarNombreFincaEnContexto(

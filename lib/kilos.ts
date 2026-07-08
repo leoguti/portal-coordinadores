@@ -9,9 +9,13 @@
  *    silenciosamente en navegadores que no normalizan el input.
  */
 
-/** Redondea a 2 decimales, eliminando artefactos de punto flotante. */
+/**
+ * Redondea a 3 decimales, eliminando artefactos de punto flotante.
+ * 3 (no 2) porque las básculas registran gramos: 76.981 kg es un valor
+ * legítimo que no se debe truncar (17.509999999999998 → 17.51 igual se limpia).
+ */
 export function roundKg(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return Math.round((n + Number.EPSILON) * 1000) / 1000;
 }
 
 /** Parsea un valor de kilos tolerando coma decimal. Inválido → 0. */
