@@ -302,8 +302,27 @@ export async function rechazarCertificado(
   // Notificar al agricultor por WhatsApp (background — no bloquea).
   after(async () => {
     try {
-      const tel = firstStr(rec.fields.movilgenerador);
-      if (tel) {
+      // En el modelo nuevo el cert no trae movilgenerador: el teléfono vive
+      // en la FINCA (o su generador). Mismo fallback que usa la aprobación.
+      let tel = firstStr(rec.fields.movilgenerador);
+      if (!tel) {
+        const fincaIds = Array.isArray(rec.fields.FINCAS)
+          ? (rec.fields.FINCAS as string[])
+          : [];
+        if (fincaIds[0]) {
+          const resolved = await resolveGeneradorDataFromFinca(
+            AIRTABLE_API_KEY,
+            AIRTABLE_BASE_ID,
+            fincaIds[0]
+          ).catch(() => null);
+          tel = resolved?.movilgenerador || "";
+        }
+      }
+      if (!tel) {
+        console.warn(`[cert/${id}/rechazar wa] sin teléfono — aviso omitido`);
+        return;
+      }
+      {
         const consecutivo = Number(rec.fields.consecutivo) || undefined;
         const nombreCoord =
           firstStr(rec.fields.nombrecoordinador) || "Coordinador";
