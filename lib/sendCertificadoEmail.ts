@@ -119,7 +119,7 @@ function buildEmailHtml(consecutivo: number): string {
           <p style="text-align:center; margin:20px 0;">
             <a href="https://wa.me/573234688397"
                 style="background-color:#25D366; color:#fff; text-decoration:none; padding:14px 28px; font-size:16px; font-weight:bold; border-radius:6px; display:inline-block; font-family:Arial,sans-serif;">
-                \uD83D\uDCF2 Solicitar otro certificado por WhatsApp
+                <img src="cid:iconWhatsapp" alt="" width="20" height="20" style="width:20px; height:20px; vertical-align:middle; margin-right:8px;"/>Solicitar otro certificado por WhatsApp
             </a>
           </p>
 
