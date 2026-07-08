@@ -1,5 +1,6 @@
 "use client";
 
+import { parseKg } from "@/lib/kilos";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -138,10 +139,10 @@ export default function CertificadosPage() {
   if (!session) return null;
 
   const totalKg =
-    Number(rigidos || 0) +
-    Number(flexibles || 0) +
-    Number(metalicos || 0) +
-    Number(embalaje || 0);
+    parseKg(rigidos) +
+    parseKg(flexibles) +
+    parseKg(metalicos) +
+    parseKg(embalaje);
 
   async function generarCertificado(e: React.FormEvent) {
     e.preventDefault();
@@ -156,10 +157,10 @@ export default function CertificadosPage() {
         body: JSON.stringify({
           fincaId: finca.id,
           municipioDevolucionId: municipioDevolucion.id,
-          rigidos: Number(rigidos || 0),
-          flexibles: Number(flexibles || 0),
-          metalicos: Number(metalicos || 0),
-          embalaje: Number(embalaje || 0),
+          rigidos: parseKg(rigidos),
+          flexibles: parseKg(flexibles),
+          metalicos: parseKg(metalicos),
+          embalaje: parseKg(embalaje),
           triplelavado,
           lugardevolucion,
           fechadevolucion: fechaDevolucion,

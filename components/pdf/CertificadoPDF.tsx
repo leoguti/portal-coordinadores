@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import LOGO_BASE64 from "./logoBase64";
+import { roundKg } from "@/lib/kilos";
 
 // ---------- Types ----------
 export interface CertificadoPDFProps {
@@ -537,7 +538,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>Tapas y envases plásticos Rígidos</Text>
           </View>
           <View style={s.materialKgCell}>
-            <Text style={s.valueText}>{rigidos} kg</Text>
+            <Text style={s.valueText}>{roundKg(rigidos)} kg</Text>
           </View>
         </View>
 
@@ -547,7 +548,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>Flexibles</Text>
           </View>
           <View style={s.materialKgCell}>
-            <Text style={s.valueText}>{flexibles} kg</Text>
+            <Text style={s.valueText}>{roundKg(flexibles)} kg</Text>
           </View>
         </View>
 
@@ -557,7 +558,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>Envases Metálicos</Text>
           </View>
           <View style={s.materialKgCell}>
-            <Text style={s.valueText}>{metalicos} kg</Text>
+            <Text style={s.valueText}>{roundKg(metalicos)} kg</Text>
           </View>
         </View>
 
@@ -567,7 +568,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>Embalaje</Text>
           </View>
           <View style={s.materialKgCell}>
-            <Text style={s.valueText}>{embalaje} kg</Text>
+            <Text style={s.valueText}>{roundKg(embalaje)} kg</Text>
           </View>
         </View>
 
@@ -577,7 +578,7 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>Total Entregado</Text>
           </View>
           <View style={s.materialKgCell}>
-            <Text style={s.valueBold}>{total} kg</Text>
+            <Text style={s.valueBold}>{roundKg(total)} kg</Text>
           </View>
         </View>
 

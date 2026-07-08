@@ -1,5 +1,6 @@
 "use client";
 
+import { parseKg, roundKg } from "@/lib/kilos";
 import { useEffect, useState, use } from "react";
 import dynamic from "next/dynamic";
 import MagicLinkLayout, {
@@ -136,10 +137,10 @@ export default function CertNuevoPage({
   }, [token]);
 
   const totalKg =
-    (Number(rigidos) || 0) +
-    (Number(flexibles) || 0) +
-    (Number(metalicos) || 0) +
-    (Number(embalaje) || 0);
+    parseKg(rigidos) +
+    parseKg(flexibles) +
+    parseKg(metalicos) +
+    parseKg(embalaje);
 
   const { min: fechaMinima, max: fechaMaxima } = rangoFechaDevolucion();
 
@@ -171,10 +172,10 @@ export default function CertNuevoPage({
           fincaId,
           coordinadorId,
           municipioDevolucionId: municipioDevolucion!.id,
-          rigidos: Number(rigidos) || 0,
-          flexibles: Number(flexibles) || 0,
-          metalicos: Number(metalicos) || 0,
-          embalaje: Number(embalaje) || 0,
+          rigidos: parseKg(rigidos),
+          flexibles: parseKg(flexibles),
+          metalicos: parseKg(metalicos),
+          embalaje: parseKg(embalaje),
           triplelavado,
           lugardevolucion: lugar.trim(),
           fechadevolucion: fecha,
@@ -389,7 +390,7 @@ export default function CertNuevoPage({
 
         <FormCard>
           <h2 className="font-medium text-gray-900 mb-1">Kilos por tipo de envase</h2>
-          <p className="text-xs text-gray-500 mb-3">Suma total: <strong>{totalKg} kg</strong></p>
+          <p className="text-xs text-gray-500 mb-3">Suma total: <strong>{roundKg(totalKg)} kg</strong></p>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Rígidos">

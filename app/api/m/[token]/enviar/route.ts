@@ -109,7 +109,8 @@ async function createRecord(table: string, fields: Record<string, unknown>) {
 // ─── Validaciones simples ──────────────────────────────────────────────────
 
 function asNumber(v: unknown, def = 0): number {
-  const n = typeof v === "string" ? Number(v) : Number(v);
+  // Tolerar coma decimal ("10,5"): Number("10,5") = NaN → se volvía 0 silencioso
+  const n = typeof v === "string" ? Number(v.trim().replace(",", ".")) : Number(v);
   return Number.isFinite(n) ? n : def;
 }
 
@@ -147,7 +148,8 @@ interface ResultadoOk {
 }
 
 function fmtNumKg(n: number): string {
-  return `${n} kg`;
+  // Redondear: 10.1+20.2 = 30.299999999999997 (artefacto de punto flotante)
+  return `${Math.round((n + Number.EPSILON) * 100) / 100} kg`;
 }
 
 function buscarNombreFincaEnContexto(

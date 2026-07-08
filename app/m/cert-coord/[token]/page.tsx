@@ -1,5 +1,6 @@
 "use client";
 
+import { parseKg, roundKg } from "@/lib/kilos";
 /**
  * Certificado generado por un COORDINADOR vía magic-link de WhatsApp.
  *
@@ -193,10 +194,10 @@ export default function CertCoordinadorPage({
   }
 
   const totalKg =
-    (Number(rigidos) || 0) +
-    (Number(flexibles) || 0) +
-    (Number(metalicos) || 0) +
-    (Number(embalaje) || 0);
+    parseKg(rigidos) +
+    parseKg(flexibles) +
+    parseKg(metalicos) +
+    parseKg(embalaje);
 
   function validar(): string | null {
     if (!generador) return "Busca y selecciona al agricultor";
@@ -225,10 +226,10 @@ export default function CertCoordinadorPage({
         body: JSON.stringify({
           fincaId,
           municipioDevolucionId: municipioDevolucion!.id,
-          rigidos: Number(rigidos) || 0,
-          flexibles: Number(flexibles) || 0,
-          metalicos: Number(metalicos) || 0,
-          embalaje: Number(embalaje) || 0,
+          rigidos: parseKg(rigidos),
+          flexibles: parseKg(flexibles),
+          metalicos: parseKg(metalicos),
+          embalaje: parseKg(embalaje),
           triplelavado,
           lugardevolucion: lugar.trim(),
           fechadevolucion: fecha,
@@ -439,7 +440,7 @@ export default function CertCoordinadorPage({
             2. Kilos por tipo de envase
           </h2>
           <p className="text-xs text-gray-500 mb-3">
-            Suma total: <strong>{totalKg} kg</strong>
+            Suma total: <strong>{roundKg(totalKg)} kg</strong>
           </p>
           <div className="grid grid-cols-2 gap-3">
             {(

@@ -16,6 +16,7 @@ import { Client as PgClient } from "pg";
 import CertificadoPDF from "@/components/pdf/CertificadoPDF";
 import type { CertificadoPDFProps } from "@/components/pdf/CertificadoPDF";
 import { sendCertificadoEmail } from "@/lib/sendCertificadoEmail";
+import { roundKg } from "@/lib/kilos";
 import {
   resolveGeneradorDataFromFinca,
   type ResolvedGeneradorData,
@@ -349,11 +350,13 @@ export function construirPdfProps(
     municipiogenerador: resolved ? resolved.municipiogenerador : firstStr(f.municipiogenerador),
     tipogenerador: resolved ? resolved.tipogenerador : firstStr(f.tipogenerador),
     nombrefinca: resolved?.fincaNombre || "",
-    rigidos: Number(f.rigidos) || 0,
-    flexibles: Number(f.flexibles) || 0,
-    metalicos: Number(f.metalicos) || 0,
-    embalaje: Number(f.embalaje) || 0,
-    total: Number(f.total) || 0,
+    // roundKg: la fórmula `total` de Airtable llega con artefactos de punto
+    // flotante por la API (437.9+332.2 → 770.0999999999999) — bug 2026-07-08
+    rigidos: roundKg(Number(f.rigidos) || 0),
+    flexibles: roundKg(Number(f.flexibles) || 0),
+    metalicos: roundKg(Number(f.metalicos) || 0),
+    embalaje: roundKg(Number(f.embalaje) || 0),
+    total: roundKg(Number(f.total) || 0),
     triplelavado: String(f.triplelavado || ""),
     lugardevolucion: String(f.lugardevolucion || ""),
     municipiodevolucion: firstStr(f.municipiodevolucion),
