@@ -19,6 +19,7 @@ import { randomBytes } from "crypto";
 export type Intent =
   | "cert-nuevo"
   | "cert-coordinador"
+  | "aprobar-cert"
   | "editar-finca"
   | "editar-generador"
   | "editar-perfil"

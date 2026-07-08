@@ -115,6 +115,9 @@ function urlParaIntent(intent: Intent, token: string): string {
     case "cert-coordinador":
       // No se alcanza: el flujo coordinador se resuelve antes en el POST.
       return `${base}/m/cert-coord/${token}`;
+    case "aprobar-cert":
+      // No se alcanza: este token no nace del bot sino del email al coord.
+      return `${base}/m/aprobar-cert/${token}`;
     case "editar-finca":
       return `${base}/m/finca/${token}`;
     case "editar-generador":
@@ -154,6 +157,9 @@ function recordIdParaToken(
       return null;
     case "cert-coordinador":
       // No se alcanza: el flujo coordinador se resuelve antes en el POST.
+      return null;
+    case "aprobar-cert":
+      // No se alcanza: este token no nace del bot sino del email al coord.
       return null;
   }
 }
@@ -364,6 +370,9 @@ async function mensajeOkParaIntent(
     case "cert-coordinador":
       // No se alcanza: el flujo coordinador se resuelve antes en el POST.
       return "Vamos a generar un certificado.";
+    case "aprobar-cert":
+      // No se alcanza: este token no nace del bot sino del email al coord.
+      return "Vamos a revisar la solicitud.";
   }
 }
 

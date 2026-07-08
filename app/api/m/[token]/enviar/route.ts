@@ -18,9 +18,11 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import {
   consumirToken,
+  crearToken,
   type EdicionToken,
   type Intent,
 } from "@/lib/edicionTokens";
+import { sendEmailAprobacionCert } from "@/lib/emailAprobacionCert";
 import {
   crearRegistroCertificado,
   crearCertificadoCompleto,
@@ -53,6 +55,10 @@ function intentToNotifTipo(
       // No se usa: el aviso de cert-coordinador es notificarCertAprobado
       // (con PDF), manejado aparte en el after() del POST.
       return "cert";
+    case "aprobar-cert":
+      // No se usa: los tokens aprobar-cert no pasan por /enviar (tienen sus
+      // propios endpoints aprobar-cert / rechazar-cert).
+      return "cert";
   }
 }
 
@@ -63,6 +69,9 @@ export const maxDuration = 60;
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;
 const WHATSAPP_FALLBACK_COORDINADOR_ID = process.env.WHATSAPP_FALLBACK_COORDINADOR_ID;
+const PORTAL_BASE = (process.env.NEXTAUTH_URL || "https://portal.campolimpio.org").replace(/\/$/, "");
+/** Vigencia del enlace de aprobación por email: 7 días. */
+const APROBAR_CERT_TTL_MIN = 7 * 24 * 60;
 
 // ─── Helpers Airtable ─────────────────────────────────────────────────────
 
@@ -164,17 +173,18 @@ function buscarNombreFincaEnContexto(
 
 async function coordinadorInfo(
   coordinadorId: string
-): Promise<{ nombre: string; telefono: string }> {
+): Promise<{ nombre: string; telefono: string; email: string }> {
   try {
     const r = await airtableFetch(`/Coordinadores/${coordinadorId}`);
-    if (!r.ok) return { nombre: "", telefono: "" };
+    if (!r.ok) return { nombre: "", telefono: "", email: "" };
     const d = (await r.json()) as { fields: Record<string, unknown> };
     return {
       nombre: String(d.fields?.Name || "").trim(),
       telefono: String(d.fields?.telefono || "").trim(),
+      email: String(d.fields?.email || "").trim(),
     };
   } catch {
-    return { nombre: "", telefono: "" };
+    return { nombre: "", telefono: "", email: "" };
   }
 }
 
@@ -275,11 +285,73 @@ async function manejarCertNuevo(
     `• Devolución: ${lugar}`,
     `• Fecha devolución: ${fechaLbl}`,
   ];
+
+  // Avisar al coordinador por EMAIL con un enlace mágico para decidir
+  // (aprobar/rechazar). En background: si el email falla, la solicitud del
+  // agricultor ya quedó creada y NO se bloquea su respuesta.
+  const consecutivoCert = Number(result.fullRecord.fields.consecutivo) || 0;
+  const telefonoAgricultor = t.telefonoValidado;
+  after(async () => {
+    try {
+      const p = result.pdfProps;
+      const tokenAprobacion = await crearToken({
+        intent: "aprobar-cert",
+        recordId: result.recordId,
+        // Teléfono del agricultor que originó la solicitud (trazabilidad);
+        // la auth de este token es el email del coordinador, no un teléfono.
+        telefonoValidado: telefonoAgricultor,
+        contexto: {
+          coordinadorId,
+          consecutivo: consecutivoCert,
+          nombreAgricultor: p.nombregenerador,
+          movilAgricultor: p.movilgenerador,
+          finca: p.nombrefinca,
+        },
+        ttlMinutes: APROBAR_CERT_TTL_MIN,
+      });
+
+      const movilAgr10 = p.movilgenerador
+        ? normalizarMovilCO(p.movilgenerador)
+        : "";
+      const waTexto = `Hola, soy tu coordinador de CampoLimpio. Estoy revisando tu solicitud de certificado #${consecutivoCert} y quiero confirmar unos datos contigo.`;
+      const waAgricultorUrl = movilAgr10
+        ? `https://wa.me/57${movilAgr10}?text=${encodeURIComponent(waTexto)}`
+        : null;
+
+      const emailRes = await sendEmailAprobacionCert({
+        coordinadorEmail: coord.email,
+        coordinadorNombre: coord.nombre,
+        consecutivo: consecutivoCert,
+        nombreAgricultor: p.nombregenerador,
+        cedulaAgricultor: p.cedulagenerador,
+        finca: p.nombrefinca || "",
+        municipioDevolucion: p.municipiodevolucion,
+        lugarDevolucion: p.lugardevolucion,
+        fechaRecoleccion: p.fechadevolucion,
+        rigidos: p.rigidos,
+        flexibles: p.flexibles,
+        metalicos: p.metalicos,
+        embalaje: p.embalaje,
+        total: p.total,
+        triplelavado: p.triplelavado,
+        observaciones: p.observaciones,
+        urlDecision: `${PORTAL_BASE}/m/aprobar-cert/${tokenAprobacion.token}`,
+        waAgricultorUrl,
+        urlBandeja: `${PORTAL_BASE}/certificados/pendientes`,
+      });
+      console.log(
+        `[m/enviar email-coord] ${emailRes.success ? "OK" : "FAIL"}: ${emailRes.message}`
+      );
+    } catch (err) {
+      console.error("[m/enviar email-coord] Error:", err);
+    }
+  });
+
   return {
     ok: true,
     intent: "cert-nuevo",
     recordId: result.recordId,
-    consecutivo: Number(result.fullRecord.fields.consecutivo) || undefined,
+    consecutivo: consecutivoCert || undefined,
     mensaje:
       "Solicitud enviada. Tu coordinador la revisará y la aprobará, y luego recibirás el PDF.",
     resumen: lineas.join("\n"),

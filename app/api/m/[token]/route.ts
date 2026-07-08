@@ -619,5 +619,11 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
       if (!coordinador.id) throw new Error("Token sin coordinador");
       return { ...base, intent: "cert-coordinador", coordinador };
     }
+
+    case "aprobar-cert":
+      // La página /m/aprobar-cert usa su propio GET token-scoped
+      // (/api/m/[token]/aprobar-cert) porque necesita verificar el estado
+      // vivo del certificado. No se sirve desde aquí.
+      throw new Error("Intent aprobar-cert se sirve desde /api/m/[token]/aprobar-cert");
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 type Tab = "cert" | "generadores" | "fincas";
 
@@ -27,6 +28,7 @@ interface CertItem {
   generadorTipoPersona: string;
   fincaNombre: string;
   municipioDevolucion: string;
+  movilAgricultor: string;
   createdTime: string;
 }
 interface GenItem {
@@ -74,6 +76,21 @@ function fmtFecha(iso: string): string {
 
 function fmtNum(n: number): string {
   return new Intl.NumberFormat("es-CO").format(n);
+}
+
+/** Instrumentación: desde qué dispositivo decide el coordinador. */
+function dispositivoActual(): "movil" | "desktop" {
+  return typeof window !== "undefined" && window.innerWidth < 768
+    ? "movil"
+    : "desktop";
+}
+
+/** wa.me al agricultor con texto prellenado para aclarar dudas. */
+function waAgricultorUrl(c: CertItem): string | null {
+  const movil10 = normalizarMovilCO(c.movilAgricultor || "");
+  if (!/^3\d{9}$/.test(movil10)) return null;
+  const texto = `Hola, soy tu coordinador de CampoLimpio. Estoy revisando tu solicitud de certificado #${c.consecutivo} y quiero confirmar unos datos contigo.`;
+  return `https://wa.me/57${movil10}?text=${encodeURIComponent(texto)}`;
 }
 
 export default function PendientesPage() {
@@ -136,10 +153,15 @@ export default function PendientesPage() {
     try {
       const tabla =
         tab === "cert" ? "certificados" : tab === "generadores" ? "generadores" : "fincas";
+      // Instrumentación (solo certs): via=bandeja lo pone el endpoint; el
+      // dispositivo se mide aquí con el ancho de pantalla.
+      const body: Record<string, unknown> = {};
+      if (accion === "rechazar") body.motivo = motivoTxt;
+      if (tab === "cert") body.dispositivo = dispositivoActual();
       const r = await fetch(`/api/${tabla}/${id}/${accion}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: accion === "rechazar" ? JSON.stringify({ motivo: motivoTxt }) : "{}",
+        body: JSON.stringify(body),
       });
       const data = await r.json();
       if (!r.ok) {
@@ -240,7 +262,11 @@ export default function PendientesPage() {
                   key={c.id}
                   c={c}
                   isAdmin={isAdmin}
-                  onAprobar={() => doAction(c.id, "aprobar")}
+                  onAprobar={() => {
+                    // Confirmación de responsabilidad antes de aprobar.
+                    setActionFor(c.id);
+                    setActionMode("aprobar");
+                  }}
                   onRechazar={() => {
                     setActionFor(c.id);
                     setActionMode("rechazar");
@@ -274,6 +300,40 @@ export default function PendientesPage() {
                   submitting={submittingId === f.id}
                 />
               ))}
+          </div>
+        )}
+
+        {actionFor && actionMode === "aprobar" && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirmar aprobación
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Al aprobar, este certificado se emite{" "}
+                <strong>bajo tu responsabilidad como coordinador</strong>.
+                ¿Verificaste los datos con el agricultor?
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setActionFor(null);
+                    setActionMode(null);
+                  }}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                  disabled={submittingId === actionFor}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => doAction(actionFor, "aprobar")}
+                  disabled={submittingId === actionFor}
+                  className="px-4 py-2 text-sm bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white rounded-lg font-medium"
+                >
+                  {submittingId === actionFor ? "Aprobando…" : "Sí, aprobar"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -340,6 +400,7 @@ function CertCard({
   submitting: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const waUrl = waAgricultorUrl(c);
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -394,6 +455,22 @@ function CertCard({
             <p className="mt-2"><span className="text-gray-500">Obs:</span> {c.observaciones}</p>
           )}
         </div>
+      )}
+
+      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1.5 mb-2">
+        ⚠️ La aprobación es tu responsabilidad: el certificado se emite con tu
+        nombre. Si tienes dudas, habla con el agricultor antes de decidir.
+      </p>
+
+      {waUrl && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-center border border-[#25d366] text-[#128c7e] hover:bg-green-50 text-sm font-medium py-2 rounded-lg mb-2"
+        >
+          💬 Hablar con el agricultor
+        </a>
       )}
 
       <div className="flex gap-2">

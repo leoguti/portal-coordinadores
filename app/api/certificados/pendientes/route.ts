@@ -178,12 +178,17 @@ export async function GET(request: Request) {
         generadorTipoPersona?: string;
         fincaNombre?: string;
         fincaId?: string;
+        movilAgricultor?: string;
       }>
     ): Promise<void> {
       const fincaIds = Array.from(
         new Set(
           certs
-            .filter((c) => c.fincaId && (!c.nombregenerador || !c.fincaNombre))
+            .filter(
+              (c) =>
+                c.fincaId &&
+                (!c.nombregenerador || !c.fincaNombre || !c.movilAgricultor)
+            )
             .map((c) => c.fincaId!)
         )
       );
@@ -191,14 +196,14 @@ export async function GET(request: Request) {
       const CHUNK = 30;
       const fincaById = new Map<
         string,
-        { nombre: string; generadorId: string | null }
+        { nombre: string; movil: string; generadorId: string | null }
       >();
       for (let i = 0; i < fincaIds.length; i += CHUNK) {
         const chunk = fincaIds.slice(i, i + CHUNK);
         const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
         const p = new URLSearchParams();
         p.set("filterByFormula", formula);
-        for (const f of ["nombre", "generador"]) p.append("fields[]", f);
+        for (const f of ["nombre", "generador", "movil"]) p.append("fields[]", f);
         p.set("pageSize", "100");
         const r = await fetch(
           `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/FINCAS?${p}`,
@@ -209,6 +214,7 @@ export async function GET(request: Request) {
         for (const rec of d.records || []) {
           fincaById.set(rec.id, {
             nombre: String(rec.fields.nombre || ""),
+            movil: String(rec.fields.movil || ""),
             generadorId: Array.isArray(rec.fields.generador)
               ? String(rec.fields.generador[0] || "")
               : null,
@@ -225,14 +231,14 @@ export async function GET(request: Request) {
       );
       const genById = new Map<
         string,
-        { nombre: string; nit: string; tipopersona: string }
+        { nombre: string; nit: string; tipopersona: string; movil: string }
       >();
       for (let i = 0; i < genIds.length; i += CHUNK) {
         const chunk = genIds.slice(i, i + CHUNK);
         const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
         const p = new URLSearchParams();
         p.set("filterByFormula", formula);
-        for (const f of ["nombre", "nit", "tipopersona"]) p.append("fields[]", f);
+        for (const f of ["nombre", "nit", "tipopersona", "movil"]) p.append("fields[]", f);
         p.set("pageSize", "100");
         const r = await fetch(
           `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/GENERADORES?${p}`,
@@ -245,6 +251,7 @@ export async function GET(request: Request) {
             nombre: String(rec.fields.nombre || ""),
             nit: String(rec.fields.nit || ""),
             tipopersona: String(rec.fields.tipopersona || ""),
+            movil: String(rec.fields.movil || ""),
           });
         }
       }
@@ -253,12 +260,16 @@ export async function GET(request: Request) {
         const fincaInfo = fincaById.get(c.fincaId);
         if (!fincaInfo) continue;
         if (!c.fincaNombre) c.fincaNombre = fincaInfo.nombre;
+        // Móvil del agricultor: finca primero, generador como fallback
+        // (mismo orden que fincaGeneradorResolver).
+        if (!c.movilAgricultor) c.movilAgricultor = fincaInfo.movil;
         if (fincaInfo.generadorId) {
           const gen = genById.get(fincaInfo.generadorId);
           if (gen) {
             if (!c.nombregenerador) c.nombregenerador = gen.nombre;
             if (!c.generadorCedula) c.generadorCedula = gen.nit;
             if (!c.generadorTipoPersona) c.generadorTipoPersona = gen.tipopersona;
+            if (!c.movilAgricultor) c.movilAgricultor = gen.movil;
           }
         }
       }
@@ -290,6 +301,7 @@ export async function GET(request: Request) {
         "nombrecoordinador",
         "nombregenerador",
         "cedulagenerador",
+        "movilgenerador",
         "FINCAS",
         "municipiodevolucion",
         "cultivos_certificado",
@@ -317,6 +329,7 @@ export async function GET(request: Request) {
           generadorCedula: asStr(f.cedulagenerador),
           generadorTipoPersona: "",
           generadorNombre: asStr(f.nombregenerador),
+          movilAgricultor: asStr(f.movilgenerador),
           fincaId: fincaIds[0] || "",
           fincaNombre: "",
           municipioDevolucion: asStr(f.municipiodevolucion),
