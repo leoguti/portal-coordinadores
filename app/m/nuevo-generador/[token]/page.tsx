@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { validarDocumento } from "@/lib/validacionesCO";
 import dynamic from "next/dynamic";
 import MagicLinkLayout, {
   FormCard,
@@ -78,8 +79,10 @@ export default function NuevoGeneradorPage({
 
   function validar(): string | null {
     if (!nit.trim()) return "Falta cédula / NIT";
-    if (!/^\d{6,11}$/.test(nit.trim()))
-      return "El número debe tener entre 6 y 11 dígitos";
+    {
+      const errDoc = validarDocumento(tipopersona, nit);
+      if (errDoc) return errDoc;
+    }
     if (!nombre.trim()) return "Falta nombre / razón social";
     // Persona Natural: exigir nombre Y apellido (mín. 2 palabras) — el cliente
     // no quiere registros con solo el nombre de pila (hallazgo prueba 2026-07-08)
@@ -197,6 +200,11 @@ export default function NuevoGeneradorPage({
               onChange={(e) => setNit(e.target.value.replace(/\D/g, ""))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
             />
+            {nit.length > 0 && validarDocumento(tipopersona, nit) && (
+              <p className="text-xs font-medium text-amber-700 mt-1">
+                ⚠️ {validarDocumento(tipopersona, nit)}
+              </p>
+            )}
           </Field>
 
           <Field label={tipopersona === "Natural" ? "Nombre y apellidos" : "Razón social"} required>

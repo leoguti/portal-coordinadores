@@ -31,7 +31,7 @@ import {
   notificarSolicitudRecibida,
   notificarCertAprobado,
 } from "@/lib/textitNotify";
-import { normalizarMovilCO } from "@/lib/validacionesCO";
+import { normalizarMovilCO, validarDocumento } from "@/lib/validacionesCO";
 
 function intentToNotifTipo(
   intent: Intent
@@ -735,6 +735,11 @@ async function manejarRegistroGenerador(
     throw new Error("Escribe tu nombre y apellido completos");
   }
   if (!nit) throw new Error("Falta cédula / NIT");
+  {
+    // Regla compartida (lib/validacionesCO): cédula 6-10 dígitos, NIT 9-11
+    const errDoc = validarDocumento(tipopersona, nit);
+    if (errDoc) throw new Error(errDoc);
+  }
   if (!tipopersona) throw new Error("Falta tipo de persona");
   if (!tipo) throw new Error("Falta tipo (AGRICOLA / PECUARIO / ...)");
 
