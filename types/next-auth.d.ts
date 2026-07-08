@@ -32,5 +32,7 @@ declare module "next-auth/jwt" {
     name?: string | null;
     coordinatorRecordId?: string; // Airtable record ID
     rol?: "Coordinador" | "Administrador" | "Supervisor" | "Desactivado" | "Junta";
+    /** Última re-validación del rol contra Airtable (ms epoch). */
+    rolCheckedAt?: number;
   }
 }

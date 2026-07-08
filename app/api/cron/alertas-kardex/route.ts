@@ -6,11 +6,11 @@ export const maxDuration = 60;
 
 // Vercel cron security: verify the request comes from Vercel
 function isAuthorized(request: Request): boolean {
+  // Fail-closed (auditoría 2026-07-08): sin CRON_SECRET configurado se
+  // rechaza todo — nunca dejar la puerta abierta por una env var faltante.
+  if (!process.env.CRON_SECRET) return false;
   const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return true;
-  // Also allow if no CRON_SECRET is set (dev mode)
-  if (!process.env.CRON_SECRET) return true;
-  return false;
+  return authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
 interface KardexHuerfano {

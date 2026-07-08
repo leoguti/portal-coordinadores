@@ -12,6 +12,23 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Missing url parameter', { status: 400 });
   }
 
+  // Allowlist (auditoría 2026-07-08): solo dominios de Airtable y nuestro R2
+  // público. Sin esto el endpoint era un proxy abierto a cualquier URL (SSRF /
+  // abuso de ancho de banda).
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return new NextResponse('Invalid url', { status: 400 });
+  }
+  const permitido =
+    host.endsWith('.airtableusercontent.com') ||
+    host.endsWith('.airtable.com') ||
+    host === 'pub-7ae3d6e965b84710a236072921fe7e61.r2.dev';
+  if (!permitido) {
+    return new NextResponse('Domain not allowed', { status: 403 });
+  }
+
   try {
     const response = await fetch(url);
     

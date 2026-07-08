@@ -25,6 +25,16 @@ export const maxDuration = 60;
  * }
  */
 export async function POST(req: NextRequest) {
+  // Auth fail-closed (auditoría 2026-07-08): TextIt debe enviar la llave en el
+  // header Authorization o como ?key= en la URL del webhook. Si la env var no
+  // está configurada, se rechaza todo.
+  const expected = process.env.EVALUACIONES_WEBHOOK_KEY;
+  const bearer = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const queryKey = req.nextUrl.searchParams.get("key") || "";
+  if (!expected || (bearer !== expected && queryKey !== expected)) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   let body: {
     actividadId?: string;
     telefono?: string;

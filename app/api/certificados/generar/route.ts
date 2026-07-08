@@ -51,11 +51,13 @@ function sanitizeJsonControlChars(raw: string): string {
 }
 
 function validateApiKey(request: NextRequest): boolean {
+  // Fail-closed (auditoría 2026-07-08): sin la clave configurada se rechaza
+  // todo — antes permitía requests sin auth con solo un warning.
   if (!CERT_API_KEY) {
-    console.warn(
-      "[certificados/generar] CERTIFICADOS_API_KEY not set — allowing request without auth"
+    console.error(
+      "[certificados/generar] CERTIFICADOS_API_KEY not set — rejecting all requests"
     );
-    return true;
+    return false;
   }
   const authHeader = request.headers.get("authorization");
   if (!authHeader) return false;

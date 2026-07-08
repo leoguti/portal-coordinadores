@@ -164,6 +164,11 @@ export const authOptions: NextAuthOptions = {
   // Use JWT strategy (no database required)
   session: {
     strategy: "jwt",
+    // Auditoría 2026-07-08: el default (30 días rodantes) dejaba sesiones
+    // eternas en dispositivos compartidos/abandonados. 7 días absolutos,
+    // renovación diaria mientras haya uso.
+    maxAge: 7 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
   
   // Custom pages
@@ -203,7 +208,36 @@ export const authOptions: NextAuthOptions = {
           token.coordinatorRecordId = coordinator.id;
           token.name = coordinator.name;
           token.rol = coordinator.rol;
+          token.rolCheckedAt = Date.now();
           console.log(`JWT: Stored coordinator record ID ${coordinator.id} (${coordinator.rol}) for ${user.email}`);
+        }
+        return token;
+      }
+
+      // Re-validación periódica contra Airtable (revocación efectiva):
+      // desactivar/eliminar al usuario en Coordinadores corta su sesión en
+      // ≤24 h. getCoordinatorByEmail excluye Rol="Desactivado" en la consulta.
+      const REVALIDAR_MS = 24 * 60 * 60 * 1000;
+      const checkedAt = (token.rolCheckedAt as number | undefined) || 0;
+      if (token.email && Date.now() - checkedAt > REVALIDAR_MS) {
+        try {
+          const coordinator = await getCoordinatorByEmail(token.email);
+          if (coordinator) {
+            token.coordinatorRecordId = coordinator.id;
+            token.name = coordinator.name;
+            token.rol = coordinator.rol;
+          } else {
+            // Usuario desactivado o eliminado → sesión inutilizable (todas las
+            // APIs exigen coordinatorRecordId)
+            console.log(`JWT: usuario ${token.email} ya no autorizado — sesión invalidada`);
+            delete token.coordinatorRecordId;
+            delete token.rol;
+          }
+          token.rolCheckedAt = Date.now();
+        } catch (err) {
+          // Error transitorio de Airtable: no invalidar; reintentar en el
+          // próximo request (no actualizamos rolCheckedAt)
+          console.error("JWT: error re-validando rol (se reintenta):", err);
         }
       }
       return token;
