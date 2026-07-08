@@ -730,6 +730,10 @@ async function manejarRegistroGenerador(
   const movil = asString(body.movil) || t.telefonoValidado;
 
   if (!nombre) throw new Error("Falta nombre / razón social");
+  // Persona Natural: exigir nombre Y apellido (mín. 2 palabras)
+  if (tipopersona === "Natural" && nombre.split(/\s+/).length < 2) {
+    throw new Error("Escribe tu nombre y apellido completos");
+  }
   if (!nit) throw new Error("Falta cédula / NIT");
   if (!tipopersona) throw new Error("Falta tipo de persona");
   if (!tipo) throw new Error("Falta tipo (AGRICOLA / PECUARIO / ...)");

@@ -81,6 +81,11 @@ export default function NuevoGeneradorPage({
     if (!/^\d{6,11}$/.test(nit.trim()))
       return "El número debe tener entre 6 y 11 dígitos";
     if (!nombre.trim()) return "Falta nombre / razón social";
+    // Persona Natural: exigir nombre Y apellido (mín. 2 palabras) — el cliente
+    // no quiere registros con solo el nombre de pila (hallazgo prueba 2026-07-08)
+    if (tipopersona === "Natural" && nombre.trim().split(/\s+/).length < 2) {
+      return "Escribe tu nombre y apellido completos (ej: Ángela Mercado)";
+    }
     if (!tipo) return "Selecciona el tipo";
     if (!municipio) return "Selecciona el municipio sede";
     if (!coordinadorSolicitadoId) return "Selecciona tu coordinador";
@@ -194,7 +199,7 @@ export default function NuevoGeneradorPage({
             />
           </Field>
 
-          <Field label={tipopersona === "Natural" ? "Nombre completo" : "Razón social"} required>
+          <Field label={tipopersona === "Natural" ? "Nombre y apellidos" : "Razón social"} required>
             <input
               type="text"
               value={nombre}
