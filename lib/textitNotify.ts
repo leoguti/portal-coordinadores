@@ -263,7 +263,7 @@ export async function notificarCertAprobado(
     `📄 *Certificado #${p.consecutivo}*\n` +
     `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
     (attachment
-      ? `Aquí tienes tu certificado en PDF. 👇`
+      ? `Aquí tienes tu certificado en PDF. 👆`
       : p.pdfUrl
         ? `Descárgalo aquí: ${p.pdfUrl}`
         : `El PDF te llegará también por email.`);
