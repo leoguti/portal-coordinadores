@@ -510,7 +510,7 @@ export default function CertCoordinadorPage({
           <Field
             label="Fecha de recolección"
             required
-            hint="No puede ser futura ni mayor a 5 meses"
+            hint="Debe ser hoy o una fecha pasada, con máximo 5 meses de antigüedad"
           >
             <input
               type="date"

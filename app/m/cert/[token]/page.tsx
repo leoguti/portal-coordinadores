@@ -353,7 +353,7 @@ export default function CertNuevoPage({
             )}
           </Field>
 
-          <Field label="Fecha de devolución" required hint="No puede ser futura ni mayor a 5 meses">
+          <Field label="Fecha de devolución" required hint="Debe ser hoy o una fecha pasada, con máximo 5 meses de antigüedad">
             <input
               type="date"
               value={fecha}
