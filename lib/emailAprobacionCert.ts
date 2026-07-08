@@ -165,7 +165,7 @@ function buildHtml(p: EmailAprobacionCertParams): string {
 
 function buildText(p: EmailAprobacionCertParams): string {
   const lineas = [
-    `Nueva solicitud de certificado #${p.consecutivo}`,
+    `Aprobar certificado #${p.consecutivo} — solicitud de agricultor por WhatsApp`,
     ``,
     `Hola ${p.coordinadorNombre || "coordinador"},`,
     ``,
@@ -232,7 +232,7 @@ export async function sendEmailAprobacionCert(
     await transport.sendMail({
       from: `"CampoLimpio Certificados" <${process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || "certificados@campolimpio.org"}>`,
       to: email,
-      subject: `Nueva solicitud de certificado #${params.consecutivo} — ${params.nombreAgricultor}`,
+      subject: `Aprobar certificado #${params.consecutivo} — ${params.nombreAgricultor} · agricultor WhatsApp`,
       text: buildText(params),
       html: buildHtml(params),
     });
