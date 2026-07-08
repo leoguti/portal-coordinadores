@@ -247,14 +247,18 @@ export default function NuevoGeneradorPage({
             />
           </Field>
 
-          <Field label="Móvil" required>
+          <Field label="Móvil (tu WhatsApp verificado)" required>
             <input
               type="tel"
               inputMode="numeric"
               value={movil}
-              onChange={(e) => setMovil(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
+              readOnly
+              disabled
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base bg-gray-100 text-gray-600"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Es el número desde el que escribiste — tu identidad en CampoLimpio. No se puede cambiar.
+            </p>
           </Field>
 
           <Field label="Email">

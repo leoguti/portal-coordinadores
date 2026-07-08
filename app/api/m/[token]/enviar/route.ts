@@ -727,7 +727,10 @@ async function manejarRegistroGenerador(
   const municipioId = asString(body.municipioId);
   const email = asString(body.email);
   const coordinadorSolicitadoId = asString(body.coordinadorSolicitadoId);
-  const movil = asString(body.movil) || t.telefonoValidado;
+  // Identidad: SIEMPRE el número verificado del token (el que chateó por
+  // WhatsApp) — se ignora lo que venga del cliente (hallazgo prueba 2026-07-08:
+  // el campo era editable y rompía la conexión usuario↔WhatsApp).
+  const movil = normalizarMovilCO(t.telefonoValidado) || t.telefonoValidado;
 
   if (!nombre) throw new Error("Falta nombre / razón social");
   // Persona Natural: exigir nombre Y apellido (mín. 2 palabras)
