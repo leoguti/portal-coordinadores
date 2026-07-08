@@ -86,7 +86,7 @@ function buildEmailHtml(consecutivo: number): string {
               <p style="margin:0;">Certificado de Devoluci\u00F3n</p>
             </td>
             <td align="right" valign="middle" style="padding-right:15px;">
-              <img src="cid:logoHeader" alt="Logo CampoLimpio" style="height:160px; display:block;"/>
+              <img src="cid:logoHeader" alt="Logo CampoLimpio" width="160" height="160" style="height:160px; width:160px; display:block;"/>
             </td>
           </tr>
         </table>
@@ -112,14 +112,14 @@ function buildEmailHtml(consecutivo: number): string {
           </p>
 
           <p>
-            \u00BFQuieres acceder f\u00E1cilmente a todos tus certificados desde tu celular?<br/>
-            Ahora puedes consultarlos y descargarlos directamente a trav\u00E9s de nuestro canal de WhatsApp:
+            \u00BFNecesitas otro certificado?<br/>
+            Puedes solicitarlo directamente desde tu celular a trav\u00E9s de nuestro canal de WhatsApp:
           </p>
 
           <p style="text-align:center; margin:20px 0;">
-            <a href="http://bot.campolimpio.org/"
+            <a href="https://wa.me/573234688397"
                 style="background-color:#25D366; color:#fff; text-decoration:none; padding:14px 28px; font-size:16px; font-weight:bold; border-radius:6px; display:inline-block; font-family:Arial,sans-serif;">
-                \uD83D\uDCF2 Acceder v\u00EDa WhatsApp
+                \uD83D\uDCF2 Solicitar otro certificado por WhatsApp
             </a>
           </p>
 
@@ -130,9 +130,9 @@ function buildEmailHtml(consecutivo: number): string {
             <p style="font-weight:bold;">Conoce m\u00E1s sobre nuestro compromiso ambiental:</p>
             <table align="center" cellpadding="10">
               <tr>
-                <td align="center"><a href="https://campolimpio.org/"><img src="cid:logoCL" alt="Logo CampoLimpio" style="max-height:80px;"/></a></td>
-                <td align="center"><a href="https://campolimpio.org/"><img src="cid:logoAmo" alt="Logo Amo" style="max-height:80px;"/></a></td>
-                <td align="center"><a href="https://campolimpio.org/"><img src="cid:pascualSol" alt="Pascual y Sol" style="max-height:100px;"/></a></td>
+                <td align="center"><a href="https://campolimpio.org/"><img src="cid:logoCL" alt="Logo CampoLimpio" width="196" height="80" style="width:196px; height:80px;"/></a></td>
+                <td align="center"><a href="https://campolimpio.org/"><img src="cid:logoAmo" alt="Logo Amo" width="82" height="80" style="width:82px; height:80px;"/></a></td>
+                <td align="center"><a href="https://campolimpio.org/"><img src="cid:pascualSol" alt="Pascual y Sol" width="80" height="100" style="width:80px; height:100px;"/></a></td>
               </tr>
             </table>
           </div>
@@ -142,11 +142,11 @@ function buildEmailHtml(consecutivo: number): string {
         <div style="background:#eee; text-align:center; padding:10px;">
           <p>S\u00EDganos en nuestras redes sociales:</p>
           <div class="social-icons">
-            <a href="https://www.instagram.com/CampoLimpioColombia"><img src="cid:iconInstagram" alt="Instagram"/></a>
-            <a href="https://www.facebook.com/CampoLimpioOficial"><img src="cid:iconFacebook" alt="Facebook"/></a>
-            <a href="https://www.youtube.com/@campolimpiocolombia71"><img src="cid:iconYouTube" alt="YouTube"/></a>
-            <a href="http://bot.campolimpio.org/"><img src="cid:iconWhatsapp" alt="WhatsApp"/></a>
-            <a href="https://campolimpio.org/"><img src="cid:iconWeb" alt="Sitio Web"/></a>
+            <a href="https://www.instagram.com/CampoLimpioColombia"><img src="cid:iconInstagram" alt="Instagram" width="30" height="30" style="width:30px; height:30px;"/></a>
+            <a href="https://www.facebook.com/CampoLimpioOficial"><img src="cid:iconFacebook" alt="Facebook" width="30" height="30" style="width:30px; height:30px;"/></a>
+            <a href="https://www.youtube.com/@campolimpiocolombia71"><img src="cid:iconYouTube" alt="YouTube" width="30" height="30" style="width:30px; height:30px;"/></a>
+            <a href="https://wa.me/573234688397"><img src="cid:iconWhatsapp" alt="WhatsApp" width="30" height="30" style="width:30px; height:30px;"/></a>
+            <a href="https://campolimpio.org/"><img src="cid:iconWeb" alt="Sitio Web" width="30" height="30" style="width:30px; height:30px;"/></a>
           </div>
         </div>
 
@@ -268,7 +268,7 @@ export async function sendCertificadoEmail(
 
     // 5. Build and send email
     const htmlBody = buildEmailHtml(consecutivo);
-    const textBody = `Certificado de Devolución No. ${consecutivo}\n\nEstimado generador,\n\nGracias por ser parte del cambio hacia una agricultura más sustentable.\n\nEl certificado de devolución se encuentra adjunto a este correo en formato PDF.\nPor favor guárdalo en tus archivos para cualquier visita o requerimiento de la autoridad ambiental.\n\nAccede vía WhatsApp: http://bot.campolimpio.org/\n\n¡Gracias por sumarte!\nCampoLimpio® Colombia`;
+    const textBody = `Certificado de Devolución No. ${consecutivo}\n\nEstimado generador,\n\nGracias por ser parte del cambio hacia una agricultura más sustentable.\n\nEl certificado de devolución se encuentra adjunto a este correo en formato PDF.\nPor favor guárdalo en tus archivos para cualquier visita o requerimiento de la autoridad ambiental.\n\n¿Necesitas otro certificado? Solicítalo por WhatsApp: https://wa.me/573234688397\n\n¡Gracias por sumarte!\nCampoLimpio® Colombia`;
 
     await transport.sendMail({
       from: `"CampoLimpio Certificados" <${process.env.EMAIL_SERVER_USER || "certificados@campolimpio.org"}>`,
