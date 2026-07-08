@@ -30,10 +30,37 @@ export async function POST(
     return NextResponse.json({ error: `Estado actual: ${estado}` }, { status: 409 });
   }
 
+  // Las fincas del auto-registro no traen coordinador_id: su coordinador es el
+  // coordinador_solicitado del GENERADOR padre. Resolvemos el padre una sola
+  // vez (también sirve para la regla de orden de abajo).
+  const genIds = Array.isArray(f.generador) ? (f.generador as string[]) : [];
+  const padres = await Promise.all(
+    genIds.map((gid) => airtableGetRecord("GENERADORES", gid))
+  );
+
   if (!isAdmin) {
     const cs = Array.isArray(f.coordinador_id) ? (f.coordinador_id as string[]) : [];
-    if (!cs.includes(coordId)) {
+    const coordsPadre = padres.flatMap((g) =>
+      Array.isArray(g?.fields?.coordinador_solicitado)
+        ? (g!.fields.coordinador_solicitado as string[])
+        : []
+    );
+    if (!cs.includes(coordId) && !coordsPadre.includes(coordId)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+  }
+
+  // Regla de orden (2026-07-08): una finca nueva no se aprueba hasta que su
+  // generador esté aprobado — sin generador válido la finca no tiene dueño.
+  if (estado === "pendiente" && genIds.length > 0) {
+    const padreAprobado = padres.some(
+      (g) => String(g?.fields?.estado || "") === "aprobado"
+    );
+    if (!padreAprobado) {
+      return NextResponse.json(
+        { error: "Primero aprueba el registro del generador de esta finca" },
+        { status: 409 }
+      );
     }
   }
 

@@ -49,6 +49,9 @@ interface GenItem {
 interface FincaItem {
   id: string;
   nombre: string;
+  // El generador padre aún no está aprobado → mostrar bloqueada
+  generadorPendiente?: boolean;
+  generadorNombre?: string;
   movil: string;
   email: string;
   estado: string;
@@ -626,22 +629,36 @@ function FincaCard({
         <p><span className="text-gray-500">Email:</span> {f.email || "—"}</p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={onAprobar}
-          disabled={submitting}
-          className="flex-1 bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white text-sm font-medium py-2 rounded-lg"
-        >
-          {submitting ? "Aprobando…" : "✓ Aprobar"}
-        </button>
-        <button
-          onClick={onRechazar}
-          disabled={submitting}
-          className="flex-1 border border-red-300 hover:bg-red-50 disabled:opacity-50 text-red-700 text-sm font-medium py-2 rounded-lg"
-        >
-          ✗ Rechazar
-        </button>
-      </div>
+      {f.generadorPendiente ? (
+        <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-800">
+          ⛔ <strong>Primero aprueba el generador</strong>
+          {f.generadorNombre ? (
+            <>
+              {" "}(<strong>{f.generadorNombre}</strong>, en la pestaña Generadores)
+            </>
+          ) : (
+            " (pestaña Generadores)"
+          )}
+          . Esta finca se habilita cuando su generador esté aprobado.
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={onAprobar}
+            disabled={submitting}
+            className="flex-1 bg-[#00d084] hover:bg-[#00b870] disabled:bg-gray-300 text-white text-sm font-medium py-2 rounded-lg"
+          >
+            {submitting ? "Aprobando…" : "✓ Aprobar"}
+          </button>
+          <button
+            onClick={onRechazar}
+            disabled={submitting}
+            className="flex-1 border border-red-300 hover:bg-red-50 disabled:opacity-50 text-red-700 text-sm font-medium py-2 rounded-lg"
+          >
+            ✗ Rechazar
+          </button>
+        </div>
+      )}
     </div>
   );
 }

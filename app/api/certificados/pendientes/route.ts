@@ -449,36 +449,52 @@ export async function GET(request: Request) {
         "cambios_pendientes",
         "coordinador_id",
       ]);
-      if (coordinadorId) {
-        // Directas: la finca tiene coordinador_id propio
-        const directas = records.filter((r) =>
-          asArrStr(r.fields.coordinador_id).includes(coordinadorId)
+      // Info de los generadores padre (una sola tanda): sirve para (a) el
+      // filtro por coordinador (fincas nuevas no traen coordinador_id) y
+      // (b) marcar las fincas cuyo generador sigue pendiente — se muestran
+      // pero bloqueadas: "primero aprueba el generador" (regla 2026-07-08).
+      const genIdsTodos = [
+        ...new Set(records.flatMap((r) => asArrStr(r.fields.generador))),
+      ];
+      const genInfo = new Map<
+        string,
+        { estado: string; coords: string[]; nombre: string }
+      >();
+      for (let i = 0; i < genIdsTodos.length; i += 50) {
+        const lote = genIdsTodos.slice(i, i + 50);
+        const fGen = `OR(${lote.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+        const gens = await fetchAll("GENERADORES", fGen, [
+          "estado",
+          "nombre",
+          "coordinador_solicitado",
+        ]);
+        gens.forEach((g) =>
+          genInfo.set(g.id, {
+            estado: String(g.fields.estado || ""),
+            nombre: String(g.fields.nombre || ""),
+            coords: asArrStr(g.fields.coordinador_solicitado),
+          })
         );
-        // Vía padre: fincas sin coordinador propio → mirar el generador
-        const sinCoord = records.filter(
-          (r) => asArrStr(r.fields.coordinador_id).length === 0
-        );
-        const genIds = [
-          ...new Set(sinCoord.flatMap((r) => asArrStr(r.fields.generador))),
-        ];
-        const coordDeGen = new Map<string, string[]>();
-        for (let i = 0; i < genIds.length; i += 50) {
-          const lote = genIds.slice(i, i + 50);
-          const fGen = `OR(${lote.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
-          const gens = await fetchAll("GENERADORES", fGen, [
-            "coordinador_solicitado",
-          ]);
-          gens.forEach((g) =>
-            coordDeGen.set(g.id, asArrStr(g.fields.coordinador_solicitado))
-          );
-        }
-        const viaPadre = sinCoord.filter((r) =>
-          asArrStr(r.fields.generador).some((gid) =>
-            (coordDeGen.get(gid) || []).includes(coordinadorId)
-          )
-        );
-        records = [...directas, ...viaPadre];
       }
+      if (coordinadorId) {
+        records = records.filter(
+          (r) =>
+            asArrStr(r.fields.coordinador_id).includes(coordinadorId) ||
+            asArrStr(r.fields.generador).some((gid) =>
+              (genInfo.get(gid)?.coords || []).includes(coordinadorId)
+            )
+        );
+      }
+      // Flag por finca: su generador padre aún no está aprobado
+      const generadorPendienteDe = (r: (typeof records)[number]): { pendiente: boolean; nombre: string } => {
+        const gids = asArrStr(r.fields.generador);
+        if (String(r.fields.estado) !== "pendiente" || gids.length === 0) {
+          return { pendiente: false, nombre: "" };
+        }
+        const aprobado = gids.some((gid) => genInfo.get(gid)?.estado === "aprobado");
+        const nombre = gids.map((gid) => genInfo.get(gid)?.nombre || "").find(Boolean) || "";
+        return { pendiente: !aprobado, nombre };
+      };
       const munIds = new Set<string>();
       for (const r of records) {
         const diff = parseCambiosPendientes(r.fields.cambios_pendientes);
@@ -520,6 +536,10 @@ export async function GET(request: Request) {
             origen: asStr(f.solicitud_origen),
             cambiosPendientes: asStr(f.cambios_pendientes),
             coordinadorId: asArrStr(f.coordinador_id)[0] || null,
+            // Regla de orden: si el generador padre sigue pendiente, la finca
+            // se muestra pero bloqueada ("primero aprueba el generador")
+            generadorPendiente: generadorPendienteDe(r).pendiente,
+            generadorNombre: generadorPendienteDe(r).nombre,
             tieneCambios: Object.keys(diff).length > 0,
             camposCambiados: Object.keys(diff),
             diffLegible,

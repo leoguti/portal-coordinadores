@@ -46,7 +46,24 @@ export async function POST(
     const cs = Array.isArray(rec.fields.coordinador_id)
       ? (rec.fields.coordinador_id as string[])
       : [];
-    if (!cs.includes(coordId)) {
+    // Fincas del auto-registro sin coordinador_id: autorizar vía el
+    // coordinador_solicitado del GENERADOR padre (mismo criterio que aprobar)
+    let autorizado = cs.includes(coordId);
+    if (!autorizado && cs.length === 0) {
+      const genIds = Array.isArray(rec.fields.generador)
+        ? (rec.fields.generador as string[])
+        : [];
+      const padres = await Promise.all(
+        genIds.map((gid) => airtableGetRecord("GENERADORES", gid))
+      );
+      autorizado = padres.some((g) =>
+        (Array.isArray(g?.fields?.coordinador_solicitado)
+          ? (g!.fields.coordinador_solicitado as string[])
+          : []
+        ).includes(coordId)
+      );
+    }
+    if (!autorizado) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
   }
