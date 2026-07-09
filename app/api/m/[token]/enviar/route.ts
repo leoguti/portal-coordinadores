@@ -188,6 +188,19 @@ async function coordinadorInfo(
   }
 }
 
+// Nombre legible del municipio para el resumen de WhatsApp; si falla la
+// consulta, cae al genérico "(actualizado)".
+async function nombreMunicipio(municipioId: string): Promise<string> {
+  try {
+    const r = await airtableFetch(`/MUNICIPIOS/${municipioId}`);
+    if (!r.ok) return "(actualizado)";
+    const d = (await r.json()) as { fields: Record<string, unknown> };
+    return String(d.fields?.mundep || "").trim() || "(actualizado)";
+  } catch {
+    return "(actualizado)";
+  }
+}
+
 async function manejarCertNuevo(
   t: EdicionToken,
   body: Record<string, unknown>
@@ -469,7 +482,8 @@ async function manejarEditarFinca(
   if ("nombre" in cambios) lineas.push(`• Nombre: ${cambios.nombre}`);
   if ("movil" in cambios) lineas.push(`• Móvil: ${cambios.movil}`);
   if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
-  if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
+  if ("municipio" in cambios)
+    lineas.push(`• Municipio: ${await nombreMunicipio((cambios.municipio as string[])[0])}`);
   if ("cultivos" in cambios)
     lineas.push(`• Cultivos: ${(cambios.cultivos as string[]).length} seleccionados`);
 
@@ -530,7 +544,8 @@ async function manejarEditarGenerador(
   if ("direccion_sede" in cambios)
     lineas.push(`• Dirección: ${cambios.direccion_sede || "(vacía)"}`);
   if ("email" in cambios) lineas.push(`• Email: ${cambios.email || "(vacío)"}`);
-  if ("municipio" in cambios) lineas.push(`• Municipio: (actualizado)`);
+  if ("municipio" in cambios)
+    lineas.push(`• Municipio: ${await nombreMunicipio((cambios.municipio as string[])[0])}`);
 
   const coord = await coordinadorInfo(coordinadorId);
   return {
@@ -606,7 +621,9 @@ async function manejarEditarPerfil(
       if ("email" in cambiosEmpresa)
         resumenLineas.push(`  • Email: ${cambiosEmpresa.email || "(vacío)"}`);
       if ("municipio" in cambiosEmpresa)
-        resumenLineas.push(`  • Municipio: (actualizado)`);
+        resumenLineas.push(
+          `  • Municipio: ${await nombreMunicipio((cambiosEmpresa.municipio as string[])[0])}`
+        );
     }
   }
 
@@ -649,7 +666,9 @@ async function manejarEditarPerfil(
     if ("email" in cambiosFinca)
       resumenLineas.push(`  • Email: ${cambiosFinca.email || "(vacío)"}`);
     if ("municipio" in cambiosFinca)
-      resumenLineas.push(`  • Municipio: (actualizado)`);
+      resumenLineas.push(
+        `  • Municipio: ${await nombreMunicipio((cambiosFinca.municipio as string[])[0])}`
+      );
     if ("cultivos" in cambiosFinca)
       resumenLineas.push(
         `  • Cultivos: ${(cambiosFinca.cultivos as string[]).length} seleccionados`
