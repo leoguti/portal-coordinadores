@@ -521,7 +521,15 @@ export async function notificarGeneradorRechazado(p: {
   motivo: string;
   nombreCoordinador: string;
   esRevision?: boolean;
+  /** wa.me corto del coordinador (ej. "wa.me/573001234567"). */
+  coordContactoWaUrl?: string;
 }): Promise<BroadcastResult> {
+  const contacto = p.coordContactoWaUrl
+    ? `Si tienes dudas, escríbele a tu coordinador:\n👉 ${p.coordContactoWaUrl}`
+    : `Si tienes dudas, escríbele a tu coordinador. 💬`;
+  const contactoPlano = p.coordContactoWaUrl
+    ? `Si tienes dudas, escríbele a tu coordinador: ${p.coordContactoWaUrl}`
+    : `Si tienes dudas, escríbele a tu coordinador.`;
   let textoLibre: string;
   let var1: string;
   let var3: string;
@@ -531,18 +539,18 @@ export async function notificarGeneradorRechazado(p: {
       `📋 *Detalle:*\n` +
       `• Motivo: ${p.motivo}\n` +
       `• Coordinador: ${p.nombreCoordinador}\n\n` +
-      `Tus datos vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador. 💬`;
+      `Tus datos vuelven al estado anterior. ${contacto}`;
     var1 = "de cambios en tus datos";
-    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Tus datos vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador.`;
+    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Tus datos vuelven al estado anterior. ${contactoPlano}`;
   } else {
     textoLibre =
       `❌ *Tu registro fue rechazado.*\n\n` +
       `📋 *Detalle:*\n` +
       `• Motivo: ${p.motivo}\n` +
       `• Coordinador: ${p.nombreCoordinador}\n\n` +
-      `Si tienes dudas, escríbele a tu coordinador. 💬`;
+      contacto;
     var1 = "de registro como generador";
-    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
+    var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. ${contactoPlano}`;
   }
   return enviarConFallback(p.telefono, textoLibre, var1, "rechazada", var3);
 }
@@ -578,21 +586,29 @@ export async function notificarFincaRechazada(p: {
   motivo: string;
   nombreCoordinador: string;
   esRevision?: boolean;
+  /** wa.me corto del coordinador (ej. "wa.me/573001234567"). */
+  coordContactoWaUrl?: string;
 }): Promise<BroadcastResult> {
+  const contacto = p.coordContactoWaUrl
+    ? `Si tienes dudas, escríbele a tu coordinador:\n👉 ${p.coordContactoWaUrl}`
+    : `Si tienes dudas, escríbele a tu coordinador. 💬`;
+  const contactoPlano = p.coordContactoWaUrl
+    ? `Si tienes dudas, escríbele a tu coordinador: ${p.coordContactoWaUrl}`
+    : `Si tienes dudas, escríbele a tu coordinador.`;
   const textoLibre = p.esRevision
     ? `❌ *Los cambios en tu finca fueron rechazados.*\n\n` +
       `🌱 *Finca:* ${p.nombreFinca}\n` +
       `📋 *Motivo:* ${p.motivo}\n` +
       `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
-      `Los datos de la finca vuelven al estado anterior. Si tienes dudas, escríbele a tu coordinador. 💬`
+      `Los datos de la finca vuelven al estado anterior. ${contacto}`
     : `❌ *Tu finca fue rechazada.*\n\n` +
       `🌱 *Finca:* ${p.nombreFinca}\n` +
       `📋 *Motivo:* ${p.motivo}\n` +
       `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
-      `Si tienes dudas, escríbele a tu coordinador. 💬`;
+      contacto;
   const var1 = p.esRevision
     ? `de cambios en la finca "${p.nombreFinca}"`
     : `de nueva finca "${p.nombreFinca}"`;
-  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. Si tienes dudas, escríbele a tu coordinador.`;
+  const var3 = `Motivo: ${p.motivo}. Coordinador: ${p.nombreCoordinador}. ${contactoPlano}`;
   return enviarConFallback(p.telefono, textoLibre, var1, "rechazada", var3);
 }

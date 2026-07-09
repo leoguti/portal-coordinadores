@@ -6,6 +6,7 @@ import {
   airtableGetRecord,
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 import { notificarGeneradorRechazado } from "@/lib/textitNotify";
 
 export async function POST(
@@ -71,11 +72,14 @@ export async function POST(
       if (tel) {
         const coordRec = await airtableGetRecord("Coordinadores", coordId);
         const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
+        const coordTel10 = normalizarMovilCO(String(coordRec?.fields?.telefono || ""));
+        const coordContactoWaUrl = coordTel10 ? `wa.me/57${coordTel10}` : undefined;
         const r = await notificarGeneradorRechazado({
           telefono: tel,
           nombre: String(rec.fields.nombre || ""),
           motivo,
           nombreCoordinador: nombreCoord,
+          coordContactoWaUrl,
           esRevision,
         });
         console.log(`[gen/${id}/rechazar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);

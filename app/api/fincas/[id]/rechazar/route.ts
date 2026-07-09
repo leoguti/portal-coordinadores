@@ -100,12 +100,15 @@ export async function POST(
       if (tels.size > 0) {
         const coordRec = await airtableGetRecord("Coordinadores", coordId);
         const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
+        const coordTel10 = normalizarMovilCO(String(coordRec?.fields?.telefono || ""));
+        const coordContactoWaUrl = coordTel10 ? `wa.me/57${coordTel10}` : undefined;
         for (const tel of tels) {
           const r = await notificarFincaRechazada({
             telefono: tel,
             nombreFinca: String(rec.fields.nombre || ""),
             motivo,
             nombreCoordinador: nombreCoord,
+          coordContactoWaUrl,
             esRevision: estado === "pendiente_revision",
           });
           console.log(`[finca/${id}/rechazar wa→${tel}] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
