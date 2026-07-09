@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import ConfirmModal from "@/components/ConfirmModal";
 import Link from "next/link";
 import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
@@ -53,6 +54,7 @@ interface Actividad {
 export default function ActividadDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/actividades");
   const params = useParams();
   const actividadId = params.id as string;
   
@@ -145,7 +147,7 @@ export default function ActividadDetailPage() {
       }
 
       // Redirigir a la lista de actividades
-      router.push("/actividades");
+      router.push(volverHref);
     } catch (err) {
       console.error("Error deleting activity:", err);
       setError(err instanceof Error ? err.message : "Error al eliminar la actividad");
@@ -170,7 +172,7 @@ export default function ActividadDetailPage() {
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error || "Error al cargar la actividad"}
           </div>
-          <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
+          <Link href={volverHref} className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
             ← Volver a Actividades
           </Link>
         </div>
@@ -188,7 +190,7 @@ export default function ActividadDetailPage() {
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+              <Link href={volverHref} className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
                 ← Volver a Actividades
               </Link>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">

@@ -9,6 +9,12 @@ import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
 import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
+import {
+  paramInicial,
+  reflejarFiltrosEnUrl,
+  leerExpandidosGuardados,
+  guardarExpandidos,
+} from "@/lib/listadoFiltrosNav";
 import JSZip from "jszip";
 
 interface AirtableAttachment {
@@ -48,21 +54,47 @@ export default function ActividadesPage() {
   const router = useRouter();
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
-  const [selectedCoordinador, setSelectedCoordinador] = useState<string>("");
-  const [selectedMes, setSelectedMes] = useState<string>("");
-  const [selectedAno, setSelectedAno] = useState<string>("");
-  const [selectedMunicipio, setSelectedMunicipio] = useState<string>("");
-  const [selectedTipo, setSelectedTipo] = useState<string>("");
+  // Filtros — inicializados desde la URL para que "Volver a Actividades" conserve la vista
+  const [selectedCoordinador, setSelectedCoordinador] = useState<string>(() => paramInicial("coordinador"));
+  const [selectedMes, setSelectedMes] = useState<string>(() => paramInicial("mes"));
+  const [selectedAno, setSelectedAno] = useState<string>(() => paramInicial("ano"));
+  const [selectedMunicipio, setSelectedMunicipio] = useState<string>(() => paramInicial("municipio"));
+  const [selectedTipo, setSelectedTipo] = useState<string>(() => paramInicial("tipo"));
   // Filtro "solo incompletas" (al hacer click en el cuadro de incompletas)
-  const [soloIncompletas, setSoloIncompletas] = useState(false);
-  const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>("");
+  const [soloIncompletas, setSoloIncompletas] = useState(() => paramInicial("incompletas") === "1");
+  const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>(() => paramInicial("tipoIncompleta"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-  const [expandedCoordinadores, setExpandedCoordinadores] = useState<Set<string>>(new Set());
-  const [paginaMes, setPaginaMes] = useState(0);
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(
+    () => new Set(leerExpandidosGuardados("/actividades").meses)
+  );
+  const [expandedCoordinadores, setExpandedCoordinadores] = useState<Set<string>>(
+    () => new Set(leerExpandidosGuardados("/actividades").coordinadores)
+  );
+  const [paginaMes, setPaginaMes] = useState(() => parseInt(paramInicial("pag"), 10) || 0);
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
+
+  // Refleja filtros y página en la URL (y sessionStorage para "Volver a Actividades")
+  useEffect(() => {
+    reflejarFiltrosEnUrl("/actividades", {
+      coordinador: selectedCoordinador,
+      mes: selectedMes,
+      ano: selectedAno,
+      municipio: selectedMunicipio,
+      tipo: selectedTipo,
+      incompletas: soloIncompletas ? "1" : "",
+      tipoIncompleta: tipoIncompletaFiltro,
+      pag: paginaMes > 0 ? String(paginaMes) : "",
+    });
+  }, [selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, soloIncompletas, tipoIncompletaFiltro, paginaMes]);
+
+  useEffect(() => {
+    guardarExpandidos("/actividades", {
+      meses: expandedMonths,
+      coordinadores: expandedCoordinadores,
+    });
+  }, [expandedMonths, expandedCoordinadores]);
 
   // Metas mensuales (12 meses) según contexto: self / coord filtrado / agregado
   const [metasMensuales, setMetasMensuales] = useState<Array<{

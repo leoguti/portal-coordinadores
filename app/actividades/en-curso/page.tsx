@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import MunicipioSearch from "@/components/MunicipioSearch";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +22,7 @@ function maxFechaISO() {
 export default function ActividadEnCursoPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/actividades");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +102,7 @@ export default function ActividadEnCursoPage() {
       <AuthenticatedLayout>
         <div className="max-w-lg mx-auto text-center">
           <div className="mb-6">
-            <Link href="/actividades" className="text-blue-600 hover:text-blue-700 text-sm">
+            <Link href={volverHref} className="text-blue-600 hover:text-blue-700 text-sm">
               ← Volver a Actividades
             </Link>
           </div>
@@ -145,7 +147,7 @@ export default function ActividadEnCursoPage() {
                 </a>
               )}
               <Link
-                href="/actividades"
+                href={volverHref}
                 className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 Ver todas las actividades
@@ -161,7 +163,7 @@ export default function ActividadEnCursoPage() {
     <AuthenticatedLayout>
       <div className="max-w-xl mx-auto">
         <div className="mb-8">
-          <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mb-4 inline-block text-sm">
+          <Link href={volverHref} className="text-blue-600 hover:text-blue-700 mb-4 inline-block text-sm">
             ← Volver a Actividades
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-1">Actividad en campo</h1>
@@ -229,7 +231,7 @@ export default function ActividadEnCursoPage() {
                 {loading ? "Creando..." : "📍 Crear y obtener QR"}
               </button>
               <Link
-                href="/actividades"
+                href={volverHref}
                 className="px-5 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancelar

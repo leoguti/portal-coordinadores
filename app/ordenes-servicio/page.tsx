@@ -10,10 +10,10 @@ import { puedeModificarFecha } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 import {
-  ORDENES_FILTROS_QS_KEY,
+  reflejarFiltrosEnUrl,
   leerExpandidosGuardados,
   guardarExpandidos,
-} from "@/lib/ordenesListadoNav";
+} from "@/lib/listadoFiltrosNav";
 
 function OrdenesServicioPageInner() {
   const { data: session, status } = useSession();
@@ -38,31 +38,28 @@ function OrdenesServicioPageInner() {
 
   // Grupos expandidos (mes y beneficiario) — restaurados al volver del detalle
   const [expandedMeses, setExpandedMeses] = useState<Set<string>>(
-    () => new Set(leerExpandidosGuardados().meses)
+    () => new Set(leerExpandidosGuardados("/ordenes-servicio").meses)
   );
   const [expandedBeneficiarios, setExpandedBeneficiarios] = useState<Set<string>>(
-    () => new Set(leerExpandidosGuardados().beneficiarios)
+    () => new Set(leerExpandidosGuardados("/ordenes-servicio").beneficiarios)
   );
 
   // Refleja filtros y página en la URL (y sessionStorage para "Volver a ordenes")
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (filtroCoordinador) params.set("coordinador", filtroCoordinador);
-    if (filtroBeneficiario) params.set("beneficiario", filtroBeneficiario);
-    if (filtroEstado) params.set("estado", filtroEstado);
-    if (filtroMes) params.set("mes", filtroMes);
-    if (monthPage > 0) params.set("pag", String(monthPage));
-    const qs = params.toString() ? `?${params.toString()}` : "";
-    window.history.replaceState(null, "", `/ordenes-servicio${qs}`);
-    try {
-      sessionStorage.setItem(ORDENES_FILTROS_QS_KEY, qs);
-    } catch {
-      // sin sessionStorage el enlace de volver queda sin filtros, nada más
-    }
+    reflejarFiltrosEnUrl("/ordenes-servicio", {
+      coordinador: filtroCoordinador,
+      beneficiario: filtroBeneficiario,
+      estado: filtroEstado,
+      mes: filtroMes,
+      pag: monthPage > 0 ? String(monthPage) : "",
+    });
   }, [filtroCoordinador, filtroBeneficiario, filtroEstado, filtroMes, monthPage]);
 
   useEffect(() => {
-    guardarExpandidos(expandedMeses, expandedBeneficiarios);
+    guardarExpandidos("/ordenes-servicio", {
+      meses: expandedMeses,
+      beneficiarios: expandedBeneficiarios,
+    });
   }, [expandedMeses, expandedBeneficiarios]);
 
   const canViewAll = isAdminOrSupervisor(session?.user?.rol);

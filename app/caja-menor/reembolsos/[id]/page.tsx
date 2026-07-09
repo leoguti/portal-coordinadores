@@ -5,11 +5,13 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import { type ReembolsoCajaMenor } from "@/lib/airtable";
 
 export default function ReembolsoDetallePage() {
   const params = useParams();
   useSession(); // Validate session
+  const volverHref = useVolverAlListado("/caja-menor");
   const reembolsoId = params.id as string;
 
   const [reembolso, setReembolso] = useState<ReembolsoCajaMenor | null>(null);
@@ -73,7 +75,7 @@ export default function ReembolsoDetallePage() {
             <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
             <p className="text-red-700">{error || "Reembolso no encontrado"}</p>
             <Link
-              href="/caja-menor"
+              href={volverHref}
               className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Volver a Caja Menor
@@ -96,7 +98,7 @@ export default function ReembolsoDetallePage() {
         {/* Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/caja-menor" className="hover:text-[#00d084] transition-colors">
+            <Link href={volverHref} className="hover:text-[#00d084] transition-colors">
               Caja Menor
             </Link>
             <span>&rsaquo;</span>
@@ -160,7 +162,7 @@ export default function ReembolsoDetallePage() {
         {/* Back button */}
         <div className="mt-6">
           <Link
-            href="/caja-menor"
+            href={volverHref}
             className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             Volver a Caja Menor

@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import ActividadForm, { ActividadFormData } from "@/components/ActividadForm";
 import ImageUpload, { ImageFile } from "@/components/ImageUpload";
 import Link from "next/link";
@@ -48,6 +49,7 @@ interface Actividad {
 export default function EditarActividadPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/actividades");
   const params = useParams();
   const actividadId = params.id as string;
 
@@ -341,7 +343,7 @@ export default function EditarActividadPage() {
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
           </div>
-          <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
+          <Link href={volverHref} className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
             ← Volver a Actividades
           </Link>
         </div>

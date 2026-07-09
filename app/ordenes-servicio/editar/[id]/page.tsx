@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
-import { useVolverAOrdenes } from "@/lib/ordenesListadoNav";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import {
   getOrdenById,
   getItemsOrden,
@@ -49,7 +49,7 @@ interface TerceroSeleccionado {
 
 export default function EditarOrdenPage() {
   const { data: session, status } = useSession();
-  const volverHref = useVolverAOrdenes();
+  const volverHref = useVolverAlListado("/ordenes-servicio");
   const router = useRouter();
   const params = useParams();
   const ordenId = params.id as string;

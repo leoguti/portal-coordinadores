@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import {
+  paramInicial,
+  reflejarFiltrosEnUrl,
+  leerExpandidosGuardados,
+  guardarExpandidos,
+} from "@/lib/listadoFiltrosNav";
+import {
   getGastosCajaMenorCoordinador,
   getAllGastosCajaMenor,
   type GastoCajaMenor,
@@ -29,10 +35,10 @@ export default function CajaMenorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filtros
-  const [filtroCoordinador, setFiltroCoordinador] = useState<string>("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("");
-  const [filtroMes, setFiltroMes] = useState<string>("");
+  // Filtros — inicializados desde la URL para que "Volver a Caja Menor" conserve la vista
+  const [filtroCoordinador, setFiltroCoordinador] = useState<string>(() => paramInicial("coordinador"));
+  const [filtroEstado, setFiltroEstado] = useState<string>(() => paramInicial("estado"));
+  const [filtroMes, setFiltroMes] = useState<string>(() => paramInicial("mes"));
 
   // Admin: coordinadores con saldo
   const [coordinadoresConSaldo, setCoordinadoresConSaldo] = useState<CoordinadorConSaldo[]>([]);
@@ -48,7 +54,22 @@ export default function CajaMenorPage() {
   const [creandoReembolso, setCreandoReembolso] = useState(false);
 
   // Meses expandidos en la vista agrupada (gastos y reembolsos)
-  const [mesesExpandidos, setMesesExpandidos] = useState<Set<string>>(new Set());
+  const [mesesExpandidos, setMesesExpandidos] = useState<Set<string>>(
+    () => new Set(leerExpandidosGuardados("/caja-menor").meses)
+  );
+
+  // Refleja filtros en la URL (y sessionStorage para "Volver a Caja Menor")
+  useEffect(() => {
+    reflejarFiltrosEnUrl("/caja-menor", {
+      coordinador: filtroCoordinador,
+      estado: filtroEstado,
+      mes: filtroMes,
+    });
+  }, [filtroCoordinador, filtroEstado, filtroMes]);
+
+  useEffect(() => {
+    guardarExpandidos("/caja-menor", { meses: mesesExpandidos });
+  }, [mesesExpandidos]);
   const [mesesReembolsosExpandidos, setMesesReembolsosExpandidos] = useState<Set<string>>(new Set());
 
   // Descarga de facturas

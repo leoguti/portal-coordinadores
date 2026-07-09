@@ -7,13 +7,13 @@ import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenById, getItemsOrden, getKardexByIds, getRubrosByIds, type Orden, type ItemOrden, type Kardex, type Rubro } from "@/lib/airtable";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
-import { useVolverAOrdenes } from "@/lib/ordenesListadoNav";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 
 export default function OrdenDetallePage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
-  const volverHref = useVolverAOrdenes();
+  const volverHref = useVolverAlListado("/ordenes-servicio");
   const ordenId = params.id as string;
 
   const [orden, setOrden] = useState<Orden | null>(null);

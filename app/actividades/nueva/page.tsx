@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import MunicipioSearch from "@/components/MunicipioSearch";
 import ImageUpload, { ImageFile } from "@/components/ImageUpload";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import Link from "next/link";
 export default function NuevaActividadPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/actividades");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -278,7 +280,7 @@ export default function NuevaActividadPage() {
       }
 
       // Success - redirect to actividades list
-      router.push("/actividades");
+      router.push(volverHref);
     } catch (err) {
       console.error("Error creating activity:", err);
       setError(err instanceof Error ? err.message : "Error desconocido");
@@ -300,7 +302,7 @@ export default function NuevaActividadPage() {
     <AuthenticatedLayout>
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <Link href="/actividades" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+          <Link href={volverHref} className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
             ← Volver a Actividades
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Nueva Actividad</h1>
@@ -645,7 +647,7 @@ export default function NuevaActividadPage() {
                 {loading ? "Guardando..." : "Guardar Actividad"}
               </button>
               <Link
-                href="/actividades"
+                href={volverHref}
                 className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancelar

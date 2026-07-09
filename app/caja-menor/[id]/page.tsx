@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import TerceroSearch from "@/components/TerceroSearch";
 import MunicipioSearch from "@/components/MunicipioSearch";
 import { getGastoCajaMenorById, type GastoCajaMenor } from "@/lib/airtable";
@@ -41,6 +42,7 @@ interface KardexVinculado {
 export default function GastoDetallePage() {
   const params = useParams();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/caja-menor");
   const { data: session } = useSession();
   const gastoId = params.id as string;
 
@@ -389,7 +391,7 @@ export default function GastoDetallePage() {
             <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
             <p className="text-red-700">{error || "Gasto no encontrado"}</p>
             <Link
-              href="/caja-menor"
+              href={volverHref}
               className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Volver a Caja Menor
@@ -435,7 +437,7 @@ export default function GastoDetallePage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/caja-menor" className="hover:text-[#00d084] transition-colors">
+            <Link href={volverHref} className="hover:text-[#00d084] transition-colors">
               Caja Menor
             </Link>
             <span>&rsaquo;</span>
@@ -528,7 +530,7 @@ export default function GastoDetallePage() {
           <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               Los reembolsos se realizan en lote desde la{" "}
-              <Link href="/caja-menor" className="font-bold underline hover:text-blue-900">vista principal</Link>.
+              <Link href={volverHref} className="font-bold underline hover:text-blue-900">vista principal</Link>.
               Selecciona los gastos aprobados de un coordinador para crear un reembolso.
             </p>
           </div>
@@ -587,7 +589,7 @@ export default function GastoDetallePage() {
                   try {
                     const res = await fetch(`/api/caja-menor/${gastoId}`, { method: "DELETE" });
                     if (res.ok) {
-                      router.push("/caja-menor");
+                      router.push(volverHref);
                     } else {
                       const d = await res.json();
                       setActionMessage({ type: "error", text: d.error || "Error al eliminar" });
@@ -1077,7 +1079,7 @@ export default function GastoDetallePage() {
           {/* Boton volver */}
           <div className="mt-6 pt-6 border-t border-gray-300">
             <Link
-              href="/caja-menor"
+              href={volverHref}
               className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Volver a Caja Menor

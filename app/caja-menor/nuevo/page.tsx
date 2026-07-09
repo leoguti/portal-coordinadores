@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import TerceroSearch from "@/components/TerceroSearch";
 import TerceroCompletitudWarning from "@/components/TerceroCompletitudWarning";
 import MunicipioSearch from "@/components/MunicipioSearch";
@@ -40,6 +41,7 @@ interface KardexDisponible {
 export default function NuevoGastoCajaMenorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const volverHref = useVolverAlListado("/caja-menor");
   const [verificandoSaldo, setVerificandoSaldo] = useState(true);
   const [sinSaldo, setSinSaldo] = useState(false);
 
@@ -278,7 +280,7 @@ export default function NuevoGastoCajaMenorPage() {
         }
       }
 
-      router.push("/caja-menor");
+      router.push(volverHref);
     } catch (err) {
       console.error("Error creating gasto:", err);
       setError("Error al crear el gasto. Intenta de nuevo.");
@@ -292,7 +294,7 @@ export default function NuevoGastoCajaMenorPage() {
       <div className="max-w-3xl mx-auto">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-          <Link href="/caja-menor" className="hover:text-[#00d084] transition-colors">
+          <Link href={volverHref} className="hover:text-[#00d084] transition-colors">
             Caja Menor
           </Link>
           <span>&rsaquo;</span>
@@ -305,7 +307,7 @@ export default function NuevoGastoCajaMenorPage() {
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
             <p className="text-yellow-800 font-medium">No tienes saldo de caja menor asignado.</p>
             <p className="text-yellow-700 text-sm mt-1">Contacta al administrador para que te asigne un saldo inicial antes de registrar gastos.</p>
-            <Link href="/caja-menor" className="inline-block mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+            <Link href={volverHref} className="inline-block mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
               Volver a Caja Menor
             </Link>
           </div>
@@ -725,7 +727,7 @@ export default function NuevoGastoCajaMenorPage() {
           {/* Botones */}
           <div className="flex items-center justify-between pt-6 border-t border-gray-300">
             <Link
-              href="/caja-menor"
+              href={volverHref}
               className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Cancelar
