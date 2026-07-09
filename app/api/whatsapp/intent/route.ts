@@ -168,11 +168,15 @@ function recordIdParaToken(
 async function manejarContactarCoord(
   identidad: IdentidadAgricultor
 ): Promise<string> {
-  // TODO Sprint 6: mandar email al coord asignado / admin con los datos del
-  // agricultor. Por ahora solo respondemos OK.
   console.log(
     `[whatsapp/intent] contactar-coord: tel=${identidad.telefonoNormalizado} gen=${identidad.generador?.id} rol=${identidad.rol}`
   );
+  const c = await datosCoordinador(identidad);
+  if (c) {
+    return `Tu coordinador es *${c.nombre}*. Escríbele directamente:\n👉 ${c.waUrl}`;
+  }
+  // Sin coordinador asignado (p.ej. agricultor sin registro): no hay a
+  // quién dirigirlo todavía. TODO: avisar al admin con los datos.
   return "Listo, un coordinador te contactará pronto.";
 }
 
@@ -385,25 +389,33 @@ async function mensajeOkParaIntent(
  * mensaje del enlace ("si tienes dudas escríbele..."). Vacía si no hay
  * coordinador resoluble o falla la consulta.
  */
-async function lineaContactoCoordinador(
+async function datosCoordinador(
   identidad: IdentidadAgricultor
-): Promise<string> {
+): Promise<{ nombre: string; waUrl: string } | null> {
   const coordId = identidad.generador?.coordinadorId || "";
-  if (!coordId) return "";
+  if (!coordId) return null;
   try {
     const r = await fetch(
       `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Coordinadores/${coordId}`,
       { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` }, cache: "no-store" }
     );
-    if (!r.ok) return "";
+    if (!r.ok) return null;
     const d = (await r.json()) as { fields?: Record<string, unknown> };
     const nombre = String(d.fields?.Name || "").trim();
     const tel10 = normalizarMovilCO(String(d.fields?.telefono || ""));
-    if (!nombre || !tel10) return "";
-    return `\n\nTu coordinador es *${nombre}* — si tienes dudas escríbele:\n👉 wa.me/57${tel10}`;
+    if (!nombre || !tel10) return null;
+    return { nombre, waUrl: `wa.me/57${tel10}` };
   } catch {
-    return "";
+    return null;
   }
+}
+
+async function lineaContactoCoordinador(
+  identidad: IdentidadAgricultor
+): Promise<string> {
+  const c = await datosCoordinador(identidad);
+  if (!c) return "";
+  return `\n\nTu coordinador es *${c.nombre}* — si tienes dudas escríbele:\n👉 ${c.waUrl}`;
 }
 
 async function resolverNombresCultivos(cultivoIds: string[]): Promise<string[]> {
