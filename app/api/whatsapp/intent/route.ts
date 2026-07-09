@@ -357,21 +357,12 @@ async function mensajeOkParaIntent(
         ? `Vamos a actualizar los datos de la empresa *${identidad.generador?.nombre || ""}*.`
         : `Vamos a actualizar tus datos personales.`;
     case "editar-perfil": {
-      const partes = ["Vamos a actualizar tus datos."];
-      const labelMia = esEmpresa ? "tu empresa" : "tus datos personales";
+      const labelMia = esEmpresa
+        ? "los datos de tu empresa"
+        : "tus datos personales";
       const labelFincas =
-        fincasAprobadas.length === 1 ? "tu finca" : "tus fincas";
-      partes.push(
-        `Vas a ver ${labelMia} y ${labelFincas} en una sola página — edita lo que necesites.`
-      );
-      if (fincasAprobadas.length > 0) {
-        const nombres = fincasAprobadas
-          .map((f) => `• ${f.nombre}`)
-          .join("\n");
-        const titFincas = fincasAprobadas.length === 1 ? "Tu finca" : "Tus fincas";
-        partes.push(`\n🌱 *${titFincas}:*\n${nombres}`);
-      }
-      return partes.join("\n");
+        fincasAprobadas.length === 1 ? "de tu finca" : "de tus fincas";
+      return `En este enlace puedes actualizar ${labelMia} y los ${labelFincas}. Ahí verás toda tu información — cambia solo lo que necesites.`;
     }
     case "crear-finca":
       return "Vamos a registrar tu nueva finca.";
