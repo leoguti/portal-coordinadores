@@ -106,7 +106,9 @@ export async function POST(
         const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
         const r = await notificarFincaAprobada({
           telefono: tel,
-          nombreFinca: String(f.nombre || ""),
+          // Nombre del diff aplicado si el cambio lo incluía (el aviso debe
+          // mostrar los datos nuevos, no los anteriores)
+          nombreFinca: String(cambiosAAplicar.nombre || f.nombre || ""),
           nombreCoordinador: nombreCoord,
           esRevision,
         });
