@@ -35,14 +35,13 @@ export default function CultivosMultiSelect({
   const selectedIds = new Set(value.map((v) => v.id));
   const norm = (s: string) =>
     s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const filtered = search
-    ? all
-        .filter(
-          (c) =>
-            !selectedIds.has(c.id) && norm(c.nombre).includes(norm(search))
-        )
-        .slice(0, 12)
-    : all.filter((c) => !selectedIds.has(c.id)).slice(0, 8);
+  // Lista completa con scroll — con tope se veían solo los primeros por
+  // alfabeto (puras "A") y parecía que no había más cultivos.
+  const filtered = all.filter(
+    (c) =>
+      !selectedIds.has(c.id) &&
+      (!search || norm(c.nombre).includes(norm(search)))
+  );
 
   return (
     <div>
