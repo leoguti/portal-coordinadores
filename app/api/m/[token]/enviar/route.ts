@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse, after } from "next/server";
+import { getCultivosMap } from "@/lib/cultivosCache";
 import {
   consumirToken,
   crearToken,
@@ -199,6 +200,19 @@ async function nombreMunicipio(municipioId: string): Promise<string> {
   } catch {
     return "(actualizado)";
   }
+}
+
+// Nombres legibles de los cultivos para el resumen de WhatsApp; si falla
+// la consulta, cae al conteo genérico.
+async function nombresCultivos(ids: string[]): Promise<string> {
+  try {
+    const map = await getCultivosMap();
+    const nombres = ids.map((id) => map.get(id) || "").filter(Boolean);
+    if (nombres.length > 0) return nombres.join(", ");
+  } catch {
+    // cae al conteo
+  }
+  return `${ids.length} seleccionados`;
 }
 
 async function manejarCertNuevo(
@@ -485,7 +499,7 @@ async function manejarEditarFinca(
   if ("municipio" in cambios)
     lineas.push(`• Municipio: ${await nombreMunicipio((cambios.municipio as string[])[0])}`);
   if ("cultivos" in cambios)
-    lineas.push(`• Cultivos: ${(cambios.cultivos as string[]).length} seleccionados`);
+    lineas.push(`• Cultivos: ${await nombresCultivos(cambios.cultivos as string[])}`);
 
   return {
     ok: true,
@@ -671,7 +685,7 @@ async function manejarEditarPerfil(
       );
     if ("cultivos" in cambiosFinca)
       resumenLineas.push(
-        `  • Cultivos: ${(cambiosFinca.cultivos as string[]).length} seleccionados`
+        `  • Cultivos: ${await nombresCultivos(cambiosFinca.cultivos as string[])}`
       );
   }
 
@@ -723,7 +737,7 @@ async function manejarCrearFinca(
     `• Móvil: ${movil}`,
   ];
   if (email) lineas.push(`• Email: ${email}`);
-  if (cultivos.length > 0) lineas.push(`• Cultivos: ${cultivos.length} seleccionados`);
+  if (cultivos.length > 0) lineas.push(`• Cultivos: ${await nombresCultivos(cultivos)}`);
   return {
     ok: true,
     intent: "crear-finca",
