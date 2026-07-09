@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import TerceroSearch from "@/components/TerceroSearch";
+import { useVolverAOrdenes } from "@/lib/ordenesListadoNav";
 import {
   getOrdenById,
   getItemsOrden,
@@ -48,6 +49,7 @@ interface TerceroSeleccionado {
 
 export default function EditarOrdenPage() {
   const { data: session, status } = useSession();
+  const volverHref = useVolverAOrdenes();
   const router = useRouter();
   const params = useParams();
   const ordenId = params.id as string;
@@ -323,7 +325,7 @@ export default function EditarOrdenPage() {
             <h2 className="text-xl font-bold text-red-900 mb-2">Error</h2>
             <p className="text-red-800">{error}</p>
             <Link
-              href="/ordenes-servicio"
+              href={volverHref}
               className="inline-block mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
             >
               Volver a Órdenes
@@ -347,7 +349,7 @@ export default function EditarOrdenPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/ordenes-servicio" className="hover:text-[#00d084]">
+            <Link href={volverHref} className="hover:text-[#00d084]">
               Órdenes de Servicio
             </Link>
             <span>›</span>
@@ -852,7 +854,7 @@ export default function EditarOrdenPage() {
             {/* Botones */}
             <div className="flex gap-3 justify-end">
               <Link
-                href="/ordenes-servicio"
+                href={volverHref}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
                 Cancelar

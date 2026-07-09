@@ -7,11 +7,13 @@ import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenById, getItemsOrden, getKardexByIds, getRubrosByIds, type Orden, type ItemOrden, type Kardex, type Rubro } from "@/lib/airtable";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
+import { useVolverAOrdenes } from "@/lib/ordenesListadoNav";
 
 export default function OrdenDetallePage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
+  const volverHref = useVolverAOrdenes();
   const ordenId = params.id as string;
 
   const [orden, setOrden] = useState<Orden | null>(null);
@@ -294,7 +296,7 @@ export default function OrdenDetallePage() {
             <h2 className="text-xl font-bold text-red-800 mb-2">Error</h2>
             <p className="text-red-700">{error || "Orden no encontrada"}</p>
             <Link
-              href="/ordenes-servicio"
+              href={volverHref}
               className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Volver a ordenes
@@ -322,7 +324,7 @@ export default function OrdenDetallePage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
             <Link
-              href="/ordenes-servicio"
+              href={volverHref}
               className="hover:text-[#00d084] transition-colors"
             >
               Ordenes de Servicio
@@ -1047,7 +1049,7 @@ export default function OrdenDetallePage() {
           {/* Boton volver */}
           <div className="mt-6 pt-6 border-t border-gray-300">
             <Link
-              href="/ordenes-servicio"
+              href={volverHref}
               className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Volver a ordenes
