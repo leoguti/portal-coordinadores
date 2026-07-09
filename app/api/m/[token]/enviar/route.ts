@@ -221,6 +221,31 @@ function waUrlCoord(coord: { telefono: string }): string | undefined {
   return tel10 ? `wa.me/57${tel10}` : undefined;
 }
 
+// Contacto del coordinador asignado al generador (aprobado_por, fallback
+// coordinador_solicitado) — para avisos "recibimos" con nombre y wa.me.
+async function contactoCoordDeGenerador(
+  generadorId: string
+): Promise<{ nombre?: string; waUrl?: string }> {
+  try {
+    const r = await airtableFetch(`/GENERADORES/${generadorId}`);
+    if (!r.ok) return {};
+    const d = (await r.json()) as { fields?: Record<string, unknown> };
+    const ap = d.fields?.aprobado_por;
+    const cs = d.fields?.coordinador_solicitado;
+    const cid =
+      Array.isArray(ap) && ap[0]
+        ? String(ap[0])
+        : Array.isArray(cs) && cs[0]
+          ? String(cs[0])
+          : "";
+    if (!cid) return {};
+    const coord = await coordinadorInfo(cid);
+    return { nombre: coord.nombre || undefined, waUrl: waUrlCoord(coord) };
+  } catch {
+    return {};
+  }
+}
+
 async function manejarCertNuevo(
   t: EdicionToken,
   body: Record<string, unknown>
@@ -508,6 +533,17 @@ async function manejarEditarFinca(
   if ("cultivos" in cambios)
     lineas.push(`• Cultivos: ${await nombresCultivos(cambios.cultivos as string[])}`);
 
+  let cc: { nombre?: string; waUrl?: string } = {};
+  try {
+    const fr = await airtableFetch(`/FINCAS/${t.recordId}`);
+    if (fr.ok) {
+      const fd = (await fr.json()) as { fields?: Record<string, unknown> };
+      const gid = Array.isArray(fd.fields?.generador) ? String(fd.fields.generador[0] || "") : "";
+      if (gid) cc = await contactoCoordDeGenerador(gid);
+    }
+  } catch {
+    // aviso sin contacto
+  }
   return {
     ok: true,
     intent: "editar-finca",
@@ -515,6 +551,8 @@ async function manejarEditarFinca(
     mensaje:
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
     resumen: lineas.join("\n"),
+    nombreCoordinador: cc.nombre,
+    coordContactoWaUrl: cc.waUrl,
   };
 }
 
@@ -747,6 +785,7 @@ async function manejarCrearFinca(
   ];
   if (email) lineas.push(`• Email: ${email}`);
   if (cultivos.length > 0) lineas.push(`• Cultivos: ${await nombresCultivos(cultivos)}`);
+  const cc = await contactoCoordDeGenerador(t.recordId);
   return {
     ok: true,
     intent: "crear-finca",
@@ -754,6 +793,8 @@ async function manejarCrearFinca(
     mensaje:
       "Solicitud enviada. Tu coordinador aprobará la finca antes de que puedas generar certificados.",
     resumen: lineas.join("\n"),
+    nombreCoordinador: cc.nombre,
+    coordContactoWaUrl: cc.waUrl,
   };
 }
 
