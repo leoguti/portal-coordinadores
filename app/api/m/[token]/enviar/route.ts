@@ -215,6 +215,12 @@ async function nombresCultivos(ids: string[]): Promise<string> {
   return `${ids.length} seleccionados`;
 }
 
+// wa.me corto del coordinador (sin ?text=, ver nota en manejarCertNuevo).
+function waUrlCoord(coord: { telefono: string }): string | undefined {
+  const tel10 = coord.telefono ? normalizarMovilCO(coord.telefono) : "";
+  return tel10 ? `wa.me/57${tel10}` : undefined;
+}
+
 async function manejarCertNuevo(
   t: EdicionToken,
   body: Record<string, unknown>
@@ -451,6 +457,7 @@ async function manejarCertCoordinador(
     consecutivo: result.consecutivo || undefined,
     pdfUrl: result.r2Url || result.pdfUrl || undefined,
     nombreCoordinador: coord.nombre || undefined,
+    coordContactoWaUrl: waUrlCoord(coord),
     mensaje: `Certificado #${result.consecutivo} generado y aprobado. Te llega el PDF por WhatsApp en un momento.`,
   };
 }
@@ -570,6 +577,7 @@ async function manejarEditarGenerador(
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
     resumen: lineas.join("\n"),
     nombreCoordinador: coord.nombre || undefined,
+    coordContactoWaUrl: waUrlCoord(coord),
   };
 }
 
@@ -702,6 +710,7 @@ async function manejarEditarPerfil(
       "Cambios enviados. Tu coordinador los revisará antes de que queden firmes.",
     resumen: resumenLineas.join("\n"),
     nombreCoordinador: coord.nombre || undefined,
+    coordContactoWaUrl: waUrlCoord(coord),
   };
 }
 
@@ -845,6 +854,7 @@ async function manejarRegistroGenerador(
       "Solicitud de registro enviada. Tu coordinador la aprobará para que puedas empezar a generar certificados.",
     resumen: lineas.join("\n"),
     nombreCoordinador: coord.nombre || undefined,
+    coordContactoWaUrl: waUrlCoord(coord),
   };
 }
 
