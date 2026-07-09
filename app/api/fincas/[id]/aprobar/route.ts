@@ -7,6 +7,7 @@ import {
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
 import { notificarFincaAprobada } from "@/lib/textitNotify";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 export async function POST(
   _request: NextRequest,
@@ -95,24 +96,31 @@ export async function POST(
 
   after(async () => {
     try {
-      // Buscar móvil: primero el de la finca, sino el del generador
-      let tel = String(f.movil || "");
-      if (!tel && Array.isArray(f.generador) && f.generador.length > 0) {
+      // Avisar al encargado (móvil de la finca) Y al titular (móvil del
+      // generador): el titular suele ser quien hace la solicitud y el bot
+      // le promete avisarle por su chat.
+      const tels = new Set<string>();
+      const telFinca = normalizarMovilCO(String(f.movil || ""));
+      if (telFinca) tels.add(telFinca);
+      if (Array.isArray(f.generador) && f.generador.length > 0) {
         const gen = await airtableGetRecord("GENERADORES", String(f.generador[0]));
-        tel = String(gen?.fields?.movil || "");
+        const telGen = normalizarMovilCO(String(gen?.fields?.movil || ""));
+        if (telGen) tels.add(telGen);
       }
-      if (tel) {
+      if (tels.size > 0) {
         const coordRec = await airtableGetRecord("Coordinadores", coordId);
         const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
-        const r = await notificarFincaAprobada({
-          telefono: tel,
-          // Nombre del diff aplicado si el cambio lo incluía (el aviso debe
-          // mostrar los datos nuevos, no los anteriores)
-          nombreFinca: String(cambiosAAplicar.nombre || f.nombre || ""),
-          nombreCoordinador: nombreCoord,
-          esRevision,
-        });
-        console.log(`[finca/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+        for (const tel of tels) {
+          const r = await notificarFincaAprobada({
+            telefono: tel,
+            // Nombre del diff aplicado si el cambio lo incluía (el aviso debe
+            // mostrar los datos nuevos, no los anteriores)
+            nombreFinca: String(cambiosAAplicar.nombre || f.nombre || ""),
+            nombreCoordinador: nombreCoord,
+            esRevision,
+          });
+          console.log(`[finca/${id}/aprobar wa→${tel}] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+        }
       }
     } catch (err) {
       console.error(`[finca/${id}/aprobar wa] Error:`, err);

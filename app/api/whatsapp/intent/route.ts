@@ -21,6 +21,7 @@ import {
 import { identificarCoordinadorPorTelefono } from "@/lib/coordinadorResolver";
 import { crearToken, type Intent } from "@/lib/edicionTokens";
 import { getCultivosMap } from "@/lib/cultivosCache";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 const PORTAL_BASE = process.env.NEXTAUTH_URL || "https://portal.campolimpio.org";
@@ -298,7 +299,9 @@ export async function POST(request: NextRequest) {
     });
 
     const url = urlParaIntent(resolved, token.token);
-    const mensaje_ok = await mensajeOkParaIntent(resolved, identidad);
+    const mensaje_ok =
+      (await mensajeOkParaIntent(resolved, identidad)) +
+      (await lineaContactoCoordinador(identidad));
 
     console.log(
       `[whatsapp/intent] tel=${identidad.telefonoNormalizado} rol=${identidad.rol} intent=${resolved} token=${token.token.slice(0, 8)}…`
@@ -374,6 +377,32 @@ async function mensajeOkParaIntent(
     case "aprobar-cert":
       // No se alcanza: este token no nace del bot sino del email al coord.
       return "Vamos a revisar la solicitud.";
+  }
+}
+
+/**
+ * Línea de contacto del coordinador asignado al generador, para anexar al
+ * mensaje del enlace ("si tienes dudas escríbele..."). Vacía si no hay
+ * coordinador resoluble o falla la consulta.
+ */
+async function lineaContactoCoordinador(
+  identidad: IdentidadAgricultor
+): Promise<string> {
+  const coordId = identidad.generador?.coordinadorId || "";
+  if (!coordId) return "";
+  try {
+    const r = await fetch(
+      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Coordinadores/${coordId}`,
+      { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` }, cache: "no-store" }
+    );
+    if (!r.ok) return "";
+    const d = (await r.json()) as { fields?: Record<string, unknown> };
+    const nombre = String(d.fields?.Name || "").trim();
+    const tel10 = normalizarMovilCO(String(d.fields?.telefono || ""));
+    if (!nombre || !tel10) return "";
+    return `\n\nTu coordinador es *${nombre}* — si tienes dudas escríbele:\n👉 wa.me/57${tel10}`;
+  } catch {
+    return "";
   }
 }
 

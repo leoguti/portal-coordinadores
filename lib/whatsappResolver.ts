@@ -47,6 +47,8 @@ export interface GeneradorInfo {
   estado: string;
   /** "natural" | "juridica" (o vacío si legacy). */
   tipopersona: string;
+  /** Record ID del coordinador asignado (aprobado_por, fallback solicitado). */
+  coordinadorId: string;
 }
 
 export interface IdentidadAgricultor {
@@ -108,7 +110,12 @@ function mapGeneradorRecord(
     nombre: String(r.fields.nombre || "").trim(),
     estado: String(r.fields.estado || "aprobado"),
     tipopersona: String(r.fields.tipopersona || "").trim().toLowerCase(),
+    coordinadorId: primerId(r.fields.aprobado_por) || primerId(r.fields.coordinador_solicitado),
   };
+}
+
+function primerId(v: unknown): string {
+  return Array.isArray(v) && v[0] ? String(v[0]) : "";
 }
 
 async function buscarFincasPorTelefono(tel10: string): Promise<FincaInfo[]> {

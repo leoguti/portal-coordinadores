@@ -7,6 +7,7 @@ import {
   airtablePatchRecord,
 } from "@/lib/aprobacionesHelpers";
 import { notificarFincaRechazada } from "@/lib/textitNotify";
+import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 export async function POST(
   request: NextRequest,
@@ -83,29 +84,32 @@ export async function POST(
 
   after(async () => {
     try {
-      let tel = String(rec.fields.movil || "");
-      if (
-        !tel &&
-        Array.isArray(rec.fields.generador) &&
-        rec.fields.generador.length > 0
-      ) {
+      // Avisar al encargado (móvil de la finca) Y al titular (móvil del
+      // generador), igual que en aprobar.
+      const tels = new Set<string>();
+      const telFinca = normalizarMovilCO(String(rec.fields.movil || ""));
+      if (telFinca) tels.add(telFinca);
+      if (Array.isArray(rec.fields.generador) && rec.fields.generador.length > 0) {
         const gen = await airtableGetRecord(
           "GENERADORES",
           String(rec.fields.generador[0])
         );
-        tel = String(gen?.fields?.movil || "");
+        const telGen = normalizarMovilCO(String(gen?.fields?.movil || ""));
+        if (telGen) tels.add(telGen);
       }
-      if (tel) {
+      if (tels.size > 0) {
         const coordRec = await airtableGetRecord("Coordinadores", coordId);
         const nombreCoord = String(coordRec?.fields?.Name || "Coordinador");
-        const r = await notificarFincaRechazada({
-          telefono: tel,
-          nombreFinca: String(rec.fields.nombre || ""),
-          motivo,
-          nombreCoordinador: nombreCoord,
-          esRevision: estado === "pendiente_revision",
-        });
-        console.log(`[finca/${id}/rechazar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+        for (const tel of tels) {
+          const r = await notificarFincaRechazada({
+            telefono: tel,
+            nombreFinca: String(rec.fields.nombre || ""),
+            motivo,
+            nombreCoordinador: nombreCoord,
+            esRevision: estado === "pendiente_revision",
+          });
+          console.log(`[finca/${id}/rechazar wa→${tel}] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+        }
       }
     } catch (err) {
       console.error(`[finca/${id}/rechazar wa] Error:`, err);
