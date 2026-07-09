@@ -10,13 +10,6 @@ import { useEffect, useState } from "react";
 const qsKey = (basePath: string) => `filtros-qs:${basePath}`;
 const expandKey = (basePath: string) => `expandidos:${basePath}`;
 
-// Valor inicial de un filtro leído de la URL. No usa useSearchParams para no
-// exigir un límite de Suspense en cada página; en SSR devuelve el defecto.
-export function paramInicial(nombre: string, porDefecto = ""): string {
-  if (typeof window === "undefined") return porDefecto;
-  return new URLSearchParams(window.location.search).get(nombre) || porDefecto;
-}
-
 // Escribe los filtros no vacíos en la URL (sin recargar ni re-navegar) y
 // guarda la query para que useVolverAlListado pueda reconstruir el enlace.
 export function reflejarFiltrosEnUrl(basePath: string, filtros: Record<string, string>) {

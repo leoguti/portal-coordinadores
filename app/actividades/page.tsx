@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
@@ -10,7 +10,6 @@ import { puedeModificarActividad } from "@/lib/dateValidations";
 import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import {
-  paramInicial,
   reflejarFiltrosEnUrl,
   leerExpandidosGuardados,
   guardarExpandidos,
@@ -49,20 +48,21 @@ interface Actividad {
   };
 }
 
-export default function ActividadesPage() {
+function ActividadesPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
   // Filtros — inicializados desde la URL para que "Volver a Actividades" conserve la vista
-  const [selectedCoordinador, setSelectedCoordinador] = useState<string>(() => paramInicial("coordinador"));
-  const [selectedMes, setSelectedMes] = useState<string>(() => paramInicial("mes"));
-  const [selectedAno, setSelectedAno] = useState<string>(() => paramInicial("ano"));
-  const [selectedMunicipio, setSelectedMunicipio] = useState<string>(() => paramInicial("municipio"));
-  const [selectedTipo, setSelectedTipo] = useState<string>(() => paramInicial("tipo"));
+  const [selectedCoordinador, setSelectedCoordinador] = useState<string>(searchParams.get("coordinador") || "");
+  const [selectedMes, setSelectedMes] = useState<string>(searchParams.get("mes") || "");
+  const [selectedAno, setSelectedAno] = useState<string>(searchParams.get("ano") || "");
+  const [selectedMunicipio, setSelectedMunicipio] = useState<string>(searchParams.get("municipio") || "");
+  const [selectedTipo, setSelectedTipo] = useState<string>(searchParams.get("tipo") || "");
   // Filtro "solo incompletas" (al hacer click en el cuadro de incompletas)
-  const [soloIncompletas, setSoloIncompletas] = useState(() => paramInicial("incompletas") === "1");
-  const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>(() => paramInicial("tipoIncompleta"));
+  const [soloIncompletas, setSoloIncompletas] = useState(searchParams.get("incompletas") === "1");
+  const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>(searchParams.get("tipoIncompleta") || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export default function ActividadesPage() {
   const [expandedCoordinadores, setExpandedCoordinadores] = useState<Set<string>>(
     () => new Set(leerExpandidosGuardados("/actividades").coordinadores)
   );
-  const [paginaMes, setPaginaMes] = useState(() => parseInt(paramInicial("pag"), 10) || 0);
+  const [paginaMes, setPaginaMes] = useState(() => parseInt(searchParams.get("pag") || "0", 10) || 0);
   const [descargandoMes, setDescargandoMes] = useState<string | null>(null);
 
   // Refleja filtros y página en la URL (y sessionStorage para "Volver a Actividades")
@@ -1562,5 +1562,13 @@ export default function ActividadesPage() {
         )}
       </div>
     </AuthenticatedLayout>
+  );
+}
+
+export default function ActividadesPage() {
+  return (
+    <Suspense>
+      <ActividadesPageInner />
+    </Suspense>
   );
 }

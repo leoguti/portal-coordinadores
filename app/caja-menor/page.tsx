@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import {
-  paramInicial,
   reflejarFiltrosEnUrl,
   leerExpandidosGuardados,
   guardarExpandidos,
@@ -26,9 +25,10 @@ interface CoordinadorConSaldo {
   saldoInicial: number;
 }
 
-export default function CajaMenorPage() {
+function CajaMenorPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [gastos, setGastos] = useState<GastoCajaMenor[]>([]);
   const [rubroNames, setRubroNames] = useState<Map<string, string>>(new Map());
   const [saldoInicial, setSaldoInicial] = useState<number>(0);
@@ -36,9 +36,9 @@ export default function CajaMenorPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Filtros — inicializados desde la URL para que "Volver a Caja Menor" conserve la vista
-  const [filtroCoordinador, setFiltroCoordinador] = useState<string>(() => paramInicial("coordinador"));
-  const [filtroEstado, setFiltroEstado] = useState<string>(() => paramInicial("estado"));
-  const [filtroMes, setFiltroMes] = useState<string>(() => paramInicial("mes"));
+  const [filtroCoordinador, setFiltroCoordinador] = useState<string>(searchParams.get("coordinador") || "");
+  const [filtroEstado, setFiltroEstado] = useState<string>(searchParams.get("estado") || "");
+  const [filtroMes, setFiltroMes] = useState<string>(searchParams.get("mes") || "");
 
   // Admin: coordinadores con saldo
   const [coordinadoresConSaldo, setCoordinadoresConSaldo] = useState<CoordinadorConSaldo[]>([]);
@@ -1211,5 +1211,13 @@ export default function CajaMenorPage() {
       )}
 
     </AuthenticatedLayout>
+  );
+}
+
+export default function CajaMenorPage() {
+  return (
+    <Suspense>
+      <CajaMenorPageInner />
+    </Suspense>
   );
 }
