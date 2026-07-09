@@ -13,7 +13,7 @@
  *        intents que no generan link (ej. contactar-coord).
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import {
   identificarAgricultor,
   type IdentidadAgricultor,
@@ -21,6 +21,7 @@ import {
 import { identificarCoordinadorPorTelefono } from "@/lib/coordinadorResolver";
 import { crearToken, type Intent } from "@/lib/edicionTokens";
 import { getCultivosMap } from "@/lib/cultivosCache";
+import { enviarAvisoContactoDesconocido } from "@/lib/emailContactoDesconocido";
 import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
@@ -175,9 +176,14 @@ async function manejarContactarCoord(
   if (c) {
     return `Tu coordinador es *${c.nombre}*. Escríbele directamente:\n👉 ${c.waUrl}`;
   }
-  // Sin coordinador asignado (p.ej. agricultor sin registro): no hay a
-  // quién dirigirlo todavía. TODO: avisar al admin con los datos.
-  return "Listo, un coordinador te contactará pronto.";
+  // Sin coordinador asignado (p.ej. persona sin registro): avisar al buzón
+  // de atención (Comunicaciones) para que hagan el primer contacto. El
+  // email sale después de responder para no demorar el webhook de TextIt.
+  after(() => enviarAvisoContactoDesconocido(identidad.telefonoNormalizado));
+  return (
+    "Le avisamos a nuestro equipo y te escribirán a este número. 📞\n\n" +
+    "Si lo prefieres, regístrate de una vez con la opción 1️⃣ — durante el registro eliges tu coordinador."
+  );
 }
 
 // Margen para cold starts + Neon/Airtable (TextIt espera la respuesta del
