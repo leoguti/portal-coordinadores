@@ -2,7 +2,9 @@ import nodemailer from "nodemailer";
 
 // Buzón de atención de la página web (lo revisa Comunicaciones). Se puede
 // sobreescribir con CONTACTO_WEB_EMAIL en Vercel sin tocar código.
-const DESTINO = process.env.CONTACTO_WEB_EMAIL || "contactenos@campolimpio.org";
+// TEMPORAL 2026-07-10: apuntado a administrativa@ para revisar cómo llega el
+// correo (no hay acceso a contactenos@ ahora). Revertir a contactenos@.
+const DESTINO = process.env.CONTACTO_WEB_EMAIL || "administrativa@campolimpio.org";
 
 /**
  * Aviso al equipo cuando una persona SIN registro escribe al bot de WhatsApp
