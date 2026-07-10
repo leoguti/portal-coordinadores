@@ -71,3 +71,7 @@ dev.log
 *.swp
 *.swo
 public/revisar-fincas.html
+
+# Archivos locales de trabajo
+backup/
+.claude/
