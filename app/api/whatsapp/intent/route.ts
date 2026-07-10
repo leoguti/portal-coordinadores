@@ -167,23 +167,38 @@ function recordIdParaToken(
 }
 
 async function manejarContactarCoord(
-  identidad: IdentidadAgricultor
-): Promise<string> {
+  identidad: IdentidadAgricultor,
+  tema: string | null
+): Promise<{ mensaje: string; accion?: "pedir_tema" }> {
   console.log(
-    `[whatsapp/intent] contactar-coord: tel=${identidad.telefonoNormalizado} gen=${identidad.generador?.id} rol=${identidad.rol}`
+    `[whatsapp/intent] contactar-coord: tel=${identidad.telefonoNormalizado} gen=${identidad.generador?.id} rol=${identidad.rol} tema=${tema === null ? "(no)" : "sí"}`
   );
   const c = await datosCoordinador(identidad);
   if (c) {
-    return `Tu coordinador es *${c.nombre}*. Escríbele directamente:\n👉 ${c.waUrl}`;
+    return {
+      mensaje: `Tu coordinador es *${c.nombre}*. Escríbele directamente:\n👉 ${c.waUrl}`,
+    };
   }
-  // Sin coordinador asignado (p.ej. persona sin registro): avisar al buzón
-  // de atención (Comunicaciones) para que hagan el primer contacto. El
-  // email sale después de responder para no demorar el webhook de TextIt.
-  after(() => enviarAvisoContactoDesconocido(identidad.telefonoNormalizado));
-  return (
-    "Le avisamos a nuestro equipo y te escribirán a este número. 📞\n\n" +
-    "Si lo prefieres, regístrate de una vez con la opción 1️⃣ — durante el registro eliges tu coordinador."
+  // Sin coordinador asignado (p.ej. persona sin registro): el flow primero
+  // pregunta el tema (texto abierto) y vuelve a llamar con `tema`; ahí sí
+  // avisamos al buzón de atención (Comunicaciones) para el primer contacto.
+  if (tema === null) {
+    return {
+      accion: "pedir_tema",
+      mensaje:
+        "Con gusto. 👍 Cuéntanos en un mensaje: ¿sobre qué tema quieres hablar con un coordinador?",
+    };
+  }
+  // El email sale después de responder para no demorar el webhook de TextIt.
+  const temaFinal = tema || "(no escribió el tema)";
+  after(() =>
+    enviarAvisoContactoDesconocido(identidad.telefonoNormalizado, temaFinal)
   );
+  return {
+    mensaje:
+      "¡Gracias! Le pasamos tu mensaje a nuestro equipo y te escribirán a este número. 📞\n\n" +
+      "Si lo prefieres, regístrate de una vez con la opción 1️⃣ — durante el registro eliges tu coordinador.",
+  };
 }
 
 // Margen para cold starts + Neon/Airtable (TextIt espera la respuesta del
@@ -205,9 +220,15 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       telefono?: string;
       opcion?: number | string;
+      tema?: string;
     };
     const telefono = String(body.telefono || "").trim();
     const opcion = Number(body.opcion);
+    // `tema` distingue los dos pasos de contactar-coord: ausente = primer
+    // paso (preguntar el tema); presente (aunque venga vacío, p.ej. solo un
+    // audio) = segundo paso (enviar el email). Null = ausente.
+    const tema =
+      body.tema === undefined ? null : String(body.tema).trim().slice(0, 500);
     if (!telefono || !Number.isFinite(opcion) || opcion < 1) {
       return NextResponse.json(
         { error: "Faltan campos `telefono` y `opcion` (numérico ≥ 1)" },
@@ -267,11 +288,12 @@ export async function POST(request: NextRequest) {
     const resolved = intentRealParaMenu(menuIntent, identidad);
 
     if (resolved === "contactar-coord") {
-      const mensaje = await manejarContactarCoord(identidad);
+      const r = await manejarContactarCoord(identidad, tema);
       return NextResponse.json({
         url: null,
         expira_min: 0,
-        mensaje_ok: mensaje,
+        mensaje_ok: r.mensaje,
+        ...(r.accion ? { accion: r.accion } : {}),
       });
     }
 
