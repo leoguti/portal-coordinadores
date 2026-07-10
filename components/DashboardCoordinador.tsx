@@ -38,6 +38,7 @@ interface Stats {
     meta: number;
     actual: number;
     evaluadas: number;
+    enRevision?: number;
     porcentaje: number;
     configurada: boolean;
   };
@@ -46,6 +47,7 @@ interface Stats {
     whatsapp: number;
     reportadas: number;
     total: number;
+    enRevision?: number;
     porcentaje: number;
     configurada: boolean;
   };
@@ -397,6 +399,11 @@ export default function DashboardCoordinador() {
                   Meta: <strong className="text-gray-900">{fmt(stats.metaSensibilizacion.meta)}</strong>
                 </span>
               </div>
+              {(stats.metaSensibilizacion.enRevision ?? 0) > 0 && (
+                <div className="text-xs text-amber-600 mt-1" title="Participantes de tus actividades que el administrador aún no ha revisado — suman cuando las apruebe">
+                  +{fmt(stats.metaSensibilizacion.enRevision!)} en revisión del administrador
+                </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-gray-500">Contacta al administrador para configurar tu meta.</p>
@@ -452,6 +459,11 @@ export default function DashboardCoordinador() {
                 Presenciales: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.reportadas)}</strong>
                 <span className="ml-3 text-gray-400">Total: <strong className="text-gray-900">{fmt(stats.metaEvaluaciones.total)}</strong></span>
               </div>
+              {(stats.metaEvaluaciones.enRevision ?? 0) > 0 && (
+                <div className="text-xs text-amber-600 mt-1" title="Evaluaciones de tus actividades que el administrador aún no ha revisado — suman cuando las apruebe">
+                  +{fmt(stats.metaEvaluaciones.enRevision!)} en revisión del administrador
+                </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-gray-500">Contacta al administrador para configurar tu meta.</p>

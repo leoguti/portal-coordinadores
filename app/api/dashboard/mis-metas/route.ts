@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas, participantesPendientes, evaluadasPendientes, evaluacionesWAPendientes } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -85,6 +85,7 @@ export async function GET(request: Request) {
 
     // --- Real Sensibilización + Evaluaciones (Actividades del coordinador) ---
     const realSen = ceros(), realEva = ceros();
+    let senEnRevision = 0, evaEnRevision = 0;
     for (const a of actividades) {
       if (a.fields.Año !== yearStr) continue;
       if (a.fields.Tipo !== "Sensibilización") continue;
@@ -96,6 +97,8 @@ export async function GET(request: Request) {
       realEva[i] +=
         (evaluacionesWAAprobadas(a.fields)) +
         (evaluadasAprobadas(a.fields));
+      senEnRevision += participantesPendientes(a.fields);
+      evaEnRevision += evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields);
     }
 
     const now = new Date();
@@ -108,6 +111,10 @@ export async function GET(request: Request) {
         recoleccion: armar(realRec, metaRec),
         sensibilizacion: armar(realSen, metaSen),
         evaluaciones: armar(realEva, metaEva),
+      },
+      enRevision: {
+        sensibilizacion: senEnRevision,
+        evaluaciones: evaEnRevision,
       },
       lastUpdated: now.toISOString(),
     });

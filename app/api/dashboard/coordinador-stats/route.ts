@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas, participantesPendientes, evaluadasPendientes, evaluacionesWAPendientes } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -73,6 +73,15 @@ export async function GET(request: Request) {
     );
     const totalEvaluaciones = actSens.reduce(
       (sum, a) => sum + (evaluacionesWAAprobadas(a.fields)),
+      0
+    );
+    // Pendientes de revisión del admin: no cuentan aún, se muestran aparte.
+    const sensEnRevision = actSens.reduce(
+      (sum, a) => sum + participantesPendientes(a.fields),
+      0
+    );
+    const evalEnRevision = actSens.reduce(
+      (sum, a) => sum + evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields),
       0
     );
 
@@ -213,6 +222,7 @@ export async function GET(request: Request) {
         meta: metaSens,
         actual: personasSensibilizadas,
         evaluadas: personasEvaluadas,
+        enRevision: sensEnRevision,
         porcentaje: pctSens,
         configurada: metas !== null,
       },
@@ -221,6 +231,7 @@ export async function GET(request: Request) {
         whatsapp: totalEvaluaciones,
         reportadas: personasEvaluadas,
         total: totalEvalCombinado,
+        enRevision: evalEnRevision,
         porcentaje: pctEval,
         configurada: metas !== null && metaEval > 0,
       },
