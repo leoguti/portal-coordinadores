@@ -7,7 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
-import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo, pendienteDeRevision } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo, pendienteDeRevision, participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import {
   reflejarFiltrosEnUrl,
@@ -318,15 +318,18 @@ function ActividadesPageInner() {
         porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0 };
       }
       porTipo[tipo].count++;
-      if (actividad.fields["Cantidad de Participantes"]) {
-        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
-      }
-      if (actividad.fields.CantidadEvaluaciones) {
-        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
-      }
+      // Sensibilización: mismas cifras "solo aprobadas" que los dashboards
+      // (modelo 2026-07-10). Otros tipos no tienen aprobación → valor crudo.
+      const esSens = actividad.fields.Tipo === "Sensibilización";
+      porTipo[tipo].participantes += esSens
+        ? participantesAprobados(actividad.fields)
+        : (actividad.fields["Cantidad de Participantes"] || 0);
+      porTipo[tipo].evaluadas += esSens
+        ? evaluadasAprobadas(actividad.fields)
+        : (actividad.fields["Personas Evaluadas"] || 0);
+      porTipo[tipo].evaluadasWA += esSens
+        ? evaluacionesWAAprobadas(actividad.fields)
+        : (actividad.fields.CantidadEvaluaciones || 0);
     });
 
     return porTipo;
@@ -351,15 +354,18 @@ function ActividadesPageInner() {
         porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0, mesesIncluidos: new Set<number>() };
       }
       porTipo[tipo].count++;
-      if (actividad.fields["Cantidad de Participantes"]) {
-        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
-      }
-      if (actividad.fields.CantidadEvaluaciones) {
-        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
-      }
+      // Sensibilización: mismas cifras "solo aprobadas" que los dashboards
+      // (modelo 2026-07-10). Otros tipos no tienen aprobación → valor crudo.
+      const esSens = actividad.fields.Tipo === "Sensibilización";
+      porTipo[tipo].participantes += esSens
+        ? participantesAprobados(actividad.fields)
+        : (actividad.fields["Cantidad de Participantes"] || 0);
+      porTipo[tipo].evaluadas += esSens
+        ? evaluadasAprobadas(actividad.fields)
+        : (actividad.fields["Personas Evaluadas"] || 0);
+      porTipo[tipo].evaluadasWA += esSens
+        ? evaluacionesWAAprobadas(actividad.fields)
+        : (actividad.fields.CantidadEvaluaciones || 0);
       // Tracking del mes para filtrar metas correspondientes
       if (actividad.fields.Fecha) {
         const m = new Date(actividad.fields.Fecha + 'T00:00:00').getMonth() + 1;
