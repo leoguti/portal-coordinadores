@@ -64,11 +64,11 @@ interface Stats {
     porCoordinador: CoordMeta[];
   };
   metasSensibilizacion: {
-    global: { meta: number; actual: number; evaluadas: number; porcentaje: number };
+    global: { meta: number; actual: number; evaluadas: number; enRevision?: number; porcentaje: number };
     porCoordinador: CoordSensMeta[];
   };
   metasEvaluaciones: {
-    global: { meta: number; whatsapp: number; reportadas: number; total: number; porcentaje: number };
+    global: { meta: number; whatsapp: number; reportadas: number; total: number; enRevision?: number; porcentaje: number };
     porCoordinador: Array<{ id: string; nombre: string; meta: number; whatsapp: number; reportadas: number; total: number; porcentaje: number; semaforo: string }>;
   };
   materiales: MaterialRow[];
@@ -429,6 +429,11 @@ export default function DashboardEjecutivo({
               </strong>
             </span>
           </div>
+          {(stats.metasSensibilizacion.global.enRevision ?? 0) > 0 && (
+            <div className="text-xs text-amber-600 mt-1" title="Participantes de actividades que el administrador aún no ha aprobado — suman cuando se aprueben">
+              +{fmt(stats.metasSensibilizacion.global.enRevision!)} por revisar
+            </div>
+          )}
           {!board && (
             <button
               onClick={() => startTransition(() => setExpandSens(!expandSens))}
@@ -527,6 +532,11 @@ export default function DashboardEjecutivo({
             </div>
             <span className="whitespace-nowrap">Meta: <strong className="text-gray-900">{fmt(stats.metasEvaluaciones.global.meta)}</strong></span>
           </div>
+          {(stats.metasEvaluaciones.global.enRevision ?? 0) > 0 && (
+            <div className="text-xs text-amber-600 mt-1" title="Evaluaciones de actividades que el administrador aún no ha aprobado — suman cuando se aprueben">
+              +{fmt(stats.metasEvaluaciones.global.enRevision!)} por revisar
+            </div>
+          )}
           {!board && (
             <button
               onClick={() => startTransition(() => setExpandEval(!expandEval))}

@@ -70,9 +70,12 @@ export function actividadIncompleta(
   return evaluarCompletitudActividad(fields).incompleta;
 }
 
-// ─── Aprobación admin (modelo "aprobado por defecto") ────────────────────────
-// Solo "Rechazada" tiene efecto: excluye el componente de cifras/informes y
-// habilita la corrección por el coordinador. Pendiente/Aprobada cuentan igual.
+// ─── Aprobación admin (modelo "solo aprobadas cuentan") ──────────────────────
+// Cambio 2026-07-10 (pedido cliente): SOLO el componente con estado "Aprobada"
+// aporta a cifras/informes. Pendiente ya NO cuenta (antes sí: modelo
+// aprobado-por-defecto). El histórico anterior a la fecha de corte se aprueba
+// en bloque con scripts/aprobar-actividades-retroactivo.js ANTES de desplegar
+// este código — de lo contrario los dashboards caen a cero.
 
 /** ¿El componente de sensibilización fue rechazado por el admin? */
 export function sensibilizacionRechazada(
@@ -95,31 +98,94 @@ export function tieneRechazo(
   return sensibilizacionRechazada(fields) || evaluacionesRechazadas(fields);
 }
 
-// Valores "efectivos" para cifras/metas/informes: el componente rechazado
-// aporta 0. Pendiente y Aprobada cuentan igual (modelo aprobado-por-defecto).
+/** ¿La sensibilización fue aprobada explícitamente por el admin? */
+export function sensibilizacionAprobada(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  return fields?.AprobacionSensibilizacion === "Aprobada";
+}
 
-/** Participantes que cuentan (0 si la sensibilización fue rechazada). */
+/** ¿Las evaluaciones fueron aprobadas explícitamente por el admin? */
+export function evaluacionesAprobadas(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  return fields?.AprobacionEvaluaciones === "Aprobada";
+}
+
+// Valores "efectivos" para cifras/metas/informes: SOLO el componente Aprobada
+// aporta; Pendiente y Rechazada aportan 0.
+
+/** Participantes que cuentan (solo si la sensibilización está Aprobada). */
 export function participantesAprobados(
   fields: (ActividadFieldsLike & { "Cantidad de Participantes"?: number }) | undefined | null
 ): number {
-  if (!fields || sensibilizacionRechazada(fields)) return 0;
+  if (!fields || !sensibilizacionAprobada(fields)) return 0;
   return fields["Cantidad de Participantes"] || 0;
 }
 
-/** Personas evaluadas (presenciales) que cuentan (0 si evaluaciones rechazadas). */
+/** Personas evaluadas (presenciales) que cuentan (solo si evaluaciones Aprobadas). */
 export function evaluadasAprobadas(
   fields: ActividadFieldsLike | undefined | null
 ): number {
-  if (!fields || evaluacionesRechazadas(fields)) return 0;
+  if (!fields || !evaluacionesAprobadas(fields)) return 0;
   return fields["Personas Evaluadas"] || 0;
 }
 
-/** Evaluaciones por WhatsApp que cuentan (0 si evaluaciones rechazadas). */
+/** Evaluaciones por WhatsApp que cuentan (solo si evaluaciones Aprobadas). */
 export function evaluacionesWAAprobadas(
   fields: ActividadFieldsLike | undefined | null
 ): number {
-  if (!fields || evaluacionesRechazadas(fields)) return 0;
+  if (!fields || !evaluacionesAprobadas(fields)) return 0;
   return fields.CantidadEvaluaciones || 0;
+}
+
+// Valores "en revisión" para el indicador "+N por revisar" de los dashboards:
+// lo Pendiente (ni Aprobada ni Rechazada) que dejará de verse hasta que el
+// admin lo apruebe.
+
+/** Participantes de sensibilizaciones aún pendientes de revisión. */
+export function participantesPendientes(
+  fields: (ActividadFieldsLike & { "Cantidad de Participantes"?: number }) | undefined | null
+): number {
+  if (!fields || sensibilizacionAprobada(fields) || sensibilizacionRechazada(fields)) return 0;
+  return fields["Cantidad de Participantes"] || 0;
+}
+
+/** Personas evaluadas (presenciales) aún pendientes de revisión. */
+export function evaluadasPendientes(
+  fields: ActividadFieldsLike | undefined | null
+): number {
+  if (!fields || evaluacionesAprobadas(fields) || evaluacionesRechazadas(fields)) return 0;
+  return fields["Personas Evaluadas"] || 0;
+}
+
+/** Evaluaciones por WhatsApp aún pendientes de revisión. */
+export function evaluacionesWAPendientes(
+  fields: ActividadFieldsLike | undefined | null
+): number {
+  if (!fields || evaluacionesAprobadas(fields) || evaluacionesRechazadas(fields)) return 0;
+  return fields.CantidadEvaluaciones || 0;
+}
+
+/**
+ * ¿Necesita acción del admin para contar en cifras? (cola de revisión)
+ * Solo aplica a Sensibilización: sensibilización sin decidir, o evaluaciones
+ * sin decidir cuando la actividad tiene evaluaciones.
+ */
+export function pendienteDeRevision(
+  fields: ActividadFieldsLike | undefined | null
+): boolean {
+  if (!fields || fields.Tipo !== "Sensibilización") return false;
+  const sensPend =
+    fields.AprobacionSensibilizacion !== "Aprobada" &&
+    fields.AprobacionSensibilizacion !== "Rechazada";
+  const tieneEvals =
+    (fields["Personas Evaluadas"] || 0) > 0 || (fields.CantidadEvaluaciones || 0) > 0;
+  const evalPend =
+    tieneEvals &&
+    fields.AprobacionEvaluaciones !== "Aprobada" &&
+    fields.AprobacionEvaluaciones !== "Rechazada";
+  return sensPend || evalPend;
 }
 
 /**

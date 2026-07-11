@@ -27,6 +27,10 @@ interface MisData {
     sensibilizacion: SerieMeta;
     evaluaciones: SerieMeta;
   };
+  enRevision?: {
+    sensibilizacion: number;
+    evaluaciones: number;
+  };
   lastUpdated: string;
 }
 
@@ -82,6 +86,18 @@ export default function MisMetas({ year }: { year: number }) {
 
       <LeyendaMetas />
       <NotaMetasIniciales year={year} />
+      {((data.enRevision?.sensibilizacion ?? 0) > 0 || (data.enRevision?.evaluaciones ?? 0) > 0) && (
+        <p className="text-xs text-amber-600 mb-2">
+          En revisión del administrador (aún no suman):{" "}
+          {(data.enRevision?.sensibilizacion ?? 0) > 0 && (
+            <>{data.enRevision!.sensibilizacion.toLocaleString("es-CO")} sensibilizados</>
+          )}
+          {(data.enRevision?.sensibilizacion ?? 0) > 0 && (data.enRevision?.evaluaciones ?? 0) > 0 && " · "}
+          {(data.enRevision?.evaluaciones ?? 0) > 0 && (
+            <>{data.enRevision!.evaluaciones.toLocaleString("es-CO")} evaluaciones</>
+          )}
+        </p>
+      )}
 
       <div className="overflow-x-auto">
         <div className="min-w-[960px]">

@@ -7,7 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
-import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo, pendienteDeRevision, participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import {
   reflejarFiltrosEnUrl,
@@ -63,6 +63,8 @@ function ActividadesPageInner() {
   // Filtro "solo incompletas" (al hacer click en el cuadro de incompletas)
   const [soloIncompletas, setSoloIncompletas] = useState(searchParams.get("incompletas") === "1");
   const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>(searchParams.get("tipoIncompleta") || "");
+  // Filtro "pendientes de revisión del admin" (cola de aprobación de cifras)
+  const [soloRevision, setSoloRevision] = useState(searchParams.get("revision") === "1");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -85,9 +87,10 @@ function ActividadesPageInner() {
       tipo: selectedTipo,
       incompletas: soloIncompletas ? "1" : "",
       tipoIncompleta: tipoIncompletaFiltro,
+      revision: soloRevision ? "1" : "",
       pag: paginaMes > 0 ? String(paginaMes) : "",
     });
-  }, [selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, soloIncompletas, tipoIncompletaFiltro, paginaMes]);
+  }, [selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, soloIncompletas, tipoIncompletaFiltro, soloRevision, paginaMes]);
 
   useEffect(() => {
     guardarExpandidos("/actividades", {
@@ -264,12 +267,13 @@ function ActividadesPageInner() {
   // (y al tipo elegido, si se hizo click en un tipo). Los conteos de arriba se
   // calculan sobre actividadesFiltradas (no se afectan).
   const actividadesParaLista = React.useMemo(() => {
-    if (!soloIncompletas) return actividadesFiltradas;
+    if (!soloIncompletas && !soloRevision) return actividadesFiltradas;
     const anoVig = new Date().getFullYear();
     const hayFiltros = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
     return actividadesFiltradas.filter((a) => {
-      if (!actividadIncompleta(a.fields)) return false;
-      if (tipoIncompletaFiltro && a.fields.Tipo !== tipoIncompletaFiltro) return false;
+      if (soloIncompletas && !actividadIncompleta(a.fields)) return false;
+      if (soloIncompletas && tipoIncompletaFiltro && a.fields.Tipo !== tipoIncompletaFiltro) return false;
+      if (soloRevision && !pendienteDeRevision(a.fields)) return false;
       // Mismo criterio que el conteo: si no hay filtros, limitar al año vigente
       if (!hayFiltros) {
         if (!a.fields.Fecha) return false;
@@ -277,7 +281,7 @@ function ActividadesPageInner() {
       }
       return true;
     });
-  }, [actividadesFiltradas, soloIncompletas, tipoIncompletaFiltro, selectedAno, selectedMes, selectedMunicipio, selectedTipo, canViewAll, selectedCoordinador]);
+  }, [actividadesFiltradas, soloIncompletas, soloRevision, tipoIncompletaFiltro, selectedAno, selectedMes, selectedMunicipio, selectedTipo, canViewAll, selectedCoordinador]);
 
   const actividadesPorMes = React.useMemo(() => {
     const grupos: { [key: string]: Actividad[] } = {};
@@ -314,15 +318,18 @@ function ActividadesPageInner() {
         porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0 };
       }
       porTipo[tipo].count++;
-      if (actividad.fields["Cantidad de Participantes"]) {
-        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
-      }
-      if (actividad.fields.CantidadEvaluaciones) {
-        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
-      }
+      // Sensibilización: mismas cifras "solo aprobadas" que los dashboards
+      // (modelo 2026-07-10). Otros tipos no tienen aprobación → valor crudo.
+      const esSens = actividad.fields.Tipo === "Sensibilización";
+      porTipo[tipo].participantes += esSens
+        ? participantesAprobados(actividad.fields)
+        : (actividad.fields["Cantidad de Participantes"] || 0);
+      porTipo[tipo].evaluadas += esSens
+        ? evaluadasAprobadas(actividad.fields)
+        : (actividad.fields["Personas Evaluadas"] || 0);
+      porTipo[tipo].evaluadasWA += esSens
+        ? evaluacionesWAAprobadas(actividad.fields)
+        : (actividad.fields.CantidadEvaluaciones || 0);
     });
 
     return porTipo;
@@ -347,15 +354,18 @@ function ActividadesPageInner() {
         porTipo[tipo] = { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0, mesesIncluidos: new Set<number>() };
       }
       porTipo[tipo].count++;
-      if (actividad.fields["Cantidad de Participantes"]) {
-        porTipo[tipo].participantes += actividad.fields["Cantidad de Participantes"];
-      }
-      if (actividad.fields["Personas Evaluadas"]) {
-        porTipo[tipo].evaluadas += actividad.fields["Personas Evaluadas"];
-      }
-      if (actividad.fields.CantidadEvaluaciones) {
-        porTipo[tipo].evaluadasWA += actividad.fields.CantidadEvaluaciones;
-      }
+      // Sensibilización: mismas cifras "solo aprobadas" que los dashboards
+      // (modelo 2026-07-10). Otros tipos no tienen aprobación → valor crudo.
+      const esSens = actividad.fields.Tipo === "Sensibilización";
+      porTipo[tipo].participantes += esSens
+        ? participantesAprobados(actividad.fields)
+        : (actividad.fields["Cantidad de Participantes"] || 0);
+      porTipo[tipo].evaluadas += esSens
+        ? evaluadasAprobadas(actividad.fields)
+        : (actividad.fields["Personas Evaluadas"] || 0);
+      porTipo[tipo].evaluadasWA += esSens
+        ? evaluacionesWAAprobadas(actividad.fields)
+        : (actividad.fields.CantidadEvaluaciones || 0);
       // Tracking del mes para filtrar metas correspondientes
       if (actividad.fields.Fecha) {
         const m = new Date(actividad.fields.Fecha + 'T00:00:00').getMonth() + 1;
@@ -390,6 +400,22 @@ function ActividadesPageInner() {
       }
     });
     return { total, porTipo, porCoordinador };
+  }, [actividadesFiltradas]);
+
+  // Cola de revisión del admin: sensibilizaciones cuyas cifras aún NO cuentan
+  // (modelo "solo aprobadas cuentan", 2026-07-10). Mismo criterio de año
+  // vigente que el conteo de incompletas.
+  const pendientesRevision = React.useMemo(() => {
+    let total = 0;
+    actividadesFiltradas.forEach((actividad) => {
+      if (!hayFiltrosActivos) {
+        if (!actividad.fields.Fecha) return;
+        const anoActividad = new Date(actividad.fields.Fecha + 'T00:00:00').getFullYear();
+        if (anoActividad !== anoVigente) return;
+      }
+      if (pendienteDeRevision(actividad.fields)) total++;
+    });
+    return total;
   }, [actividadesFiltradas]);
 
   // Suma de metas mensuales aplicables al rango/filtro actual
@@ -1014,8 +1040,59 @@ function ActividadesPageInner() {
                     </>
                   )}
                 </div>
+
+                {/* Tarjeta Pendientes de revisión (cifras que aún no cuentan) */}
+                <div className={`bg-white rounded-lg p-4 shadow-sm border ${pendientesRevision > 0 ? "border-purple-300" : "border-gray-200"}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">🔎 Pendientes de revisión</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${pendientesRevision > 0 ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"}`}>
+                      {pendientesRevision}
+                    </span>
+                  </div>
+                  {pendientesRevision === 0 ? (
+                    <p className="text-xs text-gray-500">Todas las sensibilizaciones están revisadas. ✅</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mb-1">
+                        {canViewAll
+                          ? "Sensibilizaciones sin aprobar: sus cifras no suman al informe hasta que las revises."
+                          : "Tus sensibilizaciones en revisión del administrador: suman al informe cuando las apruebe."}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSoloRevision(true);
+                          setPaginaMes(0);
+                        }}
+                        className="mt-3 w-full text-center text-xs font-medium text-purple-800 bg-purple-100 hover:bg-purple-200 rounded py-1.5 transition-colors"
+                      >
+                        Ver pendientes de revisión →
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Banner de filtro "pendientes de revisión" */}
+            {soloRevision && (
+              <div className="flex items-center justify-between bg-purple-50 border border-purple-300 rounded-lg px-4 py-2">
+                <span className="text-sm text-purple-800">
+                  Mostrando solo <strong>pendientes de revisión</strong> ({actividadesParaLista.length})
+                </span>
+                <button
+                  onClick={() => { setSoloRevision(false); setPaginaMes(0); }}
+                  className="text-sm font-medium text-purple-700 hover:text-purple-900 whitespace-nowrap"
+                >
+                  ✕ Quitar filtro
+                </button>
+              </div>
+            )}
+
+            {soloRevision && actividadesParaLista.length === 0 && !soloIncompletas && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+                No hay actividades pendientes de revisión con el filtro actual. ✅
+              </div>
+            )}
 
             {/* Banner de filtro "solo incompletas" */}
             {soloIncompletas && (
@@ -1046,7 +1123,7 @@ function ActividadesPageInner() {
               const monthDate = new Date(parseInt(year), parseInt(month) - 1);
               const monthName = monthDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
               // Con el filtro de incompletas activo, los meses se auto-expanden
-              const isMonthExpanded = expandedMonths.has(monthKey) || soloIncompletas;
+              const isMonthExpanded = expandedMonths.has(monthKey) || soloIncompletas || soloRevision;
               const totalActividades = actividadesDelMes.length;
               const resumenMes = getResumenMes(actividadesDelMes);
 
@@ -1476,7 +1553,7 @@ function ActividadesPageInner() {
                         <div className="divide-y divide-gray-200">
                           {coordEntries.map(([coordId, { nombre, actividades: actividadesCoord }]) => {
                             const coordKey = `${monthKey}::${coordId}`;
-                            const isCoordExpanded = expandedCoordinadores.has(coordKey) || soloIncompletas;
+                            const isCoordExpanded = expandedCoordinadores.has(coordKey) || soloIncompletas || soloRevision;
                             const downloadKey = coordKey;
 
                             return (

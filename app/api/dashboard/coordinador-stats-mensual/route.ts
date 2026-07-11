@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas, participantesPendientes, evaluadasPendientes, evaluacionesWAPendientes } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
@@ -128,6 +128,15 @@ export async function GET(request: Request) {
       0
     );
     const totalEvalCombinado = totalEvaluacionesWA + personasEvaluadas;
+    // Pendientes de revisión del admin: no cuentan aún, se muestran aparte.
+    const sensEnRevision = actSens.reduce(
+      (sum, a) => sum + participantesPendientes(a.fields),
+      0
+    );
+    const evalEnRevision = actSens.reduce(
+      (sum, a) => sum + evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields),
+      0
+    );
 
     const pctRecol = metaRecol > 0 ? Math.round((entradasKg / metaRecol) * 100) : 0;
     const pctSens = metaSens > 0 ? Math.round((personasSensibilizadas / metaSens) * 100) : 0;
@@ -247,6 +256,7 @@ export async function GET(request: Request) {
         meta: metaSens,
         actual: personasSensibilizadas,
         evaluadas: personasEvaluadas,
+        enRevision: sensEnRevision,
         porcentaje: pctSens,
         configurada: metaSens > 0,
       },
@@ -255,6 +265,7 @@ export async function GET(request: Request) {
         whatsapp: totalEvaluacionesWA,
         reportadas: personasEvaluadas,
         total: totalEvalCombinado,
+        enRevision: evalEnRevision,
         porcentaje: pctEval,
         configurada: metaEval > 0,
       },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
+import { participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas, participantesPendientes, evaluadasPendientes, evaluacionesWAPendientes } from "@/lib/actividadCompleteness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { canViewJunta } from "@/lib/roles";
@@ -243,6 +243,17 @@ export async function GET(request: Request) {
     );
     const totalEvalCombinado = totalEvaluaciones + personasEvaluadas;
 
+    // Pendientes de revisión del admin: aún no cuentan en las cifras, pero el
+    // dashboard los muestra como "+N por revisar".
+    const capacitadasEnRevision = actSensibilizacion.reduce(
+      (sum, a) => sum + participantesPendientes(a.fields),
+      0
+    );
+    const evaluacionesEnRevision = actSensibilizacion.reduce(
+      (sum, a) => sum + evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields),
+      0
+    );
+
     const metasSensibilizacionPorCoord = allMetas.map((m) => {
       const coordId =
         m.fields.id_coordinador?.[0] || m.fields.Coordinador?.[0] || "";
@@ -401,6 +412,7 @@ export async function GET(request: Request) {
           meta: metaGlobalSensibilizacion,
           actual: personasCapacitadas,
           evaluadas: personasEvaluadas,
+          enRevision: capacitadasEnRevision,
           porcentaje:
             metaGlobalSensibilizacion > 0
               ? Math.round(
@@ -416,6 +428,7 @@ export async function GET(request: Request) {
           whatsapp: totalEvaluaciones,
           reportadas: personasEvaluadas,
           total: totalEvalCombinado,
+          enRevision: evaluacionesEnRevision,
           porcentaje:
             metaGlobalEvaluaciones > 0
               ? Math.round((totalEvalCombinado / metaGlobalEvaluaciones) * 100)
