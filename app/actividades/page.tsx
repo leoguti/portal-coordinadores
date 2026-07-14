@@ -471,7 +471,7 @@ function ActividadesPageInner() {
         const f = a.fields;
         const dentroDePeriodo = f.Fecha ? puedeModificarActividad(f.Fecha) : true;
         const incompleta = actividadIncompleta(f);
-        const estado = incompleta ? "Incompleta" : dentroDePeriodo ? "Abierta" : "Cerrada";
+        const estado = incompleta ? "Incompleta" : dentroDePeriodo ? "Abierta" : puedeEditarActividad(f) ? "Reabierta" : "Cerrada";
         return [
           f.Consecutivo,
           f.Fecha,
@@ -1397,6 +1397,10 @@ function ActividadesPageInner() {
                                       ) : dentroDePeriodo ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
                                           🔓 Abierta
+                                        </span>
+                                      ) : puedeModificar ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300" title="El mes ya cerró, pero el rechazo del administrador reabre la edición solo para esta actividad, para que se pueda corregir">
+                                          🔓 Reabierta
                                         </span>
                                       ) : (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
