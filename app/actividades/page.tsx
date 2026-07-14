@@ -683,15 +683,13 @@ function ActividadesPageInner() {
 
         {/* Filtros - Admin y Coordinadores */}
         {(opcionesFiltros.meses.length > 0 || opcionesFiltros.anos.length > 0) && (
-          <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              🔍 Filtros de Búsqueda
-            </h3>
-            <div className={`grid grid-cols-1 gap-4 ${canViewAll ? 'md:grid-cols-2 lg:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
+          <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-4">
+            <div className={`grid grid-cols-2 gap-x-4 gap-y-3 items-end md:grid-cols-3 ${canViewAll ? 'xl:grid-cols-[auto_repeat(6,minmax(0,1fr))_auto]' : 'xl:grid-cols-[auto_repeat(5,minmax(0,1fr))_auto]'}`}>
+              <span className="hidden xl:flex items-center h-9 text-sm font-semibold text-gray-700 pr-1">Filtros</span>
               {/* Filtro por Coordinador - Solo admin */}
               {canViewAll && (
                 <div>
-                  <label htmlFor="coordinador-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="coordinador-filter" className="block text-xs font-medium text-gray-500 mb-1">
                     Coordinador
                   </label>
                   <select
@@ -707,7 +705,7 @@ function ActividadesPageInner() {
                       setSelectedAprobacion("");
                       setPaginaMes(0);
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Todos</option>
                     {coordinadores.map((coord) => (
@@ -721,14 +719,14 @@ function ActividadesPageInner() {
 
               {/* Filtro por Mes */}
               <div>
-                <label htmlFor="mes-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="mes-filter" className="block text-xs font-medium text-gray-500 mb-1">
                   Mes
                 </label>
                 <select
                   id="mes-filter"
                   value={selectedMes}
                   onChange={(e) => { setSelectedMes(e.target.value); setPaginaMes(0); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.meses.map((mes) => (
@@ -741,14 +739,14 @@ function ActividadesPageInner() {
 
               {/* Filtro por Año */}
               <div>
-                <label htmlFor="ano-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="ano-filter" className="block text-xs font-medium text-gray-500 mb-1">
                   Año
                 </label>
                 <select
                   id="ano-filter"
                   value={selectedAno}
                   onChange={(e) => { setSelectedAno(e.target.value); setPaginaMes(0); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.anos.map((ano) => (
@@ -761,14 +759,14 @@ function ActividadesPageInner() {
 
               {/* Filtro por Municipio */}
               <div>
-                <label htmlFor="municipio-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="municipio-filter" className="block text-xs font-medium text-gray-500 mb-1">
                   Municipio
                 </label>
                 <select
                   id="municipio-filter"
                   value={selectedMunicipio}
                   onChange={(e) => { setSelectedMunicipio(e.target.value); setPaginaMes(0); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.municipios.map((municipio) => (
@@ -781,14 +779,14 @@ function ActividadesPageInner() {
 
               {/* Filtro por Tipo */}
               <div>
-                <label htmlFor="tipo-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tipo-filter" className="block text-xs font-medium text-gray-500 mb-1">
                   Tipo
                 </label>
                 <select
                   id="tipo-filter"
                   value={selectedTipo}
                   onChange={(e) => { setSelectedTipo(e.target.value); setPaginaMes(0); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos</option>
                   {opcionesFiltros.tipos.map((tipo) => (
@@ -801,14 +799,14 @@ function ActividadesPageInner() {
 
               {/* Filtro por estado de aprobación (solo sensibilizaciones lo tienen) */}
               <div>
-                <label htmlFor="aprobacion-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="aprobacion-filter" className="block text-xs font-medium text-gray-500 mb-1">
                   Estado
                 </label>
                 <select
                   id="aprobacion-filter"
                   value={selectedAprobacion}
                   onChange={(e) => { setSelectedAprobacion(e.target.value); setPaginaMes(0); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full h-9 px-2.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   title="Estado de revisión del administrador (sensibilizaciones): solo lo aprobado suma al informe"
                 >
                   <option value="">Todas</option>
@@ -818,10 +816,8 @@ function ActividadesPageInner() {
                   <option value="Corregida">✏️ Corregida tras rechazo</option>
                 </select>
               </div>
-            </div>
 
-            {/* Botón para limpiar filtros */}
-            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || selectedAprobacion || (canViewAll && selectedCoordinador)) && (
+              {/* Limpiar: misma fila, discreto; invisible si no hay filtros */}
               <button
                 onClick={() => {
                   if (canViewAll) setSelectedCoordinador("");
@@ -834,11 +830,12 @@ function ActividadesPageInner() {
                   setTipoIncompletaFiltro("");
                   setPaginaMes(0);
                 }}
-                className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className={`h-9 whitespace-nowrap text-sm font-medium text-gray-400 hover:text-blue-700 pl-1 text-left ${(selectedMes || selectedAno || selectedMunicipio || selectedTipo || selectedAprobacion || (canViewAll && selectedCoordinador)) ? "visible" : "invisible"}`}
+                title="Quitar todos los filtros"
               >
-                ✕ Limpiar todos los filtros
+                ✕ Limpiar
               </button>
-            )}
+            </div>
           </div>
         )}
 
