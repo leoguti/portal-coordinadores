@@ -37,11 +37,21 @@ export interface CompletenessResult {
   faltantes: string[]; // qué falta exactamente
 }
 
+/**
+ * La exigencia de completitud rige desde 2026-01-01 (decisión cliente
+ * 2026-07-14): antes el proceso no estaba bien implementado, así que lo
+ * anterior (o sin fecha = histórico) se considera completo.
+ */
+export const INICIO_EXIGENCIA_COMPLETITUD = "2026-01-01";
+
 export function evaluarCompletitudActividad(
   fields: ActividadFieldsLike | undefined | null
 ): CompletenessResult {
   const faltantes: string[] = [];
   if (!fields) return { incompleta: true, faltantes: ["sin datos"] };
+  if (!fields.Fecha || fields.Fecha < INICIO_EXIGENCIA_COMPLETITUD) {
+    return { incompleta: false, faltantes: [] };
+  }
 
   const fotos = fields.Fotografias || [];
   if (fotos.length === 0) faltantes.push("Fotografías");

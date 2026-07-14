@@ -8,7 +8,7 @@ import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
 import ConfirmModal from "@/components/ConfirmModal";
 import Link from "next/link";
 import { puedeModificarActividad, getMensajeErrorActividad } from "@/lib/dateValidations";
-import { puedeEditarActividad, actividadIncompleta, getMensajeIncompleta } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, actividadIncompleta, getMensajeIncompleta, evaluarCompletitudActividad } from "@/lib/actividadCompleteness";
 import { isAdmin } from "@/lib/roles";
 
 interface AirtableAttachment {
@@ -300,6 +300,7 @@ export default function ActividadDetailPage() {
                 <BloqueAprobacion
                   titulo="Sensibilización"
                   slug="sensibilizacion"
+                  faltantes={evaluarCompletitudActividad(f).faltantes}
                   estado={f.AprobacionSensibilizacion || "Pendiente"}
                   motivo={f.MotivoRechazoSensibilizacion}
                   esAdmin={esAdmin}
@@ -314,6 +315,7 @@ export default function ActividadDetailPage() {
                   <BloqueAprobacion
                     titulo="Evaluaciones"
                     slug="evaluaciones"
+                    faltantes={evaluarCompletitudActividad(f).faltantes}
                     estado={f.AprobacionEvaluaciones || "Pendiente"}
                     motivo={f.MotivoRechazoEvaluaciones}
                     esAdmin={esAdmin}
@@ -636,6 +638,7 @@ export default function ActividadDetailPage() {
 function BloqueAprobacion({
   titulo,
   slug,
+  faltantes,
   estado,
   motivo,
   esAdmin,
@@ -648,6 +651,7 @@ function BloqueAprobacion({
 }: {
   titulo: string;
   slug: "sensibilizacion" | "evaluaciones";
+  faltantes: string[];
   estado: string;
   motivo?: string;
   esAdmin: boolean;
@@ -690,6 +694,12 @@ function BloqueAprobacion({
         </div>
       )}
 
+      {esAdmin && faltantes.length > 0 && estado !== "Aprobada" && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
+          ⚠️ Incompleta — no se puede aprobar hasta que el coordinador adjunte: {faltantes.join(", ")}.
+        </p>
+      )}
+
       {esAdmin && (
         rechazoAbierto === slug ? (
           <div className="space-y-2">
@@ -720,9 +730,10 @@ function BloqueAprobacion({
           <div className="flex gap-2">
             {estado !== "Aprobada" && (
               <button
-                disabled={!!procesando}
+                disabled={!!procesando || faltantes.length > 0}
                 onClick={() => onAccion(`aprobar-${slug}`)}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium disabled:opacity-50 transition-colors"
+                title={faltantes.length > 0 ? `No se puede aprobar una actividad incompleta. Falta: ${faltantes.join(", ")}` : undefined}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 ✓ Aprobar
               </button>

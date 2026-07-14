@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { puedeEditarActividad } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, evaluarCompletitudActividad } from "@/lib/actividadCompleteness";
 import { puedeModificarActividad } from "@/lib/dateValidations";
 import { isAdmin } from "@/lib/roles";
 
@@ -142,6 +142,28 @@ export async function PATCH(
         { error: "El motivo es obligatorio al rechazar" },
         { status: 400 }
       );
+    }
+
+    // Aprobar implica estar completa (decisión cliente 2026-07-14): una
+    // actividad sin sus soportes obligatorios no puede aprobarse. La regla
+    // solo exige completitud desde 2026-01-01 (lo anterior se considera
+    // completo), así que el histórico aprobado en bloque no se ve afectado.
+    if (action.startsWith("aprobar")) {
+      const recRes = await fetch(
+        `https://api.airtable.com/v0/${baseId}/Actividades/${id}`,
+        { headers: { Authorization: `Bearer ${apiKey}` } }
+      );
+      if (!recRes.ok) {
+        return NextResponse.json({ error: "Actividad no encontrada" }, { status: 404 });
+      }
+      const rec = await recRes.json();
+      const completitud = evaluarCompletitudActividad(rec.fields);
+      if (completitud.incompleta) {
+        return NextResponse.json(
+          { error: `No se puede aprobar una actividad incompleta. Falta: ${completitud.faltantes.join(", ")}. Pide al coordinador completarla primero.` },
+          { status: 409 }
+        );
+      }
     }
 
     const updateResponse = await fetch(
