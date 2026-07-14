@@ -888,220 +888,198 @@ function ActividadesPageInner() {
 
         {!loading && !error && actividadesFiltradas.length > 0 && (
           <div className="space-y-4">
-            {/* Cuadro de Resumen General */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">📊</span>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {selectedAno && selectedMes
-                    ? `Resumen General de ${selectedMes} ${selectedAno}`
-                    : `Resumen General del Año ${selectedAno || anoVigente}`}
-                </h3>
-              </div>
-              <p className="text-xs text-gray-500 mb-4 ml-9">
-                {(() => {
-                  const filtros = [
-                    selectedMunicipio && `Municipio: ${selectedMunicipio}`,
-                    selectedTipo && `Tipo: ${selectedTipo}`,
-                    canViewAll && selectedCoordinador && coordinadores.find(c => c.id === selectedCoordinador)?.name && `Coordinador: ${coordinadores.find(c => c.id === selectedCoordinador)!.name}`,
-                  ].filter(Boolean);
-                  if (filtros.length > 0) return filtros.join(' · ');
-                  if (!selectedMes) return `Desde el 1 de enero de ${selectedAno || anoVigente}`;
-                  return '';
-                })()}
-              </p>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Tarjeta Sensibilización */}
-                {(() => {
-                  const stats = estadisticasGenerales["Sensibilización"];
-                  if (!stats) return null;
-                  const totalEval = stats.evaluadas + stats.evaluadasWA;
-                  const pctSens = metasAplicables.metaSens > 0
-                    ? Math.round((stats.participantes / metasAplicables.metaSens) * 100)
-                    : null;
-                  const pctEval = metasAplicables.metaEval > 0
-                    ? Math.round((totalEval / metasAplicables.metaEval) * 100)
-                    : null;
-                  const colorPct = (p: number | null) => {
-                    if (p === null) return "text-gray-500";
-                    if (p >= 70) return "text-green-700";
-                    if (p >= 40) return "text-yellow-600";
-                    return "text-red-600";
-                  };
-                  return (
-                    <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-200 lg:col-span-2">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-600">Sensibilización</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                          {stats.count}
-                        </span>
+            {/* Cuadro de Resumen General — vista ejecutiva */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              {(() => {
+                const stats = estadisticasGenerales["Sensibilización"] || { count: 0, participantes: 0, evaluadas: 0, evaluadasWA: 0, mesesIncluidos: new Set<number>() };
+                const totalEval = stats.evaluadas + stats.evaluadasWA;
+                const totalActividades = Object.values(estadisticasGenerales).reduce((sum, t) => sum + t.count, 0);
+                const pctSens = metasAplicables.metaSens > 0 ? Math.round((stats.participantes / metasAplicables.metaSens) * 100) : null;
+                const pctEval = metasAplicables.metaEval > 0 ? Math.round((totalEval / metasAplicables.metaEval) * 100) : null;
+                // Medidor: el relleno lleva la severidad; la pista es un paso
+                // más claro del MISMO tono para que el estado se lea completo.
+                const meterClases = (pct: number | null) =>
+                  pct === null ? { fill: "bg-gray-300", track: "bg-gray-100" }
+                  : pct >= 70 ? { fill: "bg-green-500", track: "bg-green-100" }
+                  : pct >= 40 ? { fill: "bg-amber-500", track: "bg-amber-100" }
+                  : { fill: "bg-red-500", track: "bg-red-100" };
+                const mSens = meterClases(pctSens);
+                const mEval = meterClases(pctEval);
+                const filtrosTxt = [
+                  selectedMunicipio && `Municipio: ${selectedMunicipio}`,
+                  selectedTipo && `Tipo: ${selectedTipo}`,
+                  canViewAll && selectedCoordinador && coordinadores.find(c => c.id === selectedCoordinador)?.name && `Coordinador: ${coordinadores.find(c => c.id === selectedCoordinador)!.name}`,
+                ].filter(Boolean).join(" · ");
+                return (
+                  <>
+                    {/* Encabezado */}
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 border-l-4 border-[#00d084] pl-3 mb-6">
+                      <h3 className="text-lg font-semibold text-[#042726]">
+                        {selectedAno && selectedMes
+                          ? `Resumen General de ${selectedMes} ${selectedAno}`
+                          : `Resumen General del Año ${selectedAno || anoVigente}`}
+                      </h3>
+                      <span className="text-xs text-gray-500">
+                        {filtrosTxt || (!selectedMes ? `Desde el 1 de enero de ${selectedAno || anoVigente}` : "")}
+                      </span>
+                    </div>
+
+                    {/* KPIs */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-5 lg:divide-x lg:divide-gray-100">
+                      <div className="lg:pr-6">
+                        <p className="text-xs text-gray-500 mb-1">Actividades</p>
+                        <p className="text-3xl font-semibold text-gray-900">{totalActividades.toLocaleString("es-CO")}</p>
                       </div>
-                      {stats.participantes > 0 && (
-                        <div className="flex items-center gap-1 text-sm text-gray-700 mt-2 pt-2 border-t border-gray-100">
-                          <span>👥</span>
-                          <span className="font-semibold">{stats.participantes.toLocaleString('es-CO')}</span>
-                          <span className="text-gray-500 text-xs">participantes</span>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-gray-100 text-xs">
-                        <div>
-                          <div className="text-gray-500">Eval. papel</div>
-                          <div className="font-semibold text-gray-900">{stats.evaluadas.toLocaleString('es-CO')}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Eval. WhatsApp</div>
-                          <div className="font-semibold text-gray-900">{stats.evaluadasWA.toLocaleString('es-CO')}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Total eval.</div>
-                          <div className="font-bold text-gray-900">{totalEval.toLocaleString('es-CO')}</div>
-                        </div>
+                      <div className="lg:px-6">
+                        <p className="text-xs text-gray-500 mb-1">Sensibilizaciones</p>
+                        <p className="text-3xl font-semibold text-gray-900">{stats.count.toLocaleString("es-CO")}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Meta Sensibilización</div>
-                          {metasAplicables.metaSens > 0 ? (
-                            <>
-                              <div className="flex items-baseline gap-1">
-                                <span className={`text-lg font-bold ${colorPct(pctSens)}`}>{pctSens}%</span>
-                                <span className="text-xs text-gray-500">de {metasAplicables.metaSens.toLocaleString('es-CO')}</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                <div className={`h-1.5 rounded-full ${pctSens! >= 70 ? "bg-green-500" : pctSens! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
-                                     style={{ width: `${Math.min(pctSens!, 100)}%` }} />
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400">Sin meta</span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Meta Evaluaciones</div>
-                          {metasAplicables.metaEval > 0 ? (
-                            <>
-                              <div className="flex items-baseline gap-1">
-                                <span className={`text-lg font-bold ${colorPct(pctEval)}`}>{pctEval}%</span>
-                                <span className="text-xs text-gray-500">de {metasAplicables.metaEval.toLocaleString('es-CO')}</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                <div className={`h-1.5 rounded-full ${pctEval! >= 70 ? "bg-green-500" : pctEval! >= 40 ? "bg-yellow-500" : "bg-red-500"}`}
-                                     style={{ width: `${Math.min(pctEval!, 100)}%` }} />
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400">Sin meta</span>
-                          )}
-                        </div>
+                      <div className="lg:px-6">
+                        <p className="text-xs text-gray-500 mb-1">Personas sensibilizadas</p>
+                        <p className="text-3xl font-semibold text-gray-900">{stats.participantes.toLocaleString("es-CO")}</p>
+                      </div>
+                      <div className="lg:pl-6">
+                        <p className="text-xs text-gray-500 mb-1">Evaluaciones</p>
+                        <p className="text-3xl font-semibold text-gray-900">{totalEval.toLocaleString("es-CO")}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{stats.evaluadas.toLocaleString("es-CO")} en papel · {stats.evaluadasWA.toLocaleString("es-CO")} por WhatsApp</p>
                       </div>
                     </div>
-                  );
-                })()}
 
-                {/* Tarjeta Actividades Incompletas */}
-                <div className={`bg-white rounded-lg p-4 shadow-sm border ${incompletas.total > 0 ? "border-amber-300" : "border-gray-200"}`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">⚠️ Actividades incompletas</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${incompletas.total > 0 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"}`}>
-                      {incompletas.total}
-                    </span>
-                  </div>
-                  {incompletas.total === 0 ? (
-                    <p className="text-sm text-gray-500 mt-3">Todas las actividades están completas. ✅</p>
-                  ) : (
-                    <>
-                      <p className="text-xs text-gray-500 mt-2">Faltan archivos obligatorios (foto, listado o soporte de evaluaciones). Haz click para verlas y completarlas.</p>
-                      <div className="mt-3 space-y-1.5">
-                        {Object.entries(incompletas.porTipo)
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([tipo, n]) => {
-                            const activo = soloIncompletas && tipoIncompletaFiltro === tipo;
-                            return (
-                              <button
-                                key={tipo}
-                                onClick={() => {
-                                  setSoloIncompletas(true);
-                                  setTipoIncompletaFiltro(tipo);
-                                  setPaginaMes(0);
-                                }}
-                                className={`w-full flex items-center justify-between text-xs px-2 py-1.5 rounded border transition-colors ${activo ? "bg-amber-200 border-amber-400" : "bg-amber-50 border-amber-100 hover:bg-amber-100"}`}
-                              >
-                                <span className="text-gray-700">{tipo}</span>
-                                <span className="font-bold text-amber-800">{n} ›</span>
-                              </button>
-                            );
-                          })}
+                    {/* Metas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-5 border-t border-gray-100">
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-xs text-gray-500">Meta de sensibilización</span>
+                          {metasAplicables.metaSens > 0 ? (
+                            <span className="text-xs text-gray-500"><span className="text-lg font-semibold text-gray-900">{pctSens}%</span> de {metasAplicables.metaSens.toLocaleString("es-CO")}</span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sin meta configurada</span>
+                          )}
+                        </div>
+                        {metasAplicables.metaSens > 0 && (
+                          <div className={`w-full h-2 rounded-full ${mSens.track}`}>
+                            <div className={`h-2 rounded-full ${mSens.fill}`} style={{ width: `${Math.min(pctSens!, 100)}%` }} />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <span className="text-xs text-gray-500">Meta de evaluaciones</span>
+                          {metasAplicables.metaEval > 0 ? (
+                            <span className="text-xs text-gray-500"><span className="text-lg font-semibold text-gray-900">{pctEval}%</span> de {metasAplicables.metaEval.toLocaleString("es-CO")}</span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sin meta configurada</span>
+                          )}
+                        </div>
+                        {metasAplicables.metaEval > 0 && (
+                          <div className={`w-full h-2 rounded-full ${mEval.track}`}>
+                            <div className={`h-2 rounded-full ${mEval.fill}`} style={{ width: `${Math.min(pctEval!, 100)}%` }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Estado de la operación */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-5 border-t border-gray-100">
+                      {/* Incompletas */}
+                      <div className={`rounded-lg border px-4 py-3 ${incompletas.total > 0 ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200"}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">⚠️ Actividades incompletas</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {incompletas.total === 0
+                                ? "Todas las actividades tienen sus soportes. ✅"
+                                : "Les faltan archivos obligatorios (foto, listado o soporte de evaluaciones)."}
+                            </p>
+                          </div>
+                          <span className={`text-2xl font-semibold ${incompletas.total > 0 ? "text-amber-700" : "text-gray-400"}`}>{incompletas.total}</span>
+                        </div>
+                        {incompletas.total > 0 && (
+                          <div className="mt-2.5">
+                            <button
+                              onClick={() => { setSoloIncompletas(true); setTipoIncompletaFiltro(""); setPaginaMes(0); }}
+                              className="text-xs font-medium text-amber-800 hover:text-amber-900 underline underline-offset-2"
+                            >
+                              Ver y completar →
+                            </button>
+                            <details className="mt-2 text-xs">
+                              <summary className="cursor-pointer text-gray-500 hover:text-gray-700 select-none">Desglose</summary>
+                              <div className="mt-2 space-y-1">
+                                {Object.entries(incompletas.porTipo)
+                                  .sort((a, b) => b[1] - a[1])
+                                  .map(([tipo, n]) => {
+                                    const activo = soloIncompletas && tipoIncompletaFiltro === tipo;
+                                    return (
+                                      <button
+                                        key={tipo}
+                                        onClick={() => { setSoloIncompletas(true); setTipoIncompletaFiltro(tipo); setPaginaMes(0); }}
+                                        className={`w-full flex items-center justify-between px-2 py-1 rounded border transition-colors ${activo ? "bg-amber-200 border-amber-400" : "bg-white border-amber-100 hover:bg-amber-100"}`}
+                                      >
+                                        <span className="text-gray-700">{tipo}</span>
+                                        <span className="font-semibold text-amber-800">{n} ›</span>
+                                      </button>
+                                    );
+                                  })}
+                                {canViewAll && !selectedCoordinador && Object.keys(incompletas.porCoordinador).length > 0 && (
+                                  <div className="pt-1.5 mt-1.5 border-t border-amber-100">
+                                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Por coordinador</p>
+                                    <div className="space-y-0.5 max-h-36 overflow-y-auto">
+                                      {Object.entries(incompletas.porCoordinador)
+                                        .sort((a, b) => b[1].count - a[1].count)
+                                        .map(([id, info]) => (
+                                          <button
+                                            key={id}
+                                            onClick={() => {
+                                              if (id !== "sin") setSelectedCoordinador(id);
+                                              setSoloIncompletas(true);
+                                              setTipoIncompletaFiltro("");
+                                              setPaginaMes(0);
+                                            }}
+                                            className="w-full flex items-center justify-between px-2 py-0.5 rounded hover:bg-white"
+                                          >
+                                            <span className="text-gray-600 truncate">{info.name}</span>
+                                            <span className="font-semibold text-amber-800 ml-2">{info.count} ›</span>
+                                          </button>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Desglose por coordinador (admin/supervisor en vista global) */}
-                      {canViewAll && !selectedCoordinador && Object.keys(incompletas.porCoordinador).length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-amber-100">
-                          <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1.5">Por coordinador</p>
-                          <div className="space-y-1 max-h-40 overflow-y-auto">
-                            {Object.entries(incompletas.porCoordinador)
-                              .sort((a, b) => b[1].count - a[1].count)
-                              .map(([id, info]) => (
-                                <button
-                                  key={id}
-                                  onClick={() => {
-                                    if (id !== "sin") setSelectedCoordinador(id);
-                                    setSoloIncompletas(true);
-                                    setTipoIncompletaFiltro("");
-                                    setPaginaMes(0);
-                                  }}
-                                  className="w-full flex items-center justify-between text-xs px-2 py-1 rounded hover:bg-gray-50"
-                                >
-                                  <span className="text-gray-600 truncate">{info.name}</span>
-                                  <span className="font-semibold text-amber-800 ml-2">{info.count} ›</span>
-                                </button>
-                              ))}
+                      {/* Pendientes de revisión */}
+                      <div className={`rounded-lg border px-4 py-3 ${pendientesRevision > 0 ? "bg-purple-50 border-purple-200" : "bg-gray-50 border-gray-200"}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">🔎 Pendientes de revisión</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {pendientesRevision === 0
+                                ? "Todas las sensibilizaciones están revisadas. ✅"
+                                : canViewAll
+                                  ? "Sin aprobar: sus cifras no suman al informe hasta que las revises."
+                                  : "En revisión del administrador: suman al informe cuando las apruebe."}
+                            </p>
                           </div>
+                          <span className={`text-2xl font-semibold ${pendientesRevision > 0 ? "text-purple-700" : "text-gray-400"}`}>{pendientesRevision}</span>
                         </div>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setSoloIncompletas(true);
-                          setTipoIncompletaFiltro("");
-                          setPaginaMes(0);
-                        }}
-                        className="mt-3 w-full text-center text-xs font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 rounded py-1.5 transition-colors"
-                      >
-                        Ver todas las incompletas →
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Tarjeta Pendientes de revisión (cifras que aún no cuentan) */}
-                <div className={`bg-white rounded-lg p-4 shadow-sm border ${pendientesRevision > 0 ? "border-purple-300" : "border-gray-200"}`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">🔎 Pendientes de revisión</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${pendientesRevision > 0 ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"}`}>
-                      {pendientesRevision}
-                    </span>
-                  </div>
-                  {pendientesRevision === 0 ? (
-                    <p className="text-xs text-gray-500">Todas las sensibilizaciones están revisadas. ✅</p>
-                  ) : (
-                    <>
-                      <p className="text-xs text-gray-500 mb-1">
-                        {canViewAll
-                          ? "Sensibilizaciones sin aprobar: sus cifras no suman al informe hasta que las revises."
-                          : "Tus sensibilizaciones en revisión del administrador: suman al informe cuando las apruebe."}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setSoloRevision(true);
-                          setPaginaMes(0);
-                        }}
-                        className="mt-3 w-full text-center text-xs font-medium text-purple-800 bg-purple-100 hover:bg-purple-200 rounded py-1.5 transition-colors"
-                      >
-                        Ver pendientes de revisión →
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+                        {pendientesRevision > 0 && (
+                          <div className="mt-2.5">
+                            <button
+                              onClick={() => { setSoloRevision(true); setPaginaMes(0); }}
+                              className="text-xs font-medium text-purple-800 hover:text-purple-900 underline underline-offset-2"
+                            >
+                              Ver pendientes de revisión →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Banner de filtro "pendientes de revisión" */}
