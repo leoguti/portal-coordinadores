@@ -288,7 +288,7 @@ export default function ActividadDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Revisión para el informe</h2>
                 <span className="text-xs text-gray-400">
-                  {esAdmin ? "Aprobada por defecto — rechaza lo que no cumple los requisitos" : ""}
+                  {esAdmin ? "Solo lo aprobado suma al informe — revisa y aprueba lo que cumple los requisitos" : ""}
                 </span>
               </div>
               {aprobacionError && (
