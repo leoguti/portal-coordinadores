@@ -455,7 +455,7 @@ function ActividadesPageInner() {
       const csvCols = [
         "Consecutivo", "Fecha", "Nombre", "Tipo", "Municipio", "Participantes",
         "Descripcion", "Cultivo", "Modalidad", "Perfil Asistentes", "Coordinador",
-        "Estado", "Aprobacion", "Num Fotos", "Num Listados Asistencia", "Num Evaluaciones",
+        "Edicion", "Estado", "Num Fotos", "Num Listados Asistencia", "Num Evaluaciones",
       ];
 
       const escapeCsv = (val: string | number | undefined | null) => {
@@ -802,7 +802,7 @@ function ActividadesPageInner() {
               {/* Filtro por estado de aprobación (solo sensibilizaciones lo tienen) */}
               <div>
                 <label htmlFor="aprobacion-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                  Aprobación
+                  Estado
                 </label>
                 <select
                   id="aprobacion-filter"
@@ -1313,11 +1313,11 @@ function ActividadesPageInner() {
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Fotos
                               </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Ciclo de la actividad: si aún se puede completar o editar">
-                                Estado
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="¿Aún se puede editar? Abierta/Cerrada según la ventana del mes; En Curso o Incompleta si falta completarla">
+                                Edición
                               </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Revisión del administrador: solo lo aprobado suma al informe (aplica a Sensibilización)">
-                                Aprobación
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Estado de aprobación del administrador: solo lo aprobado suma al informe (aplica a Sensibilización)">
+                                Estado
                               </th>
                               <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Acciones
