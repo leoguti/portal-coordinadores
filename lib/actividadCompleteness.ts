@@ -189,6 +189,24 @@ export function pendienteDeRevision(
 }
 
 /**
+ * Estado de aprobación consolidado para la interfaz (columna y filtro).
+ * Distinto del estado de realización (En curso/Abierta/Cerrada): este dice
+ * si las cifras cuentan para el informe. Solo aplica a Sensibilización.
+ * Precedencia: Rechazada > Corregida > Pendiente > Aprobada.
+ */
+export type EstadoAprobacion = "Aprobada" | "Pendiente" | "Rechazada" | "Corregida";
+
+export function estadoAprobacion(
+  fields: ActividadFieldsLike | undefined | null
+): EstadoAprobacion | null {
+  if (!fields || fields.Tipo !== "Sensibilización") return null;
+  if (tieneRechazo(fields)) return "Rechazada";
+  if (corregidaTrasRechazo(fields)) return "Corregida";
+  if (pendienteDeRevision(fields)) return "Pendiente";
+  return "Aprobada";
+}
+
+/**
  * ¿Fue corregida tras un rechazo? (volvió a Pendiente pero conserva el motivo
  * del rechazo → marcador para la cola de re-revisión del admin)
  */

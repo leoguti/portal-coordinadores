@@ -7,7 +7,7 @@ import React from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import Link from "next/link";
 import { puedeModificarActividad } from "@/lib/dateValidations";
-import { puedeEditarActividad, actividadIncompleta, tieneRechazo, corregidaTrasRechazo, pendienteDeRevision, participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
+import { puedeEditarActividad, actividadIncompleta, pendienteDeRevision, estadoAprobacion, participantesAprobados, evaluadasAprobadas, evaluacionesWAAprobadas } from "@/lib/actividadCompleteness";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import {
   reflejarFiltrosEnUrl,
@@ -65,6 +65,8 @@ function ActividadesPageInner() {
   const [tipoIncompletaFiltro, setTipoIncompletaFiltro] = useState<string>(searchParams.get("tipoIncompleta") || "");
   // Filtro "pendientes de revisión del admin" (cola de aprobación de cifras)
   const [soloRevision, setSoloRevision] = useState(searchParams.get("revision") === "1");
+  // Filtro por estado de aprobación (Pendiente/Aprobada/Rechazada/Corregida)
+  const [selectedAprobacion, setSelectedAprobacion] = useState<string>(searchParams.get("aprobacion") || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -88,9 +90,10 @@ function ActividadesPageInner() {
       incompletas: soloIncompletas ? "1" : "",
       tipoIncompleta: tipoIncompletaFiltro,
       revision: soloRevision ? "1" : "",
+      aprobacion: selectedAprobacion,
       pag: paginaMes > 0 ? String(paginaMes) : "",
     });
-  }, [selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, soloIncompletas, tipoIncompletaFiltro, soloRevision, paginaMes]);
+  }, [selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, soloIncompletas, tipoIncompletaFiltro, soloRevision, selectedAprobacion, paginaMes]);
 
   useEffect(() => {
     guardarExpandidos("/actividades", {
@@ -259,8 +262,13 @@ function ActividadesPageInner() {
       filtered = filtered.filter(a => a.fields.Tipo === selectedTipo);
     }
 
+    // Filtro por estado de aprobación (solo tienen estado las Sensibilizaciones)
+    if (selectedAprobacion) {
+      filtered = filtered.filter(a => estadoAprobacion(a.fields) === selectedAprobacion);
+    }
+
     return filtered;
-  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, canViewAll, session?.user?.coordinatorRecordId]);
+  }, [actividades, selectedCoordinador, selectedMes, selectedAno, selectedMunicipio, selectedTipo, selectedAprobacion, canViewAll, session?.user?.coordinatorRecordId]);
 
   // Agrupar actividades por mes
   // Lista visible: si "solo incompletas" está activo, restringe a las incompletas
@@ -269,7 +277,7 @@ function ActividadesPageInner() {
   const actividadesParaLista = React.useMemo(() => {
     if (!soloIncompletas && !soloRevision) return actividadesFiltradas;
     const anoVig = new Date().getFullYear();
-    const hayFiltros = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
+    const hayFiltros = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || selectedAprobacion || (canViewAll && selectedCoordinador));
     return actividadesFiltradas.filter((a) => {
       if (soloIncompletas && !actividadIncompleta(a.fields)) return false;
       if (soloIncompletas && tipoIncompletaFiltro && a.fields.Tipo !== tipoIncompletaFiltro) return false;
@@ -281,7 +289,7 @@ function ActividadesPageInner() {
       }
       return true;
     });
-  }, [actividadesFiltradas, soloIncompletas, soloRevision, tipoIncompletaFiltro, selectedAno, selectedMes, selectedMunicipio, selectedTipo, canViewAll, selectedCoordinador]);
+  }, [actividadesFiltradas, soloIncompletas, soloRevision, tipoIncompletaFiltro, selectedAno, selectedMes, selectedMunicipio, selectedTipo, selectedAprobacion, canViewAll, selectedCoordinador]);
 
   const actividadesPorMes = React.useMemo(() => {
     const grupos: { [key: string]: Actividad[] } = {};
@@ -337,7 +345,7 @@ function ActividadesPageInner() {
 
   // Calcular estadísticas generales: por defecto año vigente, o según filtros activos
   const anoVigente = new Date().getFullYear();
-  const hayFiltrosActivos = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador));
+  const hayFiltrosActivos = !!(selectedAno || selectedMes || selectedMunicipio || selectedTipo || selectedAprobacion || (canViewAll && selectedCoordinador));
   const estadisticasGenerales = React.useMemo(() => {
     const porTipo: { [tipo: string]: { count: number; participantes: number; evaluadas: number; evaluadasWA: number; mesesIncluidos: Set<number> } } = {};
 
@@ -447,7 +455,7 @@ function ActividadesPageInner() {
       const csvCols = [
         "Consecutivo", "Fecha", "Nombre", "Tipo", "Municipio", "Participantes",
         "Descripcion", "Cultivo", "Modalidad", "Perfil Asistentes", "Coordinador",
-        "Estado", "Num Fotos", "Num Listados Asistencia", "Num Evaluaciones",
+        "Estado", "Aprobacion", "Num Fotos", "Num Listados Asistencia", "Num Evaluaciones",
       ];
 
       const escapeCsv = (val: string | number | undefined | null) => {
@@ -477,6 +485,7 @@ function ActividadesPageInner() {
           f["Perfil de Asistentes"],
           f["Name (from Coordinador)"]?.[0],
           estado,
+          estadoAprobacion(f) ?? "",
           f.Fotografias?.length ?? 0,
           f["Listado Asistencia"]?.length ?? 0,
           f["Evaluaciones"]?.length ?? 0,
@@ -695,6 +704,7 @@ function ActividadesPageInner() {
                       setSelectedAno("");
                       setSelectedMunicipio("");
                       setSelectedTipo("");
+                      setSelectedAprobacion("");
                       setPaginaMes(0);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -788,10 +798,30 @@ function ActividadesPageInner() {
                   ))}
                 </select>
               </div>
+
+              {/* Filtro por estado de aprobación (solo sensibilizaciones lo tienen) */}
+              <div>
+                <label htmlFor="aprobacion-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                  Aprobación
+                </label>
+                <select
+                  id="aprobacion-filter"
+                  value={selectedAprobacion}
+                  onChange={(e) => { setSelectedAprobacion(e.target.value); setPaginaMes(0); }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  title="Estado de revisión del administrador (sensibilizaciones): solo lo aprobado suma al informe"
+                >
+                  <option value="">Todas</option>
+                  <option value="Pendiente">🕐 Pendiente</option>
+                  <option value="Aprobada">✓ Aprobada</option>
+                  <option value="Rechazada">✗ Rechazada</option>
+                  <option value="Corregida">✏️ Corregida tras rechazo</option>
+                </select>
+              </div>
             </div>
 
             {/* Botón para limpiar filtros */}
-            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || (canViewAll && selectedCoordinador)) && (
+            {(selectedMes || selectedAno || selectedMunicipio || selectedTipo || selectedAprobacion || (canViewAll && selectedCoordinador)) && (
               <button
                 onClick={() => {
                   if (canViewAll) setSelectedCoordinador("");
@@ -799,6 +829,7 @@ function ActividadesPageInner() {
                   setSelectedAno("");
                   setSelectedMunicipio("");
                   setSelectedTipo("");
+                  setSelectedAprobacion("");
                   setSoloIncompletas(false);
                   setTipoIncompletaFiltro("");
                   setPaginaMes(0);
@@ -1282,8 +1313,11 @@ function ActividadesPageInner() {
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Fotos
                               </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Ciclo de la actividad: si aún se puede completar o editar">
                                 Estado
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Revisión del administrador: solo lo aprobado suma al informe (aplica a Sensibilización)">
+                                Aprobación
                               </th>
                               <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Acciones
@@ -1351,17 +1385,7 @@ function ActividadesPageInner() {
                                       )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                      {/* Badges de revisión admin (independientes del ciclo de vida) */}
-                                      {tieneRechazo(actividad.fields) && (
-                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-300 mr-1" title="Rechazada por el administrador — revisa el motivo en el detalle">
-                                          ✗ Rechazada
-                                        </span>
-                                      )}
-                                      {corregidaTrasRechazo(actividad.fields) && (
-                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 mr-1" title="Corregida tras rechazo — pendiente de re-revisión">
-                                          ✏️ Corregida
-                                        </span>
-                                      )}
+                                      {/* Estado de REALIZACIÓN: ciclo de la actividad */}
                                       {actividad.fields.Estado === "En curso" ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
                                           ⚠️ En Curso
@@ -1379,6 +1403,33 @@ function ActividadesPageInner() {
                                           🔒 Cerrada
                                         </span>
                                       )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {/* Estado de APROBACIÓN: revisión del admin (solo Sensibilización) */}
+                                      {(() => {
+                                        const ap = estadoAprobacion(actividad.fields);
+                                        if (ap === "Rechazada") return (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-300" title="Rechazada por el administrador — no suma al informe; revisa el motivo en el detalle">
+                                            ✗ Rechazada
+                                          </span>
+                                        );
+                                        if (ap === "Corregida") return (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300" title="Corregida tras rechazo — pendiente de re-revisión del administrador">
+                                            ✏️ Corregida
+                                          </span>
+                                        );
+                                        if (ap === "Pendiente") return (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 border border-purple-300" title="En revisión del administrador — suma al informe cuando la apruebe">
+                                            🕐 Pendiente
+                                          </span>
+                                        );
+                                        if (ap === "Aprobada") return (
+                                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300" title="Aprobada por el administrador — suma al informe">
+                                            ✓ Aprobada
+                                          </span>
+                                        );
+                                        return <span className="text-xs text-gray-400" title="Solo las sensibilizaciones pasan por aprobación">—</span>;
+                                      })()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                       <div className="flex items-center justify-center gap-2">
