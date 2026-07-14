@@ -1410,7 +1410,7 @@ function ActividadesPageInner() {
                                             ✓ Aprobada
                                           </span>
                                         );
-                                        return <span className="text-xs text-gray-400" title="Solo las sensibilizaciones pasan por aprobación">—</span>;
+                                        return <span className="text-xs text-gray-400" title="Solo las sensibilizaciones pasan por aprobación">No aplica</span>;
                                       })()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
