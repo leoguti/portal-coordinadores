@@ -285,6 +285,23 @@ function CajaMenorPageInner() {
     : saldoInicial;
   const saldoActual = saldoInicialCoord + totalReembolsos - totalFacturasAprobadas;
 
+  // Extracto del mes en curso (estilo extracto bancario):
+  // saldo a fin del mes anterior + recibido este mes - legalizado este mes - pendientes = disponible
+  const hoyExtracto = new Date();
+  const mesActualKey = `${hoyExtracto.getFullYear()}-${String(hoyExtracto.getMonth() + 1).padStart(2, "0")}`;
+  const nombreMesCorto = (d: Date) => d.toLocaleDateString("es-CO", { month: "long" });
+  const mesActualNombre = nombreMesCorto(hoyExtracto);
+  const mesAnteriorNombre = nombreMesCorto(new Date(hoyExtracto.getFullYear(), hoyExtracto.getMonth(), 0));
+  const reembolsosMesActual = reembolsosCoord.filter(
+    (r) => (r.fields.Fecha || "").substring(0, 7) === mesActualKey
+  );
+  const recibidoMesActual = reembolsosMesActual.reduce((s, r) => s + (r.fields.Monto || 0), 0);
+  const aprobadosMesActual = gastosCoord.filter(
+    (g) => g.fields.Estado === "Aprobado" && (g.fields.Fecha || "").substring(0, 7) === mesActualKey
+  );
+  const legalizadoMesActual = aprobadosMesActual.reduce((s, g) => s + calcValorNeto(g), 0);
+  const saldoFinMesAnterior = saldoActual - recibidoMesActual + legalizadoMesActual;
+
   const cantAprobados = gastosCoord.filter((g) => g.fields.Estado === "Aprobado").length;
   const cantPendientes = gastosCoord.filter((g) => g.fields.Estado === "Pendiente").length;
   const cantRechazados = gastosCoord.filter((g) => g.fields.Estado === "Rechazado").length;
@@ -645,40 +662,53 @@ function CajaMenorPageInner() {
               })()}
 
               <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Extracto de {mesActualNombre}
+                </p>
                 <table className="w-full text-sm">
                   <tbody>
                     <tr>
-                      <td className="py-1.5 text-gray-600">
-                        Recibido de Bogotá
-                        <span className="block text-xs text-gray-400">
-                          inicial {formatCurrency(saldoInicialCoord)} + {reembolsosCoord.length}{" "}
-                          {reembolsosCoord.length === 1 ? "reembolso" : "reembolsos"}
-                        </span>
-                      </td>
+                      <td className="py-1.5 text-gray-600">Saldo a fin de {mesAnteriorNombre}</td>
                       <td className="py-1.5 text-right font-mono font-bold text-gray-900 align-top whitespace-nowrap">
-                        {formatCurrency(saldoInicialCoord + totalReembolsos)}
+                        {formatCurrency(saldoFinMesAnterior)}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-1.5 text-gray-600">
-                        Ya legalizado (aprobado)
-                        <span className="block text-xs text-gray-400">{cantAprobados} facturas</span>
+                        Recibido de Bogotá en {mesActualNombre}
+                        <span className="block text-xs text-gray-400">
+                          {reembolsosMesActual.length}{" "}
+                          {reembolsosMesActual.length === 1 ? "reembolso" : "reembolsos"}
+                        </span>
                       </td>
                       <td className="py-1.5 text-right font-mono font-bold text-gray-900 align-top whitespace-nowrap">
-                        − {formatCurrency(totalFacturasAprobadas)}
+                        + {formatCurrency(recibidoMesActual)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 text-gray-600">
+                        Legalizado en {mesActualNombre}
+                        <span className="block text-xs text-gray-400">
+                          {aprobadosMesActual.length} facturas aprobadas
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right font-mono font-bold text-gray-900 align-top whitespace-nowrap">
+                        − {formatCurrency(legalizadoMesActual)}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-1.5 text-gray-600">
                         En revisión (ya gastado)
-                        <span className="block text-xs text-gray-400">{cantPendientes} gastos por aprobar</span>
+                        <span className="block text-xs text-gray-400">
+                          {cantPendientes} gastos por aprobar, de cualquier mes
+                        </span>
                       </td>
                       <td className="py-1.5 text-right font-mono font-bold text-amber-700 align-top whitespace-nowrap">
                         − {formatCurrency(totalFacturasPendientes)}
                       </td>
                     </tr>
                     <tr className="border-t border-gray-300">
-                      <td className="pt-2 font-bold text-gray-800">= Disponible para gastar</td>
+                      <td className="pt-2 font-bold text-gray-800">= Disponible hoy</td>
                       <td className="pt-2 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
                         {formatCurrency(saldoActual - totalFacturasPendientes)}
                       </td>
