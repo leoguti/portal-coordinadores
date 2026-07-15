@@ -112,6 +112,7 @@ interface KardexFields {
     url: string;
     filename: string;
     type?: string;
+    thumbnails?: { small?: { url: string }; large?: { url: string } };
   }>;
   RegistroConciliacion?: string[]; // Linked to Kardex - vincula SALIDA con ENTRADA de conciliación
   Observaciones?: string; // Observaciones del registro
@@ -149,6 +150,7 @@ interface OrdenFields {
     url: string;
     filename: string;
     type?: string;
+    thumbnails?: { small?: { url: string }; large?: { url: string } };
   }>;
   FechaFactura?: string;
   PorcentajeIVA?: number;

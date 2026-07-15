@@ -846,12 +846,23 @@ export default function OrdenDetallePage() {
                           href={soporte.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center w-full h-28 bg-white rounded border border-blue-300 hover:border-blue-500 hover:shadow-md transition-all"
+                          className="relative flex items-center justify-center w-full h-28 bg-white rounded border border-blue-300 hover:border-blue-500 hover:shadow-md transition-all overflow-hidden"
                         >
-                          <div className="text-center px-2">
-                            <span className="block text-2xl mb-1">&#128196;</span>
-                            <span className="text-xs text-blue-700 break-all">{soporte.filename}</span>
-                          </div>
+                          {soporte.thumbnails?.large?.url ? (
+                            <img
+                              src={`/api/image-proxy?url=${encodeURIComponent(soporte.thumbnails.large.url)}`}
+                              alt={soporte.filename}
+                              className="w-full h-full object-cover object-top"
+                            />
+                          ) : (
+                            <div className="text-center px-2">
+                              <span className="block text-2xl mb-1">&#128196;</span>
+                              <span className="text-xs text-blue-700 break-all">{soporte.filename}</span>
+                            </div>
+                          )}
+                          <span className="absolute bottom-1 right-1 bg-red-600 text-white text-[9px] font-bold px-1 rounded">
+                            PDF
+                          </span>
                         </a>
                       )}
                       <p className="text-xs text-blue-600 mt-1 truncate text-center">{soporte.filename}</p>
@@ -966,23 +977,55 @@ export default function OrdenDetallePage() {
 
                           {/* Foto Bascula */}
                           <td className="px-4 py-3 text-center">
-                            {fotoBascula ? (
-                              <button
-                                onClick={() => setSelectedPhoto({
-                                  url: fotoBascula.url,
-                                  filename: fotoBascula.filename,
-                                  kardexId: kardex?.fields.idkardex || 0,
-                                })}
-                                className="inline-block group relative"
-                                title={`Ver foto - Kardex #${kardex?.fields.idkardex}`}
-                              >
-                                <img
-                                  src={`/api/image-proxy?url=${encodeURIComponent(fotoBascula.url)}`}
-                                  alt={`Bascula - Kardex #${kardex?.fields.idkardex}`}
-                                  className="w-12 h-12 object-cover rounded border border-gray-300 group-hover:border-[#00d084] group-hover:shadow-md transition-all"
-                                />
-                              </button>
-                            ) : (
+                            {fotoBascula ? (() => {
+                              const esPdf =
+                                fotoBascula.type === "application/pdf" ||
+                                /\.pdf$/i.test(fotoBascula.filename || "");
+                              if (esPdf) {
+                                const thumb = fotoBascula.thumbnails?.large?.url;
+                                return (
+                                  <a
+                                    href={fotoBascula.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block group relative"
+                                    title={`Abrir soporte PDF - Kardex #${kardex?.fields.idkardex}`}
+                                  >
+                                    {thumb ? (
+                                      <img
+                                        src={`/api/image-proxy?url=${encodeURIComponent(thumb)}`}
+                                        alt={`Soporte PDF - Kardex #${kardex?.fields.idkardex}`}
+                                        className="w-12 h-12 object-cover rounded border border-gray-300 group-hover:border-[#00d084] group-hover:shadow-md transition-all"
+                                      />
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-12 h-12 rounded border border-gray-300 bg-gray-50 text-lg">
+                                        📄
+                                      </span>
+                                    )}
+                                    <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[8px] font-bold px-1 rounded leading-3">
+                                      PDF
+                                    </span>
+                                  </a>
+                                );
+                              }
+                              return (
+                                <button
+                                  onClick={() => setSelectedPhoto({
+                                    url: fotoBascula.url,
+                                    filename: fotoBascula.filename,
+                                    kardexId: kardex?.fields.idkardex || 0,
+                                  })}
+                                  className="inline-block group relative"
+                                  title={`Ver foto - Kardex #${kardex?.fields.idkardex}`}
+                                >
+                                  <img
+                                    src={`/api/image-proxy?url=${encodeURIComponent(fotoBascula.url)}`}
+                                    alt={`Bascula - Kardex #${kardex?.fields.idkardex}`}
+                                    className="w-12 h-12 object-cover rounded border border-gray-300 group-hover:border-[#00d084] group-hover:shadow-md transition-all"
+                                  />
+                                </button>
+                              );
+                            })() : (
                               <span className="text-gray-300 text-xs">—</span>
                             )}
                           </td>
