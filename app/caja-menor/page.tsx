@@ -343,6 +343,13 @@ function CajaMenorPageInner() {
     return Array.from(grupos.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
+  // Nombre del mes (con offset) a partir de una clave "YYYY-MM": nombreDeMes("2026-07", -1) => "junio"
+  const nombreDeMes = (mesKey: string, offset = 0) => {
+    const [y, m] = mesKey.split("-").map(Number);
+    if (!y || !m) return "";
+    return new Date(y, m - 1 + offset, 1).toLocaleDateString("es-CO", { month: "long" });
+  };
+
   const formatMesNombre = (mesStr: string) => {
     if (mesStr === "sin-fecha") return "Sin fecha";
     const [year, month] = mesStr.split("-");
@@ -949,21 +956,25 @@ function CajaMenorPageInner() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                           <span className="font-bold text-gray-900 capitalize text-lg">{formatMesNombre(mes)}</span>
+                          {mes === mesActualKey && (
+                            <span className="text-xs font-medium text-gray-500">(en curso)</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3 text-sm">
+                        <div className="flex items-center gap-2 text-sm">
                           {resumen.cantReemb > 0 && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium font-mono">
-                              +{formatCurrency(resumen.totalReembolsos)}
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium">
+                              Recibido <span className="font-mono font-bold">+{formatCurrency(resumen.totalReembolsos)}</span>
                             </span>
                           )}
                           {resumen.cantAprob > 0 && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded font-medium font-mono">
-                              -{formatCurrency(resumen.aprobado)}
+                            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded font-medium">
+                              Legalizado <span className="font-mono font-bold">−{formatCurrency(resumen.aprobado)}</span>
                             </span>
                           )}
                           {saldoMes && (
-                            <span className={`px-3 py-1 rounded font-bold font-mono ${saldoMes.saldoFinal >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                              Saldo: {formatCurrency(saldoMes.saldoFinal)}
+                            <span className={`px-3 py-1 rounded font-bold ${saldoMes.saldoFinal >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                              {mes === mesActualKey ? "Saldo hoy:" : "Cierre:"}{" "}
+                              <span className="font-mono">{formatCurrency(saldoMes.saldoFinal)}</span>
                             </span>
                           )}
                         </div>
@@ -1139,7 +1150,18 @@ function CajaMenorPageInner() {
                                           {canViewAll && !filtroCoordinador && (
                                             <td className="px-3 py-2 text-gray-700 text-xs">{coordinador}</td>
                                           )}
-                                          <td className="px-3 py-2 text-gray-900 font-medium">{beneficiario}</td>
+                                          <td className="px-3 py-2 text-gray-900 font-medium">
+                                            {beneficiario}
+                                            {gasto.fields.Observaciones && (
+                                              <span
+                                                title={gasto.fields.Observaciones}
+                                                aria-label={`Observaciones: ${gasto.fields.Observaciones}`}
+                                                className="ml-1.5 cursor-help select-none"
+                                              >
+                                                💬
+                                              </span>
+                                            )}
+                                          </td>
                                           <td className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{rubro}</td>
                                           <td className="px-3 py-2 text-right w-36">
                                             <span className="font-bold text-gray-900 font-mono">{formatCurrency(valorNeto)}</span>
@@ -1176,36 +1198,50 @@ function CajaMenorPageInner() {
                             </div>
                           )}
 
-                          {/* Resumen de saldos del mes */}
+                          {/* Extracto del mes */}
                           {saldoMes && (
                             <div className="bg-gray-50 border border-gray-300 rounded-lg overflow-hidden">
                               <div className="bg-gray-200 px-4 py-2 border-b border-gray-300">
-                                <h4 className="font-bold text-gray-700 text-sm uppercase">Resumen del Mes</h4>
+                                <h4 className="font-bold text-gray-700 text-sm uppercase">
+                                  Extracto de {nombreDeMes(mes)}
+                                </h4>
                               </div>
                               <div className="p-4">
                                 <table className="w-full text-sm">
                                   <tbody>
                                     <tr>
-                                      <td className="py-1 text-gray-600">Saldo anterior:</td>
+                                      <td className="py-1 text-gray-600">
+                                        Saldo a fin de {nombreDeMes(mes, -1)}
+                                      </td>
                                       <td className="py-1 text-right font-mono font-bold text-gray-700 w-36">
                                         {formatCurrency(saldoMes.saldoAnterior)}
                                       </td>
                                     </tr>
                                     <tr>
-                                      <td className="py-1 text-blue-600">+ Reembolsos del mes:</td>
+                                      <td className="py-1 text-gray-600">
+                                        Recibido de Bogotá en {nombreDeMes(mes)}
+                                        <span className="ml-1 text-xs text-gray-400">
+                                          ({resumen.cantReemb} {resumen.cantReemb === 1 ? "reembolso" : "reembolsos"})
+                                        </span>
+                                      </td>
                                       <td className="py-1 text-right font-mono font-bold text-blue-700 w-36">
-                                        +{formatCurrency(saldoMes.reembolsosMes)}
+                                        + {formatCurrency(saldoMes.reembolsosMes)}
                                       </td>
                                     </tr>
                                     <tr>
-                                      <td className="py-1 text-orange-600">- Gastos aprobados:</td>
+                                      <td className="py-1 text-gray-600">
+                                        Legalizado en {nombreDeMes(mes)}
+                                        <span className="ml-1 text-xs text-gray-400">
+                                          ({resumen.cantAprob} {resumen.cantAprob === 1 ? "factura aprobada" : "facturas aprobadas"})
+                                        </span>
+                                      </td>
                                       <td className="py-1 text-right font-mono font-bold text-orange-700 w-36">
-                                        -{formatCurrency(saldoMes.facturasAprobadasMes)}
+                                        − {formatCurrency(saldoMes.facturasAprobadasMes)}
                                       </td>
                                     </tr>
                                     <tr className="border-t-2 border-gray-400">
                                       <td className={`py-2 font-bold ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                        = SALDO FINAL:
+                                        = {mes === mesActualKey ? "Saldo hoy" : "Saldo al cierre"}
                                       </td>
                                       <td className={`py-2 text-right font-mono font-bold text-lg w-36 ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                                         {formatCurrency(saldoMes.saldoFinal)}
@@ -1213,6 +1249,13 @@ function CajaMenorPageInner() {
                                     </tr>
                                   </tbody>
                                 </table>
+                                {resumen.cantPend > 0 && (
+                                  <p className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                    🕐 En revisión: <b className="font-mono">{formatCurrency(resumen.pendiente)}</b>{" "}
+                                    ({resumen.cantPend} {resumen.cantPend === 1 ? "gasto" : "gastos"}) — ya gastado; descuenta
+                                    del saldo cuando el administrador lo apruebe.
+                                  </p>
+                                )}
                               </div>
                             </div>
                           )}
