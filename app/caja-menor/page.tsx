@@ -655,7 +655,7 @@ function CajaMenorPageInner() {
                         ? canViewAll
                           ? "Ha cubierto gastos con su dinero — se compensa con el próximo reembolso."
                           : "Has cubierto gastos con tu dinero — se compensa con el próximo reembolso."
-                        : "Dinero de CampoLimpio bajo " + (canViewAll ? "su" : "tu") + " responsabilidad, disponible para gastar."}
+                        : <>Dinero de CampoLimpio bajo {canViewAll ? "su" : "tu"} responsabilidad, <b>disponible para gastar</b>.</>}
                     </p>
                   </div>
                 );
