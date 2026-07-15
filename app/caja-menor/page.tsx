@@ -70,6 +70,24 @@ function CajaMenorPageInner() {
   useEffect(() => {
     guardarExpandidos("/caja-menor", { meses: mesesExpandidos });
   }, [mesesExpandidos]);
+
+  // El botón atrás del navegador deshace la selección de coordinador (y demás filtros)
+  useEffect(() => {
+    const onPop = () => {
+      const p = new URLSearchParams(window.location.search);
+      setFiltroCoordinador(p.get("coordinador") || "");
+      setFiltroEstado(p.get("estado") || "");
+      setFiltroMes(p.get("mes") || "");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // Entrar a la caja de un coordinador crea entrada de historial: "atrás" vuelve a la tabla general
+  const seleccionarCoordinador = (id: string) => {
+    window.history.pushState(null, "", window.location.href);
+    setFiltroCoordinador(id);
+  };
   const [mesesReembolsosExpandidos, setMesesReembolsosExpandidos] = useState<Set<string>>(new Set());
 
   // Descarga de facturas
@@ -848,7 +866,7 @@ function CajaMenorPageInner() {
                       <tr
                         key={coord.id}
                         className={`border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
-                        onClick={() => setFiltroCoordinador(coord.id)}
+                        onClick={() => seleccionarCoordinador(coord.id)}
                       >
                         <td className="py-3 px-4 font-medium text-gray-900">{coord.nombre}</td>
                         <td className="py-3 px-4 text-right font-mono text-gray-600">{formatCurrency(coord.recibido)}</td>
@@ -870,7 +888,7 @@ function CajaMenorPageInner() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setFiltroCoordinador(coord.id);
+                              seleccionarCoordinador(coord.id);
                             }}
                             className="px-2 py-1 bg-[#00d084] text-white text-xs font-medium rounded hover:bg-[#00b872] transition-colors"
                           >
