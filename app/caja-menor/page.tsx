@@ -301,6 +301,7 @@ function CajaMenorPageInner() {
   );
   const legalizadoMesActual = aprobadosMesActual.reduce((s, g) => s + calcValorNeto(g), 0);
   const saldoFinMesAnterior = saldoActual - recibidoMesActual + legalizadoMesActual;
+  const disponibleHoy = saldoActual - totalFacturasPendientes;
 
   const cantAprobados = gastosCoord.filter((g) => g.fields.Estado === "Aprobado").length;
   const cantPendientes = gastosCoord.filter((g) => g.fields.Estado === "Pendiente").length;
@@ -641,7 +642,6 @@ function CajaMenorPageInner() {
             {/* Héroe + ecuación del dinero */}
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               {(() => {
-                const disponibleHoy = saldoActual - totalFacturasPendientes;
                 const leDeben = disponibleHoy < 0;
                 return (
                   <div
@@ -971,12 +971,20 @@ function CajaMenorPageInner() {
                               Legalizado <span className="font-mono font-bold">−{formatCurrency(resumen.aprobado)}</span>
                             </span>
                           )}
-                          {saldoMes && (
+                          {saldoMes && mes === mesActualKey ? (
+                            <>
+                              <span className="px-3 py-1 rounded font-bold bg-gray-200 text-gray-700">
+                                Saldo: <span className="font-mono">{formatCurrency(saldoMes.saldoFinal)}</span>
+                              </span>
+                              <span className={`px-3 py-1 rounded font-bold ${disponibleHoy >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
+                                Disponible: <span className="font-mono">{formatCurrency(disponibleHoy)}</span>
+                              </span>
+                            </>
+                          ) : saldoMes ? (
                             <span className={`px-3 py-1 rounded font-bold ${saldoMes.saldoFinal >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                              {mes === mesActualKey ? "Saldo hoy:" : "Cierre:"}{" "}
-                              <span className="font-mono">{formatCurrency(saldoMes.saldoFinal)}</span>
+                              Cierre: <span className="font-mono">{formatCurrency(saldoMes.saldoFinal)}</span>
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </button>
 
@@ -1240,16 +1248,39 @@ function CajaMenorPageInner() {
                                       </td>
                                     </tr>
                                     <tr className="border-t-2 border-gray-400">
-                                      <td className={`py-2 font-bold ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                        = {mes === mesActualKey ? "Saldo hoy" : "Saldo al cierre"}
+                                      <td className={`py-2 font-bold ${mes === mesActualKey ? "text-gray-700" : saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                        = {mes === mesActualKey ? "Saldo hoy (según lo aprobado)" : "Saldo al cierre"}
                                       </td>
-                                      <td className={`py-2 text-right font-mono font-bold text-lg w-36 ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                      <td className={`py-2 text-right font-mono font-bold w-36 ${mes === mesActualKey ? "text-gray-700" : `text-lg ${saldoMes.saldoFinal >= 0 ? "text-emerald-700" : "text-red-700"}`}`}>
                                         {formatCurrency(saldoMes.saldoFinal)}
                                       </td>
                                     </tr>
+                                    {mes === mesActualKey && cantPendientes > 0 && (
+                                      <>
+                                        <tr>
+                                          <td className="py-1 text-amber-700">
+                                            En revisión (ya gastado)
+                                            <span className="ml-1 text-xs text-amber-600/70">
+                                              ({cantPendientes} {cantPendientes === 1 ? "gasto" : "gastos"} por aprobar, de cualquier mes)
+                                            </span>
+                                          </td>
+                                          <td className="py-1 text-right font-mono font-bold text-amber-700 w-36">
+                                            − {formatCurrency(totalFacturasPendientes)}
+                                          </td>
+                                        </tr>
+                                        <tr className="border-t-2 border-gray-400">
+                                          <td className={`py-2 font-bold ${disponibleHoy >= 0 ? "text-emerald-700" : "text-sky-700"}`}>
+                                            = Disponible hoy
+                                          </td>
+                                          <td className={`py-2 text-right font-mono font-bold text-lg w-36 ${disponibleHoy >= 0 ? "text-emerald-700" : "text-sky-700"}`}>
+                                            {formatCurrency(disponibleHoy)}
+                                          </td>
+                                        </tr>
+                                      </>
+                                    )}
                                   </tbody>
                                 </table>
-                                {resumen.cantPend > 0 && (
+                                {mes !== mesActualKey && resumen.cantPend > 0 && (
                                   <p className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
                                     🕐 En revisión: <b className="font-mono">{formatCurrency(resumen.pendiente)}</b>{" "}
                                     ({resumen.cantPend} {resumen.cantPend === 1 ? "gasto" : "gastos"}) — ya gastado; descuenta
