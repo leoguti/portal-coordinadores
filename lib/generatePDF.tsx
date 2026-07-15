@@ -15,6 +15,7 @@ interface ItemOrden {
   precioUnitario: number;
   subtotal: number;
   fotoBasculaUrl?: string;
+  fotoBasculaEsPdf?: boolean;
 }
 
 interface GeneratePDFParams {

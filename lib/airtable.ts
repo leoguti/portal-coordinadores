@@ -111,6 +111,7 @@ interface KardexFields {
     id: string;
     url: string;
     filename: string;
+    type?: string;
   }>;
   RegistroConciliacion?: string[]; // Linked to Kardex - vincula SALIDA con ENTRADA de conciliación
   Observaciones?: string; // Observaciones del registro
@@ -147,6 +148,7 @@ interface OrdenFields {
     id: string;
     url: string;
     filename: string;
+    type?: string;
   }>;
   FechaFactura?: string;
   PorcentajeIVA?: number;
@@ -1195,14 +1197,26 @@ export async function createOrdenServicio(
           } catch { return undefined; }
         }
 
-        // Pre-download bascula photos as base64 (parallel)
+        // Pre-download bascula photos as base64 (parallel).
+        // Soportes en PDF no se pueden pintar con <Image>: van como páginas fusionadas al final.
         const basculaDownloads = await Promise.all(
           kardexData.map(async (k) => {
-            const url = k.fields.soportebascula?.[0]?.url;
-            return { id: k.id, base64: url ? await imgToBase64(url) : undefined };
+            const adj = k.fields.soportebascula?.[0];
+            if (!adj?.url) return { id: k.id, base64: undefined, pdfBuf: undefined };
+            const esPdf = adj.type === "application/pdf" || /\.pdf$/i.test(adj.filename || "");
+            if (esPdf) {
+              try {
+                const resp = await fetch(adj.url);
+                if (resp.ok) return { id: k.id, base64: undefined, pdfBuf: Buffer.from(await resp.arrayBuffer()) };
+              } catch { /* soporte PDF no descargable: queda como "sin soporte" */ }
+              return { id: k.id, base64: undefined, pdfBuf: undefined };
+            }
+            return { id: k.id, base64: await imgToBase64(adj.url), pdfBuf: undefined };
           })
         );
         const basculaBase64Map = new Map(basculaDownloads.map(d => [d.id, d.base64]));
+        const basculaPdfIds = new Set(basculaDownloads.filter(d => d.pdfBuf).map(d => d.id));
+        const kardexPdfBuffers = basculaDownloads.filter(d => d.pdfBuf).map(d => d.pdfBuf as Buffer);
 
         // Prepare items data for PDF with detailed descriptions
         const pdfItems = params.items.map((item, index) => {
@@ -1227,6 +1241,7 @@ export async function createOrdenServicio(
               precioUnitario: item.precioUnitario,
               subtotal: item.cantidad * item.precioUnitario,
               fotoBasculaUrl: item.kardexRecordId ? basculaBase64Map.get(item.kardexRecordId) : undefined,
+              fotoBasculaEsPdf: item.kardexRecordId ? basculaPdfIds.has(item.kardexRecordId) : false,
             };
           } else {
             const nombre = rubroNameMapForPdf.get(item.rubroRecordId) || "Servicio";
@@ -1247,19 +1262,25 @@ export async function createOrdenServicio(
 
         const totalCalculated = pdfItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-        // Pre-download soportes de bascula from the orden as base64
+        // Pre-download soportes de bascula from the orden: imágenes como base64, PDFs para fusionar
         const soportesOrdenRaw = ordenData.fields["Soporte de Bascula"] || [];
         const soportesOrden: Array<{ url: string; filename: string }> = [];
+        const soportesPdfBuffers: Buffer[] = [];
         if (soportesOrdenRaw.length > 0) {
-          const results = await Promise.all(
+          await Promise.all(
             soportesOrdenRaw.map(async (s) => {
-              const base64 = await imgToBase64(s.url);
-              return { base64, filename: s.filename };
+              const esPdf = s.type === "application/pdf" || /\.pdf$/i.test(s.filename || "");
+              if (esPdf) {
+                try {
+                  const resp = await fetch(s.url);
+                  if (resp.ok) soportesPdfBuffers.push(Buffer.from(await resp.arrayBuffer()));
+                } catch { /* soporte PDF no descargable */ }
+              } else {
+                const base64 = await imgToBase64(s.url);
+                if (base64) soportesOrden.push({ url: base64, filename: s.filename });
+              }
             })
           );
-          results.forEach(({ base64, filename }) => {
-            if (base64) soportesOrden.push({ url: base64, filename });
-          });
         }
 
         // Generate PDF buffer
@@ -1278,12 +1299,25 @@ export async function createOrdenServicio(
           soportesOrden: soportesOrden.length > 0 ? soportesOrden : undefined,
         });
 
+        // Fusionar soportes en PDF (kardex + orden) como páginas finales
+        let pdfFinal = pdfBuffer;
+        const anexosPdf = [...kardexPdfBuffers, ...soportesPdfBuffers];
+        if (anexosPdf.length > 0) {
+          try {
+            const { mergePDFs } = await import("@/lib/generatePDF");
+            pdfFinal = await mergePDFs([pdfBuffer, ...anexosPdf]);
+            console.log(`Merged ${anexosPdf.length} soporte PDF(s) into orden PDF`);
+          } catch (e) {
+            console.error("Error merging soporte PDFs (continuing without them):", e);
+          }
+        }
+
         // Upload PDF to Vercel Blob
         console.log("Uploading PDF to Vercel Blob...");
         const { put, del } = await import("@vercel/blob");
-        
+
         const filename = `Orden_${ordenData.fields.NumeroOrden}.pdf`;
-        const blob = await put(filename, pdfBuffer, {
+        const blob = await put(filename, pdfFinal, {
           access: "public",
           contentType: "application/pdf",
         });
@@ -1465,30 +1499,52 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     }
   }
 
-  // 7. Pre-download bascula photos as base64 (parallel)
+  // 7. Pre-download bascula photos as base64 (parallel).
+  // Los soportes que son PDF no se pueden pintar con <Image> de @react-pdf:
+  // se descargan como buffer y se fusionan como páginas al final (pdf-lib).
   console.log(`[regenerarPDF] Pre-downloading bascula photos...`);
-  const basculaUrlsToDownload: Array<{ index: number; url: string }> = [];
+  const basculaUrlsToDownload: Array<{ index: number; url: string; esPdf: boolean }> = [];
   kardexData.forEach((kardex) => {
-    const url = kardex.fields.soportebascula?.[0]?.url;
-    if (url) {
+    const adj = kardex.fields.soportebascula?.[0];
+    if (adj?.url) {
       const itemIndex = items.findIndex(item => item.fields.Kardex?.[0] === kardex.id);
-      if (itemIndex >= 0) basculaUrlsToDownload.push({ index: itemIndex, url });
+      if (itemIndex >= 0) {
+        basculaUrlsToDownload.push({
+          index: itemIndex,
+          url: adj.url,
+          esPdf: adj.type === "application/pdf" || /\.pdf$/i.test(adj.filename || ""),
+        });
+      }
     }
   });
 
   const basculaBase64Map = new Map<number, string>();
+  const basculaPdfIndices = new Set<number>();
+  const kardexPdfDescargados: Array<{ index: number; buf: Buffer }> = [];
   if (basculaUrlsToDownload.length > 0) {
-    const results = await Promise.all(
-      basculaUrlsToDownload.map(async ({ index, url }) => {
-        const base64 = await imageUrlToBase64(url);
-        return { index, base64 };
+    await Promise.all(
+      basculaUrlsToDownload.map(async ({ index, url, esPdf }) => {
+        if (esPdf) {
+          try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+              kardexPdfDescargados.push({ index, buf: Buffer.from(await resp.arrayBuffer()) });
+              basculaPdfIndices.add(index);
+            }
+          } catch (e) {
+            console.warn(`[regenerarPDF] Could not download kardex soporte PDF (item ${index}):`, e);
+          }
+        } else {
+          const base64 = await imageUrlToBase64(url);
+          if (base64) basculaBase64Map.set(index, base64);
+        }
       })
     );
-    results.forEach(({ index, base64 }) => {
-      if (base64) basculaBase64Map.set(index, base64);
-    });
-    console.log(`[regenerarPDF] Downloaded ${basculaBase64Map.size}/${basculaUrlsToDownload.length} bascula photos`);
+    console.log(
+      `[regenerarPDF] Bascula soportes: ${basculaBase64Map.size} images, ${kardexPdfDescargados.length} PDFs (de ${basculaUrlsToDownload.length})`
+    );
   }
+  const kardexPdfBuffers = kardexPdfDescargados.sort((a, b) => a.index - b.index).map((k) => k.buf);
 
   // Pre-download soportes de orden: separate images (for @react-pdf) from PDFs (for pdf-lib merge)
   const soportesOrdenRaw = orden.fields["Soporte de Bascula"] || [];
@@ -1543,6 +1599,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
         precioUnitario: item.fields.PrecioUnitario || 0,
         subtotal: item.fields["Cálculo"] || (item.fields.Cantidad || 0) * (item.fields.PrecioUnitario || 0),
         fotoBasculaUrl: basculaBase64Map.get(index),
+        fotoBasculaEsPdf: basculaPdfIndices.has(index),
       };
     } else {
       const rubroId = item.fields.Rubro?.[0];
@@ -1607,10 +1664,11 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
     }
   }
 
-  // Build ordered list: 1) Factura  2) Orden  3) Soportes PDF de orden
+  // Build ordered list: 1) Factura  2) Orden  3) Soportes PDF de kardex  4) Soportes PDF de orden
   const allPdfs: Buffer[] = [];
   if (facturaBuffer) allPdfs.push(facturaBuffer);
   allPdfs.push(pdfBuffer); // orden con anexos de fotos (kardex + orden imágenes)
+  allPdfs.push(...kardexPdfBuffers); // soportes de kardex que son PDF
   allPdfs.push(...soportesPdfBuffers); // soportes de orden que son PDF
 
   if (allPdfs.length > 1) {

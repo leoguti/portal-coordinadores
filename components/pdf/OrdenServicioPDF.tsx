@@ -15,6 +15,7 @@ interface ItemOrden {
   precioUnitario: number;
   subtotal: number;
   fotoBasculaUrl?: string;
+  fotoBasculaEsPdf?: boolean;
 }
 
 interface OrdenServicioPDFProps {
@@ -198,6 +199,12 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
                 <View key={item.id} style={styles.photoItem}>
                   {item.fotoBasculaUrl ? (
                     <Image src={item.fotoBasculaUrl} style={styles.photoImage} />
+                  ) : item.fotoBasculaEsPdf ? (
+                    <View style={styles.noPhotoPlaceholder}>
+                      <Text style={styles.noPhotoText}>
+                        Soporte en formato PDF — anexado en las páginas finales de este documento
+                      </Text>
+                    </View>
                   ) : (
                     <View style={styles.noPhotoPlaceholder}>
                       <Text style={styles.noPhotoText}>Sin soporte de báscula</Text>
