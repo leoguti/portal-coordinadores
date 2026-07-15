@@ -15,6 +15,7 @@ interface ItemOrden {
   precioUnitario: number;
   subtotal: number;
   fotoBasculaUrl?: string;
+  fotoBasculaUrls?: string[];
   fotoBasculaEsPdf?: boolean;
 }
 
@@ -194,33 +195,51 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
 
           <View style={styles.photoGrid}>
             {items
-              .filter(item => item.tipo === "KARDEX" && item.fotoBasculaUrl)
-              .map((item) => (
-                <View key={item.id} style={styles.photoItem}>
-                  <Image src={item.fotoBasculaUrl} style={styles.photoImage} />
-                  <Text style={styles.photoCaption}>{item.descripcion}</Text>
-                </View>
-              ))}
+              .filter(item => item.tipo === "KARDEX")
+              .flatMap((item) => {
+                const fotos = item.fotoBasculaUrls ?? (item.fotoBasculaUrl ? [item.fotoBasculaUrl] : []);
+                return fotos.map((foto, fi) => (
+                  <View key={`${item.id}-foto-${fi}`} style={styles.photoItem}>
+                    <Image src={foto} style={styles.photoImage} />
+                    <Text style={styles.photoCaption}>
+                      {item.descripcion}
+                      {fotos.length > 1 ? ` (foto ${fi + 1}/${fotos.length})` : ""}
+                    </Text>
+                  </View>
+                ));
+              })}
           </View>
 
-          {items.some(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && item.fotoBasculaEsPdf) && (
+          {items.some(item => item.tipo === "KARDEX" && item.fotoBasculaEsPdf) && (
             <View style={styles.pdfAnexoBox}>
               <Text style={styles.pdfAnexoTitle}>
                 Soportes en formato PDF — anexados como páginas al final de este documento:
               </Text>
               {items
-                .filter(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && item.fotoBasculaEsPdf)
+                .filter(item => item.tipo === "KARDEX" && item.fotoBasculaEsPdf)
                 .map((item) => (
                   <Text key={item.id} style={styles.pdfAnexoRow}>• {item.descripcion}</Text>
                 ))}
             </View>
           )}
 
-          {items.some(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && !item.fotoBasculaEsPdf) && (
+          {items.some(
+            item =>
+              item.tipo === "KARDEX" &&
+              !item.fotoBasculaUrl &&
+              !(item.fotoBasculaUrls && item.fotoBasculaUrls.length > 0) &&
+              !item.fotoBasculaEsPdf
+          ) && (
             <View style={styles.sinSoporteBox}>
               <Text style={styles.pdfAnexoTitle}>Sin soporte de báscula:</Text>
               {items
-                .filter(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && !item.fotoBasculaEsPdf)
+                .filter(
+                  item =>
+                    item.tipo === "KARDEX" &&
+                    !item.fotoBasculaUrl &&
+                    !(item.fotoBasculaUrls && item.fotoBasculaUrls.length > 0) &&
+                    !item.fotoBasculaEsPdf
+                )
                 .map((item) => (
                   <Text key={item.id} style={styles.pdfAnexoRow}>• {item.descripcion}</Text>
                 ))}

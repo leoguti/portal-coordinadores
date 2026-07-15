@@ -15,6 +15,7 @@ interface ItemOrden {
   precioUnitario: number;
   subtotal: number;
   fotoBasculaUrl?: string;
+  fotoBasculaUrls?: string[];
   fotoBasculaEsPdf?: boolean;
 }
 
@@ -83,9 +84,10 @@ export async function mergePDFs(
     const titulo = Buffer.isBuffer(item) ? undefined : item.titulo;
     const doc = await PDFDocument.load(buf);
     const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
-    for (const page of pages) {
+    for (const [pi, page] of pages.entries()) {
       mergedPdf.addPage(page);
       if (titulo) {
+        const tituloPagina = pages.length > 1 ? `${titulo} — pág. ${pi + 1}/${pages.length}` : titulo;
         const { width, height } = page.getSize();
         const bandH = 24;
         page.drawRectangle({
@@ -96,7 +98,7 @@ export async function mergePDFs(
           color: rgb(0.016, 0.153, 0.149), // #042726 CampoLimpio
         });
         const fontSize = 10;
-        let texto = titulo;
+        let texto = tituloPagina;
         // Recortar si no cabe en el ancho de la página
         while (texto.length > 8 && font.widthOfTextAtSize(texto, fontSize) > width - 24) {
           texto = texto.slice(0, -4) + "…";
