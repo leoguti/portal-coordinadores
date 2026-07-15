@@ -1163,10 +1163,9 @@ function CajaMenorPageInner() {
                                             {gasto.fields.Observaciones && (
                                               <span
                                                 title={gasto.fields.Observaciones}
-                                                aria-label={`Observaciones: ${gasto.fields.Observaciones}`}
-                                                className="ml-1.5 cursor-help select-none"
+                                                className="block text-xs font-normal text-gray-500 truncate max-w-[320px] cursor-help"
                                               >
-                                                💬
+                                                💬 {gasto.fields.Observaciones}
                                               </span>
                                             )}
                                           </td>
