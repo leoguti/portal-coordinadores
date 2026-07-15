@@ -307,6 +307,53 @@ function CajaMenorPageInner() {
   const cantPendientes = gastosCoord.filter((g) => g.fields.Estado === "Pendiente").length;
   const cantRechazados = gastosCoord.filter((g) => g.fields.Estado === "Rechazado").length;
 
+  // Resumen por coordinador para la vista admin sin filtro (cada coordinador es una caja independiente)
+  const resumenCoordinadores = !canViewAll
+    ? []
+    : coordinadoresConSaldo
+        .filter((coord) => {
+          const tieneGastos = gastos.some((g) => g.fields.Coordinador?.includes(coord.id));
+          const tieneReembolsos = reembolsos.some((r) => r.fields.Coordinador?.includes(coord.id));
+          return tieneGastos || tieneReembolsos || coord.saldoInicial > 0;
+        })
+        .map((coord) => {
+          const gastosC = gastos.filter((g) => g.fields.Coordinador?.includes(coord.id));
+          const reembolsosC = reembolsos.filter((r) => r.fields.Coordinador?.includes(coord.id));
+          const recibido = coord.saldoInicial + reembolsosC.reduce((s, r) => s + (r.fields.Monto || 0), 0);
+          const legalizado = gastosC
+            .filter((g) => g.fields.Estado === "Aprobado")
+            .reduce((s, g) => s + calcValorNeto(g), 0);
+          const pendientesC = gastosC.filter((g) => g.fields.Estado === "Pendiente");
+          const pendMonto = pendientesC.reduce((s, g) => s + calcValorNeto(g), 0);
+          const saldo = recibido - legalizado;
+          return {
+            id: coord.id,
+            nombre: coord.nombre,
+            recibido,
+            legalizado,
+            saldo,
+            pendMonto,
+            cantPend: pendientesC.length,
+            disponible: saldo - pendMonto,
+          };
+        })
+        .sort(
+          (a, b) => b.cantPend - a.cantPend || b.pendMonto - a.pendMonto || a.nombre.localeCompare(b.nombre)
+        );
+  const admTotales = resumenCoordinadores.reduce(
+    (acc, c) => ({
+      recibido: acc.recibido + c.recibido,
+      legalizado: acc.legalizado + c.legalizado,
+      saldo: acc.saldo + c.saldo,
+      pendMonto: acc.pendMonto + c.pendMonto,
+      cantPend: acc.cantPend + c.cantPend,
+      disponible: acc.disponible + c.disponible,
+      deuda: acc.deuda + (c.disponible < 0 ? -c.disponible : 0),
+      deudores: acc.deudores + (c.disponible < 0 ? 1 : 0),
+    }),
+    { recibido: 0, legalizado: 0, saldo: 0, pendMonto: 0, cantPend: 0, disponible: 0, deuda: 0, deudores: 0 }
+  );
+
   const coordNombre = canViewAll
     ? (coordinadoresConSaldo.find((c) => c.id === filtroCoordinador)?.nombre || "")
     : (session?.user?.name || "");
@@ -740,64 +787,84 @@ function CajaMenorPageInner() {
           </div>
         )}
 
-        {/* Resumen de saldos por coordinador (admin sin filtro) */}
+        {/* Vista admin sin filtro: franja de resumen + una caja por coordinador */}
         {canViewAll && !filtroCoordinador && !loading && (
-          <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-            <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-gray-700 uppercase">Resumen de Saldos por Coordinador</h3>
+          <>
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`rounded-lg border p-5 ${admTotales.cantPend > 0 ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200"}`}>
+                <p className={`text-xs font-bold uppercase tracking-wide ${admTotales.cantPend > 0 ? "text-amber-700" : "text-gray-500"}`}>
+                  Por aprobar
+                </p>
+                <p className={`text-3xl font-bold font-mono mt-1 ${admTotales.cantPend > 0 ? "text-amber-800" : "text-gray-700"}`}>
+                  {formatCurrency(admTotales.pendMonto)}
+                </p>
+                <p className={`text-sm mt-1 ${admTotales.cantPend > 0 ? "text-amber-700" : "text-gray-500"}`}>
+                  {admTotales.cantPend === 0
+                    ? "Nada pendiente — al día"
+                    : `${admTotales.cantPend} ${admTotales.cantPend === 1 ? "gasto" : "gastos"} esperando tu revisión`}
+                </p>
+              </div>
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-5">
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">En las cajas</p>
+                <p className="text-3xl font-bold font-mono mt-1 text-emerald-800">{formatCurrency(admTotales.saldo)}</p>
+                <p className="text-sm mt-1 text-emerald-700">
+                  Suma de las {resumenCoordinadores.length} cajas — dinero de CampoLimpio en la calle
+                </p>
+              </div>
+              <div className={`rounded-lg border p-5 ${admTotales.deudores > 0 ? "bg-sky-50 border-sky-300" : "bg-gray-50 border-gray-200"}`}>
+                <p className={`text-xs font-bold uppercase tracking-wide ${admTotales.deudores > 0 ? "text-sky-700" : "text-gray-500"}`}>
+                  CampoLimpio debe
+                </p>
+                <p className={`text-3xl font-bold font-mono mt-1 ${admTotales.deudores > 0 ? "text-sky-800" : "text-gray-700"}`}>
+                  {formatCurrency(admTotales.deuda)}
+                </p>
+                <p className={`text-sm mt-1 ${admTotales.deudores > 0 ? "text-sky-700" : "text-gray-500"}`}>
+                  {admTotales.deudores === 0
+                    ? "Ningún coordinador ha puesto de su bolsillo"
+                    : `a ${admTotales.deudores} ${admTotales.deudores === 1 ? "coordinador que cubrió" : "coordinadores que cubrieron"} gastos de su bolsillo`}
+                </p>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left py-3 px-4 font-bold text-gray-600 uppercase text-xs">Coordinador</th>
-                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Saldo Inicial</th>
-                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Reembolsos</th>
-                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Gastos Aprob.</th>
-                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Saldo Actual</th>
-                    <th className="text-center py-3 px-4 font-bold text-gray-600 uppercase text-xs w-20">Pend.</th>
-                    <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-20"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {coordinadoresConSaldo
-                    .filter((coord) => {
-                      // Filtrar solo coordinadores con movimientos
-                      const tieneGastos = gastos.some((g) => g.fields.Coordinador?.includes(coord.id));
-                      const tieneReembolsos = reembolsos.some((r) => r.fields.Coordinador?.includes(coord.id));
-                      const tieneSaldoInicial = coord.saldoInicial > 0;
-                      return tieneGastos || tieneReembolsos || tieneSaldoInicial;
-                    })
-                    .map((coord, index) => {
-                    const gastosCoordResumen = gastos.filter((g) => g.fields.Coordinador?.includes(coord.id));
-                    const reembolsosCoordResumen = reembolsos.filter((r) => r.fields.Coordinador?.includes(coord.id));
 
-                    const totalReemb = reembolsosCoordResumen.reduce((sum, r) => sum + (r.fields.Monto || 0), 0);
-                    const totalAprob = gastosCoordResumen
-                      .filter((g) => g.fields.Estado === "Aprobado")
-                      .reduce((sum, g) => sum + calcValorNeto(g), 0);
-                    const cantPend = gastosCoordResumen.filter((g) => g.fields.Estado === "Pendiente").length;
-                    const saldoActualCoord = coord.saldoInicial + totalReemb - totalAprob;
-
-                    return (
+            <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+              <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-bold text-gray-700 uppercase">Cajas por Coordinador</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left py-3 px-4 font-bold text-gray-600 uppercase text-xs">Coordinador</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Recibido</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Legalizado</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Saldo</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-40">En revisión</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-32">Disponible</th>
+                      <th className="text-right py-3 px-4 font-bold text-gray-600 uppercase text-xs w-20"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumenCoordinadores.map((coord, index) => (
                       <tr
                         key={coord.id}
                         className={`border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
                         onClick={() => setFiltroCoordinador(coord.id)}
                       >
                         <td className="py-3 px-4 font-medium text-gray-900">{coord.nombre}</td>
-                        <td className="py-3 px-4 text-right font-mono text-gray-600">{formatCurrency(coord.saldoInicial)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-blue-600">+{formatCurrency(totalReemb)}</td>
-                        <td className="py-3 px-4 text-right font-mono text-orange-600">-{formatCurrency(totalAprob)}</td>
-                        <td className={`py-3 px-4 text-right font-mono font-bold ${saldoActualCoord >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                          {formatCurrency(saldoActualCoord)}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {cantPend > 0 && (
-                            <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
-                              {cantPend}
+                        <td className="py-3 px-4 text-right font-mono text-gray-600">{formatCurrency(coord.recibido)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-gray-600">{formatCurrency(coord.legalizado)}</td>
+                        <td className="py-3 px-4 text-right font-mono text-gray-800">{formatCurrency(coord.saldo)}</td>
+                        <td className="py-3 px-4 text-right">
+                          {coord.cantPend > 0 ? (
+                            <span className="inline-block px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-bold font-mono">
+                              {formatCurrency(coord.pendMonto)} ({coord.cantPend})
                             </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
                           )}
+                        </td>
+                        <td className={`py-3 px-4 text-right font-mono font-bold ${coord.disponible >= 0 ? "text-emerald-700" : "text-sky-700"}`}>
+                          {formatCurrency(coord.disponible)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <button
@@ -811,40 +878,42 @@ function CajaMenorPageInner() {
                           </button>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-gray-100 border-t-2 border-gray-300">
-                  <tr>
-                    <td className="py-3 px-4 font-bold text-gray-700 uppercase text-xs">TOTALES</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-gray-700">
-                      {formatCurrency(coordinadoresConSaldo.reduce((sum, c) => sum + c.saldoInicial, 0))}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-blue-700">
-                      +{formatCurrency(reembolsos.reduce((sum, r) => sum + (r.fields.Monto || 0), 0))}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-orange-700">
-                      -{formatCurrency(gastos.filter((g) => g.fields.Estado === "Aprobado").reduce((sum, g) => sum + calcValorNeto(g), 0))}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-gray-900">
-                      {formatCurrency(
-                        coordinadoresConSaldo.reduce((sum, c) => sum + c.saldoInicial, 0) +
-                        reembolsos.reduce((sum, r) => sum + (r.fields.Monto || 0), 0) -
-                        gastos.filter((g) => g.fields.Estado === "Aprobado").reduce((sum, g) => sum + calcValorNeto(g), 0)
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center font-bold text-yellow-700">
-                      {gastos.filter((g) => g.fields.Estado === "Pendiente").length}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                    <tr>
+                      <td className="py-3 px-4 font-bold text-gray-700 uppercase text-xs">
+                        Totales
+                        <span className="block normal-case font-normal text-gray-400">
+                          suma de las {resumenCoordinadores.length} cajas
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-gray-700 align-top">
+                        {formatCurrency(admTotales.recibido)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-gray-700 align-top">
+                        {formatCurrency(admTotales.legalizado)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-gray-900 align-top">
+                        {formatCurrency(admTotales.saldo)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-amber-700 align-top">
+                        {admTotales.cantPend > 0 ? `${formatCurrency(admTotales.pendMonto)} (${admTotales.cantPend})` : "—"}
+                      </td>
+                      <td className={`py-3 px-4 text-right font-mono font-bold align-top ${admTotales.disponible >= 0 ? "text-emerald-700" : "text-sky-700"}`}>
+                        {formatCurrency(admTotales.disponible)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+                Cada coordinador es una caja independiente — haz clic en uno para ver su detalle y aprobar sus gastos.
+                Los que tienen gastos en revisión aparecen primero.
+              </div>
             </div>
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
-              Haz clic en un coordinador para ver su detalle
-            </div>
-          </div>
+          </>
         )}
 
         {/* Filtros (solo coordinador) */}
@@ -897,7 +966,7 @@ function CajaMenorPageInner() {
               <p className="mt-4 text-gray-600">Cargando movimientos...</p>
             </div>
           </div>
-        ) : (
+        ) : canViewAll && !filtroCoordinador ? null : (
           <>
             {/* Contador */}
             <div className="mb-4">
