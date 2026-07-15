@@ -238,4 +238,32 @@ export const styles = StyleSheet.create({
     fontSize: 9,
     color: "#9ca3af",
   },
+
+  pdfAnexoBox: {
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: "#f0fdf9",
+    borderWidth: 1,
+    borderColor: "#94d3c5",
+    borderRadius: 4,
+  },
+  pdfAnexoTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#042726",
+    marginBottom: 6,
+  },
+  pdfAnexoRow: {
+    fontSize: 9,
+    color: "#374151",
+    marginBottom: 3,
+  },
+  sinSoporteBox: {
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: "#fafafa",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 4,
+  },
 });

@@ -60,23 +60,55 @@ export async function generateOrdenServicioPDF(
   }
 }
 
+/** Documento a fusionar: buffer solo, o buffer con título estampado en cada página */
+export type PdfMergeItem = Buffer | { buf: Buffer; titulo: string };
+
 /**
  * Merge multiple PDF buffers into a single PDF using pdf-lib.
- * Pages from each PDF are appended in order.
+ * Pages from each PDF are appended in order. Si el item trae `titulo`,
+ * se estampa una franja con ese texto en la parte superior de sus páginas
+ * (para identificar a qué registro corresponde cada soporte anexado).
  */
 export async function mergePDFs(
-  pdfBuffers: Buffer[],
+  pdfBuffers: PdfMergeItem[],
 ): Promise<Buffer> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PDFDocument } = require("pdf-lib");
+  const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 
   const mergedPdf = await PDFDocument.create();
+  const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
-  for (const buf of pdfBuffers) {
+  for (const item of pdfBuffers) {
+    const buf = Buffer.isBuffer(item) ? item : item.buf;
+    const titulo = Buffer.isBuffer(item) ? undefined : item.titulo;
     const doc = await PDFDocument.load(buf);
     const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
     for (const page of pages) {
       mergedPdf.addPage(page);
+      if (titulo) {
+        const { width, height } = page.getSize();
+        const bandH = 24;
+        page.drawRectangle({
+          x: 0,
+          y: height - bandH,
+          width,
+          height: bandH,
+          color: rgb(0.016, 0.153, 0.149), // #042726 CampoLimpio
+        });
+        const fontSize = 10;
+        let texto = titulo;
+        // Recortar si no cabe en el ancho de la página
+        while (texto.length > 8 && font.widthOfTextAtSize(texto, fontSize) > width - 24) {
+          texto = texto.slice(0, -4) + "…";
+        }
+        page.drawText(texto, {
+          x: 12,
+          y: height - bandH + 7.5,
+          size: fontSize,
+          font,
+          color: rgb(1, 1, 1),
+        });
+      }
     }
   }
 

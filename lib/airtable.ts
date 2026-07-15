@@ -1201,22 +1201,27 @@ export async function createOrdenServicio(
         // Soportes en PDF no se pueden pintar con <Image>: van como páginas fusionadas al final.
         const basculaDownloads = await Promise.all(
           kardexData.map(async (k) => {
+            const titulo = `Soporte de báscula — Kardex #${k.fields.idkardex || "N/A"} — ${
+              k.fields.NombreCentrodeAcopio?.[0] || "N/A"
+            } — ${Math.abs(k.fields.Total || 0)} kg`;
             const adj = k.fields.soportebascula?.[0];
-            if (!adj?.url) return { id: k.id, base64: undefined, pdfBuf: undefined };
+            if (!adj?.url) return { id: k.id, base64: undefined, pdfBuf: undefined, titulo };
             const esPdf = adj.type === "application/pdf" || /\.pdf$/i.test(adj.filename || "");
             if (esPdf) {
               try {
                 const resp = await fetch(adj.url);
-                if (resp.ok) return { id: k.id, base64: undefined, pdfBuf: Buffer.from(await resp.arrayBuffer()) };
+                if (resp.ok) return { id: k.id, base64: undefined, pdfBuf: Buffer.from(await resp.arrayBuffer()), titulo };
               } catch { /* soporte PDF no descargable: queda como "sin soporte" */ }
-              return { id: k.id, base64: undefined, pdfBuf: undefined };
+              return { id: k.id, base64: undefined, pdfBuf: undefined, titulo };
             }
-            return { id: k.id, base64: await imgToBase64(adj.url), pdfBuf: undefined };
+            return { id: k.id, base64: await imgToBase64(adj.url), pdfBuf: undefined, titulo };
           })
         );
         const basculaBase64Map = new Map(basculaDownloads.map(d => [d.id, d.base64]));
         const basculaPdfIds = new Set(basculaDownloads.filter(d => d.pdfBuf).map(d => d.id));
-        const kardexPdfBuffers = basculaDownloads.filter(d => d.pdfBuf).map(d => d.pdfBuf as Buffer);
+        const kardexPdfBuffers = basculaDownloads
+          .filter(d => d.pdfBuf)
+          .map(d => ({ buf: d.pdfBuf as Buffer, titulo: d.titulo }));
 
         // Prepare items data for PDF with detailed descriptions
         const pdfItems = params.items.map((item, index) => {
@@ -1265,7 +1270,7 @@ export async function createOrdenServicio(
         // Pre-download soportes de bascula from the orden: imágenes como base64, PDFs para fusionar
         const soportesOrdenRaw = ordenData.fields["Soporte de Bascula"] || [];
         const soportesOrden: Array<{ url: string; filename: string }> = [];
-        const soportesPdfBuffers: Buffer[] = [];
+        const soportesPdfBuffers: Array<{ buf: Buffer; titulo: string }> = [];
         if (soportesOrdenRaw.length > 0) {
           await Promise.all(
             soportesOrdenRaw.map(async (s) => {
@@ -1273,7 +1278,11 @@ export async function createOrdenServicio(
               if (esPdf) {
                 try {
                   const resp = await fetch(s.url);
-                  if (resp.ok) soportesPdfBuffers.push(Buffer.from(await resp.arrayBuffer()));
+                  if (resp.ok)
+                    soportesPdfBuffers.push({
+                      buf: Buffer.from(await resp.arrayBuffer()),
+                      titulo: `Soporte de báscula de la orden — ${s.filename}`,
+                    });
                 } catch { /* soporte PDF no descargable */ }
               } else {
                 const base64 = await imgToBase64(s.url);
@@ -1503,7 +1512,7 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   // Los soportes que son PDF no se pueden pintar con <Image> de @react-pdf:
   // se descargan como buffer y se fusionan como páginas al final (pdf-lib).
   console.log(`[regenerarPDF] Pre-downloading bascula photos...`);
-  const basculaUrlsToDownload: Array<{ index: number; url: string; esPdf: boolean }> = [];
+  const basculaUrlsToDownload: Array<{ index: number; url: string; esPdf: boolean; titulo: string }> = [];
   kardexData.forEach((kardex) => {
     const adj = kardex.fields.soportebascula?.[0];
     if (adj?.url) {
@@ -1513,6 +1522,9 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
           index: itemIndex,
           url: adj.url,
           esPdf: adj.type === "application/pdf" || /\.pdf$/i.test(adj.filename || ""),
+          titulo: `Soporte de báscula — Kardex #${kardex.fields.idkardex || "N/A"} — ${
+            kardex.fields.NombreCentrodeAcopio?.[0] || "N/A"
+          } — ${Math.abs(kardex.fields.Total || 0)} kg`,
         });
       }
     }
@@ -1520,15 +1532,15 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
 
   const basculaBase64Map = new Map<number, string>();
   const basculaPdfIndices = new Set<number>();
-  const kardexPdfDescargados: Array<{ index: number; buf: Buffer }> = [];
+  const kardexPdfDescargados: Array<{ index: number; buf: Buffer; titulo: string }> = [];
   if (basculaUrlsToDownload.length > 0) {
     await Promise.all(
-      basculaUrlsToDownload.map(async ({ index, url, esPdf }) => {
+      basculaUrlsToDownload.map(async ({ index, url, esPdf, titulo }) => {
         if (esPdf) {
           try {
             const resp = await fetch(url);
             if (resp.ok) {
-              kardexPdfDescargados.push({ index, buf: Buffer.from(await resp.arrayBuffer()) });
+              kardexPdfDescargados.push({ index, buf: Buffer.from(await resp.arrayBuffer()), titulo });
               basculaPdfIndices.add(index);
             }
           } catch (e) {
@@ -1544,21 +1556,26 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
       `[regenerarPDF] Bascula soportes: ${basculaBase64Map.size} images, ${kardexPdfDescargados.length} PDFs (de ${basculaUrlsToDownload.length})`
     );
   }
-  const kardexPdfBuffers = kardexPdfDescargados.sort((a, b) => a.index - b.index).map((k) => k.buf);
+  const kardexPdfBuffers = kardexPdfDescargados
+    .sort((a, b) => a.index - b.index)
+    .map((k) => ({ buf: k.buf, titulo: k.titulo }));
 
   // Pre-download soportes de orden: separate images (for @react-pdf) from PDFs (for pdf-lib merge)
   const soportesOrdenRaw = orden.fields["Soporte de Bascula"] || [];
   const soportesOrden: Array<{ url: string; filename: string }> = []; // images as base64
-  const soportesPdfBuffers: Buffer[] = []; // PDF files to merge later
+  const soportesPdfBuffers: Array<{ buf: Buffer; titulo: string }> = []; // PDF files to merge later
   if (soportesOrdenRaw.length > 0) {
     await Promise.all(
       soportesOrdenRaw.map(async (s) => {
-        const isPdf = /\.pdf$/i.test(s.filename);
+        const isPdf = s.type === "application/pdf" || /\.pdf$/i.test(s.filename);
         if (isPdf) {
           try {
             const resp = await fetch(s.url);
             if (resp.ok) {
-              soportesPdfBuffers.push(Buffer.from(await resp.arrayBuffer()));
+              soportesPdfBuffers.push({
+                buf: Buffer.from(await resp.arrayBuffer()),
+                titulo: `Soporte de báscula de la orden — ${s.filename}`,
+              });
               console.log(`[regenerarPDF] Soporte PDF downloaded: ${s.filename}`);
             }
           } catch (e) {
@@ -1665,11 +1682,11 @@ export async function regenerarPDFOrden(ordenId: string): Promise<string> {
   }
 
   // Build ordered list: 1) Factura  2) Orden  3) Soportes PDF de kardex  4) Soportes PDF de orden
-  const allPdfs: Buffer[] = [];
+  const allPdfs: Array<Buffer | { buf: Buffer; titulo: string }> = [];
   if (facturaBuffer) allPdfs.push(facturaBuffer);
   allPdfs.push(pdfBuffer); // orden con anexos de fotos (kardex + orden imágenes)
-  allPdfs.push(...kardexPdfBuffers); // soportes de kardex que son PDF
-  allPdfs.push(...soportesPdfBuffers); // soportes de orden que son PDF
+  allPdfs.push(...kardexPdfBuffers); // soportes de kardex que son PDF (con título estampado)
+  allPdfs.push(...soportesPdfBuffers); // soportes de orden que son PDF (con título estampado)
 
   if (allPdfs.length > 1) {
     try {

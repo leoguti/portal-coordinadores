@@ -194,26 +194,38 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
 
           <View style={styles.photoGrid}>
             {items
-              .filter(item => item.tipo === "KARDEX")
+              .filter(item => item.tipo === "KARDEX" && item.fotoBasculaUrl)
               .map((item) => (
                 <View key={item.id} style={styles.photoItem}>
-                  {item.fotoBasculaUrl ? (
-                    <Image src={item.fotoBasculaUrl} style={styles.photoImage} />
-                  ) : item.fotoBasculaEsPdf ? (
-                    <View style={styles.noPhotoPlaceholder}>
-                      <Text style={styles.noPhotoText}>
-                        Soporte en formato PDF — anexado en las páginas finales de este documento
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.noPhotoPlaceholder}>
-                      <Text style={styles.noPhotoText}>Sin soporte de báscula</Text>
-                    </View>
-                  )}
+                  <Image src={item.fotoBasculaUrl} style={styles.photoImage} />
                   <Text style={styles.photoCaption}>{item.descripcion}</Text>
                 </View>
               ))}
           </View>
+
+          {items.some(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && item.fotoBasculaEsPdf) && (
+            <View style={styles.pdfAnexoBox}>
+              <Text style={styles.pdfAnexoTitle}>
+                Soportes en formato PDF — anexados como páginas al final de este documento:
+              </Text>
+              {items
+                .filter(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && item.fotoBasculaEsPdf)
+                .map((item) => (
+                  <Text key={item.id} style={styles.pdfAnexoRow}>• {item.descripcion}</Text>
+                ))}
+            </View>
+          )}
+
+          {items.some(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && !item.fotoBasculaEsPdf) && (
+            <View style={styles.sinSoporteBox}>
+              <Text style={styles.pdfAnexoTitle}>Sin soporte de báscula:</Text>
+              {items
+                .filter(item => item.tipo === "KARDEX" && !item.fotoBasculaUrl && !item.fotoBasculaEsPdf)
+                .map((item) => (
+                  <Text key={item.id} style={styles.pdfAnexoRow}>• {item.descripcion}</Text>
+                ))}
+            </View>
+          )}
 
           <Text style={styles.footer}>
             CampoLimpio - Programa de Manejo de Envases Vacíos
