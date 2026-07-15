@@ -51,6 +51,7 @@ export default function ReembolsoDetallePage() {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 

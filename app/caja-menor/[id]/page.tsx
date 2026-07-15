@@ -360,6 +360,7 @@ export default function GastoDetallePage() {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 

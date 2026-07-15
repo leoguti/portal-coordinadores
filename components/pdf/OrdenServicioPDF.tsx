@@ -52,6 +52,7 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(value);
   };
 

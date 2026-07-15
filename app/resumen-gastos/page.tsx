@@ -49,6 +49,7 @@ const formatCurrency = (amount: number) =>
     style: "currency",
     currency: "COP",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 
 export default function ResumenGastosPage() {

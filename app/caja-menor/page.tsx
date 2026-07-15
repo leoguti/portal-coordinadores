@@ -235,6 +235,7 @@ function CajaMenorPageInner() {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -613,47 +614,91 @@ function CajaMenorPageInner() {
               )}
             </div>
 
-            {/* Tarjeta de Saldo */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">Saldo Inicial</p>
-                <p className="text-xl font-bold text-gray-900 font-mono">{formatCurrency(saldoInicialCoord)}</p>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-xs text-blue-600 mb-1">Total Reembolsos</p>
-                <p className="text-xl font-bold text-blue-700 font-mono">+{formatCurrency(totalReembolsos)}</p>
-                <p className="text-xs text-blue-500">{reembolsosCoord.length} reembolsos</p>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-xs text-green-600 mb-1">Facturas Aprobadas</p>
-                <p className="text-xl font-bold text-green-700 font-mono">-{formatCurrency(totalFacturasAprobadas)}</p>
-                <p className="text-xs text-green-500">{cantAprobados} facturas</p>
-              </div>
-              <div className={`border rounded-lg p-4 ${saldoActual >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
-                <p className={`text-xs mb-1 font-bold ${saldoActual >= 0 ? "text-emerald-600" : "text-red-600"}`}>SALDO ACTUAL</p>
-                <p className={`text-2xl font-bold font-mono ${saldoActual >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                  {formatCurrency(saldoActual)}
-                </p>
+            {/* Héroe + ecuación del dinero */}
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              {(() => {
+                const disponibleHoy = saldoActual - totalFacturasPendientes;
+                const leDeben = disponibleHoy < 0;
+                return (
+                  <div
+                    className={`flex-1 rounded-lg border p-5 flex flex-col justify-center ${
+                      leDeben ? "bg-sky-50 border-sky-300" : "bg-emerald-50 border-emerald-300"
+                    }`}
+                  >
+                    <p className={`text-xs font-bold uppercase tracking-wide ${leDeben ? "text-sky-700" : "text-emerald-700"}`}>
+                      {leDeben
+                        ? canViewAll ? `CampoLimpio le debe a ${coordNombre}` : "CampoLimpio te debe"
+                        : canViewAll ? "En su caja hoy" : "En tu caja hoy"}
+                    </p>
+                    <p className={`text-4xl font-bold font-mono mt-1 ${leDeben ? "text-sky-800" : "text-emerald-800"}`}>
+                      {formatCurrency(Math.abs(disponibleHoy))}
+                    </p>
+                    <p className={`text-sm mt-2 ${leDeben ? "text-sky-700" : "text-emerald-700"}`}>
+                      {leDeben
+                        ? canViewAll
+                          ? "Ha cubierto gastos con su dinero — se compensa con el próximo reembolso."
+                          : "Has cubierto gastos con tu dinero — se compensa con el próximo reembolso."
+                        : "Dinero de CampoLimpio bajo " + (canViewAll ? "su" : "tu") + " responsabilidad, disponible para gastar."}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-5">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr>
+                      <td className="py-1.5 text-gray-600">
+                        Recibido de Bogotá
+                        <span className="block text-xs text-gray-400">
+                          inicial {formatCurrency(saldoInicialCoord)} + {reembolsosCoord.length}{" "}
+                          {reembolsosCoord.length === 1 ? "reembolso" : "reembolsos"}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right font-mono font-bold text-gray-900 align-top whitespace-nowrap">
+                        {formatCurrency(saldoInicialCoord + totalReembolsos)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 text-gray-600">
+                        Ya legalizado (aprobado)
+                        <span className="block text-xs text-gray-400">{cantAprobados} facturas</span>
+                      </td>
+                      <td className="py-1.5 text-right font-mono font-bold text-gray-900 align-top whitespace-nowrap">
+                        − {formatCurrency(totalFacturasAprobadas)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 text-gray-600">
+                        En revisión (ya gastado)
+                        <span className="block text-xs text-gray-400">{cantPendientes} gastos por aprobar</span>
+                      </td>
+                      <td className="py-1.5 text-right font-mono font-bold text-amber-700 align-top whitespace-nowrap">
+                        − {formatCurrency(totalFacturasPendientes)}
+                      </td>
+                    </tr>
+                    <tr className="border-t border-gray-300">
+                      <td className="pt-2 font-bold text-gray-800">= Disponible para gastar</td>
+                      <td className="pt-2 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
+                        {formatCurrency(saldoActual - totalFacturasPendientes)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Resumen por estado */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Pendiente</p>
-                <p className="text-lg font-bold text-yellow-800 font-mono">{formatCurrency(totalFacturasPendientes)}</p>
-                <p className="text-xs text-yellow-600">{cantPendientes} gastos</p>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-xs font-bold text-green-700 uppercase mb-1">Aprobado</p>
-                <p className="text-lg font-bold text-green-800 font-mono">{formatCurrency(totalFacturasAprobadas)}</p>
-                <p className="text-xs text-green-600">{cantAprobados} gastos</p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-xs font-bold text-red-700 uppercase mb-1">Rechazado</p>
-                <p className="text-lg font-bold text-red-800 font-mono">{formatCurrency(totalFacturasRechazadas)}</p>
-                <p className="text-xs text-red-600">{cantRechazados} gastos</p>
-              </div>
+            {/* Estados de los gastos */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800 font-medium">
+                🕐 {cantPendientes} en revisión · {formatCurrency(totalFacturasPendientes)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-800 font-medium">
+                ✓ {cantAprobados} aprobados · {formatCurrency(totalFacturasAprobadas)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 font-medium">
+                ✗ {cantRechazados} rechazados · {formatCurrency(totalFacturasRechazadas)}
+              </span>
             </div>
           </div>
         )}

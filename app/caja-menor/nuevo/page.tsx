@@ -646,6 +646,7 @@ export default function NuevoGastoCajaMenorPage() {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
                     }).format(valorNum)}
                   </p>
                 </div>
@@ -656,6 +657,7 @@ export default function NuevoGastoCajaMenorPage() {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
                     }).format(Math.round(montoIVA))}
                   </p>
                 </div>
@@ -666,6 +668,7 @@ export default function NuevoGastoCajaMenorPage() {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
                     }).format(Math.round(valorRetencion))}
                   </p>
                 </div>
@@ -676,6 +679,7 @@ export default function NuevoGastoCajaMenorPage() {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
                     }).format(Math.round(valorNeto))}
                   </p>
                 </div>
