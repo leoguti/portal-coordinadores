@@ -50,6 +50,23 @@ export function acumuladoPct(meses: Celda[], metaAnual: number): number[] {
   });
 }
 
+// Cumplimiento contra el PLAN acumulado: (real enero..mes) / (meta enero..mes).
+// Responde "¿vamos al día con lo planeado hasta este punto del año?"
+export type AcumPlan = { pct: number; realAcum: number; metaAcum: number };
+export function acumuladoVsPlan(meses: Celda[]): AcumPlan[] {
+  let r = 0;
+  let m = 0;
+  return meses.map((c) => {
+    r += c.real;
+    m += c.meta;
+    return {
+      pct: m > 0 ? Math.round((r / m) * 100) : r > 0 ? 100 : 0,
+      realAcum: r,
+      metaAcum: m,
+    };
+  });
+}
+
 // índice (0-11) del mes vigente si el año mostrado es el actual; si no, -1
 export function vigenteIdx(year: number, currentYear: number, currentMonth: number): number {
   return year === currentYear ? currentMonth - 1 : -1;
@@ -134,25 +151,28 @@ export function RowHeader({ name, bg }: { name: string; bg: string }) {
             meta
           </div>
           <div className="text-[9px] leading-[15px]">% mes</div>
-          <div className="text-[9px] leading-[13px]">% año</div>
+          <div className="text-[9px] leading-[13px]">% acum</div>
         </div>
       </div>
     </td>
   );
 }
 
-// Celda mensual: recolección (normal) · meta (negrita) · % del mes · % año.
+// Celda mensual: recolección (normal) · meta (negrita) · % del mes · % acum.
 // El COLOR y el % principal responden al cumplimiento de la META MENSUAL;
-// la última línea (gris) es el % acumulado del año. Sin meta = gris como el futuro.
+// la última línea es el cumplimiento del plan acumulado (real ene..mes ÷
+// meta ene..mes), coloreada solo en el texto. Sin meta = gris como el futuro.
 export function CeldaMes({
   celda,
   acum,
+  plan,
   estado,
   borde,
   mes,
 }: {
   celda: Celda;
   acum: number;
+  plan: AcumPlan;
   estado: Estado;
   borde: boolean;
   mes: string;
@@ -182,9 +202,11 @@ export function CeldaMes({
     ? sinMeta
       ? `${mes}: sin meta asignada${celda.real ? ` · recolectado ${fmt(celda.real)}` : ""}`
       : `${mes}: meta del mes ${fmt(celda.meta)} (pendiente)`
-    : `${mes} · Cumplimiento del mes: ${cumpleMes}% (recolectado ${fmt(
-        celda.real
-      )} / meta ${fmt(celda.meta)}) · Acumulado del año: ${acum}%`;
+    : `${mes} · Mes: ${cumpleMes}% (recolectado ${fmt(celda.real)} / meta ${fmt(
+        celda.meta
+      )}) · Acumulado a ${mes}: ${plan.pct}% (${fmt(plan.realAcum)} de ${fmt(
+        plan.metaAcum
+      )} planeados) · Avance del año: ${acum}% de la meta anual`;
 
   return (
     <td className={`${bg} ${bordeCls} p-0 align-top font-mono`} title={tip}>
@@ -205,7 +227,7 @@ export function CeldaMes({
             {simbolo}
             {cumpleMes}%
           </div>
-          <div className={`${L_ACUM} text-gray-500`}>{acum}%</div>
+          <div className={`${L_ACUM} font-semibold ${pctColor(plan.pct).text}`}>{plan.pct}%</div>
         </>
       )}
     </td>
@@ -239,22 +261,24 @@ export function LeyendaMetas() {
           <div className="text-[10px] text-gray-700">5.080</div>
           <div className="text-[10px] font-bold text-gray-900 bg-black/5 px-1">5.000</div>
           <div className="text-[10px] font-bold text-green-700">✓ 102%</div>
-          <div className="text-[9px] text-gray-500">50%</div>
+          <div className="text-[9px] font-semibold text-green-700">98%</div>
         </div>
         <div className="text-[10px] text-gray-600 leading-tight">
           <div>← recolección (real)</div>
           <div className="font-semibold">← meta (negrita)</div>
           <div>← % de cumplimiento del mes</div>
-          <div>← % acumulado del año</div>
+          <div>← % acumulado (real ÷ meta, de enero a ese mes)</div>
         </div>
       </div>
       <span className="basis-full text-[11px] text-gray-500">
         El <strong>color</strong> y el <strong>% principal</strong> de cada celda
         responden al cumplimiento de la <strong>meta del mes</strong> (recolectado
-        ÷ meta del mes); la línea gris de abajo es el <strong>% acumulado del año</strong>.
-        En meses cerrados: <strong>✓</strong> cumplió la meta · <strong>✗</strong> no
-        la cumplió. Los meses sin meta y los futuros van en gris. Pasa el mouse
-        sobre una celda para ver el detalle del mes.
+        ÷ meta del mes). La línea de abajo es el <strong>% acumulado</strong>:
+        todo lo recolectado de enero a ese mes ÷ todo lo planeado de enero a ese
+        mes — responde si la zona va al día con el plan. En meses cerrados:
+        {" "}<strong>✓</strong> cumplió la meta · <strong>✗</strong> no la cumplió.
+        Los meses sin meta y los futuros van en gris. Pasa el mouse sobre una
+        celda para ver el detalle completo.
       </span>
       <span className="text-gray-300">|</span>
       <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />≥70%</span>

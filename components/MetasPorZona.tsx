@@ -6,6 +6,7 @@ import {
   type Celda,
   estadoMes,
   acumuladoPct,
+  acumuladoVsPlan,
   vigenteIdx,
   MetasColgroup,
   HeaderRow,
@@ -43,6 +44,7 @@ function TablaMeta({
 }) {
   const vigente = vigenteIdx(data.year, data.currentYear, data.currentMonth);
   const acumTotal = acumuladoPct(tabla.total.meses, tabla.total.metaAnual);
+  const planTotal = acumuladoVsPlan(tabla.total.meses);
 
   return (
     <div className="mb-7">
@@ -62,14 +64,16 @@ function TablaMeta({
         <tbody>
           {tabla.filas.map((f) => {
             const acum = acumuladoPct(f.meses, f.metaAnual);
+            const plan = acumuladoVsPlan(f.meses);
             return (
-              <tr key={f.zona} className="border-t border-gray-100">
+              <tr key={f.zona} className="border-t-2 border-gray-300">
                 <RowHeader name={f.zona} bg="bg-white" />
                 {f.meses.map((celda, i) => (
                   <CeldaMes
                     key={i}
                     celda={celda}
                     acum={acum[i]}
+                    plan={plan[i]}
                     estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
                     borde={i === vigente}
                     mes={MESES[i]}
@@ -88,6 +92,7 @@ function TablaMeta({
                 key={i}
                 celda={celda}
                 acum={acumTotal[i]}
+                plan={planTotal[i]}
                 estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
                 borde={i === vigente}
                 mes={MESES[i]}
@@ -139,7 +144,7 @@ export default function MetasPorZona() {
             Metas por Zona <span className="text-gray-500 font-medium">· {year}</span>
           </h1>
           <p className="text-sm text-gray-500">
-            Cada celda: recolección · <strong>meta (negrita)</strong> · % del mes · % acumulado del año
+            Cada celda: recolección · <strong>meta (negrita)</strong> · % del mes · % acumulado frente al plan
           </p>
         </div>
         <select

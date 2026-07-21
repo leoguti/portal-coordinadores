@@ -6,6 +6,7 @@ import {
   type Celda,
   estadoMes,
   acumuladoPct,
+  acumuladoVsPlan,
   vigenteIdx,
   MetasColgroup,
   HeaderRow,
@@ -114,14 +115,16 @@ export default function MisMetas({ year }: { year: number }) {
             <tbody>
               {filas.map((f) => {
                 const acum = acumuladoPct(f.serie.meses, f.serie.metaAnual);
+                const plan = acumuladoVsPlan(f.serie.meses);
                 return (
-                  <tr key={f.label} className="border-t border-gray-100">
+                  <tr key={f.label} className="border-t-2 border-gray-300">
                     <RowHeader name={f.label} bg="bg-white" />
                     {f.serie.meses.map((celda, i) => (
                       <CeldaMes
                         key={i}
                         celda={celda}
                         acum={acum[i]}
+                        plan={plan[i]}
                         estado={estadoMes(data.year, i, data.currentYear, data.currentMonth)}
                         borde={i === vigente}
                         mes={MESES[i]}
