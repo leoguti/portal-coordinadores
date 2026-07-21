@@ -75,7 +75,7 @@ export function vigenteIdx(year: number, currentYear: number, currentMonth: numb
 // Clases de línea compartidas para que valores y etiquetas queden alineados.
 const L_REAL = "text-[10px] leading-[14px] text-center px-1";
 const L_META = "text-[10px] leading-[14px] text-center px-1 font-bold border-y border-gray-300/50 bg-black/5";
-const L_PCT = "text-[11px] leading-[15px] text-center px-1 font-bold";
+const L_PCT = "text-[11px] leading-[15px] text-center px-1";
 const L_ACUM = "text-[10px] leading-[13px] text-center px-1";
 
 // Anchos de columna iguales en ambas vistas (alineación de meses).
@@ -227,7 +227,7 @@ export function CeldaMes({
             {simbolo}
             {cumpleMes}%
           </div>
-          <div className={`${L_ACUM} font-semibold ${pctColor(plan.pct).text}`}>{plan.pct}%</div>
+          <div className={`${L_ACUM} font-bold ${pctColor(plan.pct).text}`}>{plan.pct}%</div>
         </>
       )}
     </td>
@@ -260,8 +260,8 @@ export function LeyendaMetas() {
         <div className="font-mono text-right leading-tight">
           <div className="text-[10px] text-gray-700">5.080</div>
           <div className="text-[10px] font-bold text-gray-900 bg-black/5 px-1">5.000</div>
-          <div className="text-[10px] font-bold text-green-700">✓ 102%</div>
-          <div className="text-[9px] font-semibold text-green-700">98%</div>
+          <div className="text-[10px] text-green-700">✓ 102%</div>
+          <div className="text-[9px] font-bold text-green-700">98%</div>
         </div>
         <div className="text-[10px] text-gray-600 leading-tight">
           <div>← recolección (real)</div>
