@@ -59,6 +59,7 @@ export function vigenteIdx(year: number, currentYear: number, currentMonth: numb
 const L_REAL = "text-[10px] leading-[14px] text-center px-1";
 const L_META = "text-[10px] leading-[14px] text-center px-1 font-bold border-y border-gray-300/50 bg-black/5";
 const L_PCT = "text-[11px] leading-[15px] text-center px-1 font-bold";
+const L_ACUM = "text-[10px] leading-[13px] text-center px-1";
 
 // Anchos de columna iguales en ambas vistas (alineación de meses).
 export function MetasColgroup() {
@@ -132,16 +133,17 @@ export function RowHeader({ name, bg }: { name: string; bg: string }) {
           <div className="text-[9px] leading-[14px] font-bold text-gray-500 border-y border-transparent">
             meta
           </div>
-          <div className="text-[9px] leading-[15px]">%</div>
+          <div className="text-[9px] leading-[15px]">% mes</div>
+          <div className="text-[9px] leading-[13px]">% año</div>
         </div>
       </div>
     </td>
   );
 }
 
-// Celda mensual: recolección (normal) · meta (negrita) · % acumulado.
-// El COLOR se basa en el cumplimiento de la META MENSUAL; el NÚMERO mostrado
-// es el % acumulado del año. Sin meta = gris como el futuro.
+// Celda mensual: recolección (normal) · meta (negrita) · % del mes · % año.
+// El COLOR y el % principal responden al cumplimiento de la META MENSUAL;
+// la última línea (gris) es el % acumulado del año. Sin meta = gris como el futuro.
 export function CeldaMes({
   celda,
   acum,
@@ -193,12 +195,18 @@ export function CeldaMes({
         {fmt(celda.meta)}
       </div>
       {neutral ? (
-        <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
+        <>
+          <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
+          <div className={`${L_ACUM} text-gray-300`}>·</div>
+        </>
       ) : (
-        <div className={`${L_PCT} ${pctText}`}>
-          {simbolo}
-          {acum}%
-        </div>
+        <>
+          <div className={`${L_PCT} ${pctText}`}>
+            {simbolo}
+            {cumpleMes}%
+          </div>
+          <div className={`${L_ACUM} text-gray-500`}>{acum}%</div>
+        </>
       )}
     </td>
   );
@@ -216,7 +224,8 @@ export function CeldaAnual({ real, meta }: { real: number; meta: number }) {
       <div className={`${L_META} text-gray-900`} title="Meta del año">
         {fmt(meta)}
       </div>
-      <div className={`${L_PCT} ${c.text}`}>{p}%</div>
+      <div className="text-[11px] leading-[15px] text-center text-gray-300">·</div>
+      <div className={`${L_ACUM} ${c.text} font-bold`}>{p}%</div>
     </td>
   );
 }
@@ -229,21 +238,23 @@ export function LeyendaMetas() {
         <div className="font-mono text-right leading-tight">
           <div className="text-[10px] text-gray-700">5.080</div>
           <div className="text-[10px] font-bold text-gray-900 bg-black/5 px-1">5.000</div>
-          <div className="text-[10px] font-bold text-green-700">✓ 50%</div>
+          <div className="text-[10px] font-bold text-green-700">✓ 102%</div>
+          <div className="text-[9px] text-gray-500">50%</div>
         </div>
         <div className="text-[10px] text-gray-600 leading-tight">
           <div>← recolección (real)</div>
           <div className="font-semibold">← meta (negrita)</div>
+          <div>← % de cumplimiento del mes</div>
           <div>← % acumulado del año</div>
         </div>
       </div>
       <span className="basis-full text-[11px] text-gray-500">
-        El <strong>color</strong> de la celda indica el cumplimiento de la
-        <strong> meta del mes</strong> (recolectado ÷ meta del mes); el
-        <strong> número</strong> es el % acumulado del año. En meses cerrados:
-        {" "}<strong>✓</strong> cumplió la meta · <strong>✗</strong> no la cumplió.
-        {" "}Los meses sin meta y los futuros van en gris. Pasa el mouse sobre una
-        celda para ver el detalle del mes.
+        El <strong>color</strong> y el <strong>% principal</strong> de cada celda
+        responden al cumplimiento de la <strong>meta del mes</strong> (recolectado
+        ÷ meta del mes); la línea gris de abajo es el <strong>% acumulado del año</strong>.
+        En meses cerrados: <strong>✓</strong> cumplió la meta · <strong>✗</strong> no
+        la cumplió. Los meses sin meta y los futuros van en gris. Pasa el mouse
+        sobre una celda para ver el detalle del mes.
       </span>
       <span className="text-gray-300">|</span>
       <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />≥70%</span>

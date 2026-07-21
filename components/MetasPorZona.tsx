@@ -139,7 +139,7 @@ export default function MetasPorZona() {
             Metas por Zona <span className="text-gray-500 font-medium">· {year}</span>
           </h1>
           <p className="text-sm text-gray-500">
-            Cada celda: recolección · <strong>meta (negrita)</strong> · % acumulado del año
+            Cada celda: recolección · <strong>meta (negrita)</strong> · % del mes · % acumulado del año
           </p>
         </div>
         <select
