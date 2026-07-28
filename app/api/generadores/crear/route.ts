@@ -240,6 +240,11 @@ export async function POST(req: NextRequest) {
       direccion_sede: direccionSede,
       municipio: [genMunicipioId],
       movil: genMovil,
+      // Creado por el coordinador desde el portal: nace aprobado. Sin este
+      // estado, el bot bloquea certificados ("finca en revisión") y el
+      // registro no aparece en la cola de pendientes.
+      estado: "aprobado",
+      solicitud_origen: "portal",
     };
     if (genEmail) genFields.email = genEmail;
     if (dvJuridica !== null) genFields.dv = dvJuridica;
@@ -280,6 +285,9 @@ export async function POST(req: NextRequest) {
       generador: [generadorId],
       municipio: [fincaMunicipioId],
       cultivos: cultivoIds,
+      estado: "aprobado",
+      solicitud_origen: "portal",
+      revisado: true,
       // Asigna la finca al coordinador que la crea para que aparezca en su
       // lista de "Generadores y Fincas" (filtrada por coordinador_asignado).
       coordinador_asignado: [session.user.coordinatorRecordId],

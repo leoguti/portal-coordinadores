@@ -108,6 +108,10 @@ export async function POST(
     movil,
     email,
     revisado: true,
+    // Creada por el coordinador desde el portal: nace aprobada. Sin estado,
+    // el bot bloquea certificados y no aparece en la cola de pendientes.
+    estado: "aprobado",
+    solicitud_origen: "portal",
     // Asigna la finca al coordinador que la crea para que aparezca en su
     // lista de "Generadores y Fincas" (filtrada por coordinador_asignado).
     coordinador_asignado: [session.user.coordinatorRecordId],
