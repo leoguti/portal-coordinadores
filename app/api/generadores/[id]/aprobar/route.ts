@@ -94,13 +94,27 @@ export async function POST(
       const tel = String(f.movil || "");
       if (tel) {
         const nombreCoord = await getCoordinadorNombre(coordId);
+        // Los certificados se generan por finca: el texto solo dice "ya
+        // puedes generar certificados" si hay al menos una finca aprobada.
+        const fincaIds = Array.isArray(f.FINCAS) ? (f.FINCAS as string[]) : [];
+        let tieneFincaAprobada = false;
+        for (const fid of fincaIds.slice(0, 10)) {
+          const finca = await airtableGetRecord("FINCAS", fid);
+          if (String(finca?.fields?.estado || "") === "aprobado") {
+            tieneFincaAprobada = true;
+            break;
+          }
+        }
         const r = await notificarGeneradorAprobado({
           telefono: tel,
           nombre: nombreActual,
           nombreCoordinador: nombreCoord,
           esRevision,
+          tieneFincaAprobada,
         });
-        console.log(`[gen/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"}: ${r.message}`);
+        console.log(
+          `[gen/${id}/aprobar wa] ${r.ok ? "OK" : "FAIL"} (fincaAprobada=${tieneFincaAprobada}): ${r.message}`
+        );
       }
     } catch (err) {
       console.error(`[gen/${id}/aprobar wa] Error:`, err);

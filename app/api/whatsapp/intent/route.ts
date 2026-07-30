@@ -349,9 +349,12 @@ export async function POST(request: NextRequest) {
     });
 
     const url = urlParaIntent(resolved, token.token);
-    const mensaje_ok =
-      (await mensajeOkParaIntent(resolved, identidad)) +
-      (await lineaContactoCoordinador(identidad));
+    // OJO: NO anexar aquí el wa.me del coordinador. Cuando iba junto al
+    // enlace del formulario, la gente le daba clic al número del coordinador
+    // (primer link del mensaje) en vez de al formulario (último) — reporte
+    // cliente 2026-07-30. El contacto del coordinador vive en la opción
+    // "Hablar con un coordinador" del menú.
+    const mensaje_ok = await mensajeOkParaIntent(resolved, identidad);
 
     console.log(
       `[whatsapp/intent] tel=${identidad.telefonoNormalizado} rol=${identidad.rol} intent=${resolved} token=${token.token.slice(0, 8)}…`
@@ -431,9 +434,9 @@ async function mensajeOkParaIntent(
 }
 
 /**
- * Línea de contacto del coordinador asignado al generador, para anexar al
- * mensaje del enlace ("si tienes dudas escríbele..."). Vacía si no hay
- * coordinador resoluble o falla la consulta.
+ * Nombre y wa.me del coordinador asignado al generador. Se usa SOLO en
+ * "contactar-coord" (opción del menú) — nunca junto al enlace de un
+ * formulario, para que el único link clicable sea el del formulario.
  */
 async function datosCoordinador(
   identidad: IdentidadAgricultor
@@ -454,14 +457,6 @@ async function datosCoordinador(
   } catch {
     return null;
   }
-}
-
-async function lineaContactoCoordinador(
-  identidad: IdentidadAgricultor
-): Promise<string> {
-  const c = await datosCoordinador(identidad);
-  if (!c) return "";
-  return `\n\nTu coordinador es *${c.nombre}* — si tienes dudas escríbele:\n👉 ${c.waUrl}`;
 }
 
 async function resolverNombresCultivos(cultivoIds: string[]): Promise<string[]> {

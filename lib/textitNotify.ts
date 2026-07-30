@@ -451,7 +451,7 @@ export async function notificarSolicitudRecibida(
       break;
     case "registro-generador":
       titulo = "✅ ¡Recibimos tu solicitud de registro!";
-      detalle = `${coordCap} revisará tus datos y te avisará cuando esté aprobado para que puedas empezar a generar certificados. 👋`;
+      detalle = `${coordCap} revisará tus datos y te aviso por aquí. Recuerda: los certificados se generan por finca — podrás pedirlos cuando tu finca esté registrada y aprobada. 🌱`;
       break;
     case "crear-finca":
       titulo = "✅ ¡Recibimos tu solicitud de nueva finca!";
@@ -559,6 +559,10 @@ export async function notificarGeneradorAprobado(p: {
   nombre: string;
   nombreCoordinador: string;
   esRevision?: boolean;
+  /** ¿Tiene al menos una finca APROBADA en este momento? Los certificados
+   *  se generan por finca: prometer "ya puedes generar certificados" sin
+   *  finca aprobada confunde a la gente (reporte cliente 2026-07-30). */
+  tieneFincaAprobada?: boolean;
 }): Promise<BroadcastResult> {
   let textoLibre: string;
   let var1: string;
@@ -572,7 +576,7 @@ export async function notificarGeneradorAprobado(p: {
       `Tus datos ya están firmes. 👍`;
     var1 = "de cambios en tus datos";
     var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Tus datos actualizados ya están firmes.`;
-  } else {
+  } else if (p.tieneFincaAprobada) {
     textoLibre =
       `🎉 *¡Tu registro fue aprobado!*\n\n` +
       `📋 *Datos:*\n` +
@@ -581,6 +585,17 @@ export async function notificarGeneradorAprobado(p: {
       `Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar. 👋`;
     var1 = "de registro como generador";
     var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Ya puedes generar certificados desde el bot. Escríbeme cualquier mensaje para empezar.`;
+  } else {
+    // Registro aprobado pero SIN finca aprobada todavía: dejar claro que el
+    // certificado se genera por finca y que falta ese paso.
+    textoLibre =
+      `🎉 *¡Tu registro fue aprobado!*\n\n` +
+      `📋 *Datos:*\n` +
+      `• Nombre: *${p.nombre}*\n` +
+      `• Coordinador: ${p.nombreCoordinador}\n\n` +
+      `⚠️ *Importante:* los certificados se generan por finca. Cuando tu finca quede registrada y aprobada te aviso por aquí — desde ese momento podrás pedirlos. 🌱`;
+    var1 = "de registro como generador";
+    var3 = `Nombre: ${p.nombre}. Coordinador: ${p.nombreCoordinador}. Importante: los certificados se generan por finca — te avisaremos cuando tu finca quede aprobada para que puedas pedirlos.`;
   }
   return enviarConFallback(p.telefono, textoLibre, var1, "aprobada", var3);
 }
