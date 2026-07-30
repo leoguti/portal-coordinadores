@@ -1,0 +1,7 @@
+[    1359ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://campolimpio.org/wp-content/plugins/popup-maker/dist/packages/block-library-style.css?ver=7424eb959f91acb8bbb2:0
+[    1385ms] [LOG] JQMIGRATE: Migrate is installed, version 3.4.1 @ https://campolimpio.org/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1:1
+[    1731ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://campolimpio.org/cursos/triple-lavado-clave-para-el-reciclaje-de-envases-de-plaguicidas/:0
+[    1731ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://campolimpio.org/cursos/triple-lavado-clave-para-el-reciclaje-de-envases-de-plaguicidas/:0
+[    1731ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://campolimpio.org/cursos/triple-lavado-clave-para-el-reciclaje-de-envases-de-plaguicidas/:0
+[    2312ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://campolimpio.org/home3/concepto/campolimpio.org/wp-content/uploads/thim-fonts/dm-sans/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2:0
+[    2335ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://campolimpio.org/home3/concepto/campolimpio.org/wp-content/uploads/thim-fonts/sora/xMQbuFFYT72XzQUpDg.woff2:0

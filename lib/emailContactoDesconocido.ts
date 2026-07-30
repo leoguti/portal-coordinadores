@@ -48,14 +48,14 @@ export async function enviarAvisoContactoDesconocido(
         `Número: +57 ${telefono10}\n` +
         temaTxt +
         `Escríbele por WhatsApp: ${wa}\n\n` +
-        `El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de registrarse como agricultor.\n\n` +
+        `El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.\n\n` +
         `— Aviso automático del bot de WhatsApp (portal.campolimpio.org)`,
       html:
         `<p>Una persona <strong>sin registro</strong> escribió al bot de WhatsApp de CampoLimpio y pidió hablar con un coordinador.</p>` +
         `<p><strong>Número:</strong> +57 ${telefono10}</p>` +
         temaHtml +
         `<p><a href="${wa}" style="display:inline-block;margin-top:8px;background-color:#25D366;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Escribirle por WhatsApp</a></p>` +
-        `<p>El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de registrarse como agricultor.</p>` +
+        `<p>El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.</p>` +
         `<p style="color:#888;font-size:12px;">— Aviso automático del bot de WhatsApp (portal.campolimpio.org)</p>`,
     });
     console.log(`[contacto-desconocido] email enviado a ${DESTINO} por +57${telefono10}`);

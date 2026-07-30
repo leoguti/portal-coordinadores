@@ -442,7 +442,7 @@ function armarRespuestaDesconocido(
   const saludo = "Hola 👋";
   const intro = "No te tengo registrado todavía con este número.\n\n¿Qué quieres hacer?";
   const opciones: MenuOpcion[] = [
-    { numero: 1, intent: "registro-generador", label: "1️⃣ Registrarme como agricultor" },
+    { numero: 1, intent: "registro-generador", label: "1️⃣ Inscribirme para generar certificados" },
     { numero: 2, intent: "contactar-coord", label: "2️⃣ Hablar con un coordinador" },
   ];
   return baseResp(identidad, saludo, intro, opciones, null);

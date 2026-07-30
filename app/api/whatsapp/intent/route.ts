@@ -402,7 +402,7 @@ async function mensajeOkParaIntent(
     case "crear-finca":
       return "Vamos a registrar tu nueva finca.";
     case "registro-generador":
-      return "Vamos a registrarte como agricultor.";
+      return "Vamos a inscribirte para que puedas generar tus certificados.";
     case "cert-coordinador":
       // No se alcanza: el flujo coordinador se resuelve antes en el POST.
       return "Vamos a generar un certificado.";

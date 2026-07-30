@@ -1,0 +1,184 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - generic [ref=f3e3]:
+      - generic [ref=f3e6]:
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]:
+            - navigation "Menu" [ref=f3e10]:
+              - list [ref=f3e11]:
+                - listitem [ref=f3e12]:
+                  - link "Preguntas Frecuentes" [ref=f3e13] [cursor=pointer]:
+                    - /url: https://campolimpio.org/preguntas-frecuentes-campolimpio/
+                - listitem [ref=f3e14]:
+                  - link "Términos & Condiciones" [ref=f3e15] [cursor=pointer]:
+                    - /url: https://campolimpio.org/terminos-y-condiciones-de-uso/
+                - listitem [ref=f3e16]:
+                  - link "Políticas de privacidad" [ref=f3e17] [cursor=pointer]:
+                    - /url: https://campolimpio.org/politicas-de-privacidad/
+            - text:  
+          - list [ref=f3e21]:
+            - listitem [ref=f3e22]:
+              - link "Facebook" [ref=f3e23] [cursor=pointer]:
+                - /url: https://www.facebook.com/CampoLimpioOficial
+                - generic [ref=f3e24]: 
+                - text: Facebook
+            - listitem [ref=f3e25]:
+              - link "Instagram" [ref=f3e26] [cursor=pointer]:
+                - /url: https://www.instagram.com/campolimpiocolombia
+                - generic [ref=f3e27]: 
+                - text: Instagram
+            - listitem [ref=f3e28]:
+              - link "YouTube" [ref=f3e29] [cursor=pointer]:
+                - /url: https://www.youtube.com/@campolimpiocolombia71
+                - generic [ref=f3e30]: 
+                - text: YouTube
+        - generic [ref=f3e32]:
+          - link "Campo Limpio Campus" [ref=f3e37] [cursor=pointer]:
+            - /url: https://campolimpio.org/
+          - generic [ref=f3e38]:
+            - list [ref=f3e44]:
+              - listitem [ref=f3e45]:
+                - link "Inicio" [ref=f3e46] [cursor=pointer]:
+                  - /url: https://campolimpio.org/
+              - listitem [ref=f3e47]:
+                - link "Nosotros" [ref=f3e48] [cursor=pointer]:
+                  - /url: https://campolimpio.org/nosotros/
+              - listitem [ref=f3e49]:
+                - link "Cursos" [ref=f3e50] [cursor=pointer]:
+                  - /url: https://campolimpio.org/cursos/
+              - listitem [ref=f3e51]:
+                - link "Triple Lavado" [ref=f3e52] [cursor=pointer]:
+                  - /url: https://campolimpio.org/triple-lavado/
+              - listitem [ref=f3e53]:
+                - link "Gestión de residuos" [ref=f3e54] [cursor=pointer]:
+                  - /url: https://campolimpio.org/gestion-de-residuos/
+              - listitem [ref=f3e55]:
+                - link "Blog" [ref=f3e56] [cursor=pointer]:
+                  - /url: https://campolimpio.org/blog/
+              - listitem [ref=f3e57]:
+                - link "Contacto" [ref=f3e58] [cursor=pointer]:
+                  - /url: https://campolimpio.org/contactanos/
+            - generic [ref=f3e59]:
+              - link "Coordinadores" [ref=f3e62] [cursor=pointer]:
+                - /url: https://campolimpio.org/contactanos/#coordinadores
+                - generic [ref=f3e63]: 
+                - text: Coordinadores
+              - link [ref=f3e67] [cursor=pointer]:
+                - /url: "#ekits-search-8e48ef2"
+                - generic [ref=f3e68]: 
+              - paragraph [ref=f3e70]:
+                - strong [ref=f3e71]:
+                  - link "Acceso" [ref=f3e72] [cursor=pointer]:
+                    - /url: https://campolimpio.org/registrarse/
+      - generic [ref=f3e73]:
+        - generic [ref=f3e74]:
+          - generic [ref=f3e77]:
+            - generic [ref=f3e80]:
+              - link "Home" [ref=f3e81] [cursor=pointer]:
+                - /url: https://campolimpio.org
+              - generic [ref=f3e82]: 
+              - link "Cursos" [ref=f3e84] [cursor=pointer]:
+                - /url: https://campolimpio.org/cursos/
+              - generic [ref=f3e85]: 
+              - link "Triple Lavado" [ref=f3e87] [cursor=pointer]:
+                - /url: https://campolimpio.org/categoría/triple-lavado/
+            - 'heading "Triple Lavado: clave para el reciclaje de envases de plaguicidas" [level=1] [ref=f3e91]'
+            - generic [ref=f3e93]:
+              - generic [ref=f3e94]: "Dirigido por:"
+              - link "Admin_campolimpio" [ref=f3e98] [cursor=pointer]:
+                - /url: https://campolimpio.org/instructor/admin_campolimpio/
+            - generic [ref=f3e104]:
+              - generic [ref=f3e105]: 
+              - generic [ref=f3e106]: "120"
+              - text: Estudiantes
+            - generic [ref=f3e109]:
+              - generic [ref=f3e110]:
+                - generic [ref=f3e115]: Fecha
+                - generic [ref=f3e116]: May/2026
+              - generic [ref=f3e117]:
+                - generic [ref=f3e120]: "10"
+                - text: Lecciones
+              - generic [ref=f3e121]: Español
+          - generic [ref=f3e126]:
+            - generic [ref=f3e127]:
+              - generic [ref=f3e130]:
+                - tablist "Course Tabs" [ref=f3e131]:
+                  - tab "Índice" [selected] [ref=f3e132] [cursor=pointer]
+                  - tab "¿Qué aprenderá?" [ref=f3e133] [cursor=pointer]
+                  - tab "Docente" [ref=f3e134] [cursor=pointer]
+                  - tab "Preguntas" [ref=f3e135] [cursor=pointer]
+                - generic [ref=f3e136]:
+                  - tabpanel "Índice" [ref=f3e137]:
+                    - generic [ref=f3e143]:
+                      - heading "¿De qué se trata?" [level=4] [ref=f3e144]
+                      - paragraph [ref=f3e145]:
+                        - text: Este curso le guía paso a paso para
+                        - strong [ref=f3e146]: realizar correctamente el Triple Lavado de envases vacíos de plaguicidas,
+                        - text: después de aplicados, cómo inutilizarlos y entregarlos correctamente a programas posconsumo autorizados para que tengan
+                        - strong [ref=f3e147]: una adecuada y segura disposición final.
+                      - paragraph [ref=f3e148]:
+                        - text: Explica por qué
+                        - strong [ref=f3e149]: es una práctica fundamental para la salud, el ambiente y la economía circular,
+                        - text: así como le dará herramientas para clasificar, almacenar y entregar sus envases plásticos de manera segura en jornadas o rutas de recolección que organiza la Corporación o Centros de Acopio establecidos en el país.
+                      - heading "¿Qué aprenderá?" [level=4] [ref=f3e150]
+                      - list [ref=f3e151]:
+                        - listitem [ref=f3e152]: Identificar cuándo y cómo realizar el Triple Lavado.
+                        - listitem [ref=f3e153]: Preparar el sitio y conocer cuáles son los elementos del Equipo de Protección.
+                        - listitem [ref=f3e154]: Inutilizar envases para prevenir su reutilización y falsificación.
+                        - listitem [ref=f3e155]: Condiciones de entrega de los residuos posconsumo de plaguicidas.
+                        - listitem [ref=f3e156]: Entender responsabilidades y beneficios de participar en el posconsumo.
+                      - heading "Dirigido a" [level=4] [ref=f3e157]
+                      - paragraph [ref=f3e158]: Productores y trabajadores de finca, encargados de bodega y puntos de recolección, distribuidores de agroinsumos, técnicos, autoridades locales, transportadores, estudiantes y ciudadanía interesada en el manejo responsable de envases de plaguicidas.
+                  - text:                                         
+              - generic [ref=f3e161]:
+                - group [ref=f3e163]:
+                  - generic " Requerimientos" [ref=f3e164] [cursor=pointer]:
+                    - generic [ref=f3e165]: 
+                    - text: 
+                    - generic [ref=f3e167]: Requerimientos
+                - group [ref=f3e169]:
+                  - generic " Audiencia" [ref=f3e170] [cursor=pointer]:
+                    - generic [ref=f3e171]: 
+                    - text: 
+                    - generic [ref=f3e173]: Audiencia
+            - generic [ref=f3e176]:
+              - link "Triple Lavado" [ref=f3e181] [cursor=pointer]:
+                - /url: https://campolimpio.org/categoría/triple-lavado/
+              - img "coveR_curso_triple" [ref=f3e185]
+              - generic [ref=f3e186]: Gratis
+              - button "Empezar ahora" [ref=f3e194] [cursor=pointer]
+              - generic [ref=f3e197]:
+                - generic [ref=f3e198]:
+                  - generic [ref=f3e199]: 
+                  - generic [ref=f3e200]: Duración
+                  - generic [ref=f3e201]: 30 minutos
+                - generic [ref=f3e202]:
+                  - generic [ref=f3e203]: 
+                  - generic [ref=f3e204]: "10"
+                  - text: Lecciones
+                - generic [ref=f3e205]:
+                  - generic [ref=f3e206]: 
+                  - generic [ref=f3e207]: "120"
+                  - text: Estudiantes
+                - generic [ref=f3e208]:
+                  - generic [ref=f3e209]: 
+                  - generic [ref=f3e210]: "3"
+                  - text: quizzes
+                - generic [ref=f3e211]:
+                  - generic [ref=f3e212]: 
+                  - generic [ref=f3e213]: Tareas
+                  - generic [ref=f3e214]: Self
+                - generic [ref=f3e215]:
+                  - generic [ref=f3e216]: 
+                  - generic [ref=f3e217]: Nivel
+                  - generic [ref=f3e218]: Todos los niveles
+          - generic [ref=f3e221]:
+            - heading "Tambien te puede interesar..." [level=3] [ref=f3e225]
+            - link "Ver más" [ref=f3e228] [cursor=pointer]:
+              - /url: "#"
+              - text: Ver más
+              - generic [ref=f3e229]: 
+        - contentinfo
+    - generic [ref=f3e230] [cursor=pointer]: 
+  - text:    
+  - generic [ref=f3e234]: desktop
