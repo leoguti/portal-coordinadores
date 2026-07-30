@@ -654,13 +654,13 @@ export async function notificarFincaAprobada(p: {
     : `🎉 *¡Tu finca fue aprobada!*\n\n` +
       `🌱 *Finca:* ${p.nombreFinca}\n` +
       `👤 *Coordinador:* ${p.nombreCoordinador}\n\n` +
-      `Ya puedes generar certificados para esta finca. 👋`;
+      `📄 *Genera tu primer certificado así:* escríbeme cualquier mensaje (por ejemplo "hola") y elige *1️⃣ Solicitar un nuevo certificado*.`;
   const var1 = p.esRevision
     ? `de cambios en la finca "${p.nombreFinca}"`
     : `de nueva finca "${p.nombreFinca}"`;
   const detalle = p.esRevision
     ? "Los datos actualizados ya están firmes."
-    : "Ya puedes generar certificados para esta finca.";
+    : `Genera tu primer certificado así: escríbenos cualquier mensaje (por ejemplo "hola") y elige la opción 1, Solicitar un nuevo certificado.`;
   const var3 = `Coordinador: ${p.nombreCoordinador}. ${detalle}`;
   return enviarConFallback(p.telefono, textoLibre, var1, "aprobada", var3);
 }
