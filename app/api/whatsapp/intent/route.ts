@@ -214,7 +214,8 @@ async function manejarContactarCoord(
   return {
     mensaje:
       "¡Gracias! Le pasamos tu mensaje a nuestro equipo y te escribirán a este número. 📞\n\n" +
-      "Si lo prefieres, regístrate de una vez con la opción 1️⃣ — durante el registro eliges tu coordinador.",
+      "Mientras te atendemos, el asistente automático queda en pausa. ✋🤖\n\n" +
+      "Si necesitas el menú en cualquier momento, escribe *menú*.",
   };
 }
 
