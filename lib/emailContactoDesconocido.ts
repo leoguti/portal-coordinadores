@@ -52,6 +52,12 @@ export async function enviarAvisoContactoDesconocido(
     const ticketHtml = ticketUrl
       ? `<p><a href="${ticketUrl}" style="display:inline-block;margin-top:8px;background-color:#3B5BDB;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Abrir el ticket en TextIt</a><br><span style="color:#888;font-size:12px;">Respóndele desde el ticket para que quede el historial.</span></p>`
       : "";
+    // Con ticket, la respuesta debe salir por TextIt (historial completo);
+    // el botón de WhatsApp directo solo aparece en el email de respaldo.
+    const waTxt = ticketUrl ? "" : `Escríbele por WhatsApp: ${wa}\n\n`;
+    const waHtml = ticketUrl
+      ? ""
+      : `<p><a href="${wa}" style="display:inline-block;margin-top:8px;background-color:#25D366;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Escribirle por WhatsApp</a></p>`;
     await transport.sendMail({
       from: process.env.EMAIL_FROM,
       to: DESTINO,
@@ -61,7 +67,7 @@ export async function enviarAvisoContactoDesconocido(
         `Número: +57 ${telefono10}\n` +
         temaTxt +
         ticketTxt +
-        `Escríbele por WhatsApp: ${wa}\n\n` +
+        waTxt +
         `El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.\n\n` +
         `— Aviso automático del bot de WhatsApp (portal.campolimpio.org)`,
       html:
@@ -69,7 +75,7 @@ export async function enviarAvisoContactoDesconocido(
         `<p><strong>Número:</strong> +57 ${telefono10}</p>` +
         temaHtml +
         ticketHtml +
-        `<p><a href="${wa}" style="display:inline-block;margin-top:8px;background-color:#25D366;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Escribirle por WhatsApp</a></p>` +
+        waHtml +
         `<p>El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.</p>` +
         `<p style="color:#888;font-size:12px;">— Aviso automático del bot de WhatsApp (portal.campolimpio.org)</p>`,
     });
