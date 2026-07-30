@@ -18,10 +18,14 @@ function escapeHtml(s: string): string {
  * Aviso al equipo cuando una persona SIN registro escribe al bot de WhatsApp
  * y pide hablar con un coordinador: sin registro no hay coordinador asignado
  * a quien dirigirla, así que el equipo hace el primer contacto.
+ *
+ * Si viene `ticketUuid`, la conversación quedó como ticket en TextIt y el
+ * email incluye el botón directo al ticket (ahí se responde con historial).
  */
 export async function enviarAvisoContactoDesconocido(
   telefono10: string,
-  tema?: string
+  tema?: string,
+  ticketUuid?: string
 ): Promise<boolean> {
   try {
     const port = Number(process.env.EMAIL_SERVER_PORT) || 587;
@@ -35,9 +39,18 @@ export async function enviarAvisoContactoDesconocido(
       },
     });
     const wa = `https://wa.me/57${telefono10}`;
+    const ticketUrl = ticketUuid
+      ? `https://textit.com/ticket/all/open/${ticketUuid}/`
+      : null;
     const temaTxt = tema ? `Tema: ${tema}\n` : "";
     const temaHtml = tema
       ? `<p style="background:#f4f4f4;border-left:4px solid #25D366;padding:10px 14px;margin:12px 0;"><strong>Tema:</strong> ${escapeHtml(tema)}</p>`
+      : "";
+    const ticketTxt = ticketUrl
+      ? `La conversación quedó como ticket en TextIt — respóndele desde ahí (queda el historial): ${ticketUrl}\n`
+      : "";
+    const ticketHtml = ticketUrl
+      ? `<p><a href="${ticketUrl}" style="display:inline-block;margin-top:8px;background-color:#3B5BDB;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Abrir el ticket en TextIt</a><br><span style="color:#888;font-size:12px;">Respóndele desde el ticket para que quede el historial.</span></p>`
       : "";
     await transport.sendMail({
       from: process.env.EMAIL_FROM,
@@ -47,6 +60,7 @@ export async function enviarAvisoContactoDesconocido(
         `Una persona sin registro escribió al bot de WhatsApp de CampoLimpio y pidió hablar con un coordinador.\n\n` +
         `Número: +57 ${telefono10}\n` +
         temaTxt +
+        ticketTxt +
         `Escríbele por WhatsApp: ${wa}\n\n` +
         `El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.\n\n` +
         `— Aviso automático del bot de WhatsApp (portal.campolimpio.org)`,
@@ -54,6 +68,7 @@ export async function enviarAvisoContactoDesconocido(
         `<p>Una persona <strong>sin registro</strong> escribió al bot de WhatsApp de CampoLimpio y pidió hablar con un coordinador.</p>` +
         `<p><strong>Número:</strong> +57 ${telefono10}</p>` +
         temaHtml +
+        ticketHtml +
         `<p><a href="${wa}" style="display:inline-block;margin-top:8px;background-color:#25D366;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Escribirle por WhatsApp</a></p>` +
         `<p>El bot ya le respondió que el equipo la contactará a ese número, y le sugirió la opción de inscribirse para generar certificados.</p>` +
         `<p style="color:#888;font-size:12px;">— Aviso automático del bot de WhatsApp (portal.campolimpio.org)</p>`,

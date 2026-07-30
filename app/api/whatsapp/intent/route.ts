@@ -22,6 +22,7 @@ import { identificarCoordinadorPorTelefono } from "@/lib/coordinadorResolver";
 import { crearToken, type Intent } from "@/lib/edicionTokens";
 import { getCultivosMap } from "@/lib/cultivosCache";
 import { enviarAvisoContactoDesconocido } from "@/lib/emailContactoDesconocido";
+import { iniciarFlowAbrirTicket } from "@/lib/textitNotify";
 import { normalizarMovilCO } from "@/lib/validacionesCO";
 
 const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
@@ -189,11 +190,27 @@ async function manejarContactarCoord(
         "Con gusto. 👍 Cuéntanos en un mensaje: ¿sobre qué tema quieres hablar con un coordinador?",
     };
   }
-  // El email sale después de responder para no demorar el webhook de TextIt.
+  // Después de responder (para no demorar el webhook de TextIt): abrir
+  // ticket en TextIt vía flow 32 — el flow llama de vuelta a
+  // /api/whatsapp/aviso-ticket y AHÍ sale el email con el enlace al ticket.
+  // Si el flow no arranca (env sin configurar, TextIt caído), el email
+  // simple de siempre es el respaldo: el aviso nunca se pierde.
   const temaFinal = tema || "(no escribió el tema)";
-  after(() =>
-    enviarAvisoContactoDesconocido(identidad.telefonoNormalizado, temaFinal)
-  );
+  after(async () => {
+    const r = await iniciarFlowAbrirTicket(
+      identidad.telefonoNormalizado,
+      temaFinal
+    );
+    if (!r.ok) {
+      console.warn(
+        `[whatsapp/intent] abrir-ticket falló (${r.message}) — email de respaldo`
+      );
+      await enviarAvisoContactoDesconocido(
+        identidad.telefonoNormalizado,
+        temaFinal
+      );
+    }
+  });
   return {
     mensaje:
       "¡Gracias! Le pasamos tu mensaje a nuestro equipo y te escribirán a este número. 📞\n\n" +

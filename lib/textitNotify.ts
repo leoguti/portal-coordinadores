@@ -38,6 +38,7 @@ const TEXTIT_API_TOKEN = process.env.TEXTIT_API_TOKEN;
 const TEXTIT_API_URL = (process.env.TEXTIT_API_URL || "https://textit.com/api/v2").replace(/\/$/, "");
 const TEXTIT_CHANNEL_UUID = process.env.TEXTIT_CHANNEL_UUID || "";
 const TEXTIT_FLOW_AVISO_CIERRE_UUID = process.env.TEXTIT_FLOW_AVISO_CIERRE_UUID || "";
+const TEXTIT_FLOW_ABRIR_TICKET_UUID = process.env.TEXTIT_FLOW_ABRIR_TICKET_UUID || "";
 
 export interface BroadcastResult {
   ok: boolean;
@@ -193,6 +194,75 @@ export async function enviarAvisoActualizacionSolicitud(
     };
   } catch (err) {
     console.error("[textitNotify] Error flow_starts:", err);
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/**
+ * Dispara el flow `32-abrir-ticket`: abre un ticket en TextIt para el
+ * contacto (asignado al agente de atención) y el flow llama de vuelta a
+ * `/api/whatsapp/aviso-ticket` con el UUID del ticket, que es quien manda
+ * el email con el enlace directo.
+ *
+ * Se usa cuando alguien pide "hablar con una persona" y no tiene
+ * coordinador asignado. `tema` viaja como @trigger.params.tema y queda como
+ * nota del ticket.
+ */
+export async function iniciarFlowAbrirTicket(
+  telefono: string,
+  tema: string
+): Promise<BroadcastResult> {
+  if (!TEXTIT_API_TOKEN) {
+    console.warn("[textitNotify] TEXTIT_API_TOKEN no configurado — skip");
+    return { ok: false, message: "TEXTIT_API_TOKEN no configurado" };
+  }
+  if (!TEXTIT_FLOW_ABRIR_TICKET_UUID) {
+    console.warn(
+      "[textitNotify] TEXTIT_FLOW_ABRIR_TICKET_UUID no configurado — skip"
+    );
+    return {
+      ok: false,
+      message: "TEXTIT_FLOW_ABRIR_TICKET_UUID no configurado",
+    };
+  }
+  const tel10 = telefono.replace(/\D/g, "").slice(-10);
+  if (tel10.length !== 10) {
+    return { ok: false, message: `Teléfono inválido: ${telefono}` };
+  }
+  // TextIt rechaza el "+" en URNs (mismo motivo que en broadcasts).
+  const urn = `whatsapp:57${tel10}`;
+
+  try {
+    const r = await fetch(`${TEXTIT_API_URL}/flow_starts.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${TEXTIT_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        flow: TEXTIT_FLOW_ABRIR_TICKET_UUID,
+        urns: [urn],
+        restart_participants: true,
+        params: { tema },
+      }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error(
+        `[textitNotify] flow abrir-ticket falló (${r.status}):`,
+        JSON.stringify(data).slice(0, 300)
+      );
+      return {
+        ok: false,
+        message: `TextIt ${r.status}: ${JSON.stringify(data).slice(0, 100)}`,
+      };
+    }
+    return { ok: true, message: "Flow abrir-ticket disparado" };
+  } catch (err) {
+    console.error("[textitNotify] Error flow abrir-ticket:", err);
     return {
       ok: false,
       message: err instanceof Error ? err.message : String(err),
