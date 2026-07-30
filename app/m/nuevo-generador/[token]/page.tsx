@@ -52,8 +52,8 @@ export default function NuevoGeneradorPage({
   const [email, setEmail] = useState("");
   const [coordinadorSolicitadoId, setCoordinadorSolicitadoId] = useState("");
 
-  // Datos opcionales de primera finca
-  const [agregarFinca, setAgregarFinca] = useState(false);
+  // Primera finca — obligatoria: un generador sin finca no puede pedir
+  // certificados (se generan por finca) y queda en un registro sin salida.
   const [fNombre, setFNombre] = useState("");
   const [fMunicipio, setFMunicipio] = useState<{ id: string; mundep: string } | null>(null);
   const [fCultivos, setFCultivos] = useState<Cultivo[]>([]);
@@ -92,10 +92,8 @@ export default function NuevoGeneradorPage({
     if (!tipo) return "Selecciona el tipo";
     if (!municipio) return "Selecciona el municipio sede";
     if (!coordinadorSolicitadoId) return "Selecciona tu coordinador";
-    if (agregarFinca) {
-      if (!fNombre.trim()) return "Falta nombre de la finca";
-      if (!fMunicipio) return "Falta municipio de la finca";
-    }
+    if (!fNombre.trim()) return "Falta el nombre de tu finca o predio";
+    if (!fMunicipio) return "Falta el municipio de tu finca o predio";
     return null;
   }
 
@@ -120,13 +118,11 @@ export default function NuevoGeneradorPage({
         email: email.trim(),
         coordinadorSolicitadoId,
       };
-      if (agregarFinca) {
-        body.primera_finca = {
-          nombre: fNombre.trim(),
-          municipioId: fMunicipio?.id,
-          cultivosIds: fCultivos.map((c) => c.id),
-        };
-      }
+      body.primera_finca = {
+        nombre: fNombre.trim(),
+        municipioId: fMunicipio?.id,
+        cultivosIds: fCultivos.map((c) => c.id),
+      };
       const r = await fetch(`/api/m/${token}/enviar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -287,46 +283,35 @@ export default function NuevoGeneradorPage({
         </FormCard>
 
         <FormCard>
-          <div className="flex items-center gap-3 mb-3">
-            <input
-              type="checkbox"
-              id="agregar-finca"
-              checked={agregarFinca}
-              onChange={(e) => setAgregarFinca(e.target.checked)}
-              className="w-5 h-5"
-            />
-            <label htmlFor="agregar-finca" className="text-sm font-medium text-gray-900">
-              ¿Quieres registrar tu primera finca ya?
-            </label>
-          </div>
+          <h2 className="font-medium text-gray-900 mb-1">🌱 Tu finca o predio</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Los certificados se generan por finca — regístrala de una vez para
+            poder pedirlos apenas te aprueben.
+          </p>
 
-          {agregarFinca && (
-            <div className="pl-2 border-l-2 border-[#00d084]/30">
-              <Field label="Nombre de la finca" required>
-                <input
-                  type="text"
-                  value={fNombre}
-                  onChange={(e) => setFNombre(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
-                />
-              </Field>
-              <Field label="Municipio de la finca" required>
-                <MunicipioSearch
-                  value={fMunicipio}
-                  onChange={setFMunicipio}
-                  magicLinkToken={token}
-                  placeholder="Busca el municipio…"
-                />
-              </Field>
-              <Field label="Cultivos">
-                <CultivosMultiSelect
-                  value={fCultivos}
-                  onChange={setFCultivos}
-                  magicLinkToken={token}
-                />
-              </Field>
-            </div>
-          )}
+          <Field label="Nombre de la finca o predio" required>
+            <input
+              type="text"
+              value={fNombre}
+              onChange={(e) => setFNombre(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
+            />
+          </Field>
+          <Field label="Municipio de la finca" required>
+            <MunicipioSearch
+              value={fMunicipio}
+              onChange={setFMunicipio}
+              magicLinkToken={token}
+              placeholder="Busca el municipio…"
+            />
+          </Field>
+          <Field label="Cultivos">
+            <CultivosMultiSelect
+              value={fCultivos}
+              onChange={setFCultivos}
+              magicLinkToken={token}
+            />
+          </Field>
         </FormCard>
 
         {submitError && (

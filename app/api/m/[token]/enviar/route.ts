@@ -892,7 +892,7 @@ async function manejarRegistroGenerador(
     intent: "registro-generador",
     recordId: created.id,
     mensaje:
-      "Solicitud de registro enviada. Tu coordinador la aprobará para que puedas empezar a generar certificados.",
+      "Solicitud de registro enviada. Tu coordinador revisará tus datos y tu finca — te avisaremos por WhatsApp con cada aprobación.",
     resumen: lineas.join("\n"),
     nombreCoordinador: coord.nombre || undefined,
     coordContactoWaUrl: waUrlCoord(coord),
