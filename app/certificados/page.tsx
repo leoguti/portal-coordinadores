@@ -153,6 +153,16 @@ function ListarCertificadosPage() {
   const [ano, setAno] = useState("");
   const [mes, setMes] = useState("");
   const [consecutivoFiltro, setConsecutivoFiltro] = useState("");
+  // Versión con debounce del Nº de certificado: la consulta sale cuando el
+  // usuario deja de escribir (~450ms), no en cada tecla.
+  const [consecutivoDebounced, setConsecutivoDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(
+      () => setConsecutivoDebounced(consecutivoFiltro.trim()),
+      450
+    );
+    return () => clearTimeout(t);
+  }, [consecutivoFiltro]);
   const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
   const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
   const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
@@ -207,8 +217,8 @@ function ListarCertificadosPage() {
       if (offset) params.set("offset", offset);
       if (ano) params.set("ano", ano);
       if (mes) params.set("mes", mes);
-      if (consecutivoFiltro.trim())
-        params.set("consecutivo", consecutivoFiltro.trim());
+      if (consecutivoDebounced)
+        params.set("consecutivo", consecutivoDebounced);
       if (generador) params.set("generador", generador.id);
       if (finca) params.set("finca", finca.id);
       for (const d of selDepartamentos) params.append("departamento", d);
@@ -228,7 +238,7 @@ function ListarCertificadosPage() {
     [
       ano,
       mes,
-      consecutivoFiltro,
+      consecutivoDebounced,
       generador,
       finca,
       selDepartamentos,
@@ -285,6 +295,9 @@ function ListarCertificadosPage() {
     vista,
     ano,
     mes,
+    // El Nº de certificado no estaba aquí: se escribía y la búsqueda jamás
+    // se disparaba (reporte cliente 2026-07-31, cert #86465 "no aparece").
+    consecutivoDebounced,
     generador?.id,
     finca?.id,
     depKeyDepartamentos,
