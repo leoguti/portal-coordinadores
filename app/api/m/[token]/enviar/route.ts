@@ -829,6 +829,42 @@ async function manejarRegistroGenerador(
   if (!tipopersona) throw new Error("Falta tipo de persona");
   if (!tipo) throw new Error("Falta tipo (AGRICOLA / PECUARIO / ...)");
 
+  // Anti-duplicados: una cédula/NIT solo puede existir UNA vez en GENERADORES,
+  // aunque llegue desde otro número de WhatsApp (hueco reportado por los
+  // coordinadores). Misma fórmula normalizada que /api/generadores/crear.
+  // El cambio de número legítimo es trámite con humano (coordinador edita el
+  // móvil del registro existente) — también evita que un tercero se apropie
+  // de la identidad de otro registrándose con su cédula.
+  {
+    const nitDigits = nit.replace(/\D/g, "");
+    const formula = `REGEX_REPLACE({nit}&'', '[^0-9]', '') = '${nitDigits}'`;
+    const params = new URLSearchParams();
+    params.append("fields[]", "nombre");
+    params.append("fields[]", "movil");
+    params.set("filterByFormula", formula);
+    params.set("maxRecords", "1");
+    const dupRes = await airtableFetch(`/GENERADORES?${params.toString()}`);
+    if (!dupRes.ok) {
+      // Fail-closed: sin poder verificar duplicados no se crea el registro.
+      throw new Error(
+        "No pudimos validar tu documento en este momento. Intenta de nuevo en unos minutos."
+      );
+    }
+    const dup = (await dupRes.json()) as {
+      records?: Array<{ fields?: Record<string, unknown> }>;
+    };
+    const existente = dup.records?.[0];
+    if (existente) {
+      const mismoTel =
+        normalizarMovilCO(String(existente.fields?.movil || "")) === movil;
+      throw new Error(
+        mismoTel
+          ? "Esta cédula/NIT ya está registrada con este mismo número de WhatsApp. Escríbele cualquier mensaje al bot para ver tu menú."
+          : "Esta cédula/NIT ya está registrada en CampoLimpio con otro número de WhatsApp. Si cambiaste de número o crees que es un error, elige “Hablar con un coordinador” en el menú del bot para que actualicen tu registro."
+      );
+    }
+  }
+
   const genFields: Record<string, unknown> = {
     nombre,
     nit,
