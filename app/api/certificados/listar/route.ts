@@ -63,7 +63,9 @@ function buildSelectorParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   for (const f of FIELDS_TO_FETCH) params.append("fields[]", f);
-  params.append("sort[0][field]", "fechadevolucion");
+  // Orden por consecutivo: dentro de un mismo día los números salían
+  // revueltos (pedido cliente 2026-07-31). El consecutivo ya es cronológico.
+  params.append("sort[0][field]", "consecutivo");
   params.append("sort[0][direction]", "desc");
   params.set("pageSize", String(pageSize));
   if (filterFormula) params.set("filterByFormula", filterFormula);
