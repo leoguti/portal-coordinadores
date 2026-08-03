@@ -164,7 +164,10 @@ export async function GET(request: Request) {
       // Documentos del repositorio nuevo (versionado): cuentan como cargados
       // y aportan la alerta de problemas. Si la tabla falla, seguimos solo
       // con los adjuntos legacy.
-      let docsPorTercero = new Map<string, { tipos: Set<string>; problemas: number }>();
+      let docsPorTercero = new Map<
+        string,
+        { tipos: Set<string>; tiposProblema: Set<string>; problemas: number }
+      >();
       try {
         const { mapaDocsPorTercero } = await import("@/lib/documentosTerceros");
         docsPorTercero = await mapaDocsPorTercero();
@@ -174,7 +177,11 @@ export async function GET(request: Request) {
 
       const terceros = records.map((r: any) => {
         const docsInfo = docsPorTercero.get(r.id);
-        const completitud = evaluarCompletitud(r.fields, docsInfo?.tipos);
+        const completitud = evaluarCompletitud(
+          r.fields,
+          docsInfo?.tipos,
+          docsInfo?.tiposProblema
+        );
         const ordenesCount = (r.fields.Ordenes || []).length;
         const cajaMenorCount = (r.fields.GastosCajaMenor || []).length;
         return {

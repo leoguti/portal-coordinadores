@@ -185,15 +185,19 @@ const BASICOS: Array<{ key: keyof TerceroFields; label: string; check: (v: any) 
 ];
 
 /**
- * @param docsNuevos Tipos de documento con registro en la tabla nueva
- *   DOCUMENTOS_TERCEROS (repositorio versionado). Un documento cuenta como
- *   cargado si está en el repositorio nuevo O como adjunto legacy. Paridad
- *   con el modelo viejo: cualquier estado cuenta; el endurecimiento a
- *   "aprobado y vigente" llega con la bandeja de aprobación (Sprint B).
+ * @param docsNuevos Tipos con documento SANO en la tabla DOCUMENTOS_TERCEROS
+ *   (repositorio versionado). Un documento cuenta como cargado si está sano
+ *   en el repositorio nuevo O como adjunto legacy. Paridad con el modelo
+ *   viejo: pendiente cuenta; el endurecimiento a "aprobado y vigente" llega
+ *   al procesar el backlog de la bandeja.
+ * @param docsProblema Tipos cuyo documento VIGENTE tiene problema (rechazado
+ *   o PDF con clave sin aprobar): NO cuentan como cargados, y vetan también
+ *   el adjunto legacy (es el mismo archivo problemático migrado).
  */
 export function evaluarCompletitud(
   fields: TerceroFields,
-  docsNuevos?: Set<string>
+  docsNuevos?: Set<string>,
+  docsProblema?: Set<string>
 ): CompletitudResult {
   const faltantesDatos: string[] = [];
 
@@ -225,22 +229,27 @@ export function evaluarCompletitud(
   }
 
   // 4) Documentos (solo requeridos para Órdenes de Servicio). Cuenta como
-  //    cargado el repositorio nuevo (docsNuevos) o el adjunto legacy.
+  //    cargado el repositorio nuevo (sano) o el adjunto legacy — salvo que el
+  //    documento vigente del tipo tenga problema, que veta ambos.
   const docs = docsNuevos || new Set<string>();
+  const problema = docsProblema || new Set<string>();
+  const docCargado = (tipo: string, legacy: unknown[] | undefined) =>
+    docs.has(tipo) || (!problema.has(tipo) && (legacy || []).length > 0);
+
   const faltantesDocumentos: string[] = [];
   if (fields.tipo_persona === "Natural") {
-    if (!docs.has("Cédula") && (fields.cedula_pdf || []).length === 0) {
+    if (!docCargado("Cédula", fields.cedula_pdf)) {
       faltantesDocumentos.push("Cédula escaneada");
     }
   } else if (fields.tipo_persona === "Jurídica") {
-    if (!docs.has("Cámara de Comercio") && (fields.certificado_camara_pdf || []).length === 0) {
+    if (!docCargado("Cámara de Comercio", fields.certificado_camara_pdf)) {
       faltantesDocumentos.push("Certificado Cámara de Comercio");
     }
   }
-  if (!docs.has("RUT") && (fields.rut_pdf || []).length === 0) {
+  if (!docCargado("RUT", fields.rut_pdf)) {
     faltantesDocumentos.push("RUT");
   }
-  if (!docs.has("Certificación bancaria") && (fields.certificacion_bancaria_pdf || []).length === 0) {
+  if (!docCargado("Certificación bancaria", fields.certificacion_bancaria_pdf)) {
     faltantesDocumentos.push("Certificación bancaria");
   }
 

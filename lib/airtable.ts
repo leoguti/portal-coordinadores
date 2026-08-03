@@ -977,16 +977,20 @@ export async function createOrdenServicio(
     const terceroRec = await terceroRes.json();
     const terceroFields = terceroRec.fields || {};
     const { evaluarCompletitud } = await import("./terceros");
-    // Documentos del repositorio versionado nuevo cuentan como cargados.
+    // Documentos del repositorio versionado nuevo: los sanos cuentan como
+    // cargados; los que tienen problema (rechazado / PDF con clave) vetan
+    // también el adjunto legacy.
     let docsNuevos = new Set<string>();
+    let docsProblema = new Set<string>();
     try {
-      const { listarDocumentosTercero } = await import("./documentosTerceros");
-      const docs = await listarDocumentosTercero(params.beneficiarioRecordId);
-      docsNuevos = new Set(docs.map((d) => d.tipo));
+      const { listarDocumentosTercero, resumirDocs } = await import("./documentosTerceros");
+      const resumen = resumirDocs(await listarDocumentosTercero(params.beneficiarioRecordId));
+      docsNuevos = resumen.tipos;
+      docsProblema = resumen.tiposProblema;
     } catch (err) {
       console.error("[createOrdenServicio] DOCUMENTOS_TERCEROS no disponible:", err);
     }
-    const completitud = evaluarCompletitud(terceroFields, docsNuevos);
+    const completitud = evaluarCompletitud(terceroFields, docsNuevos, docsProblema);
     if (!completitud.completo) {
       // Validación de cara al usuario: se devuelve (no se lanza) para que el
       // mensaje llegue intacto al cliente — los errores lanzados desde un

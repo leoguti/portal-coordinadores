@@ -205,35 +205,61 @@ export async function listarDocumentosTercero(
 }
 
 export interface DocsResumen {
-  /** Tipos con al menos un documento registrado (cualquier estado). */
+  /** Tipos cuyo documento vigente está sano (cuenta como cargado). */
   tipos: Set<string>;
   /**
-   * Documentos vigentes con problema: rechazados (esperan versión corregida)
-   * o con alerta de verificación (ej. PDF con clave) sin aprobar.
+   * Tipos cuyo documento vigente tiene problema: rechazado (espera versión
+   * corregida) o con alerta de verificación (ej. PDF con clave) sin aprobar.
+   * Estos tipos NO cuentan como cargados — ni siquiera con adjunto legacy,
+   * porque el legacy es el mismo archivo problemático migrado.
    */
+  tiposProblema: Set<string>;
   problemas: number;
+}
+
+function esProblematico(d: DocumentoTercero): boolean {
+  return d.estado === "rechazado" || (!!d.verificacionIa && d.estado !== "aprobado");
+}
+
+/** Resume los documentos de UN tercero: por tipo, mira su versión vigente. */
+export function resumirDocs(docs: DocumentoTercero[]): DocsResumen {
+  const porTipo = new Map<string, DocumentoTercero[]>();
+  for (const d of docs) {
+    if (!porTipo.has(d.tipo)) porTipo.set(d.tipo, []);
+    porTipo.get(d.tipo)!.push(d);
+  }
+  const r: DocsResumen = { tipos: new Set(), tiposProblema: new Set(), problemas: 0 };
+  for (const [tipo, lista] of porTipo) {
+    const vigente =
+      lista.find((d) => d.vigente) ||
+      lista.slice().sort((a, b) => b.version - a.version)[0];
+    if (vigente && esProblematico(vigente)) {
+      r.tiposProblema.add(tipo);
+      r.problemas++;
+    } else {
+      r.tipos.add(tipo);
+    }
+  }
+  return r;
 }
 
 /**
  * Mapa terceroId → resumen de documentos. `tipos` alimenta la completitud en
- * paridad con el modelo viejo de adjuntos ("cargado" = hay archivo; el
+ * paridad con el modelo viejo de adjuntos ("cargado" = hay archivo sano; el
  * endurecimiento a aprobado+vigente llegará al procesar el backlog);
- * `problemas` alimenta la alerta ⚠ del listado.
+ * `tiposProblema` veta también el fallback legacy y alimenta la alerta ⚠.
  */
 export async function mapaDocsPorTercero(): Promise<Map<string, DocsResumen>> {
   const todos = await listarTodosDocumentos();
-  const mapa = new Map<string, DocsResumen>();
+  const porTercero = new Map<string, DocumentoTercero[]>();
   for (const d of todos) {
     if (!d.terceroId) continue;
-    if (!mapa.has(d.terceroId)) mapa.set(d.terceroId, { tipos: new Set(), problemas: 0 });
-    const r = mapa.get(d.terceroId)!;
-    r.tipos.add(d.tipo);
-    if (
-      d.vigente &&
-      (d.estado === "rechazado" || (d.verificacionIa && d.estado !== "aprobado"))
-    ) {
-      r.problemas++;
-    }
+    if (!porTercero.has(d.terceroId)) porTercero.set(d.terceroId, []);
+    porTercero.get(d.terceroId)!.push(d);
+  }
+  const mapa = new Map<string, DocsResumen>();
+  for (const [terceroId, docs] of porTercero) {
+    mapa.set(terceroId, resumirDocs(docs));
   }
   return mapa;
 }
