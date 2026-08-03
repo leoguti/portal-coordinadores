@@ -380,7 +380,7 @@ function EditPanel({
           </p>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Nombre / Dirección finca</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Finca / almacén / punto de venta</label>
               <input value={nombre} onChange={(e) => setNombre(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
@@ -1003,7 +1003,6 @@ function GeneradorEditForm({
             {isJuridica ? "NIT (sin DV)" : "Cédula"}
           </label>
           <input value={nitBase} onChange={(e) => setNitBase(e.target.value)}
-            placeholder={isJuridica ? "900123456" : "12345678"}
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
         </div>
         {isJuridica && (
@@ -1035,7 +1034,6 @@ function GeneradorEditForm({
           <input
             value={direccionSede}
             onChange={(e) => setDireccionSede(e.target.value)}
-            placeholder="Calle / Carrera / Vereda…"
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
@@ -1056,7 +1054,6 @@ function GeneradorEditForm({
             value={movil}
             onChange={(e) => setMovil(e.target.value)}
             inputMode="numeric"
-            placeholder="3001234567"
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
@@ -1066,7 +1063,6 @@ function GeneradorEditForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
-            placeholder="agricultor@example.com"
             className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
@@ -1602,12 +1598,11 @@ function CreateFincaModal({
 
           {/* Finca */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Finca</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Finca / almacén / punto de venta</p>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Nombre / Dirección *</label>
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: Finca La Esperanza - Vereda El Rosal"
                   className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
