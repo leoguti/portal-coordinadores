@@ -68,6 +68,7 @@ function NuevoTerceroInner() {
     razonSocial.trim().length > 0 &&
     nit.trim().length > 0 &&
     (tipoPersona === "Natural" || tipoPersona === "Jurídica") &&
+    municipio !== null &&
     (!dirCheck || dirCheck.ok) &&
     (!correoCheck || correoCheck.ok) &&
     (!movilCheck || movilCheck.ok);
@@ -273,7 +274,7 @@ function NuevoTerceroInner() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Municipio</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Municipio *</label>
             <MunicipioSearch value={municipio} onChange={setMunicipio} placeholder="Buscar municipio..." />
           </div>
 
@@ -301,7 +302,7 @@ function NuevoTerceroInner() {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
                 Correo electrónico
-                <span className="ml-1 text-[10px] text-gray-400">(para notificarle pagos)</span>
+                <span className="ml-1 text-[10px] text-gray-400">(opcional; para notificarle pagos)</span>
               </label>
               <input
                 type="email"

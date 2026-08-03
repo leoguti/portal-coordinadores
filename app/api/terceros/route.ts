@@ -263,6 +263,12 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (!body.municipioId) {
+      return NextResponse.json(
+        { error: "Falta el municipio" },
+        { status: 400 }
+      );
+    }
 
     // NIT de jurídicas debe traer dígito de verificación válido.
     if (tipoPersona === "Jurídica" && !validarNitJuridica(nit)) {

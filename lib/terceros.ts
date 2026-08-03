@@ -173,12 +173,13 @@ export function validarCamposEscritura(input: {
 // Completitud
 // ---------------------------------------------------------------------------
 
+// El correo NO es obligatorio (decisión 2026-08-03): se valida el formato si
+// viene, pero su ausencia no cuenta como faltante ni bloquea ningún flujo.
 const BASICOS: Array<{ key: keyof TerceroFields; label: string; check: (v: any) => boolean }> = [
   { key: "RazonSocial", label: "Razón Social / Nombre", check: (v) => typeof v === "string" && v.trim().length > 0 },
   { key: "NIT", label: "NIT / Cédula", check: (v) => typeof v === "string" && v.trim().length > 0 },
   { key: "Direccion", label: "Dirección", check: (v) => typeof v === "string" && v.trim().length > 0 },
   { key: "Movil", label: "Teléfono / Móvil", check: (v) => v !== undefined && v !== null && String(v).trim().length > 0 },
-  { key: "Correo Electrónico", label: "Correo electrónico", check: (v) => typeof v === "string" && v.includes("@") },
   { key: "Municipio", label: "Municipio", check: (v) => Array.isArray(v) && v.length > 0 },
   { key: "tipo_persona", label: "Tipo de persona (Natural/Jurídica)", check: (v) => v === "Natural" || v === "Jurídica" },
 ];
