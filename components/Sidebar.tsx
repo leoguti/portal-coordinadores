@@ -30,8 +30,8 @@ const navItems = [
   // siguen funcionando como redirects a /certificados?tab=historico.
   { name: "Certificados", href: "/certificados", icon: "📜", roles: ["Coordinador", "Administrador", "Supervisor"] },
   { name: "Admin: Coordinadores", href: "/admin/coordinadores", icon: "👥", roles: ["Administrador"] },
-  // Bandeja de aprobación de documentos de terceros (repositorio versionado).
-  { name: "Admin: Documentos", href: "/revisiones/documentos", icon: "🗂️", roles: ["Administrador"] },
+  // La bandeja de documentos (/revisiones/documentos) NO va en el menú:
+  // se accede con el botón "Revisión de documentos" dentro de /terceros.
 ];
 
 export default function Sidebar({

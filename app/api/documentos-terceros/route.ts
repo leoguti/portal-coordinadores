@@ -10,6 +10,7 @@ import {
   sha256Hex,
   subirArchivoR2,
 } from "@/lib/documentosTerceros";
+import { analizarPdf, esPdf, motivoRechazoPdf } from "@/lib/pdfProtegido";
 
 export const maxDuration = 60;
 
@@ -120,6 +121,18 @@ export async function POST(req: NextRequest) {
     const desmarcarVigentes = delTipo.filter((d) => d.vigente).map((d) => d.id);
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // PDFs con clave de apertura o dañados se rechazan en el acto (sin IA:
+    // detección determinística con pdfjs). Los "restringidos" (solo permisos,
+    // típicos de certificaciones bancarias) sí pasan.
+    if (esPdf(file.name || "", file.type)) {
+      const analisis = await analizarPdf(buffer);
+      const motivo = motivoRechazoPdf(analisis);
+      if (motivo) {
+        return NextResponse.json({ error: motivo }, { status: 400 });
+      }
+    }
+
     const key = construirKeyR2(terceroId, tipo, version, file.name || "documento.pdf");
     await subirArchivoR2(key, buffer, file.type || "application/octet-stream");
 

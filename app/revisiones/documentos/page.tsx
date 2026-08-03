@@ -29,6 +29,7 @@ interface Doc {
   fechaExpedicion: string | null;
   venceEl: string | null;
   origen: string | null;
+  verificacionIa: string | null;
   tercero: { razonSocial: string; nit: string; tipoPersona: string } | null;
 }
 
@@ -210,6 +211,11 @@ export default function RevisionDocumentosPage() {
                       <span className="text-[11px] text-gray-400">
                         {fmtSize(d.archivoSize)} · subido {fmt(d.fechaSubida)}
                       </span>
+                      {d.verificacionIa && (
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">
+                          {d.verificacionIa}
+                        </span>
+                      )}
                       {d.estado === "rechazado" && d.motivoRechazo && (
                         <span className="text-[11px] text-red-600">Motivo: {d.motivoRechazo}</span>
                       )}

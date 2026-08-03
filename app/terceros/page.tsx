@@ -219,12 +219,22 @@ export default function TercerosPage() {
               vas a crear una OS con ese tercero.
             </p>
           </div>
-          <Link
-            href="/terceros/nuevo"
-            className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <span className="text-base leading-none">+</span> Agregar tercero
-          </Link>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            {isAdminView && (
+              <Link
+                href="/revisiones/documentos"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                🗂️ Revisión de documentos
+              </Link>
+            )}
+            <Link
+              href="/terceros/nuevo"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <span className="text-base leading-none">+</span> Agregar tercero
+            </Link>
+          </div>
         </div>
 
         {/* Encabezado informativo: los documentos son requisito SOLO de OS.

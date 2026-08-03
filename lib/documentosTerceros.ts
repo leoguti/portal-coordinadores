@@ -58,6 +58,8 @@ export interface DocumentoTercero {
   fechaExpedicion: string | null;
   venceEl: string | null;
   origen: string | null;
+  /** Nota de verificación automática (ej. PDF con clave). Informativa. */
+  verificacionIa: string | null;
 }
 
 export function calcularVencimiento(
@@ -161,6 +163,7 @@ function mapRecord(r: any): DocumentoTercero {
     fechaExpedicion: f.fecha_expedicion || null,
     venceEl: f.vence_el || null,
     origen: f.origen || null,
+    verificacionIa: f.verificacion_ia || null,
   };
 }
 
