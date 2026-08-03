@@ -124,6 +124,8 @@ export default function TercerosPage() {
   const [filtroUso, setFiltroUso] = useState<FiltroUso>("con_os");
   const [search, setSearch] = useState("");
   const [showUso, setShowUso] = useState(false);
+  // Badge del botón "Revisión de documentos" (solo admin).
+  const [docsPendientes, setDocsPendientes] = useState(0);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -139,6 +141,12 @@ export default function TercerosPage() {
         // Admin: default "con_os" (filtrar ruido). Coordinador: "todos" porque ya ve solo los suyos
         if (!d.isAdmin) setFiltroUso("todos");
         setLoading(false);
+        if (d.isAdmin) {
+          fetch("/api/documentos-terceros/conteos")
+            .then((r) => (r.ok ? r.json() : { pendientes: 0 }))
+            .then((c) => setDocsPendientes(c.pendientes || 0))
+            .catch(() => {});
+        }
       });
   }, [status]);
 
@@ -226,6 +234,11 @@ export default function TercerosPage() {
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
                 🗂️ Revisión de documentos
+                {docsPendientes > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-xs font-bold">
+                    {docsPendientes}
+                  </span>
+                )}
               </Link>
             )}
             <Link
