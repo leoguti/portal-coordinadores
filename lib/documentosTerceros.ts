@@ -16,31 +16,23 @@
 
 import { createHash, randomBytes } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { TipoDocumento, calcularVencimiento } from "./documentosTercerosReglas";
+
+// Reglas puras (compartidas con componentes cliente) — re-exportadas para
+// mantener estables los imports existentes.
+export {
+  TIPOS_DOCUMENTO,
+  VIGENCIA_MESES,
+  DIAS_VENTANA_RENOVACION,
+  calcularVencimiento,
+  puedeSubirVersion,
+} from "./documentosTercerosReglas";
+export type { TipoDocumento } from "./documentosTercerosReglas";
 
 const AIRTABLE_KEY = process.env.AIRTABLE_API_KEY!;
 const AIRTABLE_BASE = process.env.AIRTABLE_BASE_ID!;
 
 export const TABLA_DOCUMENTOS = "DOCUMENTOS_TERCEROS";
-
-export const TIPOS_DOCUMENTO = [
-  "RUT",
-  "Cédula",
-  "Certificación bancaria",
-  "Cámara de Comercio",
-  "Planilla SS",
-  "Otro",
-] as const;
-export type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
-
-/** Vigencia en meses por tipo (null = no vence). Configurable en un solo lugar. */
-export const VIGENCIA_MESES: Record<TipoDocumento, number | null> = {
-  RUT: 12,
-  "Cámara de Comercio": 12,
-  "Certificación bancaria": 12,
-  "Planilla SS": 1,
-  Cédula: null,
-  Otro: null,
-};
 
 export interface DocumentoTercero {
   id: string;
@@ -60,18 +52,6 @@ export interface DocumentoTercero {
   origen: string | null;
   /** Nota de verificación automática (ej. PDF con clave). Informativa. */
   verificacionIa: string | null;
-}
-
-export function calcularVencimiento(
-  tipo: TipoDocumento,
-  fechaExpedicion: string | null | undefined
-): string | null {
-  const meses = VIGENCIA_MESES[tipo];
-  if (!meses || !fechaExpedicion) return null;
-  const d = new Date(`${fechaExpedicion.slice(0, 10)}T12:00:00-05:00`);
-  if (isNaN(d.getTime())) return null;
-  d.setMonth(d.getMonth() + meses);
-  return d.toISOString().slice(0, 10);
 }
 
 // ─── R2 (archivos) ──────────────────────────────────────────────────────────
@@ -205,15 +185,21 @@ export async function listarDocumentosTercero(
 }
 
 export interface DocsResumen {
-  /** Tipos cuyo documento vigente está sano (cuenta como cargado). */
-  tipos: Set<string>;
+  /** Tipos cuyo documento vigente está APROBADO — los únicos que cuentan para OS. */
+  aprobados: Set<string>;
+  /** Tipos cuyo documento vigente está pendiente de revisión (sin alertas). */
+  enRevision: Set<string>;
   /**
    * Tipos cuyo documento vigente tiene problema: rechazado (espera versión
    * corregida) o con alerta de verificación (ej. PDF con clave) sin aprobar.
-   * Estos tipos NO cuentan como cargados — ni siquiera con adjunto legacy,
-   * porque el legacy es el mismo archivo problemático migrado.
    */
   tiposProblema: Set<string>;
+  /**
+   * Tipos con CUALQUIER registro en el repositorio nuevo: vetan el fallback
+   * al adjunto legacy (todo lo legacy fue migrado — el adjunto es el mismo
+   * archivo que ya está en revisión aquí).
+   */
+  registrados: Set<string>;
   problemas: number;
 }
 
@@ -228,16 +214,26 @@ export function resumirDocs(docs: DocumentoTercero[]): DocsResumen {
     if (!porTipo.has(d.tipo)) porTipo.set(d.tipo, []);
     porTipo.get(d.tipo)!.push(d);
   }
-  const r: DocsResumen = { tipos: new Set(), tiposProblema: new Set(), problemas: 0 };
+  const r: DocsResumen = {
+    aprobados: new Set(),
+    enRevision: new Set(),
+    tiposProblema: new Set(),
+    registrados: new Set(),
+    problemas: 0,
+  };
   for (const [tipo, lista] of porTipo) {
+    r.registrados.add(tipo);
     const vigente =
       lista.find((d) => d.vigente) ||
       lista.slice().sort((a, b) => b.version - a.version)[0];
-    if (vigente && esProblematico(vigente)) {
+    if (!vigente) continue;
+    if (vigente.estado === "aprobado") {
+      r.aprobados.add(tipo);
+    } else if (esProblematico(vigente)) {
       r.tiposProblema.add(tipo);
       r.problemas++;
     } else {
-      r.tipos.add(tipo);
+      r.enRevision.add(tipo);
     }
   }
   return r;

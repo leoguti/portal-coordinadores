@@ -39,6 +39,11 @@ export interface CompletitudResult {
   listoOrdenServicio: boolean;
   faltantesDatos: string[];
   faltantesDocumentos: string[];
+  /**
+   * Subconjunto de faltantesDocumentos que SÍ está subido pero espera
+   * revisión del administrador (para decir "en revisión" y no "falta").
+   */
+  docsEnRevision: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -184,20 +189,26 @@ const BASICOS: Array<{ key: keyof TerceroFields; label: string; check: (v: any) 
   { key: "tipo_persona", label: "Tipo de persona (Natural/Jurídica)", check: (v) => v === "Natural" || v === "Jurídica" },
 ];
 
+export interface DocsEstado {
+  /** Tipos con documento vigente APROBADO — los únicos que cuentan para OS. */
+  aprobados: Set<string>;
+  /** Tipos con documento vigente pendiente de revisión administrativa. */
+  enRevision: Set<string>;
+  /** Tipos con cualquier registro en el repositorio nuevo (vetan el legacy). */
+  registrados: Set<string>;
+}
+
 /**
- * @param docsNuevos Tipos con documento SANO en la tabla DOCUMENTOS_TERCEROS
- *   (repositorio versionado). Un documento cuenta como cargado si está sano
- *   en el repositorio nuevo O como adjunto legacy. Paridad con el modelo
- *   viejo: pendiente cuenta; el endurecimiento a "aprobado y vigente" llega
- *   al procesar el backlog de la bandeja.
- * @param docsProblema Tipos cuyo documento VIGENTE tiene problema (rechazado
- *   o PDF con clave sin aprobar): NO cuentan como cargados, y vetan también
- *   el adjunto legacy (es el mismo archivo problemático migrado).
+ * Política de documentos (endurecida 2026-08-03): para Órdenes de Servicio
+ * solo cuenta el documento vigente APROBADO por un administrador. Un
+ * documento pendiente o con problema bloquea la OS; los pendientes se
+ * reportan también en `docsEnRevision` para mensajería precisa. El adjunto
+ * legacy solo cuenta si el tipo no tiene ningún registro en el repositorio
+ * nuevo (todo lo legacy fue migrado, así que en la práctica ya no aplica).
  */
 export function evaluarCompletitud(
   fields: TerceroFields,
-  docsNuevos?: Set<string>,
-  docsProblema?: Set<string>
+  docsEstado?: DocsEstado
 ): CompletitudResult {
   const faltantesDatos: string[] = [];
 
@@ -228,30 +239,29 @@ export function evaluarCompletitud(
     faltantesDatos.push("NIT con dígito verificador inválido");
   }
 
-  // 4) Documentos (solo requeridos para Órdenes de Servicio). Cuenta como
-  //    cargado el repositorio nuevo (sano) o el adjunto legacy — salvo que el
-  //    documento vigente del tipo tenga problema, que veta ambos.
-  const docs = docsNuevos || new Set<string>();
-  const problema = docsProblema || new Set<string>();
+  // 4) Documentos (solo requeridos para Órdenes de Servicio). Solo cuenta el
+  //    aprobado; el legacy únicamente si el tipo no tiene registro nuevo.
+  const aprobados = docsEstado?.aprobados || new Set<string>();
+  const enRevision = docsEstado?.enRevision || new Set<string>();
+  const registrados = docsEstado?.registrados || new Set<string>();
   const docCargado = (tipo: string, legacy: unknown[] | undefined) =>
-    docs.has(tipo) || (!problema.has(tipo) && (legacy || []).length > 0);
+    aprobados.has(tipo) || (!registrados.has(tipo) && (legacy || []).length > 0);
 
   const faltantesDocumentos: string[] = [];
+  const docsEnRevision: string[] = [];
+  const evaluarDoc = (tipo: string, label: string, legacy: unknown[] | undefined) => {
+    if (docCargado(tipo, legacy)) return;
+    faltantesDocumentos.push(label);
+    if (enRevision.has(tipo)) docsEnRevision.push(label);
+  };
+
   if (fields.tipo_persona === "Natural") {
-    if (!docCargado("Cédula", fields.cedula_pdf)) {
-      faltantesDocumentos.push("Cédula escaneada");
-    }
+    evaluarDoc("Cédula", "Cédula escaneada", fields.cedula_pdf);
   } else if (fields.tipo_persona === "Jurídica") {
-    if (!docCargado("Cámara de Comercio", fields.certificado_camara_pdf)) {
-      faltantesDocumentos.push("Certificado Cámara de Comercio");
-    }
+    evaluarDoc("Cámara de Comercio", "Certificado Cámara de Comercio", fields.certificado_camara_pdf);
   }
-  if (!docCargado("RUT", fields.rut_pdf)) {
-    faltantesDocumentos.push("RUT");
-  }
-  if (!docCargado("Certificación bancaria", fields.certificacion_bancaria_pdf)) {
-    faltantesDocumentos.push("Certificación bancaria");
-  }
+  evaluarDoc("RUT", "RUT", fields.rut_pdf);
+  evaluarDoc("Certificación bancaria", "Certificación bancaria", fields.certificacion_bancaria_pdf);
 
   const listoCajaMenor = faltantesDatos.length === 0;
   const listoOrdenServicio = listoCajaMenor && faltantesDocumentos.length === 0;
@@ -264,5 +274,6 @@ export function evaluarCompletitud(
     listoOrdenServicio,
     faltantesDatos,
     faltantesDocumentos,
+    docsEnRevision,
   };
 }

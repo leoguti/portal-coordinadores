@@ -27,6 +27,7 @@ interface Tercero {
   listoOrdenServicio: boolean;
   faltantesDatos: string[];
   faltantesDocumentos: string[];
+  docsEnRevision: string[];
   docsProblemas: number;
 }
 
@@ -40,7 +41,18 @@ const DOC_CORTO: Record<string, string> = {
   RUT: "RUT",
 };
 const docsCortos = (t: Tercero) =>
-  (t.faltantesDocumentos || []).map((d) => DOC_CORTO[d] || d).join(", ");
+  (t.faltantesDocumentos || [])
+    .map((d) => {
+      const corto = DOC_CORTO[d] || d;
+      return (t.docsEnRevision || []).includes(d) ? `${corto} (en revisión)` : corto;
+    })
+    .join(", ");
+
+/** True si todo lo que falta para OS ya está subido y solo espera revisión. */
+const soloEnRevision = (t: Tercero) =>
+  t.faltantesDatos.length === 0 &&
+  t.faltantesDocumentos.length > 0 &&
+  t.faltantesDocumentos.every((d) => (t.docsEnRevision || []).includes(d));
 
 /**
  * Badges de estado: icono + texto siempre (nunca solo color) y paleta
@@ -97,6 +109,15 @@ function EstadoOS({ t }: { t: Tercero }) {
     <div className="space-y-0.5">
       {t.listoOrdenServicio ? (
         <BadgeListo />
+      ) : soloEnRevision(t) ? (
+        <>
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 whitespace-nowrap">
+            🕐 Docs en revisión
+          </span>
+          <p className="text-[11px] text-gray-400 leading-tight">
+            Subidos — esperan aprobación de administración
+          </p>
+        </>
       ) : (
         <>
           <BadgeFalta

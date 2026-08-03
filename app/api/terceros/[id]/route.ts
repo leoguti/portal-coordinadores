@@ -7,17 +7,15 @@ import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
 
-/** Resumen del repositorio nuevo: tipos sanos y tipos con problema. */
-async function docsDelTercero(
-  terceroId: string
-): Promise<{ tipos: Set<string>; tiposProblema: Set<string> }> {
+/** Resumen del repositorio nuevo (aprobados / en revisión / con problema). */
+async function docsDelTercero(terceroId: string) {
   try {
     const { listarDocumentosTercero, resumirDocs } = await import("@/lib/documentosTerceros");
     const docs = await listarDocumentosTercero(terceroId);
     return resumirDocs(docs);
   } catch (err) {
     console.error("[terceros/id] no se pudo leer DOCUMENTOS_TERCEROS:", err);
-    return { tipos: new Set(), tiposProblema: new Set() };
+    return undefined;
   }
 }
 
@@ -35,8 +33,7 @@ export async function GET(
   });
   if (!res.ok) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   const rec = await res.json();
-  const docsInfo = await docsDelTercero(id);
-  const completitud = evaluarCompletitud(rec.fields, docsInfo.tipos, docsInfo.tiposProblema);
+  const completitud = evaluarCompletitud(rec.fields, await docsDelTercero(id));
 
   // Si se pide chequear planilla para un mes específico (solo aplica a naturales)
   let planillaCheck: { mes: string; ok: boolean; aplica: boolean } | null = null;
@@ -197,7 +194,6 @@ export async function PATCH(
   }
 
   const rec = await res.json();
-  const docsInfo = await docsDelTercero(id);
-  const completitud = evaluarCompletitud(rec.fields, docsInfo.tipos, docsInfo.tiposProblema);
+  const completitud = evaluarCompletitud(rec.fields, await docsDelTercero(id));
   return NextResponse.json({ id: rec.id, fields: rec.fields, completitud });
 }

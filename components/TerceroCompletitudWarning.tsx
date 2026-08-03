@@ -12,6 +12,7 @@ interface Completitud {
   listoOrdenServicio?: boolean;
   faltantesDatos?: string[];
   faltantesDocumentos?: string[];
+  docsEnRevision?: string[];
 }
 
 interface PlanillaCheck {
@@ -93,7 +94,9 @@ export default function TerceroCompletitudWarning({
               </p>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {faltantes.map((f) => (
-                  <span key={f} className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>{f}</span>
+                  <span key={f} className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>
+                    {(completitud?.docsEnRevision || []).includes(f) ? `${f} — subido, en revisión` : f}
+                  </span>
                 ))}
               </div>
             </div>

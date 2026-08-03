@@ -125,6 +125,17 @@ export async function POST(req: NextRequest) {
     const version = delTipo.reduce((m, d) => Math.max(m, d.version), 0) + 1;
     const desmarcarVigentes = delTipo.filter((d) => d.vigente).map((d) => d.id);
 
+    // Candado: sobre un documento APROBADO no se aceptan versiones nuevas
+    // hasta la ventana de renovación (30 días antes del vencimiento). Los
+    // administradores no pasan por la regla (pueden corregir siempre).
+    if (!isAdmin(session.user.rol)) {
+      const { puedeSubirVersion } = await import("@/lib/documentosTercerosReglas");
+      const regla = puedeSubirVersion(delTipo, tipo);
+      if (!regla.permitido) {
+        return NextResponse.json({ error: regla.motivo }, { status: 403 });
+      }
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // PDFs con clave de apertura o dañados se rechazan en el acto (sin IA:

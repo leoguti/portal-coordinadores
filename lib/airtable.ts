@@ -977,26 +977,31 @@ export async function createOrdenServicio(
     const terceroRec = await terceroRes.json();
     const terceroFields = terceroRec.fields || {};
     const { evaluarCompletitud } = await import("./terceros");
-    // Documentos del repositorio versionado nuevo: los sanos cuentan como
-    // cargados; los que tienen problema (rechazado / PDF con clave) vetan
-    // también el adjunto legacy.
-    let docsNuevos = new Set<string>();
-    let docsProblema = new Set<string>();
+    // Documentos del repositorio versionado: para OS solo cuentan los
+    // APROBADOS por administración — pendientes y con problema bloquean.
+    let docsResumen;
     try {
       const { listarDocumentosTercero, resumirDocs } = await import("./documentosTerceros");
-      const resumen = resumirDocs(await listarDocumentosTercero(params.beneficiarioRecordId));
-      docsNuevos = resumen.tipos;
-      docsProblema = resumen.tiposProblema;
+      docsResumen = resumirDocs(await listarDocumentosTercero(params.beneficiarioRecordId));
     } catch (err) {
       console.error("[createOrdenServicio] DOCUMENTOS_TERCEROS no disponible:", err);
     }
-    const completitud = evaluarCompletitud(terceroFields, docsNuevos, docsProblema);
+    const completitud = evaluarCompletitud(terceroFields, docsResumen);
     if (!completitud.completo) {
       // Validación de cara al usuario: se devuelve (no se lanza) para que el
       // mensaje llegue intacto al cliente — los errores lanzados desde un
       // server action se redactan en producción.
+      const partes = completitud.faltantes.map((f) =>
+        completitud.docsEnRevision.includes(f) ? `${f} (subido, en revisión por administración)` : f
+      );
+      const soloRevision =
+        completitud.faltantesDatos.length === 0 &&
+        completitud.faltantesDocumentos.length > 0 &&
+        completitud.faltantesDocumentos.every((f) => completitud.docsEnRevision.includes(f));
       return {
-        validationError: `El tercero "${terceroFields.RazonSocial || "seleccionado"}" está incompleto. Falta: ${completitud.faltantes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`,
+        validationError: soloRevision
+          ? `Los documentos del tercero "${terceroFields.RazonSocial || "seleccionado"}" están subidos pero en revisión por administración (${partes.join(", ")}). Podrás crear la orden cuando sean aprobados.`
+          : `El tercero "${terceroFields.RazonSocial || "seleccionado"}" está incompleto. Falta: ${partes.join(", ")}. Ve a "Terceros" en el menú para completarlo antes de crear la orden.`,
       };
     }
 

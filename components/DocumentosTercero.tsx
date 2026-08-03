@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { puedeSubirVersion, TipoDocumento } from "@/lib/documentosTercerosReglas";
 
 interface Doc {
   id: string;
@@ -226,36 +227,50 @@ export default function DocumentosTercero({
               </div>
             )}
 
-            {/* Subida de nueva versión */}
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <label className="inline-flex items-center text-xs">
-                <span className={`px-3 py-1.5 rounded border cursor-pointer ${
-                  aplica && !tiene
-                    ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
-                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                }`}>
-                  {enSubida ? "Subiendo..." : tiene ? "Subir versión nueva" : "Seleccionar archivo"}
-                </span>
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  onChange={(e) => e.target.files?.[0] && subir(tipo, e.target.files[0])}
-                  disabled={enSubida}
-                  className="hidden"
-                />
-              </label>
-              {CON_VIGENCIA.has(tipo) && (
-                <label className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
-                  Fecha de expedición del documento:
-                  <input
-                    type="date"
-                    value={fechaExp[tipo] || ""}
-                    onChange={(e) => setFechaExp((p) => ({ ...p, [tipo]: e.target.value }))}
-                    className="border border-gray-300 rounded px-1.5 py-1 text-xs"
-                  />
-                </label>
-              )}
-            </div>
+            {/* Subida de nueva versión — con candado: sobre un documento
+                aprobado no se piden ni aceptan versiones hasta la ventana
+                de renovación (30 días antes del vencimiento). */}
+            {(() => {
+              const regla = puedeSubirVersion(versiones, tipo as TipoDocumento);
+              if (!regla.permitido) {
+                return (
+                  <p className="mt-2 text-[11px] text-gray-400">
+                    🔒 {regla.motivo}
+                  </p>
+                );
+              }
+              return (
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <label className="inline-flex items-center text-xs">
+                    <span className={`px-3 py-1.5 rounded border cursor-pointer ${
+                      aplica && !tiene
+                        ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
+                        : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                    }`}>
+                      {enSubida ? "Subiendo..." : tiene ? "Subir versión nueva" : "Seleccionar archivo"}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => e.target.files?.[0] && subir(tipo, e.target.files[0])}
+                      disabled={enSubida}
+                      className="hidden"
+                    />
+                  </label>
+                  {CON_VIGENCIA.has(tipo) && (
+                    <label className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+                      Fecha de expedición del documento:
+                      <input
+                        type="date"
+                        value={fechaExp[tipo] || ""}
+                        onChange={(e) => setFechaExp((p) => ({ ...p, [tipo]: e.target.value }))}
+                        className="border border-gray-300 rounded px-1.5 py-1 text-xs"
+                      />
+                    </label>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
