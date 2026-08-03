@@ -46,9 +46,10 @@ function buildChecklist(t: Tercero): CheckItem[] {
   const items: CheckItem[] = [];
 
   // 1) Datos básicos (presencia + formato correo/móvil/dirección) en un ítem.
+  //    Ámbar (no rojo): faltan datos que sí afectan Caja Menor.
   items.push({
     label: "Datos",
-    status: datos.size === 0 ? "ok" : "missing",
+    status: datos.size === 0 ? "ok" : "warn",
     detail: datos.size ? `Revisar: ${[...datos].join(", ")}` : undefined,
   });
 
@@ -85,15 +86,26 @@ function buildChecklist(t: Tercero): CheckItem[] {
 }
 
 function ChecklistPill({ item }: { item: CheckItem }) {
+  // "missing" = documento pendiente. Gris neutro, no rojo: los documentos
+  // solo se necesitan para OS y su ausencia no es un error del tercero.
   const cfg =
     item.status === "ok"
       ? { cls: "bg-green-50 text-green-700", icon: "✓" }
       : item.status === "warn"
         ? { cls: "bg-amber-100 text-amber-800", icon: "⚠" }
-        : { cls: "bg-red-50 text-red-700", icon: "✗" };
+        : { cls: "bg-gray-100 text-gray-500", icon: "○" };
   return (
     <span
-      title={item.detail || `${item.label}: ${item.status === "ok" ? "completo" : "pendiente"}`}
+      title={
+        item.detail ||
+        `${item.label}: ${
+          item.status === "ok"
+            ? "completo"
+            : item.status === "warn"
+              ? "pendiente"
+              : "pendiente — solo se necesita para Órdenes de Servicio"
+        }`
+      }
       className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${cfg.cls}`}
     >
       <span className="font-bold leading-none">{cfg.icon}</span>
@@ -201,8 +213,10 @@ export default function TercerosPage() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">Terceros (Proveedores)</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Completa los datos y documentos de cada tercero. Mientras estén
-              incompletos, no podrás crear Órdenes de Servicio con ellos.
+              Los terceros sirven para <strong>Caja Menor</strong> (bastan los
+              datos básicos) y para <strong>Órdenes de Servicio</strong> (que
+              además requieren documentos). Los documentos solo hacen falta si
+              vas a crear una OS con ese tercero.
             </p>
           </div>
           <Link
@@ -213,23 +227,28 @@ export default function TercerosPage() {
           </Link>
         </div>
 
-        {/* Encabezado accionable */}
+        {/* Encabezado informativo: los documentos son requisito SOLO de OS.
+            Tono neutro — un tercero sin documentos NO es un problema si solo
+            se usa para Caja Menor. */}
         {incompletos > 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-start gap-3">
-              <span className="text-xl leading-none">⚠️</span>
+              <span className="text-xl leading-none">ℹ️</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-900">
+                <p className="text-sm font-semibold text-blue-900">
                   {incompletos}{" "}
                   {incompletos === 1
-                    ? "tercero incompleto bloquea"
-                    : "terceros incompletos bloquean"}{" "}
-                  la creación de Órdenes de Servicio.
+                    ? "tercero aún no está listo"
+                    : "terceros aún no están listos"}{" "}
+                  para Órdenes de Servicio.
                 </p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Complétalos para poder facturar. {completos} de {total} listos.
+                <p className="text-xs text-blue-800 mt-0.5">
+                  Si solo los usas para <strong>Caja Menor, no tienes que hacer
+                  nada</strong> — pueden usarse normalmente. Los documentos solo
+                  se necesitan el día que quieras crear una OS con ellos.{" "}
+                  {completos} de {total} listos para OS.
                 </p>
-                <div className="w-full bg-amber-100 rounded-full h-2 mt-2">
+                <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
                   <div
                     className="bg-green-500 h-2 rounded-full transition-all"
                     style={{ width: `${pct}%` }}
@@ -242,8 +261,9 @@ export default function TercerosPage() {
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center gap-3">
             <span className="text-xl leading-none">✅</span>
             <p className="text-sm font-semibold text-green-800">
-              ¡Todo en orden! Los {total} terceros{" "}
-              {filtroUso !== "todos" ? `(${usoLabel[filtroUso].toLowerCase()})` : ""} están completos.
+              Los {total} terceros{" "}
+              {filtroUso !== "todos" ? `(${usoLabel[filtroUso].toLowerCase()})` : ""} están
+              listos para Órdenes de Servicio.
             </p>
           </div>
         )}
@@ -253,8 +273,8 @@ export default function TercerosPage() {
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
             {(["incompletos", "completos", "todos"] as const).map((f) => {
               const label =
-                f === "incompletos" ? `Por completar (${incompletos})` :
-                f === "completos" ? `Completos (${completos})` :
+                f === "incompletos" ? `Pendientes para OS (${incompletos})` :
+                f === "completos" ? `Listos para OS (${completos})` :
                 `Todos (${total})`;
               return (
                 <button key={f} onClick={() => setFiltroCompletitud(f)}
@@ -307,7 +327,7 @@ export default function TercerosPage() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {visiblesSorted.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-12">
-              {filtroCompletitud === "incompletos" ? "No hay terceros por completar 🎉" : "Sin resultados"}
+              {filtroCompletitud === "incompletos" ? "No hay terceros pendientes para OS 🎉" : "Sin resultados"}
             </p>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -356,7 +376,9 @@ export default function TercerosPage() {
                             </span>
                             <span className="text-gray-400">
                               🔵 Órdenes de Servicio:{" "}
-                              {t.listoCajaMenor ? "faltan documentos" : "faltan datos y documentos"}
+                              {t.listoCajaMenor
+                                ? "faltan documentos (solo si vas a crear una OS)"
+                                : "faltan datos y documentos"}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-1">
@@ -368,7 +390,7 @@ export default function TercerosPage() {
                       )}
                     </div>
                     <span className="text-xs text-gray-300 group-hover:text-green-600 flex-shrink-0 whitespace-nowrap mt-0.5">
-                      {t.completo ? "→" : "Completar →"}
+                      {t.completo ? "→" : t.listoCajaMenor ? "Ver →" : "Completar →"}
                     </span>
                   </div>
                 </Link>
