@@ -161,18 +161,20 @@ export async function GET(request: Request) {
         offset = data.offset;
       } while (offset);
 
-      // Documentos del repositorio nuevo (versionado): cuentan como cargados.
-      // Si la tabla falla, seguimos solo con los adjuntos legacy.
-      let docsPorTercero = new Map<string, Set<string>>();
+      // Documentos del repositorio nuevo (versionado): cuentan como cargados
+      // y aportan la alerta de problemas. Si la tabla falla, seguimos solo
+      // con los adjuntos legacy.
+      let docsPorTercero = new Map<string, { tipos: Set<string>; problemas: number }>();
       try {
-        const { mapaTiposPorTercero } = await import("@/lib/documentosTerceros");
-        docsPorTercero = await mapaTiposPorTercero();
+        const { mapaDocsPorTercero } = await import("@/lib/documentosTerceros");
+        docsPorTercero = await mapaDocsPorTercero();
       } catch (err) {
         console.error("[terceros] no se pudo leer DOCUMENTOS_TERCEROS:", err);
       }
 
       const terceros = records.map((r: any) => {
-        const completitud = evaluarCompletitud(r.fields, docsPorTercero.get(r.id));
+        const docsInfo = docsPorTercero.get(r.id);
+        const completitud = evaluarCompletitud(r.fields, docsInfo?.tipos);
         const ordenesCount = (r.fields.Ordenes || []).length;
         const cajaMenorCount = (r.fields.GastosCajaMenor || []).length;
         return {
@@ -200,6 +202,7 @@ export async function GET(request: Request) {
           listoOrdenServicio: completitud.listoOrdenServicio,
           faltantesDatos: completitud.faltantesDatos,
           faltantesDocumentos: completitud.faltantesDocumentos,
+          docsProblemas: docsInfo?.problemas || 0,
         };
       });
 

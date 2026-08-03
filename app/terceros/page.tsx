@@ -27,90 +27,88 @@ interface Tercero {
   listoOrdenServicio: boolean;
   faltantesDatos: string[];
   faltantesDocumentos: string[];
+  docsProblemas: number;
 }
 
 type FiltroUso = "con_os" | "con_caja" | "en_uso" | "sin_uso" | "todos";
 
-type CheckStatus = "ok" | "missing" | "warn";
-interface CheckItem {
-  label: string;
-  status: CheckStatus;
-  detail?: string;
+// Abreviaturas de documentos faltantes para mostrarlas en línea sin ruido.
+const DOC_CORTO: Record<string, string> = {
+  "Cédula escaneada": "Cédula",
+  "Certificado Cámara de Comercio": "Cámara",
+  "Certificación bancaria": "Bancaria",
+  RUT: "RUT",
+};
+const docsCortos = (t: Tercero) =>
+  (t.faltantesDocumentos || []).map((d) => DOC_CORTO[d] || d).join(", ");
+
+/**
+ * Badges de estado: icono + texto siempre (nunca solo color) y paleta
+ * contenida — verde discreto para lo que está bien, ámbar solo para lo
+ * accionable, rojo reservado a problemas reales.
+ */
+function BadgeListo({ texto = "Lista" }: { texto?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 whitespace-nowrap">
+      ✓ {texto}
+    </span>
+  );
 }
 
-// Convierte los faltantes en un checklist visual de pocos ítems, separando
-// datos básicos (Caja Menor) de documentos (Órdenes de Servicio).
-function buildChecklist(t: Tercero): CheckItem[] {
-  const datos = new Set(t.faltantesDatos || []);
-  const docs = new Set(t.faltantesDocumentos || []);
-  const items: CheckItem[] = [];
-
-  // 1) Datos básicos (presencia + formato correo/móvil/dirección) en un ítem.
-  //    Ámbar (no rojo): faltan datos que sí afectan Caja Menor.
-  items.push({
-    label: "Datos",
-    status: datos.size === 0 ? "ok" : "warn",
-    detail: datos.size ? `Revisar: ${[...datos].join(", ")}` : undefined,
-  });
-
-  // 2) Documento de identidad según tipo de persona.
-  if (t.tipoPersona === "Jurídica") {
-    items.push({
-      label: "Cám. Comercio",
-      status: docs.has("Certificado Cámara de Comercio") ? "missing" : "ok",
-    });
-  } else if (t.tipoPersona === "Natural") {
-    items.push({
-      label: "Cédula",
-      status: docs.has("Cédula escaneada") ? "missing" : "ok",
-    });
-  }
-
-  // 3) Documentos obligatorios para todos.
-  items.push({ label: "RUT", status: docs.has("RUT") ? "missing" : "ok" });
-  items.push({
-    label: "Bancaria",
-    status: docs.has("Certificación bancaria") ? "missing" : "ok",
-  });
-
-  // 4) NIT con dígito inválido: solo se muestra cuando hay problema (ámbar).
-  if (t.nitInvalido) {
-    items.push({
-      label: "NIT",
-      status: "warn",
-      detail: "El dígito de verificación no es válido",
-    });
-  }
-
-  return items;
-}
-
-function ChecklistPill({ item }: { item: CheckItem }) {
-  // "missing" = documento pendiente. Gris neutro, no rojo: los documentos
-  // solo se necesitan para OS y su ausencia no es un error del tercero.
-  const cfg =
-    item.status === "ok"
-      ? { cls: "bg-green-50 text-green-700", icon: "✓" }
-      : item.status === "warn"
-        ? { cls: "bg-amber-100 text-amber-800", icon: "⚠" }
-        : { cls: "bg-gray-100 text-gray-500", icon: "○" };
+function BadgeFalta({ texto, detalle }: { texto: string; detalle?: string }) {
   return (
     <span
-      title={
-        item.detail ||
-        `${item.label}: ${
-          item.status === "ok"
-            ? "completo"
-            : item.status === "warn"
-              ? "pendiente"
-              : "pendiente — solo se necesita para Órdenes de Servicio"
-        }`
-      }
-      className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${cfg.cls}`}
+      title={detalle}
+      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 whitespace-nowrap"
     >
-      <span className="font-bold leading-none">{cfg.icon}</span>
-      {item.label}
+      ⚠ {texto}
     </span>
+  );
+}
+
+function BadgeProblema({ n }: { n: number }) {
+  return (
+    <span
+      title="Documentos rechazados o con alerta (ej. PDF con clave) esperando corrección"
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700 whitespace-nowrap"
+    >
+      ⚠ {n} doc{n > 1 ? "s" : ""} con problema
+    </span>
+  );
+}
+
+/** Celda de estado para Caja Menor. */
+function EstadoCM({ t }: { t: Tercero }) {
+  if (t.listoCajaMenor) return <BadgeListo />;
+  return (
+    <div className="space-y-0.5">
+      <BadgeFalta texto="Faltan datos" detalle={(t.faltantesDatos || []).join(", ")} />
+      <p className="text-[11px] text-gray-400 leading-tight max-w-[200px]">
+        {(t.faltantesDatos || []).slice(0, 3).join(", ")}
+        {(t.faltantesDatos || []).length > 3 ? "…" : ""}
+      </p>
+    </div>
+  );
+}
+
+/** Celda de estado para Órdenes de Servicio. */
+function EstadoOS({ t }: { t: Tercero }) {
+  return (
+    <div className="space-y-0.5">
+      {t.listoOrdenServicio ? (
+        <BadgeListo />
+      ) : (
+        <>
+          <BadgeFalta
+            texto={t.listoCajaMenor ? "Faltan documentos" : "Faltan datos y docs"}
+          />
+          {docsCortos(t) && (
+            <p className="text-[11px] text-gray-400 leading-tight">{docsCortos(t)}</p>
+          )}
+        </>
+      )}
+      {t.docsProblemas > 0 && <BadgeProblema n={t.docsProblemas} />}
+    </div>
   );
 }
 
@@ -346,79 +344,86 @@ export default function TercerosPage() {
           )}
         </div>
 
-        {/* Lista */}
+        {/* Lista: tabla en escritorio (escaneo por columnas), tarjetas
+            compactas en móvil. La pregunta que responde cada fila:
+            ¿sirve para Caja Menor? ¿sirve para OS? ¿qué le falta? */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {visiblesSorted.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-12">
               {filtroCompletitud === "incompletos" ? "No hay terceros pendientes para OS 🎉" : "Sin resultados"}
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {visiblesSorted.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/terceros/${t.id}`}
-                  className="group block px-4 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-sm ${t.completo ? "text-green-500" : "text-amber-500"}`}>
-                          {t.completo ? "✓" : "⚠"}
-                        </span>
-                        <span className="font-medium text-gray-900 text-sm truncate">{t.razonSocial}</span>
-                        {t.tipoPersona && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">
-                            {t.tipoPersona}
-                          </span>
-                        )}
-                        {t.ordenesCount > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">
-                            {t.ordenesCount} OS
-                          </span>
-                        )}
-                        {t.cajaMenorCount > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
-                            {t.cajaMenorCount} CM
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5 ml-5 flex-wrap">
-                        <span className="text-xs text-gray-400 font-mono">{t.nit || "sin NIT"}</span>
-                        {t.municipioDepartamento && (
-                          <span className="text-xs text-gray-400">{t.municipioDepartamento}</span>
-                        )}
-                        {t.correo && <span className="text-xs text-gray-400 truncate">{t.correo}</span>}
-                      </div>
-                      {/* Estado por propósito + checklist (solo si incompleto para OS) */}
-                      {!t.completo && (
-                        <div className="ml-5 mt-1.5 space-y-1">
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                            <span className={t.listoCajaMenor ? "text-green-700" : "text-red-600"}>
-                              {t.listoCajaMenor ? "🟢 Listo para Caja Menor" : "⚠ Faltan datos básicos"}
-                            </span>
-                            <span className="text-gray-400">
-                              🔵 Órdenes de Servicio:{" "}
-                              {t.listoCajaMenor
-                                ? "faltan documentos (solo si vas a crear una OS)"
-                                : "faltan datos y documentos"}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {buildChecklist(t).map((item) => (
-                              <ChecklistPill key={item.label} item={item} />
-                            ))}
-                          </div>
-                        </div>
+            <>
+              {/* ── Tabla (md+) ── */}
+              <table className="hidden md:table w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                    <th className="px-4 py-2.5 font-semibold">Tercero</th>
+                    <th className="px-3 py-2.5 font-semibold">Uso</th>
+                    <th className="px-3 py-2.5 font-semibold">Caja Menor</th>
+                    <th className="px-3 py-2.5 font-semibold">Órdenes de Servicio</th>
+                    <th className="px-3 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {visiblesSorted.map((t) => (
+                    <tr
+                      key={t.id}
+                      onClick={() => router.push(`/terceros/${t.id}`)}
+                      className="cursor-pointer hover:bg-gray-50 transition-colors group align-top"
+                    >
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium text-gray-900 leading-snug">{t.razonSocial}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          <span className="font-mono">{t.nit || "sin NIT"}</span>
+                          {t.nitInvalido && (
+                            <span className="ml-1 text-amber-600" title="Dígito de verificación inválido">DV ⚠</span>
+                          )}
+                          {t.tipoPersona && <span> · {t.tipoPersona}</span>}
+                          {t.municipioDepartamento && <span> · {t.municipioDepartamento}</span>}
+                        </p>
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                        {t.ordenesCount > 0 && <span className="text-blue-700 font-medium">{t.ordenesCount} OS</span>}
+                        {t.ordenesCount > 0 && t.cajaMenorCount > 0 && <span className="text-gray-300"> · </span>}
+                        {t.cajaMenorCount > 0 && <span className="text-purple-700 font-medium">{t.cajaMenorCount} CM</span>}
+                        {!t.enUso && <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5"><EstadoCM t={t} /></td>
+                      <td className="px-3 py-2.5"><EstadoOS t={t} /></td>
+                      <td className="px-3 py-2.5 text-right text-gray-300 group-hover:text-green-600">→</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* ── Tarjetas (móvil) ── */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {visiblesSorted.map((t) => (
+                  <Link key={t.id} href={`/terceros/${t.id}`} className="block px-4 py-3 hover:bg-gray-50">
+                    <p className="font-medium text-gray-900 text-sm">{t.razonSocial}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      <span className="font-mono">{t.nit || "sin NIT"}</span>
+                      {t.tipoPersona && <span> · {t.tipoPersona}</span>}
+                      {t.enUso && (
+                        <span> · {t.ordenesCount > 0 ? `${t.ordenesCount} OS` : ""}{t.ordenesCount > 0 && t.cajaMenorCount > 0 ? " · " : ""}{t.cajaMenorCount > 0 ? `${t.cajaMenorCount} CM` : ""}</span>
                       )}
+                    </p>
+                    <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap text-[11px]">
+                      <span className="text-gray-400">Caja Menor:</span>
+                      {t.listoCajaMenor ? <BadgeListo /> : <BadgeFalta texto="Faltan datos" />}
+                      <span className="text-gray-400">OS:</span>
+                      {t.listoOrdenServicio ? (
+                        <BadgeListo />
+                      ) : (
+                        <BadgeFalta texto={t.listoCajaMenor ? `Faltan: ${docsCortos(t)}` : "Faltan datos y docs"} />
+                      )}
+                      {t.docsProblemas > 0 && <BadgeProblema n={t.docsProblemas} />}
                     </div>
-                    <span className="text-xs text-gray-300 group-hover:text-green-600 flex-shrink-0 whitespace-nowrap mt-0.5">
-                      {t.completo ? "→" : t.listoCajaMenor ? "Ver →" : "Completar →"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

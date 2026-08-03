@@ -204,19 +204,36 @@ export async function listarDocumentosTercero(
     .sort((a, b) => (a.tipo === b.tipo ? b.version - a.version : a.tipo.localeCompare(b.tipo)));
 }
 
+export interface DocsResumen {
+  /** Tipos con al menos un documento registrado (cualquier estado). */
+  tipos: Set<string>;
+  /**
+   * Documentos vigentes con problema: rechazados (esperan versión corregida)
+   * o con alerta de verificación (ej. PDF con clave) sin aprobar.
+   */
+  problemas: number;
+}
+
 /**
- * Mapa terceroId → tipos con al menos un documento registrado (cualquier
- * estado). Se usa para la completitud en paridad con el modelo viejo de
- * adjuntos: "cargado" = hay archivo. El endurecimiento a "aprobado y vigente"
- * llegará con la bandeja de aprobación (Sprint B).
+ * Mapa terceroId → resumen de documentos. `tipos` alimenta la completitud en
+ * paridad con el modelo viejo de adjuntos ("cargado" = hay archivo; el
+ * endurecimiento a aprobado+vigente llegará al procesar el backlog);
+ * `problemas` alimenta la alerta ⚠ del listado.
  */
-export async function mapaTiposPorTercero(): Promise<Map<string, Set<string>>> {
+export async function mapaDocsPorTercero(): Promise<Map<string, DocsResumen>> {
   const todos = await listarTodosDocumentos();
-  const mapa = new Map<string, Set<string>>();
+  const mapa = new Map<string, DocsResumen>();
   for (const d of todos) {
     if (!d.terceroId) continue;
-    if (!mapa.has(d.terceroId)) mapa.set(d.terceroId, new Set());
-    mapa.get(d.terceroId)!.add(d.tipo);
+    if (!mapa.has(d.terceroId)) mapa.set(d.terceroId, { tipos: new Set(), problemas: 0 });
+    const r = mapa.get(d.terceroId)!;
+    r.tipos.add(d.tipo);
+    if (
+      d.vigente &&
+      (d.estado === "rechazado" || (d.verificacionIa && d.estado !== "aprobado"))
+    ) {
+      r.problemas++;
+    }
   }
   return mapa;
 }
