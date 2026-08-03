@@ -7,6 +7,18 @@ import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
 
+/** Tipos con documento en el repositorio nuevo (cuentan como cargados). */
+async function tiposDocsNuevos(terceroId: string): Promise<Set<string>> {
+  try {
+    const { listarDocumentosTercero } = await import("@/lib/documentosTerceros");
+    const docs = await listarDocumentosTercero(terceroId);
+    return new Set(docs.map((d) => d.tipo));
+  } catch (err) {
+    console.error("[terceros/id] no se pudo leer DOCUMENTOS_TERCEROS:", err);
+    return new Set();
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,7 +33,7 @@ export async function GET(
   });
   if (!res.ok) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   const rec = await res.json();
-  const completitud = evaluarCompletitud(rec.fields);
+  const completitud = evaluarCompletitud(rec.fields, await tiposDocsNuevos(id));
 
   // Si se pide chequear planilla para un mes específico (solo aplica a naturales)
   let planillaCheck: { mes: string; ok: boolean; aplica: boolean } | null = null;
@@ -182,6 +194,6 @@ export async function PATCH(
   }
 
   const rec = await res.json();
-  const completitud = evaluarCompletitud(rec.fields);
+  const completitud = evaluarCompletitud(rec.fields, await tiposDocsNuevos(id));
   return NextResponse.json({ id: rec.id, fields: rec.fields, completitud });
 }

@@ -161,8 +161,18 @@ export async function GET(request: Request) {
         offset = data.offset;
       } while (offset);
 
+      // Documentos del repositorio nuevo (versionado): cuentan como cargados.
+      // Si la tabla falla, seguimos solo con los adjuntos legacy.
+      let docsPorTercero = new Map<string, Set<string>>();
+      try {
+        const { mapaTiposPorTercero } = await import("@/lib/documentosTerceros");
+        docsPorTercero = await mapaTiposPorTercero();
+      } catch (err) {
+        console.error("[terceros] no se pudo leer DOCUMENTOS_TERCEROS:", err);
+      }
+
       const terceros = records.map((r: any) => {
-        const completitud = evaluarCompletitud(r.fields);
+        const completitud = evaluarCompletitud(r.fields, docsPorTercero.get(r.id));
         const ordenesCount = (r.fields.Ordenes || []).length;
         const cajaMenorCount = (r.fields.GastosCajaMenor || []).length;
         return {

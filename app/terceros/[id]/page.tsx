@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
+import DocumentosTercero from "@/components/DocumentosTercero";
 import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
 
 const TIPOS_PERSONA = ["Natural", "Jurídica"];
@@ -40,17 +41,11 @@ function TerceroEditInner() {
   const [correo, setCorreo] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [municipio, setMunicipio] = useState<{ id: string; mundep: string } | null>(null);
-  const [cedulaPdf, setCedulaPdf] = useState<Attachment[]>([]);
-  const [certificadoCamaraPdf, setCertificadoCamaraPdf] = useState<Attachment[]>([]);
-  const [rutPdf, setRutPdf] = useState<Attachment[]>([]);
-  const [certificacionBancariaPdf, setCertificacionBancariaPdf] = useState<Attachment[]>([]);
-  const [otrosDocumentos, setOtrosDocumentos] = useState<Attachment[]>([]);
   const [faltantes, setFaltantes] = useState<string[]>([]);
   const [nitInvalido, setNitInvalido] = useState(false);
   const [completo, setCompleto] = useState(false);
   const [listoCajaMenor, setListoCajaMenor] = useState(false);
   const [listoOS, setListoOS] = useState(false);
-  const [uploading, setUploading] = useState<"cedula" | "camara" | "rut" | "bancaria" | "otros" | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -71,11 +66,6 @@ function TerceroEditInner() {
     const mundep = f["Municipio-Departamento"]?.[0];
     if (f.Municipio?.[0] && mundep) setMunicipio({ id: f.Municipio[0], mundep });
     else setMunicipio(null);
-    setCedulaPdf(f.cedula_pdf || []);
-    setCertificadoCamaraPdf(f.certificado_camara_pdf || []);
-    setRutPdf(f.rut_pdf || []);
-    setCertificacionBancariaPdf(f.certificacion_bancaria_pdf || []);
-    setOtrosDocumentos(f.otros_documentos || []);
     setFaltantes(data.completitud?.faltantes || []);
     setNitInvalido(data.completitud?.nitInvalido || false);
     setCompleto(data.completitud?.completo || false);
@@ -160,48 +150,6 @@ function TerceroEditInner() {
         alert("Error al guardar");
       }
     }
-  };
-
-  const handleUpload = async (field: "cedula" | "camara" | "rut" | "bancaria" | "otros", file: File) => {
-    setUploading(field);
-    const fieldName =
-      field === "cedula" ? "cedula_pdf" :
-      field === "camara" ? "certificado_camara_pdf" :
-      field === "rut" ? "rut_pdf" :
-      field === "otros" ? "otros_documentos" :
-      "certificacion_bancaria_pdf";
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("recordId", id);
-    formData.append("fieldName", fieldName);
-
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    setUploading(null);
-    if (res.ok) {
-      // Recargar para que reflote el estado de completitud
-      await load();
-    } else {
-      alert("Error al subir el documento");
-    }
-  };
-
-  // Borra un adjunto: PATCH el campo con el array sin ese archivo.
-  const handleDeleteAttachment = async (
-    patchKey: string,
-    files: Attachment[],
-    att: Attachment
-  ) => {
-    if (!confirm(`¿Quitar el archivo "${att.filename}"?`)) return;
-    const next = files
-      .filter((a) => (a.id || a.url) !== (att.id || att.url))
-      .map((a) => (a.id ? { id: a.id } : { url: a.url }));
-    const res = await fetch(`/api/terceros/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [patchKey]: next }),
-    });
-    if (res.ok) await load();
-    else alert("No se pudo quitar el archivo");
   };
 
   if (status === "loading" || loading) {
@@ -398,179 +346,9 @@ function TerceroEditInner() {
           </div>
         </div>
 
-        {/* Documentos */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          {(() => {
-            const items = [
-              { field: "rut" as const, patchKey: "rutPdf", title: "RUT", files: rutPdf, aplica: true },
-              { field: "bancaria" as const, patchKey: "certificacionBancariaPdf", title: "Certificación bancaria", files: certificacionBancariaPdf, aplica: true },
-              { field: "cedula" as const, patchKey: "cedulaPdf", title: "Cédula escaneada", files: cedulaPdf, aplica: tipoPersona === "Natural" },
-              { field: "camara" as const, patchKey: "certificadoCamaraPdf", title: "Certificado Cámara de Comercio", files: certificadoCamaraPdf, aplica: tipoPersona === "Jurídica" },
-            ];
-            const aplicables = items.filter((it) => it.aplica);
-            const cargados = aplicables.filter((it) => it.files.length > 0).length;
-            return (
-              <>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold text-gray-900">Documentos para Órdenes de Servicio</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Solo se requieren para OS — para Caja Menor no hay que subir nada.
-                    </p>
-                  </div>
-                  <span className={`text-xs font-semibold ${cargados === aplicables.length ? "text-green-700" : "text-amber-600"}`}>
-                    {cargados} de {aplicables.length} cargados
-                  </span>
-                </div>
-
-                {items.map((it) => {
-                  const tiene = it.files.length > 0;
-                  const subiendo = uploading === it.field;
-                  // Estado: obligatorio+cargado=verde, obligatorio+vacío=ámbar,
-                  // opcional+cargado=gris (extra), opcional+vacío=muted.
-                  const borde = it.aplica
-                    ? tiene
-                      ? "border-green-300 bg-green-50"
-                      : "border-amber-300 bg-amber-50"
-                    : tiene
-                      ? "border-gray-300 bg-white"
-                      : "border-gray-200 bg-gray-50";
-                  const icono = it.aplica ? (tiene ? "✅" : "⬜") : tiene ? "📎" : "○";
-                  return (
-                    <div key={it.field} className={`rounded-lg border p-3 ${borde}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base leading-none">{icono}</span>
-                        <span className="text-sm font-medium text-gray-800 flex-1">
-                          {it.title}
-                          {!it.aplica && (
-                            <span className="ml-1 text-xs font-normal text-gray-400">
-                              (no obligatorio para {tipoPersona === "Jurídica" ? "empresas" : "personas naturales"})
-                            </span>
-                          )}
-                        </span>
-                        {it.aplica ? (
-                          tiene ? (
-                            <span className="text-xs font-semibold text-green-700">Cargado</span>
-                          ) : (
-                            <span className="text-xs font-semibold text-amber-600">Pendiente</span>
-                          )
-                        ) : tiene ? (
-                          <span className="text-xs font-semibold text-gray-500">Opcional</span>
-                        ) : (
-                          <span className="text-xs text-gray-400">No requerido</span>
-                        )}
-                      </div>
-
-                      {/* Archivos cargados con opción de quitar */}
-                      {tiene && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {it.files.map((a, i) => (
-                            <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-white border border-green-200 text-gray-700 max-w-[230px]">
-                              <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" title={a.filename}>
-                                📎 {a.filename}
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteAttachment(it.patchKey, it.files, a)}
-                                className="text-gray-400 hover:text-red-600 flex-shrink-0"
-                                title="Quitar archivo"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {tiene && it.files.length > 1 && (
-                        <p className="text-xs text-amber-700 mt-1">
-                          ⚠ Hay {it.files.length} archivos en este documento. Deja solo el correcto y quita los demás.
-                        </p>
-                      )}
-
-                      {/* Acción de subida. Obligatorio+vacío = botón verde; el
-                          resto (ya cargado u opcional) = botón sutil. */}
-                      <div className="mt-2">
-                        <label className="inline-flex items-center gap-2 text-xs">
-                          <span className={`px-3 py-1.5 rounded border cursor-pointer ${
-                            it.aplica && !tiene
-                              ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
-                              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                          }`}>
-                            {subiendo
-                              ? "Subiendo..."
-                              : tiene
-                                ? "Reemplazar / subir otro"
-                                : it.aplica
-                                  ? "Seleccionar archivo"
-                                  : "Adjuntar (opcional)"}
-                          </span>
-                          <input
-                            type="file"
-                            accept=".pdf,image/*"
-                            onChange={(e) => e.target.files?.[0] && handleUpload(it.field, e.target.files[0])}
-                            disabled={subiendo}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Otros documentos — bucket abierto, sin categorizar */}
-                <div className="rounded-lg border border-gray-200 bg-white p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base leading-none">🗂️</span>
-                    <span className="text-sm font-medium text-gray-800 flex-1">
-                      Otros documentos
-                      <span className="ml-1 text-xs font-normal text-gray-400">
-                        (cualquier documento adicional)
-                      </span>
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {otrosDocumentos.length > 0 ? `${otrosDocumentos.length} archivo(s)` : "Ninguno"}
-                    </span>
-                  </div>
-
-                  {otrosDocumentos.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {otrosDocumentos.map((a, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-50 border border-gray-200 text-gray-700 max-w-[230px]">
-                          <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" title={a.filename}>
-                            📎 {a.filename}
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAttachment("otrosDocumentos", otrosDocumentos, a)}
-                            className="text-gray-400 hover:text-red-600 flex-shrink-0"
-                            title="Quitar archivo"
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-2">
-                    <label className="inline-flex items-center gap-2 text-xs">
-                      <span className="px-3 py-1.5 rounded border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 cursor-pointer">
-                        {uploading === "otros" ? "Subiendo..." : "+ Agregar documento"}
-                      </span>
-                      <input
-                        type="file"
-                        accept=".pdf,image/*"
-                        onChange={(e) => e.target.files?.[0] && handleUpload("otros", e.target.files[0])}
-                        disabled={uploading === "otros"}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
+        {/* Documentos — repositorio versionado (R2 + DOCUMENTOS_TERCEROS).
+            Sin borrado: cada subida crea una versión nueva. */}
+        <DocumentosTercero terceroId={id} tipoPersona={tipoPersona} onCambio={load} />
 
         {/* Planillas de seguridad social (solo naturales) */}
         {tipoPersona === "Natural" && <PlanillasSS terceroId={id} />}

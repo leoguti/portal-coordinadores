@@ -184,7 +184,17 @@ const BASICOS: Array<{ key: keyof TerceroFields; label: string; check: (v: any) 
   { key: "tipo_persona", label: "Tipo de persona (Natural/Jurídica)", check: (v) => v === "Natural" || v === "Jurídica" },
 ];
 
-export function evaluarCompletitud(fields: TerceroFields): CompletitudResult {
+/**
+ * @param docsNuevos Tipos de documento con registro en la tabla nueva
+ *   DOCUMENTOS_TERCEROS (repositorio versionado). Un documento cuenta como
+ *   cargado si está en el repositorio nuevo O como adjunto legacy. Paridad
+ *   con el modelo viejo: cualquier estado cuenta; el endurecimiento a
+ *   "aprobado y vigente" llega con la bandeja de aprobación (Sprint B).
+ */
+export function evaluarCompletitud(
+  fields: TerceroFields,
+  docsNuevos?: Set<string>
+): CompletitudResult {
   const faltantesDatos: string[] = [];
 
   // 1) Presencia de campos básicos.
@@ -214,15 +224,25 @@ export function evaluarCompletitud(fields: TerceroFields): CompletitudResult {
     faltantesDatos.push("NIT con dígito verificador inválido");
   }
 
-  // 4) Documentos (solo requeridos para Órdenes de Servicio).
+  // 4) Documentos (solo requeridos para Órdenes de Servicio). Cuenta como
+  //    cargado el repositorio nuevo (docsNuevos) o el adjunto legacy.
+  const docs = docsNuevos || new Set<string>();
   const faltantesDocumentos: string[] = [];
   if (fields.tipo_persona === "Natural") {
-    if ((fields.cedula_pdf || []).length === 0) faltantesDocumentos.push("Cédula escaneada");
+    if (!docs.has("Cédula") && (fields.cedula_pdf || []).length === 0) {
+      faltantesDocumentos.push("Cédula escaneada");
+    }
   } else if (fields.tipo_persona === "Jurídica") {
-    if ((fields.certificado_camara_pdf || []).length === 0) faltantesDocumentos.push("Certificado Cámara de Comercio");
+    if (!docs.has("Cámara de Comercio") && (fields.certificado_camara_pdf || []).length === 0) {
+      faltantesDocumentos.push("Certificado Cámara de Comercio");
+    }
   }
-  if ((fields.rut_pdf || []).length === 0) faltantesDocumentos.push("RUT");
-  if ((fields.certificacion_bancaria_pdf || []).length === 0) faltantesDocumentos.push("Certificación bancaria");
+  if (!docs.has("RUT") && (fields.rut_pdf || []).length === 0) {
+    faltantesDocumentos.push("RUT");
+  }
+  if (!docs.has("Certificación bancaria") && (fields.certificacion_bancaria_pdf || []).length === 0) {
+    faltantesDocumentos.push("Certificación bancaria");
+  }
 
   const listoCajaMenor = faltantesDatos.length === 0;
   const listoOrdenServicio = listoCajaMenor && faltantesDocumentos.length === 0;

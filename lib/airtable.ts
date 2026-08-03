@@ -977,7 +977,16 @@ export async function createOrdenServicio(
     const terceroRec = await terceroRes.json();
     const terceroFields = terceroRec.fields || {};
     const { evaluarCompletitud } = await import("./terceros");
-    const completitud = evaluarCompletitud(terceroFields);
+    // Documentos del repositorio versionado nuevo cuentan como cargados.
+    let docsNuevos = new Set<string>();
+    try {
+      const { listarDocumentosTercero } = await import("./documentosTerceros");
+      const docs = await listarDocumentosTercero(params.beneficiarioRecordId);
+      docsNuevos = new Set(docs.map((d) => d.tipo));
+    } catch (err) {
+      console.error("[createOrdenServicio] DOCUMENTOS_TERCEROS no disponible:", err);
+    }
+    const completitud = evaluarCompletitud(terceroFields, docsNuevos);
     if (!completitud.completo) {
       // Validación de cara al usuario: se devuelve (no se lanza) para que el
       // mensaje llegue intacto al cliente — los errores lanzados desde un
