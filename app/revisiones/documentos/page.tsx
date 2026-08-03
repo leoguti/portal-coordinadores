@@ -35,11 +35,13 @@ interface Doc {
 }
 
 const CON_VIGENCIA = new Set(["RUT", "Certificación bancaria", "Cámara de Comercio", "Planilla SS"]);
+const TIPOS = ["RUT", "Cédula", "Certificación bancaria", "Cámara de Comercio", "Planilla SS", "Otro"];
 const MOTIVOS_RAPIDOS = [
   "PDF protegido con contraseña — envía el archivo sin clave",
   "No corresponde al tipo de documento solicitado",
   "Documento ilegible o incompleto",
   "Documento desactualizado — sube una versión reciente",
+  "Reemplazado por documento subido por administración",
 ];
 
 const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
@@ -72,6 +74,11 @@ export default function RevisionDocumentosPage() {
   const [motivo, setMotivo] = useState("");
   const [fechaExp, setFechaExp] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  // Acciones correctivas (sin reenviar al coordinador).
+  const [corregir, setCorregir] = useState<null | "tipo" | "subir">(null);
+  const [nuevoTipo, setNuevoTipo] = useState("");
+  const [tipoSubida, setTipoSubida] = useState("");
+  const [msgOk, setMsgOk] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -112,6 +119,8 @@ export default function RevisionDocumentosPage() {
       setSelectedId(visibles[0]?.id || null);
       setRechazando(false);
       setMotivo("");
+      setCorregir(null);
+      setMsgOk(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibles]);
@@ -144,6 +153,54 @@ export default function RevisionDocumentosPage() {
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error || "Error guardando la decisión");
+    }
+  };
+
+  const reclasificar = async () => {
+    if (!sel || !nuevoTipo) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/documentos-terceros/${sel.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "reclasificar", nuevoTipo }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setCorregir(null);
+      setNuevoTipo("");
+      setMsgOk(`Documento reclasificado como ${nuevoTipo} ✓ — ya puedes aprobarlo.`);
+      const mantener = sel.id;
+      await cargar();
+      setSelectedId(mantener);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Error reclasificando");
+    }
+  };
+
+  const subirCorrecto = async (file: File) => {
+    if (!sel?.terceroId) return;
+    setBusy(true);
+    setError(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("terceroId", sel.terceroId);
+    fd.append("tipo", tipoSubida || sel.tipo);
+    fd.append("aprobarDirecto", "1");
+    const res = await fetch("/api/documentos-terceros", { method: "POST", body: fd });
+    setBusy(false);
+    if (res.ok) {
+      setCorregir(null);
+      setMsgOk(
+        "Documento subido y aprobado ✓ — ahora rechaza el pendiente con el motivo «Reemplazado por documento subido por administración»."
+      );
+      const mantener = sel.id;
+      await cargar();
+      setSelectedId(mantener);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Error subiendo el documento");
     }
   };
 
@@ -208,7 +265,7 @@ export default function RevisionDocumentosPage() {
                 return (
                   <button
                     key={d.id}
-                    onClick={() => { setSelectedId(d.id); setRechazando(false); setMotivo(""); }}
+                    onClick={() => { setSelectedId(d.id); setRechazando(false); setMotivo(""); setCorregir(null); setMsgOk(null); }}
                     className={`w-full text-left px-3.5 py-2.5 border-b border-gray-50 last:border-b-0 transition-colors ${
                       activo ? "bg-[#e6f9f3] border-l-4 border-l-green-600" : "hover:bg-gray-50 border-l-4 border-l-transparent"
                     }`}
@@ -305,6 +362,11 @@ export default function RevisionDocumentosPage() {
                 {/* Acciones */}
                 {sel.estado === "pendiente" && (
                   <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60 space-y-2">
+                    {msgOk && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+                        {msgOk}
+                      </div>
+                    )}
                     {!rechazando ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         {CON_VIGENCIA.has(sel.tipo) && (
@@ -374,6 +436,82 @@ export default function RevisionDocumentosPage() {
                             Cancelar
                           </button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Correcciones sin reenviar al coordinador */}
+                    {!rechazando && (
+                      <div className="pt-1 border-t border-gray-100 space-y-2">
+                        <div className="flex items-center gap-4 flex-wrap text-[11px] text-gray-400">
+                          <button
+                            onClick={() => { setCorregir(corregir === "tipo" ? null : "tipo"); setNuevoTipo(""); }}
+                            className={`hover:text-gray-700 underline ${corregir === "tipo" ? "text-gray-700" : ""}`}
+                          >
+                            🔄 ¿Mal clasificado? Cambiar tipo
+                          </button>
+                          <button
+                            onClick={() => { setCorregir(corregir === "subir" ? null : "subir"); setTipoSubida(sel.tipo); }}
+                            className={`hover:text-gray-700 underline ${corregir === "subir" ? "text-gray-700" : ""}`}
+                          >
+                            📤 Tengo el documento correcto — subirlo
+                          </button>
+                        </div>
+
+                        {corregir === "tipo" && (
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span className="text-gray-500">Este documento en realidad es:</span>
+                            <select
+                              value={nuevoTipo}
+                              onChange={(e) => setNuevoTipo(e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1.5 text-xs"
+                            >
+                              <option value="">Elegir tipo...</option>
+                              {TIPOS.filter((t) => t !== sel.tipo).map((t) => (
+                                <option key={t} value={t}>{t}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={reclasificar}
+                              disabled={busy || !nuevoTipo}
+                              className="px-3 py-1.5 text-xs font-medium rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40"
+                            >
+                              {busy ? "..." : "Cambiar tipo"}
+                            </button>
+                            <span className="text-[10px] text-gray-400">
+                              No se rechaza ni se reenvía: solo se corrige la clasificación.
+                            </span>
+                          </div>
+                        )}
+
+                        {corregir === "subir" && (
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span className="text-gray-500">Subir como:</span>
+                            <select
+                              value={tipoSubida}
+                              onChange={(e) => setTipoSubida(e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1.5 text-xs"
+                            >
+                              {TIPOS.map((t) => (
+                                <option key={t} value={t}>{t}</option>
+                              ))}
+                            </select>
+                            <label className="inline-flex items-center">
+                              <span className="px-3 py-1.5 rounded bg-gray-800 text-white hover:bg-gray-700 cursor-pointer text-xs font-medium">
+                                {busy ? "Subiendo..." : "Elegir archivo y subir"}
+                              </span>
+                              <input
+                                type="file"
+                                accept=".pdf,image/*"
+                                onChange={(e) => e.target.files?.[0] && subirCorrecto(e.target.files[0])}
+                                disabled={busy}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-[10px] text-gray-400">
+                              Queda aprobado de una vez (lo subes y revisas tú).
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

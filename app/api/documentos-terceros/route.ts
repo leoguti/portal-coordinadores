@@ -11,6 +11,7 @@ import {
   subirArchivoR2,
 } from "@/lib/documentosTerceros";
 import { analizarPdf, esPdf, motivoRechazoPdf } from "@/lib/pdfProtegido";
+import { isAdmin } from "@/lib/roles";
 
 export const maxDuration = 60;
 
@@ -73,6 +74,10 @@ export async function POST(req: NextRequest) {
   const terceroId = String(form.get("terceroId") || "").trim();
   const tipo = String(form.get("tipo") || "").trim() as TipoDocumento;
   const fechaExpedicion = String(form.get("fechaExpedicion") || "").trim() || null;
+  // Solo administradores: subir y aprobar en el acto (documento que el
+  // propio admin tiene a la mano y revisa al subirlo).
+  const aprobarDirecto =
+    String(form.get("aprobarDirecto") || "") === "1" && isAdmin(session.user.rol);
 
   if (!file || !terceroId || !tipo) {
     return NextResponse.json(
@@ -149,9 +154,14 @@ export async function POST(req: NextRequest) {
       fechaExpedicion,
       origen: "portal",
       desmarcarVigentes,
+      estadoInicial: aprobarDirecto ? "aprobado" : "pendiente",
+      aprobadoPorId: aprobarDirecto ? session.user.coordinatorRecordId : null,
     });
 
-    return NextResponse.json({ id: docId, version, tipo }, { status: 201 });
+    return NextResponse.json(
+      { id: docId, version, tipo, estado: aprobarDirecto ? "aprobado" : "pendiente" },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("[documentos-terceros] POST error:", err);
     return NextResponse.json({ error: "Error subiendo el documento" }, { status: 500 });

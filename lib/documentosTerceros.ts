@@ -236,6 +236,12 @@ export interface CrearDocumentoParams {
   /** IDs de versiones anteriores del mismo tipo a desmarcar como vigentes. */
   desmarcarVigentes?: string[];
   fechaSubida?: string;
+  /**
+   * "aprobado" SOLO cuando quien sube es un administrador que aprueba en el
+   * acto (sube él mismo el documento correcto). Default: "pendiente".
+   */
+  estadoInicial?: "pendiente" | "aprobado";
+  aprobadoPorId?: string | null;
 }
 
 export async function crearRegistroDocumento(
@@ -263,7 +269,7 @@ export async function crearRegistroDocumento(
     tipo: p.tipo,
     version: p.version,
     vigente: true,
-    estado: "pendiente",
+    estado: p.estadoInicial || "pendiente",
     archivo_key: p.archivoKey,
     archivo_nombre: p.archivoNombre,
     archivo_hash: p.archivoHash,
@@ -272,6 +278,10 @@ export async function crearRegistroDocumento(
     origen: p.origen,
   };
   if (p.subidoPorId) fields.subido_por = [p.subidoPorId];
+  if (p.estadoInicial === "aprobado" && p.aprobadoPorId) {
+    fields.aprobado_por = [p.aprobadoPorId];
+    fields.fecha_decision = new Date().toISOString();
+  }
   if (p.fechaExpedicion) {
     fields.fecha_expedicion = p.fechaExpedicion;
     const vence = calcularVencimiento(p.tipo, p.fechaExpedicion);

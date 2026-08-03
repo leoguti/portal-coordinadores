@@ -4,8 +4,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { isAdmin } from "@/lib/roles";
 import {
   TABLA_DOCUMENTOS,
+  TIPOS_DOCUMENTO,
   TipoDocumento,
   calcularVencimiento,
+  listarDocumentosTercero,
 } from "@/lib/documentosTerceros";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
@@ -42,7 +44,7 @@ export async function PATCH(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  let body: { accion?: string; motivo?: string; fechaExpedicion?: string };
+  let body: { accion?: string; motivo?: string; fechaExpedicion?: string; nuevoTipo?: string };
   try {
     body = await req.json();
   } catch {
@@ -50,9 +52,9 @@ export async function PATCH(
   }
 
   const accion = body.accion;
-  if (accion !== "aprobar" && accion !== "rechazar") {
+  if (accion !== "aprobar" && accion !== "rechazar" && accion !== "reclasificar") {
     return NextResponse.json(
-      { error: "accion debe ser 'aprobar' o 'rechazar'" },
+      { error: "accion debe ser 'aprobar', 'rechazar' o 'reclasificar'" },
       { status: 400 }
     );
   }
@@ -81,6 +83,65 @@ export async function PATCH(
   }
   const rec = await getRes.json();
   const tipo = (rec.fields?.tipo || "Otro") as TipoDocumento;
+
+  // ── Reclasificar: el documento estaba mal tipificado (ej. subieron el RUT
+  //    en la casilla de la cédula). Se corrige el tipo sin rechazar ni
+  //    reenviar al coordinador; el documento se renumera en el tipo destino.
+  if (accion === "reclasificar") {
+    const nuevoTipo = String(body.nuevoTipo || "").trim() as TipoDocumento;
+    if (!TIPOS_DOCUMENTO.includes(nuevoTipo)) {
+      return NextResponse.json({ error: `Tipo inválido: ${nuevoTipo}` }, { status: 400 });
+    }
+    if (nuevoTipo === tipo) {
+      return NextResponse.json({ error: "El documento ya es de ese tipo" }, { status: 400 });
+    }
+    const terceroId: string | null = rec.fields?.tercero?.[0] || null;
+    if (!terceroId) {
+      return NextResponse.json({ error: "Documento sin tercero" }, { status: 400 });
+    }
+    const hermanos = await listarDocumentosTercero(terceroId);
+    const enDestino = hermanos.filter((d) => d.tipo === nuevoTipo);
+    const nuevaVersion = enDestino.reduce((m, d) => Math.max(m, d.version), 0) + 1;
+    const eraVigente = Boolean(rec.fields?.vigente);
+
+    const patch = async (recId: string, f: Record<string, unknown>) =>
+      fetch(`https://api.airtable.com/v0/${BASE}/${TABLA_DOCUMENTOS}/${recId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: f, typecast: true }),
+      });
+
+    // El vigente del tipo destino deja de serlo (llega versión más nueva).
+    for (const d of enDestino.filter((d) => d.vigente)) {
+      await patch(d.id, { vigente: false });
+    }
+    // Si este documento era el vigente de su tipo original, el más reciente
+    // que quede ahí recupera la vigencia.
+    if (eraVigente) {
+      const restantes = hermanos
+        .filter((d) => d.tipo === tipo && d.id !== id)
+        .sort((a, b) => b.version - a.version);
+      if (restantes[0]) await patch(restantes[0].id, { vigente: true });
+    }
+
+    const nombreViejo = String(rec.fields?.nombre || "");
+    const nombreNuevo = nombreViejo.includes("·")
+      ? `${nuevoTipo} v${nuevaVersion} ·${nombreViejo.split("·").slice(1).join("·")}`
+      : `${nuevoTipo} v${nuevaVersion}`;
+    const vence = calcularVencimiento(nuevoTipo, rec.fields?.fecha_expedicion || null);
+    const res = await patch(id, {
+      tipo: nuevoTipo,
+      version: nuevaVersion,
+      vigente: true,
+      nombre: nombreNuevo.slice(0, 250),
+      vence_el: vence || null,
+    });
+    if (!res.ok) {
+      console.error("[documentos-terceros/id] reclasificar falló:", await res.text());
+      return NextResponse.json({ error: "Error reclasificando" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, tipo: nuevoTipo, version: nuevaVersion });
+  }
 
   const fields: Record<string, unknown> = {
     estado: accion === "aprobar" ? "aprobado" : "rechazado",
