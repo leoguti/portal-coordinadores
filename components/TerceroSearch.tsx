@@ -19,6 +19,11 @@ interface TerceroSearchProps {
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  /**
+   * Flujo desde el que se busca: adapta el formulario de creación inline
+   * (Caja Menor no pide documentos; OS sí los va a necesitar).
+   */
+  proposito?: "caja-menor" | "os";
 }
 
 export default function TerceroSearch({
@@ -27,6 +32,7 @@ export default function TerceroSearch({
   required = false,
   disabled = false,
   placeholder = "Escribe para buscar tercero...",
+  proposito,
 }: TerceroSearchProps) {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Tercero[]>([]);
@@ -179,7 +185,7 @@ export default function TerceroSearch({
             </button>
           ))}
           <a
-            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}`}
+            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}${proposito ? `&proposito=${proposito}` : ""}`}
             target="_blank"
             rel="noopener noreferrer"
             className="block border-t border-gray-100 px-4 py-2 text-sm text-green-700 font-medium hover:bg-green-50"
@@ -196,7 +202,7 @@ export default function TerceroSearch({
             No se encontró ningún tercero con «{search}».
           </p>
           <a
-            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}`}
+            href={`/terceros/nuevo?nombre=${encodeURIComponent(search)}${proposito ? `&proposito=${proposito}` : ""}`}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 inline-flex items-center gap-1 text-green-700 font-medium hover:underline"

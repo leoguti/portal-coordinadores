@@ -431,6 +431,7 @@ export default function NuevoGastoCajaMenorPage() {
               value={beneficiario}
               onChange={setBeneficiario}
               required
+              proposito="caja-menor"
               placeholder="Buscar beneficiario por nombre o NIT..."
             />
             {beneficiario && beneficiario.nit && (
@@ -439,7 +440,9 @@ export default function NuevoGastoCajaMenorPage() {
                 {beneficiario.direccion && ` | Dir: ${beneficiario.direccion}`}
               </p>
             )}
-            {beneficiario && <TerceroCompletitudWarning terceroId={beneficiario.id} />}
+            {beneficiario && (
+              <TerceroCompletitudWarning terceroId={beneficiario.id} nivel="cajaMenor" />
+            )}
           </div>
 
           {/* Rubro */}

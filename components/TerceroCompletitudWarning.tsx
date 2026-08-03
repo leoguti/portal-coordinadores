@@ -8,6 +8,10 @@ interface Completitud {
   completo: boolean;
   faltantes: string[];
   nitInvalido: boolean;
+  listoCajaMenor?: boolean;
+  listoOrdenServicio?: boolean;
+  faltantesDatos?: string[];
+  faltantesDocumentos?: string[];
 }
 
 interface PlanillaCheck {
@@ -23,10 +27,16 @@ interface PlanillaCheck {
 export default function TerceroCompletitudWarning({
   terceroId,
   mode = "warning",
+  nivel = "ordenServicio",
   fechaReferencia,
 }: {
   terceroId: string;
   mode?: "warning" | "error";
+  /**
+   * Nivel de exigencia según el flujo: Caja Menor solo requiere datos básicos;
+   * los documentos (RUT, bancaria, cédula/cámara) son exclusivos de las OS.
+   */
+  nivel?: "cajaMenor" | "ordenServicio";
   fechaReferencia?: string; // YYYY-MM-DD — si viene, chequea planilla
 }) {
   const [completitud, setCompletitud] = useState<Completitud | null>(null);
@@ -50,7 +60,17 @@ export default function TerceroCompletitudWarning({
 
   if (loading) return null;
 
-  const incompleto = completitud && !completitud.completo;
+  // Caja Menor: basta con los datos básicos (listoCajaMenor); no se mencionan
+  // documentos. OS: nivel completo (datos + documentos).
+  const listo =
+    nivel === "cajaMenor"
+      ? completitud?.listoCajaMenor ?? completitud?.completo
+      : completitud?.completo;
+  const faltantes =
+    (nivel === "cajaMenor" ? completitud?.faltantesDatos : completitud?.faltantes) ??
+    completitud?.faltantes ??
+    [];
+  const incompleto = completitud && !listo;
   // El requisito de planilla SS está desactivado temporalmente (ver lib/featureFlags.ts).
   const faltaPlanilla = REQUISITO_PLANILLA_SS && planilla && planilla.aplica && !planilla.ok;
 
@@ -72,7 +92,7 @@ export default function TerceroCompletitudWarning({
                 {isError ? "Este tercero no puede usarse: falta información" : "Este tercero tiene datos incompletos"}
               </p>
               <div className="flex flex-wrap gap-1 mt-1.5">
-                {completitud!.faltantes.map((f) => (
+                {faltantes.map((f) => (
                   <span key={f} className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>{f}</span>
                 ))}
               </div>
@@ -89,7 +109,7 @@ export default function TerceroCompletitudWarning({
             </div>
           )}
           <Link
-            href={`/terceros/${terceroId}`}
+            href={`/terceros/${terceroId}${nivel === "cajaMenor" ? "?proposito=caja-menor" : ""}`}
             target="_blank"
             className={`inline-block text-xs font-medium underline hover:no-underline ${linkColor}`}
           >

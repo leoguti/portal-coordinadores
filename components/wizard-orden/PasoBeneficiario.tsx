@@ -107,6 +107,7 @@ export default function PasoBeneficiario({
           value={beneficiario}
           onChange={onBeneficiarioChange}
           required
+          proposito="os"
           placeholder="Buscar tercero..."
         />
         {beneficiario && (

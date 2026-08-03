@@ -396,6 +396,7 @@ export default function EditarOrdenPage() {
                   value={beneficiario}
                   onChange={setBeneficiario}
                   required
+                  proposito="os"
                   placeholder="Buscar tercero..."
                 />
               </div>

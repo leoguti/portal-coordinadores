@@ -638,6 +638,7 @@ export default function GastoDetallePage() {
                   value={editBeneficiario}
                   onChange={setEditBeneficiario}
                   required
+                  proposito="caja-menor"
                 />
               </div>
             </div>

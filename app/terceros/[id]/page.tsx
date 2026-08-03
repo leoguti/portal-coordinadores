@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
@@ -13,10 +13,22 @@ const TIPOS_PERSONA = ["Natural", "Jurídica"];
 interface Attachment { id?: string; url: string; filename: string; size?: number }
 
 export default function TerceroEditPage() {
+  return (
+    <Suspense fallback={null}>
+      <TerceroEditInner />
+    </Suspense>
+  );
+}
+
+function TerceroEditInner() {
   const { status } = useSession();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id as string;
+  const searchParams = useSearchParams();
+  // Contexto de llegada: recién creado y con qué propósito (caja-menor / os).
+  const recienCreado = searchParams.get("creado") === "1";
+  const propositoLlegada = searchParams.get("proposito");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -209,6 +221,21 @@ export default function TerceroEditPage() {
           <h1 className="text-xl font-bold text-gray-900 mt-1">{razonSocial || "Tercero"}</h1>
         </div>
 
+        {/* Contexto al llegar recién creado según el propósito */}
+        {recienCreado && propositoLlegada === "caja-menor" && (
+          <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+            ✅ <strong>Tercero creado.</strong> Para Caja Menor no necesita
+            documentos: si abajo aparece «✓ Listo» en Caja Menor, ya puedes
+            volver al gasto y buscarlo.
+          </div>
+        )}
+        {recienCreado && propositoLlegada === "os" && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+            ✅ <strong>Tercero creado.</strong> Para usarlo en Órdenes de
+            Servicio, sube ahora los documentos en la sección de abajo.
+          </div>
+        )}
+
         {/* Estado de completitud — insignias de estado por propósito */}
         <div className={`rounded-xl p-4 border ${listoOS ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
@@ -385,7 +412,12 @@ export default function TerceroEditPage() {
             return (
               <>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-gray-900">Documentos para Órdenes de Servicio</h2>
+                  <div>
+                    <h2 className="text-sm font-bold text-gray-900">Documentos para Órdenes de Servicio</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Solo se requieren para OS — para Caja Menor no hay que subir nada.
+                    </p>
+                  </div>
                   <span className={`text-xs font-semibold ${cargados === aplicables.length ? "text-green-700" : "text-amber-600"}`}>
                     {cargados} de {aplicables.length} cargados
                   </span>
