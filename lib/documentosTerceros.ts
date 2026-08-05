@@ -281,6 +281,8 @@ export interface CrearDocumentoParams {
    */
   estadoInicial?: "pendiente" | "aprobado";
   aprobadoPorId?: string | null;
+  /** Nota de verificación automática (ej. PDF que no se pudo interpretar). */
+  verificacionNota?: string | null;
 }
 
 export async function crearRegistroDocumento(
@@ -317,6 +319,7 @@ export async function crearRegistroDocumento(
     origen: p.origen,
   };
   if (p.subidoPorId) fields.subido_por = [p.subidoPorId];
+  if (p.verificacionNota) fields.verificacion_ia = p.verificacionNota;
   if (p.estadoInicial === "aprobado" && p.aprobadoPorId) {
     fields.aprobado_por = [p.aprobadoPorId];
     fields.fecha_decision = new Date().toISOString();

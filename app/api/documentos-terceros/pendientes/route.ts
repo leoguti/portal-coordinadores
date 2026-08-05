@@ -22,7 +22,11 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    const docs = await listarTodosDocumentos();
+    // Solo versiones VIGENTES: la bandeja es una cola de decisión, no el
+    // historial. Una versión reemplazada (p. ej. el mismo archivo subido dos
+    // veces) no debe revisarse dos veces — el historial completo vive en el
+    // detalle del tercero.
+    const docs = (await listarTodosDocumentos()).filter((d) => d.vigente);
 
     // Datos mínimos de los terceros referenciados (una sola pasada paginada).
     const terceros = new Map<string, { razonSocial: string; nit: string; tipoPersona: string }>();

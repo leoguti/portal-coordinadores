@@ -14,7 +14,9 @@ export async function GET() {
     return NextResponse.json({ error: "Solo administradores" }, { status: 403 });
   }
   try {
-    const docs = await listarTodosDocumentos();
+    // Solo vigentes — igual que la bandeja (las versiones reemplazadas no
+    // cuentan como pendientes de revisión).
+    const docs = (await listarTodosDocumentos()).filter((d) => d.vigente);
     return NextResponse.json({
       pendientes: docs.filter((d) => d.estado === "pendiente").length,
       conAlerta: docs.filter((d) => d.estado === "pendiente" && d.verificacionIa).length,

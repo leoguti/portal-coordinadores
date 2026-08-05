@@ -137,15 +137,38 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const hash = sha256Hex(buffer);
 
-    // PDFs con clave de apertura o dañados se rechazan en el acto (sin IA:
-    // detección determinística con pdfjs). Los "restringidos" (solo permisos,
-    // típicos de certificaciones bancarias) sí pasan.
+    // Mismo archivo ya subido para este tercero (byte a byte): se rechaza.
+    // Evita revisar dos veces lo mismo y el caso "mismo PDF aprobado en dos
+    // casillas distintas" (p. ej. una bancaria ocupando el cupo de Cámara).
+    const yaExiste = existentes.find((d) => d.archivoHash === hash);
+    if (yaExiste) {
+      return NextResponse.json(
+        {
+          error: `Este archivo es idéntico a uno ya subido para este tercero (${yaExiste.tipo} v${yaExiste.version}). Si necesitas otro documento, sube el archivo correcto.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // PDFs con clave de APERTURA se rechazan en el acto (sin IA: detección
+    // determinística con pdfjs — caso indiscutible). Los "restringidos"
+    // (solo permisos, típicos de certificaciones bancarias) pasan. Los que
+    // pdfjs no logra interpretar ("ilegible") se ACEPTAN con una alerta
+    // para revisión manual — puede ser un escaneo raro que sí abre.
+    let notaVerificacion: string | null = null;
     if (esPdf(file.name || "", file.type)) {
       const analisis = await analizarPdf(buffer);
-      const motivo = motivoRechazoPdf(analisis);
-      if (motivo) {
-        return NextResponse.json({ error: motivo }, { status: 400 });
+      if (analisis === "protegido") {
+        return NextResponse.json(
+          { error: motivoRechazoPdf("protegido") },
+          { status: 400 }
+        );
+      }
+      if (analisis === "ilegible") {
+        notaVerificacion =
+          "⚠ PDF que no se pudo interpretar automáticamente — verificar a mano que abra bien";
       }
     }
 
@@ -159,8 +182,9 @@ export async function POST(req: NextRequest) {
       version,
       archivoKey: key,
       archivoNombre: file.name || `documento-v${version}`,
-      archivoHash: sha256Hex(buffer),
+      archivoHash: hash,
       archivoSize: buffer.length,
+      verificacionNota: notaVerificacion,
       subidoPorId: session.user.coordinatorRecordId,
       fechaExpedicion,
       origen: "portal",
