@@ -65,6 +65,34 @@ export async function POST(
     return NextResponse.json({ error: res.error }, { status: 500 });
   }
 
+  // Cascada: rechazar el generador arrastra sus fincas PENDIENTES — la
+  // inscripción crea generador+finca en pareja, y sin esto la finca quedaba
+  // huérfana en la cola de revisión ("pendiente por aprobar" de un generador
+  // que ya no existe a efectos prácticos). Las fincas ya aprobadas no se
+  // tocan (un rechazo de revisión posterior no debe tumbar lo aprobado).
+  let fincasRechazadas = 0;
+  const fincaIds = Array.isArray(rec.fields.FINCAS)
+    ? (rec.fields.FINCAS as string[])
+    : [];
+  for (const fid of fincaIds) {
+    try {
+      const finca = await airtableGetRecord("FINCAS", fid);
+      const fEstado = String(finca?.fields?.estado || "");
+      if (fEstado !== "pendiente" && fEstado !== "pendiente_revision") continue;
+      const fr = await airtablePatchRecord("FINCAS", fid, {
+        estado: "rechazado",
+        motivo_rechazo: `Generador rechazado: ${motivo}`,
+        fecha_rechazo: new Date().toISOString(),
+        rechazado_por: [coordId],
+        cambios_pendientes: "",
+      });
+      if (fr.ok) fincasRechazadas++;
+      else console.error(`[gen/${id}/rechazar] finca ${fid} no se pudo rechazar:`, fr.error);
+    } catch (err) {
+      console.error(`[gen/${id}/rechazar] error en cascada finca ${fid}:`, err);
+    }
+  }
+
   const esRevision = estado === "pendiente_revision";
   after(async () => {
     try {
@@ -89,5 +117,5 @@ export async function POST(
     }
   });
 
-  return NextResponse.json({ ok: true, estado: "rechazado" });
+  return NextResponse.json({ ok: true, estado: "rechazado", fincasRechazadas });
 }
