@@ -299,6 +299,12 @@ export async function GET(request: Request) {
       (s, a) => s + evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields),
       0
     );
+    const actsSensEnRevision = actSensibilizacion.filter(
+      (a) => participantesPendientes(a.fields) > 0
+    ).length;
+    const actsEvalEnRevision = actSensibilizacion.filter(
+      (a) => evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields) > 0
+    ).length;
 
     const metasSensibilizacionPorCoord = coordinadores.map((c) => {
       const m = metaMap.get(c.id) || { rec: 0, sen: 0, eva: 0 };
@@ -453,6 +459,7 @@ export async function GET(request: Request) {
           actual: personasCapacitadas,
           evaluadas: personasEvaluadas,
           enRevision: capacitadasEnRevision,
+          enRevisionActs: actsSensEnRevision,
           porcentaje:
             metaGlobalSen > 0
               ? Math.round((personasCapacitadas / metaGlobalSen) * 100)
@@ -467,6 +474,7 @@ export async function GET(request: Request) {
           reportadas: personasEvaluadas,
           total: totalEvalCombinado,
           enRevision: evaluacionesEnRevision,
+          enRevisionActs: actsEvalEnRevision,
           porcentaje:
             metaGlobalEva > 0
               ? Math.round((totalEvalCombinado / metaGlobalEva) * 100)

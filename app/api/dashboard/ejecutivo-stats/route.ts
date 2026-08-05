@@ -253,6 +253,15 @@ export async function GET(request: Request) {
       (sum, a) => sum + evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields),
       0
     );
+    // Cantidad de ACTIVIDADES detrás de esas personas: hace el número
+    // explicable ("+42 por revisar · 2 actividades") y cotejable con la cola
+    // del panel, que cuenta actividades.
+    const actsSensEnRevision = actSensibilizacion.filter(
+      (a) => participantesPendientes(a.fields) > 0
+    ).length;
+    const actsEvalEnRevision = actSensibilizacion.filter(
+      (a) => evaluadasPendientes(a.fields) + evaluacionesWAPendientes(a.fields) > 0
+    ).length;
 
     const metasSensibilizacionPorCoord = allMetas.map((m) => {
       const coordId =
@@ -413,6 +422,7 @@ export async function GET(request: Request) {
           actual: personasCapacitadas,
           evaluadas: personasEvaluadas,
           enRevision: capacitadasEnRevision,
+          enRevisionActs: actsSensEnRevision,
           porcentaje:
             metaGlobalSensibilizacion > 0
               ? Math.round(
@@ -429,6 +439,7 @@ export async function GET(request: Request) {
           reportadas: personasEvaluadas,
           total: totalEvalCombinado,
           enRevision: evaluacionesEnRevision,
+          enRevisionActs: actsEvalEnRevision,
           porcentaje:
             metaGlobalEvaluaciones > 0
               ? Math.round((totalEvalCombinado / metaGlobalEvaluaciones) * 100)

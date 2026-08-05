@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Fragment, useTransition } from "react";
+import Link from "next/link";
 import MapaActividadesResumen from "./MapaActividadesResumen";
 import {
   BarChart,
@@ -64,11 +65,11 @@ interface Stats {
     porCoordinador: CoordMeta[];
   };
   metasSensibilizacion: {
-    global: { meta: number; actual: number; evaluadas: number; enRevision?: number; porcentaje: number };
+    global: { meta: number; actual: number; evaluadas: number; enRevision?: number; enRevisionActs?: number; porcentaje: number };
     porCoordinador: CoordSensMeta[];
   };
   metasEvaluaciones: {
-    global: { meta: number; whatsapp: number; reportadas: number; total: number; enRevision?: number; porcentaje: number };
+    global: { meta: number; whatsapp: number; reportadas: number; total: number; enRevision?: number; enRevisionActs?: number; porcentaje: number };
     porCoordinador: Array<{ id: string; nombre: string; meta: number; whatsapp: number; reportadas: number; total: number; porcentaje: number; semaforo: string }>;
   };
   materiales: MaterialRow[];
@@ -431,7 +432,19 @@ export default function DashboardEjecutivo({
           </div>
           {(stats.metasSensibilizacion.global.enRevision ?? 0) > 0 && (
             <div className="text-xs text-amber-600 mt-1" title="Participantes de actividades que el administrador aún no ha aprobado — suman cuando se aprueben">
-              +{fmt(stats.metasSensibilizacion.global.enRevision!)} por revisar
+              {(() => {
+                const acts = stats.metasSensibilizacion.global.enRevisionActs || 0;
+                const texto = `+${fmt(stats.metasSensibilizacion.global.enRevision!)} por revisar${
+                  acts > 0 ? ` · ${acts} actividad${acts === 1 ? "" : "es"}` : ""
+                }`;
+                return board ? (
+                  <>{texto}</>
+                ) : (
+                  <Link href="/actividades?revision=1" className="hover:underline">
+                    {texto} →
+                  </Link>
+                );
+              })()}
             </div>
           )}
           {!board && (
@@ -534,7 +547,19 @@ export default function DashboardEjecutivo({
           </div>
           {(stats.metasEvaluaciones.global.enRevision ?? 0) > 0 && (
             <div className="text-xs text-amber-600 mt-1" title="Evaluaciones de actividades que el administrador aún no ha aprobado — suman cuando se aprueben">
-              +{fmt(stats.metasEvaluaciones.global.enRevision!)} por revisar
+              {(() => {
+                const acts = stats.metasEvaluaciones.global.enRevisionActs || 0;
+                const texto = `+${fmt(stats.metasEvaluaciones.global.enRevision!)} por revisar${
+                  acts > 0 ? ` · ${acts} actividad${acts === 1 ? "" : "es"}` : ""
+                }`;
+                return board ? (
+                  <>{texto}</>
+                ) : (
+                  <Link href="/actividades?revision=1" className="hover:underline">
+                    {texto} →
+                  </Link>
+                );
+              })()}
             </div>
           )}
           {!board && (
