@@ -24,11 +24,17 @@ interface UbicacionRaw {
   conteo: number;
 }
 
-/** Strips non-digits and removes the last digit → grouping key */
+/**
+ * Clave de agrupación: SOLO dígitos, COMPLETOS. Las ubicaciones legacy son
+ * cédulas de agricultores (personas naturales) — el último dígito es
+ * significativo. Quitar el último dígito (regla que solo vale para el DV de
+ * NITs jurídicos) hacía ver como duplicadas cédulas consecutivas de
+ * personas distintas.
+ */
 function nitPrefix(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.length < 5) return ""; // too short to be meaningful
-  return digits.slice(0, -1);
+  return digits;
 }
 
 export async function GET() {

@@ -1320,7 +1320,7 @@ function GeneradorMergeModal({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-base font-bold text-gray-900 mb-1">Fusionar generadores duplicados</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Estos {allGroups.length} generadores comparten el mismo NIT base. Elige cuál conservar — las fincas de los otros se reasignarán y los duplicados se eliminarán.
+          Estos {allGroups.length} generadores comparten el mismo documento (misma cédula, o mismo NIT con/sin DV). Elige cuál conservar — las fincas de los otros se reasignarán y los duplicados se eliminarán.
         </p>
 
         <div className="space-y-2 mb-4">
@@ -1880,22 +1880,30 @@ export default function RevisionFincasPage() {
     }
   }, [loadData]);
 
-  // Detección de NITs duplicados (prefijo sin último dígito — estándar NIT Colombia)
-  const nitPrefix = (nit: string) => {
-    const d = (nit || "").replace(/\D/g, "");
-    return d.length >= 5 ? d.slice(0, -1) : "";
+  // Detección de documentos duplicados. OJO con la diferencia por tipo:
+  //  - Jurídicas: se agrupa por el NIT SIN el último dígito, porque el DV
+  //    puede venir escrito o no (900143856-1 == 9001438561 == 900143856).
+  //  - Naturales (y tipo desconocido): la cédula se compara COMPLETA — su
+  //    último dígito es significativo. Quitar el último dígito aquí hacía
+  //    ver como duplicadas cédulas consecutivas de personas distintas
+  //    (…035 vs …034) y ofrecía fusionarlas irreversiblemente.
+  const nitKey = (g: GeneradorGrupo) => {
+    const d = (g.generador?.nit || "").replace(/\D/g, "");
+    if (d.length < 5) return "";
+    const esJuridica = (g.generador?.tipopersona || "").trim().startsWith("Jur");
+    return esJuridica ? `J:${d.slice(0, -1)}` : `N:${d}`;
   };
 
   const duplicadosMap = new Map<string, GeneradorGrupo[]>();
   for (const g of grupos) {
-    const key = nitPrefix(g.generador?.nit || "");
+    const key = nitKey(g);
     if (!key || !g.generadorId) continue;
     if (!duplicadosMap.has(key)) duplicadosMap.set(key, []);
     duplicadosMap.get(key)!.push(g);
   }
 
   const getDuplicadosFor = (grupo: GeneradorGrupo): GeneradorGrupo[] => {
-    const key = nitPrefix(grupo.generador?.nit || "");
+    const key = nitKey(grupo);
     if (!key) return [];
     const all = duplicadosMap.get(key) || [];
     if (all.length <= 1) return [];
@@ -1988,7 +1996,7 @@ export default function RevisionFincasPage() {
                 {totalGeneradoresConDuplicados} generadores con NIT duplicado detectados
               </p>
               <p className="text-xs text-red-700 mt-0.5">
-                Son generadores distintos que comparten el mismo NIT base (sin dígito de verificación). Úsalos con el filtro "Duplicados" y fusionalos uno a uno.
+                Son generadores distintos que comparten el mismo documento: la misma cédula (naturales) o el mismo NIT con/sin dígito de verificación (jurídicas). Úsalos con el filtro "Duplicados" y fusionalos uno a uno.
               </p>
             </div>
             <button
