@@ -45,11 +45,15 @@ export interface FincaInfo {
   /** tipopersona del generador dueño ("natural"/"juridica") — para que la
    *  UI hable de "empresas" o "productores" según corresponda. */
   generadorTipopersona?: string;
+  /** Cédula/NIT del dueño — el selector la muestra para confirmar identidad. */
+  generadorNit?: string;
 }
 
 export interface GeneradorInfo {
   id: string;
   nombre: string;
+  /** Cédula o NIT — permite confirmar la identidad en selectores. */
+  nit: string;
   estado: string;
   /** "natural" | "juridica" (o vacío si legacy). */
   tipopersona: string;
@@ -118,6 +122,7 @@ function mapGeneradorRecord(
   return {
     id: r.id,
     nombre: String(r.fields.nombre || "").trim(),
+    nit: String(r.fields.nit || "").trim(),
     estado: String(r.fields.estado || "aprobado"),
     tipopersona: String(r.fields.tipopersona || "").trim().toLowerCase(),
     coordinadorId: primerId(r.fields.aprobado_por) || primerId(r.fields.coordinador_solicitado),
@@ -240,6 +245,7 @@ export async function identificarAgricultor(
           ...f,
           generadorNombre: g.info.nombre,
           generadorTipopersona: g.info.tipopersona,
+          generadorNit: g.info.nit,
         });
       }
     });

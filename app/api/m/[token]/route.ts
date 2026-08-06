@@ -101,6 +101,7 @@ interface PayloadCertNuevo extends PayloadBase {
     generadorId: string;
     generadorNombre: string;
     generadorTipopersona: string;
+    generadorNit: string;
     cultivos: { id: string; nombre: string }[];
     coordinadorSugerido: { id: string; nombre: string } | null;
   }[];
@@ -431,9 +432,9 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
       // elegir. Si solo hay una en recordId, esa pre-seleccionada.
       // Contexto por finca (incluye generadorId/Nombre reales — clave en
       // teléfonos multiempresa: un gestor con varias razones sociales).
-      const ctxFincas: Array<{ id: string; generadorId?: string; generadorNombre?: string; generadorTipopersona?: string }> =
+      const ctxFincas: Array<{ id: string; generadorId?: string; generadorNombre?: string; generadorTipopersona?: string; generadorNit?: string }> =
         Array.isArray(t.contexto.fincas)
-          ? (t.contexto.fincas as Array<{ id: string; generadorId?: string; generadorNombre?: string; generadorTipopersona?: string }>)
+          ? (t.contexto.fincas as Array<{ id: string; generadorId?: string; generadorNombre?: string; generadorTipopersona?: string; generadorNit?: string }>)
           : t.recordId
             ? [{ id: t.recordId }]
             : [];
@@ -445,6 +446,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         generadorId: string;
         generadorNombre: string;
         generadorTipopersona: string;
+        generadorNit: string;
         cultivos: { id: string; nombre: string }[];
         coordinadorSugerido: { id: string; nombre: string } | null;
       }[] = [];
@@ -478,6 +480,7 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
             ctxPorFinca.get(fid)?.generadorNombre ||
             (genId === generadorPrincipal?.id ? generadorPrincipal?.nombre || "" : ""),
           generadorTipopersona: ctxPorFinca.get(fid)?.generadorTipopersona || "",
+          generadorNit: ctxPorFinca.get(fid)?.generadorNit || "",
           cultivos: f.cultivos,
           coordinadorSugerido: null,
         });

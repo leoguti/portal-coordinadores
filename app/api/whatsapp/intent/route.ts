@@ -335,6 +335,7 @@ export async function POST(request: NextRequest) {
         generadorNombre: f.generadorNombre || identidad.generador?.nombre || "",
         generadorTipopersona:
           f.generadorTipopersona || identidad.generador?.tipopersona || "",
+        generadorNit: f.generadorNit || identidad.generador?.nit || "",
       })),
       generador: identidad.generador
         ? {

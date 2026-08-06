@@ -21,6 +21,7 @@ const MunicipioSearch = dynamic(() => import("@/components/MunicipioSearch"), {
 interface Finca {
   generadorNombre?: string;
   generadorTipopersona?: string;
+  generadorNit?: string;
   id: string;
   nombre: string;
   generadorId: string;
@@ -272,13 +273,18 @@ export default function CertNuevoPage({
                 <option value="">
                   {esMultiempresa ? "— Selecciona titular y finca —" : "— Selecciona una finca —"}
                 </option>
-                {fincasOrdenadas.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {esMultiempresa && f.generadorNombre
-                      ? `${f.generadorNombre} — ${f.nombre}`
-                      : f.nombre}
-                  </option>
-                ))}
+                {fincasOrdenadas.map((f) => {
+                  const doc = f.generadorNit
+                    ? ` (${(f.generadorTipopersona || "").includes("jur") ? "NIT" : "CC"} ${f.generadorNit})`
+                    : "";
+                  return (
+                    <option key={f.id} value={f.id}>
+                      {esMultiempresa && f.generadorNombre
+                        ? `${f.generadorNombre}${doc} — ${f.nombre}`
+                        : f.nombre}
+                    </option>
+                  );
+                })}
               </select>
             </Field>
           ) : fincaSeleccionada ? (
