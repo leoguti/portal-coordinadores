@@ -167,7 +167,13 @@ function armarRespuestaTitular(
 ): RespuestaIdentificar {
   const generador = identidad.generador!;
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
-  const nombreCorto = truncar(generador.nombre, 40);
+  // Gestor multiempresa (varios generadores con el mismo teléfono): el
+  // saludo no puede ser el nombre de UNA empresa arbitraria.
+  const nGens = identidad.generadores.length;
+  const nombreCorto =
+    nGens > 1
+      ? `gestor de ${nGens} empresas`
+      : truncar(generador.nombre, 40);
   const esJuridica = esEmpresa(generador.tipopersona);
   const generadorEnRevision = generador.estado === "pendiente_revision";
 

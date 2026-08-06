@@ -39,6 +39,9 @@ export interface FincaInfo {
   /** IDs de certificados linked (reverse lookup en FINCAS). Usado para
    *  listar procesos pendientes en el menú del bot. */
   certIds: string[];
+  /** Nombre del generador dueño — clave en teléfonos multiempresa (gestores
+   *  que administran varias razones sociales con el mismo número). */
+  generadorNombre?: string;
 }
 
 export interface GeneradorInfo {
@@ -55,7 +58,11 @@ export interface IdentidadAgricultor {
   estado: EstadoAgricultor;
   rol: RolAgricultor;
   telefonoNormalizado: string;
+  /** Generador "principal" (compat): el primero cuando hay varios. */
   generador: GeneradorInfo | null;
+  /** TODOS los generadores cuyo movil coincide — los gestores gremiales
+   *  administran varias empresas con un solo teléfono (caso real: 21). */
+  generadores: GeneradorInfo[];
   fincas: FincaInfo[];
 }
 
@@ -132,20 +139,20 @@ interface GeneradorPorTelefonoRes {
   fincaIds: string[];
 }
 
-async function buscarGeneradorPorTelefono(
+async function buscarGeneradoresPorTelefono(
   tel10: string
-): Promise<GeneradorPorTelefonoRes | null> {
+): Promise<GeneradorPorTelefonoRes[]> {
   const formula = `RIGHT(REGEX_REPLACE({movil}&'', '[^0-9]', ''), 10) = '${tel10}'`;
-  const url = `/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`;
+  const url = `/GENERADORES?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
   const data = (await airtableFetch(url)) as {
     records: Array<{ id: string; fields: Record<string, unknown> }>;
   };
-  const r = data.records?.[0];
-  if (!r) return null;
-  const fincaIds = Array.isArray(r.fields.FINCAS)
-    ? (r.fields.FINCAS as string[]).map(String)
-    : [];
-  return { info: mapGeneradorRecord(r), fincaIds };
+  return (data.records || []).map((r) => ({
+    info: mapGeneradorRecord(r),
+    fincaIds: Array.isArray(r.fields.FINCAS)
+      ? (r.fields.FINCAS as string[]).map(String)
+      : [],
+  }));
 }
 
 async function buscarGeneradorPorId(id: string): Promise<GeneradorInfo | null> {
@@ -201,29 +208,42 @@ export async function identificarAgricultor(
       rol: "desconocido",
       telefonoNormalizado: tel10,
       generador: null,
+      generadores: [],
       fincas: [],
     };
   }
 
   // Búsqueda paralela en ambas tablas.
-  const [generadorPorMovil, fincasPorMovil] = await Promise.all([
-    buscarGeneradorPorTelefono(tel10),
+  const [generadoresPorMovil, fincasPorMovil] = await Promise.all([
+    buscarGeneradoresPorTelefono(tel10),
     buscarFincasPorTelefono(tel10),
   ]);
 
-  // CASO 1: número en GENERADOR → rol titular, traer todas sus fincas.
+  // CASO 1: número en GENERADOR(ES) → rol titular. Un gestor gremial puede
+  // administrar VARIAS empresas con el mismo teléfono: se traen las fincas
+  // de TODAS, etiquetadas con el nombre de su empresa, para que los
+  // selectores (p. ej. el del certificado) nunca adivinen.
   // Usamos el campo lookup `FINCAS` del generador (array de record IDs)
   // en vez de filtrar FINCAS por el linked record `generador` — esa fórmula
   // fallaba porque ARRAYJOIN sobre linked records devuelve display names.
-  if (generadorPorMovil) {
-    const todasLasFincas = await traerFincasPorIds(generadorPorMovil.fincaIds);
+  if (generadoresPorMovil.length > 0) {
+    const fincasPorGen = await Promise.all(
+      generadoresPorMovil.map((g) => traerFincasPorIds(g.fincaIds))
+    );
+    const todasLasFincas: FincaInfo[] = [];
+    generadoresPorMovil.forEach((g, i) => {
+      for (const f of fincasPorGen[i]) {
+        todasLasFincas.push({ ...f, generadorNombre: g.info.nombre });
+      }
+    });
     const fincasAprobadas = todasLasFincas.filter((f) => f.estado === "aprobado");
     return {
       estado:
         fincasAprobadas.length > 0 ? "conocido_con_fincas" : "conocido_sin_finca",
       rol: "titular",
       telefonoNormalizado: tel10,
-      generador: generadorPorMovil.info,
+      generador: generadoresPorMovil[0].info,
+      generadores: generadoresPorMovil.map((g) => g.info),
       fincas: todasLasFincas,
     };
   }
@@ -239,6 +259,7 @@ export async function identificarAgricultor(
       rol: "admin_finca",
       telefonoNormalizado: tel10,
       generador,
+      generadores: generador ? [generador] : [],
       fincas: fincasPorMovil,
     };
   }
@@ -249,6 +270,7 @@ export async function identificarAgricultor(
     rol: "desconocido",
     telefonoNormalizado: tel10,
     generador: null,
+    generadores: [],
     fincas: [],
   };
 }

@@ -427,15 +427,21 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
     case "cert-nuevo": {
       // Si el contexto tiene varias fincas, las exponemos todas; el form deja
       // elegir. Si solo hay una en recordId, esa pre-seleccionada.
-      const fincaIds: string[] = Array.isArray(t.contexto.fincas)
-        ? (t.contexto.fincas as Array<{ id: string }>).map((f) => f.id)
-        : t.recordId
-          ? [t.recordId]
-          : [];
+      // Contexto por finca (incluye generadorId/Nombre reales — clave en
+      // teléfonos multiempresa: un gestor con varias razones sociales).
+      const ctxFincas: Array<{ id: string; generadorId?: string; generadorNombre?: string }> =
+        Array.isArray(t.contexto.fincas)
+          ? (t.contexto.fincas as Array<{ id: string; generadorId?: string; generadorNombre?: string }>)
+          : t.recordId
+            ? [{ id: t.recordId }]
+            : [];
+      const fincaIds = ctxFincas.map((f) => f.id);
+      const ctxPorFinca = new Map(ctxFincas.map((f) => [f.id, f]));
       const fincasDisponibles: {
         id: string;
         nombre: string;
         generadorId: string;
+        generadorNombre: string;
         cultivos: { id: string; nombre: string }[];
         coordinadorSugerido: { id: string; nombre: string } | null;
       }[] = [];
@@ -447,31 +453,30 @@ async function armarPayload(t: EdicionToken): Promise<Payload> {
         if (!fincaPrincipal && (fid === t.recordId || fincaIds.length === 1)) {
           fincaPrincipal = f;
         }
-        // Para mostrar generador en el header.
-        if (!generadorPrincipal) {
+        // generadorId REAL de esta finca: del contexto; fallback al linked
+        // record (tokens viejos sin contexto enriquecido).
+        let genId = ctxPorFinca.get(fid)?.generadorId || "";
+        if (!genId) {
           const fincaRec = await getRecord("FINCAS", fid);
-          const genId = Array.isArray(fincaRec?.fields.generador)
+          genId = Array.isArray(fincaRec?.fields.generador)
             ? String((fincaRec!.fields.generador as string[])[0])
-            : null;
-          if (genId) {
-            generadorPrincipal = await cargarGenerador(genId);
-            fincasDisponibles.push({
-              id: f.id,
-              nombre: f.nombre,
-              generadorId: genId,
-              cultivos: f.cultivos,
-              coordinadorSugerido: null,
-            });
-          }
-        } else {
-          fincasDisponibles.push({
-            id: f.id,
-            nombre: f.nombre,
-            generadorId: generadorPrincipal.id,
-            cultivos: f.cultivos,
-            coordinadorSugerido: null,
-          });
+            : "";
         }
+        // Para mostrar generador en el header: el de la finca principal o
+        // el primero que aparezca.
+        if (!generadorPrincipal && genId) {
+          generadorPrincipal = await cargarGenerador(genId);
+        }
+        fincasDisponibles.push({
+          id: f.id,
+          nombre: f.nombre,
+          generadorId: genId,
+          generadorNombre:
+            ctxPorFinca.get(fid)?.generadorNombre ||
+            (genId === generadorPrincipal?.id ? generadorPrincipal?.nombre || "" : ""),
+          cultivos: f.cultivos,
+          coordinadorSugerido: null,
+        });
       }
       // Sugerir coordinador por finca según el último cert aprobado.
       await Promise.all(

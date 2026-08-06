@@ -19,6 +19,7 @@ const MunicipioSearch = dynamic(() => import("@/components/MunicipioSearch"), {
 });
 
 interface Finca {
+  generadorNombre?: string;
   id: string;
   nombre: string;
   generadorId: string;
@@ -221,27 +222,47 @@ export default function CertNuevoPage({
 
   const fincaSeleccionada = payload.fincasDisponibles.find((f) => f.id === fincaId);
   const hayVariasFincas = payload.fincasDisponibles.length > 1;
+  // Teléfono multiempresa (gestor gremial): fincas de 2+ generadores. El
+  // selector muestra "Empresa — Finca", agrupado por empresa, para que el
+  // certificado jamás salga a nombre de la razón social equivocada.
+  const esMultiempresa =
+    new Set(payload.fincasDisponibles.map((f) => f.generadorId)).size > 1;
+  const fincasOrdenadas = esMultiempresa
+    ? [...payload.fincasDisponibles].sort(
+        (a, b) =>
+          (a.generadorNombre || "").localeCompare(b.generadorNombre || "") ||
+          a.nombre.localeCompare(b.nombre)
+      )
+    : payload.fincasDisponibles;
 
   return (
     <MagicLinkLayout
       titulo="Nuevo certificado"
-      subtitulo={payload.generador?.nombre || ""}
+      subtitulo={
+        esMultiempresa
+          ? `Gestionas ${new Set(payload.fincasDisponibles.map((f) => f.generadorId)).size} empresas`
+          : payload.generador?.nombre || ""
+      }
     >
       <form onSubmit={onSubmit}>
         <FormCard>
           <h2 className="font-medium text-gray-900 mb-3">Datos generales</h2>
 
           {hayVariasFincas ? (
-            <Field label="Finca" required>
+            <Field label={esMultiempresa ? "Empresa y finca" : "Finca"} required>
               <select
                 value={fincaId}
                 onChange={(e) => setFincaId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
               >
-                <option value="">— Selecciona una finca —</option>
-                {payload.fincasDisponibles.map((f) => (
+                <option value="">
+                  {esMultiempresa ? "— Selecciona la empresa y finca —" : "— Selecciona una finca —"}
+                </option>
+                {fincasOrdenadas.map((f) => (
                   <option key={f.id} value={f.id}>
-                    {f.nombre}
+                    {esMultiempresa && f.generadorNombre
+                      ? `${f.generadorNombre} — ${f.nombre}`
+                      : f.nombre}
                   </option>
                 ))}
               </select>
