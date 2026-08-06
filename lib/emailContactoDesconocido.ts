@@ -40,7 +40,9 @@ export async function enviarAvisoContactoDesconocido(
     });
     const wa = `https://wa.me/57${telefono10}`;
     const ticketUrl = ticketUuid
-      ? `https://textit.com/ticket/all/open/${ticketUuid}/`
+      // OJO: TextIt cambió el esquema (ago-2026): ya NO lleva el segmento de
+      // estado ("open"). Con /open/ la página responde 404 aun con sesión.
+      ? `https://textit.com/ticket/all/${ticketUuid}/`
       : null;
     const temaTxt = tema ? `Tema: ${tema}\n` : "";
     const temaHtml = tema
