@@ -333,6 +333,8 @@ export async function POST(request: NextRequest) {
         // Nombre de la empresa dueña: en teléfonos multiempresa (gestores
         // gremiales) el selector del form lo muestra para no confundir.
         generadorNombre: f.generadorNombre || identidad.generador?.nombre || "",
+        generadorTipopersona:
+          f.generadorTipopersona || identidad.generador?.tipopersona || "",
       })),
       generador: identidad.generador
         ? {

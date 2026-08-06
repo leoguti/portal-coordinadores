@@ -42,6 +42,9 @@ export interface FincaInfo {
   /** Nombre del generador dueño — clave en teléfonos multiempresa (gestores
    *  que administran varias razones sociales con el mismo número). */
   generadorNombre?: string;
+  /** tipopersona del generador dueño ("natural"/"juridica") — para que la
+   *  UI hable de "empresas" o "productores" según corresponda. */
+  generadorTipopersona?: string;
 }
 
 export interface GeneradorInfo {
@@ -233,7 +236,11 @@ export async function identificarAgricultor(
     const todasLasFincas: FincaInfo[] = [];
     generadoresPorMovil.forEach((g, i) => {
       for (const f of fincasPorGen[i]) {
-        todasLasFincas.push({ ...f, generadorNombre: g.info.nombre });
+        todasLasFincas.push({
+          ...f,
+          generadorNombre: g.info.nombre,
+          generadorTipopersona: g.info.tipopersona,
+        });
       }
     });
     const fincasAprobadas = todasLasFincas.filter((f) => f.estado === "aprobado");

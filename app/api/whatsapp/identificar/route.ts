@@ -167,12 +167,16 @@ function armarRespuestaTitular(
 ): RespuestaIdentificar {
   const generador = identidad.generador!;
   const fincasAprobadas = identidad.fincas.filter((f) => f.estado === "aprobado");
-  // Gestor multiempresa (varios generadores con el mismo teléfono): el
-  // saludo no puede ser el nombre de UNA empresa arbitraria.
+  // Gestor multi-titular (varios generadores con el mismo teléfono): el
+  // saludo no puede ser el nombre de UN titular arbitrario. Puede ser un
+  // gestor gremial (empresas) o un líder veredal (productores campesinos).
   const nGens = identidad.generadores.length;
+  const hayJur = identidad.generadores.some((g) => esEmpresa(g.tipopersona));
+  const hayNat = identidad.generadores.some((g) => !esEmpresa(g.tipopersona));
+  const termino = hayJur && hayNat ? "registros" : hayJur ? "empresas" : "productores";
   const nombreCorto =
     nGens > 1
-      ? `gestor de ${nGens} empresas`
+      ? `gestor de ${nGens} ${termino}`
       : truncar(generador.nombre, 40);
   const esJuridica = esEmpresa(generador.tipopersona);
   const generadorEnRevision = generador.estado === "pendiente_revision";

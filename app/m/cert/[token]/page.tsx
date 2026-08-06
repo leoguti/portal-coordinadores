@@ -20,6 +20,7 @@ const MunicipioSearch = dynamic(() => import("@/components/MunicipioSearch"), {
 
 interface Finca {
   generadorNombre?: string;
+  generadorTipopersona?: string;
   id: string;
   nombre: string;
   generadorId: string;
@@ -227,6 +228,19 @@ export default function CertNuevoPage({
   // certificado jamás salga a nombre de la razón social equivocada.
   const esMultiempresa =
     new Set(payload.fincasDisponibles.map((f) => f.generadorId)).size > 1;
+  // El gestor puede administrar empresas (gremial), productores campesinos
+  // (líder veredal) o una mezcla — el texto se adapta.
+  const hayJuridicas = payload.fincasDisponibles.some((f) =>
+    (f.generadorTipopersona || "").includes("jur")
+  );
+  const hayNaturales = payload.fincasDisponibles.some(
+    (f) => !(f.generadorTipopersona || "").includes("jur")
+  );
+  const terminoTitulares = hayJuridicas && hayNaturales
+    ? "empresas y productores"
+    : hayJuridicas
+      ? "empresas"
+      : "productores";
   const fincasOrdenadas = esMultiempresa
     ? [...payload.fincasDisponibles].sort(
         (a, b) =>
@@ -240,7 +254,7 @@ export default function CertNuevoPage({
       titulo="Nuevo certificado"
       subtitulo={
         esMultiempresa
-          ? `Gestionas ${new Set(payload.fincasDisponibles.map((f) => f.generadorId)).size} empresas`
+          ? `Gestionas ${new Set(payload.fincasDisponibles.map((f) => f.generadorId)).size} ${terminoTitulares}`
           : payload.generador?.nombre || ""
       }
     >
@@ -249,14 +263,14 @@ export default function CertNuevoPage({
           <h2 className="font-medium text-gray-900 mb-3">Datos generales</h2>
 
           {hayVariasFincas ? (
-            <Field label={esMultiempresa ? "Empresa y finca" : "Finca"} required>
+            <Field label={esMultiempresa ? "Titular y finca" : "Finca"} required>
               <select
                 value={fincaId}
                 onChange={(e) => setFincaId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base"
               >
                 <option value="">
-                  {esMultiempresa ? "— Selecciona la empresa y finca —" : "— Selecciona una finca —"}
+                  {esMultiempresa ? "— Selecciona titular y finca —" : "— Selecciona una finca —"}
                 </option>
                 {fincasOrdenadas.map((f) => (
                   <option key={f.id} value={f.id}>
