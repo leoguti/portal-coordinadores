@@ -322,6 +322,9 @@ export default function NuevaOrdenV2Page() {
           razonSocial: beneficiario.razonSocial,
           nit: beneficiario.nit || "N/A",
           direccion: beneficiario.direccion || "N/A",
+          // Sin esto el email de la orden salía con "to" vacío y solo le
+          // llegaba al coordinador (CC) — el proveedor nunca lo recibía.
+          email: beneficiario.correo,
         }
       );
 

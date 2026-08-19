@@ -25,7 +25,10 @@ export interface OrdenSemaforoFields {
   Estado?: string;
   "Fecha de pedido"?: string;
   Factura?: Array<{ url?: string }>;
+  Coordinador?: string[];
   NombreCoordinador?: string[];
+  Beneficiario?: string[];
+  RazonSocial?: string[];
 }
 
 export interface OrdenSemaforo {
@@ -39,6 +42,13 @@ export interface OrdenEnMora {
   fechaPedido: string;
   dias: number;
   coordinador: string;
+  /** Record ID del coordinador (linked) — lo usa el cron de avisos para
+   *  resolver su email. Vacío si la orden no tiene coordinador. */
+  coordinadorId: string;
+  /** Record ID y razón social del tercero beneficiario — el cron también
+   *  le avisa al proveedor a los 40 días que su factura está pendiente. */
+  beneficiarioId: string;
+  beneficiario: string;
 }
 
 /**
@@ -88,6 +98,9 @@ export function semaforoDeOrdenes(
       fechaPedido: orden.fields["Fecha de pedido"] || "",
       dias,
       coordinador: orden.fields.NombreCoordinador?.[0] || "",
+      coordinadorId: orden.fields.Coordinador?.[0] || "",
+      beneficiarioId: orden.fields.Beneficiario?.[0] || "",
+      beneficiario: orden.fields.RazonSocial?.[0] || "",
     };
     if (color === "rojo") rojas.push(entrada);
     else amarillas.push(entrada);
