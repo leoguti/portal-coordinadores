@@ -246,6 +246,108 @@ Ventajas reales de hacerlo así:
 
 **Si no hay contador comprometido con el proyecto**, entonces cambia la recomendación: ir por **Siigo o Alegra (SaaS colombiano)**. Menos ambicioso pero más sostenible sin expertise contable interna.
 
+---
+
+# ACTUALIZACIÓN — Retoma del proyecto (2026-08-19)
+
+## Novedades
+
+- **Ángela está animada y quiere activar el ERP en CampoLimpio.** Hay respaldo institucional para avanzar — esto despeja parcialmente la pregunta de compromiso organizacional de la Fase 0.
+- **El sistema contable actual es Helisa** (el doc original lo llamaba "sistema contable muy básico" sin nombrarlo). Ver sección "Helisa" abajo.
+
+## Helisa — investigación (2026-08-19)
+
+### Qué es hoy
+
+- Software de **Proasistemas S.A.** (Bogotá, desde 1988). Vivo y con releases en 2026, pero de estirpe escritorio: cliente-servidor Windows sobre **Firebird** (en jun-2026 apenas migraron de Firebird 2.5 → 3.0, motor de 2016 — ilustra el ritmo tecnológico). Producto principal actual: **Helisa N.I.** (NIIF + fiscal); "Helisa GW" es el nombre histórico. Existe **Helisa Cloud** (mismo software hospedado por ellos, no app web nativa): Básico $192.780 / Estándar $249.480 / Plus $396.900 COP/mes.
+- **Cumplimiento normativo completo**: facturación electrónica integrada (ATEB Colombia S.A.S., empresa de Proasistemas, es **proveedor tecnológico habilitado DIAN** desde 2017), nómina electrónica, documento soporte, e **Información Exógena** (producto aparte que genera/valida el XML para MUISCA).
+- Percepción: tercero en rankings CO 2026, valorado por profundidad contable "tradicional"; Siigo/Alegra dominan la conversación. No hay herramienta oficial de migración Helisa→otro; la vía estándar es exportar a Excel.
+
+### 🔑 HALLAZGO CLAVE: Helisa tiene API oficial — "Helisa Conekta"
+
+- **Bidireccional y documentada** (helisa.com/producto/helisa-conekta, helisa.com/api):
+  - **POST**: inserción de **documentos contables/asientos** (con cuenta PUC, débito/crédito, tercero NIT/CC, centro de costo, concepto, base gravable), órdenes de compra, productos, creación/actualización de terceros.
+  - **GET**: saldos, cartera, existencias, balance general, estado de resultados, cartillas.
+  - JSON vía HTTP POST + autenticación **HMAC** del payload. El servidor **valida partida doble y rechaza duplicados** (códigos de error específicos: asiento descuadrado, documento duplicado).
+  - Endpoint de ejemplo en la doc: `http://webconekta.helisa.com:9590/...` — ⚠️ aparece en HTTP con puerto no estándar; **confirmar HTTPS con Proasistemas antes de enviar datos reales**.
+- **Costo: $211.680 COP/mes** (un mes gratis pagando año anticipado).
+- **Plan B gratuito**: módulo "Transferencia de Datos → Importar → Movimiento Contable" — carga asientos desde **Excel .xls** (formato 97-2003) con mapeo de columnas y validación previa; restricción: un archivo = un mes. También importa cartillas de cuentas y terceros.
+- **Pendiente confirmar con Proasistemas**: HTTPS, si Conekta aplica a la edición/licencia que tiene CampoLimpio, versión mínima de Helisa requerida, SLA.
+
+### Implicación: la decisión ahora tiene TRES rutas
+
+| | **Ruta 0: Quedarse en Helisa + Conekta** | **Ruta A: Odoo Online** | **Ruta B: Odoo Community self-hosted** |
+|---|---|---|---|
+| Cambio para contabilidad | **Ninguno** (siguen en Helisa) | Alto (nuevo sistema, capacitación, migración saldos) | Alto (ídem) |
+| Trabajo técnico nuestro | Solo el conector portal→Conekta (JSON+HMAC desde API route) — semanas, no meses | Conector + configuración Odoo + migración | Todo lo anterior + VPS/DevOps + fact. electrónica OCA/Jorels |
+| Costo recurrente | ~$212k COP/mes Conekta (o $0 con importador .xls) + licencia Helisa actual | ~$8.95 USD/us/mes + partner por horas | VPS + API Jorels por consumo + retainer partner |
+| Cumplimiento DIAN | Ya resuelto (ATEB habilitado, exógena, nómina) | Odoo lo mantiene (`l10n_co_dian`) | Responsabilidad propia ("software propio") |
+| Lo que NO gana | Sigue siendo escritorio/Firebird; sin compras/inventario/reportería moderna integrada | — | — |
+| Riesgo | Bajo | Medio | Alto |
+
+**Lectura**: el argumento original del doc para el ERP era que pasar datos a contabilidad era manual. **Conekta elimina ese dolor sin migrar de sistema**: el portal puede empujar asientos automáticamente (con tercero y centro de costo) y Helisa valida partida doble y duplicados. La Ruta 0 captura la mayor parte del valor con una fracción del riesgo y del esfuerzo, y **no cierra la puerta**: si en 1-2 años Helisa queda corto, la integración portal→contabilidad ya construida se re-apunta a Odoo (el mapeo contable ya estaría hecho y probado). El ERP completo (Rutas A/B) solo se justifica si CampoLimpio necesita lo que Helisa no da: compras/inventario integrados, multiusuario web, reportería gerencial moderna.
+- Leonardo se inclina por la **implementación propia** (modelo híbrido del addendum: Leonardo + Claude en lo técnico, partner por horas para localización/DIAN, contador validando flujos), apoyado en la experiencia acumulada con el portal.
+
+## Preocupaciones expresadas al retomar
+
+1. **Cambio de tecnología**: el portal es Next.js/TypeScript; Odoo es Python + su propio framework ORM/XML. Riesgo percibido: meterse en terreno difícil.
+2. **Comunicación portal ↔ ERP**: cómo se integra lo ya construido (Airtable, kardex, caja menor, OS, certificados) con el ERP sin romper la operación actual.
+
+## Verificación de afirmaciones del addendum de abril (hecha 2026-08-19)
+
+Se verificaron en la web las afirmaciones clave del addendum. Veredictos:
+
+### ⚠️ CORRECCIÓN CRÍTICA: `l10n_co_dian` NO es Community
+
+El addendum decía que Odoo 18 traía conexión directa DIAN "Software Propio" **gratis** vía `l10n_co_dian`. Verificado contra GitHub: ese módulo **no existe en el repo Community** (`odoo/odoo`, ramas 18.0 y 19.0) — es **Enterprise** (vive en `odoo/enterprise`, licencia OEEL). El anuncio oficial lo confirma: disponible en SaaS 17.4+ y Odoo 18 en Odoo.sh/On Premise, modalidades que requieren suscripción Enterprise.
+
+**Rutas reales de facturación electrónica en Community**:
+1. Módulo OCA `l10n_co_electronic_invoice_self` (Software Propio, disponible 18.0 y portado a 19.0)
+2. Jorels (ver abajo)
+3. Proveedores pagos (Carvajal vía `l10n_co_edi`, etc.)
+
+### 💰 A FAVOR: geopricing — Odoo Online cuesta $8.95 USD/usuario/mes en Colombia
+
+El "~$30 USD/usuario/mes" del doc original es el precio de EE.UU. Odoo cobra por país: **Colombia paga Standard $8.95 / Custom $13.60 USD/usuario/mes** (facturación anual). Con 3-5 usuarios contables: ~$27-68 USD/mes, sin DevOps, con `l10n_co_dian` (conexión DIAN oficial) incluido. Esto debilita el argumento económico de Community self-hosted. Trade-off: Odoo Online (Standard) no permite módulos custom propios; para eso se necesita Odoo.sh o Custom/on-premise Enterprise.
+
+### Jorels — CONFIRMADO vivo y activo, con matices
+
+- Monorepo `jorels-odoo-addons` (GitLab principal, espejo GitHub) con ramas 12.0–19.0, **todas con commits del 2-ago-2026**. Licencia LGPL-3 confirmada. Incluye POS, nómina electrónica, salud.
+- **Matiz "gratis"**: los módulos son libres, pero se conectan a la **API de Jorels que se paga por consumo de documentos** (planes "desde $0 COP"; capacitación $312.000 COP + IVA).
+- **Jorels NO es proveedor tecnológico habilitado DIAN** (verificado contra el listado oficial DIAN del 6-ago-2026). Opera bajo la figura de **"software propio"**: cada cliente registra el software a su nombre ante la DIAN y la responsabilidad regulatoria recae en el facturador (CampoLimpio), no en Jorels.
+- Madurez: 7 años de desarrollo, 8 versiones mantenidas, ~666 descargas, +300 empresas (auto-reportado). Cautela: casi ninguna reseña pública independiente; issues de GitHub sin respuesta desde 2024 (soporte por canales privados).
+- Empresa activa: Jorels S.A.S., NIT 901.410.078-1, Bogotá.
+
+### Otros veredictos
+
+| Afirmación (abril) | Veredicto (agosto) |
+|---|---|
+| PUC oficial viene con `l10n_co` (Community) | ✅ CONFIRMADA |
+| OCA l10n-colombia activo, 4 módulos, rama 18.0 | 🔄 Sigue activo (commit jul-2026); ahora **5 módulos** en 18.0 (se sumó `l10n_co_check_vat`, jun-2026); **ya existe rama 19.0** con 3 módulos |
+| Versión Odoo | 🔄 La estable actual es **Odoo 19** (sept-2025, localización CO completa); Odoo 20 esperado ~oct-2026 |
+| 29 partners Colombia (7G/5S/17R) | 🔄 Ahora **43** (8 Gold / 8 Silver / 27 Ready) — ecosistema creció ~48% |
+| ConsultoresOdooColombia desde $4.9M COP | 🚩 **Sitio bloqueado por suscripción vencida** — no verificable; descartarlo como candidato |
+| Backendevs USD 300/año | ✅ CONFIRMADA (vigente; implementación aparte) |
+| Odoo Online ~$30 USD/us/mes | 🔄 Colombia: **$8.95 / $13.60** (geopricing) |
+| Siigo $50-200 USD/mes | 🔄 Real: ~$36-52 USD/mes (146k-208k COP, plan anual); ya no publican precios abiertamente |
+| Alegra $30-100 USD/mes | 🔄 Real: ~$18-78 USD/mes (Contabilidad); solo facturación desde ~$4 USD/mes |
+| Siigo API "menos flexible" | 🔄 Matizar: ambas tienen API REST pública documentada; Alegra suma webhooks + OpenAPI (la más amigable para integrar) |
+
+### Implicación para la decisión
+
+La disyuntiva ya no es "Community self-hosted vs partner caro". Las dos rutas viables hoy:
+
+| | **A: Odoo Online (Enterprise SaaS)** | **B: Community self-hosted + OCA/Jorels** |
+|---|---|---|
+| Costo licencias | $8.95 USD/us/mes (~$27-45/mes con 3-5 usuarios) | $0 licencias + VPS $30-100/mes + API Jorels por consumo |
+| DevOps | Ninguno (Odoo lo opera) | VPS, backups, upgrades anuales propios |
+| Facturación DIAN | `l10n_co_dian` oficial incluido | OCA `_self` o Jorels ("software propio", responsabilidad propia) |
+| Módulos custom | ❌ No en Standard (sí en Odoo.sh, más caro) | ✅ Total libertad |
+| Integración portal↔ERP | ✅ API XML-RPC/JSON-RPC disponible igual | ✅ Igual |
+| Riesgo actualización DIAN | Odoo la mantiene | Depende de OCA/Jorels + nosotros |
+
+La integración portal↔Odoo (el valor diferencial nuestro) funciona igual en ambas rutas — la API externa de Odoo está disponible en Online y Community. La pregunta decisiva pasa a ser: **¿cuánto módulo custom necesitamos dentro de Odoo?** Si la personalización vive en el portal (que sigue siendo la fuente operativa) y Odoo solo recibe transacciones, la ruta A es más barata en esfuerzo total y más segura en DIAN.
+
 ## Fuentes investigación
 - OCA/l10n-colombia: https://github.com/OCA/l10n-colombia
 - Partners Odoo Colombia: https://www.odoo.com/partners/country/colombia-47
