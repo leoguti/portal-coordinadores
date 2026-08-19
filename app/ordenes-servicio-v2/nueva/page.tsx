@@ -16,12 +16,14 @@ import { type ImageFile } from "@/components/ImageUpload";
 import {
   getKardexPorPagar,
   getRubros,
+  getOrdenesCoordinador,
   createOrdenServicio,
   updateTercero,
   type Kardex,
   type Rubro,
   type CreateItemOrdenParams,
 } from "@/lib/airtable";
+import { semaforoDeOrdenes, DIAS_BLOQUEO, type OrdenEnMora } from "@/lib/ordenesSemaforo";
 
 interface TerceroSeleccionado {
   id: string;
@@ -56,6 +58,9 @@ export default function NuevaOrdenV2Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Semáforo de facturación: órdenes Enviada sin factura ≥60 días bloquean
+  // la creación (el servidor valida igual; esto es el reflejo en la UI).
+  const [ordenesRojas, setOrdenesRojas] = useState<OrdenEnMora[]>([]);
 
   // Wizard form data
   const [kardexSeleccionados, setKardexSeleccionados] = useState<Kardex[]>([]);
@@ -83,12 +88,14 @@ export default function NuevaOrdenV2Page() {
       try {
         setLoading(true);
         setError(null);
-        const [kardexData, rubrosData] = await Promise.all([
+        const [kardexData, rubrosData, ordenesData] = await Promise.all([
           getKardexPorPagar(session.user.coordinatorRecordId),
           getRubros(),
+          getOrdenesCoordinador(session.user.coordinatorRecordId),
         ]);
         setKardexDisponibles(kardexData);
         setRubrosDisponibles(rubrosData);
+        setOrdenesRojas(semaforoDeOrdenes(ordenesData).rojas);
       } catch (err) {
         console.error("Error loading data:", err);
         setError("Error al cargar los datos");
@@ -391,6 +398,43 @@ export default function NuevaOrdenV2Page() {
 
   if (!session) {
     return null;
+  }
+
+  // Bloqueo por semáforo: pantalla completa en lugar del wizard.
+  if (ordenesRojas.length > 0) {
+    return (
+      <AuthenticatedLayout>
+        <div className="max-w-3xl mx-auto mt-12">
+          <div className="p-6 bg-red-50 border-2 border-red-300 rounded-lg">
+            <h1 className="text-2xl font-bold text-red-800 mb-3">
+              🔴 No puedes crear órdenes nuevas
+            </h1>
+            <p className="text-red-700 mb-3">
+              {ordenesRojas.length === 1 ? "Tienes una orden" : `Tienes ${ordenesRojas.length} órdenes`} con más de {DIAS_BLOQUEO} días esperando la factura del transportador:
+            </p>
+            <ul className="text-red-700 mb-4 space-y-1">
+              {ordenesRojas.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/ordenes-servicio/${r.id}`} className="font-bold underline">
+                    Orden #{r.numero}
+                  </Link>{" "}
+                  — {r.dias} días sin factura (pedido del {r.fechaPedido})
+                </li>
+              ))}
+            </ul>
+            <p className="text-red-700 text-sm mb-5">
+              Consigue la factura con el transportador y envíala a administración. El bloqueo se libera automáticamente en el momento en que la orden pase a Facturada.
+            </p>
+            <Link
+              href="/ordenes-servicio"
+              className="inline-block px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Volver a mis órdenes
+            </Link>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    );
   }
 
   const pasoTitulos: Record<number, string> = {

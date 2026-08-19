@@ -9,6 +9,7 @@ import { getOrdenesCoordinador, getAllOrdenes, computeConceptosOrdenes, type Ord
 import { puedeModificarFecha } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
+import { semaforoDeOrdenes, diasSinFactura, DIAS_AVISO, DIAS_BLOQUEO } from "@/lib/ordenesSemaforo";
 import {
   reflejarFiltrosEnUrl,
   leerExpandidosGuardados,
@@ -169,6 +170,12 @@ function OrdenesServicioPageInner() {
     return conceptoColorPalette[Math.abs(hash) % conceptoColorPalette.length];
   };
 
+  // --- Semáforo de facturación ---
+  // Para el coordinador: sus propias órdenes (bloquea crear en rojo).
+  // Para admin: todas — sirve de vista de control por coordinador.
+  const semaforo = semaforoDeOrdenes(ordenes);
+  const creacionBloqueada = !canViewAll && semaforo.rojas.length > 0;
+
   // --- Filtros ---
   const coordinadoresUnicos = [...new Set(ordenes.map(o => o.fields.NombreCoordinador?.[0] || "").filter(Boolean))].sort();
   const beneficiariosUnicos = [...new Set(ordenes.map(o => o.fields.RazonSocial?.[0] || "").filter(Boolean))].sort();
@@ -285,14 +292,76 @@ function OrdenesServicioPageInner() {
                 {exportingPDF ? "Generando..." : "Exportar PDF"}
               </button>
             )}
-            <Link
-              href="/ordenes-servicio-v2/nueva"
-              className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
-            >
-              + Nueva Orden
-            </Link>
+            {creacionBloqueada ? (
+              <span
+                title={`Tienes órdenes con más de ${DIAS_BLOQUEO} días sin factura`}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
+              >
+                + Nueva Orden
+              </span>
+            ) : (
+              <Link
+                href="/ordenes-servicio-v2/nueva"
+                className="px-4 py-2 bg-[#00d084] hover:bg-[#00a868] text-white rounded-lg transition-colors font-medium"
+              >
+                + Nueva Orden
+              </Link>
+            )}
           </div>
         </div>
+
+        {/* Semáforo de facturación */}
+        {!loading && !canViewAll && semaforo.rojas.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+            <p className="font-bold text-red-800 mb-1">
+              🔴 No puedes crear órdenes nuevas
+            </p>
+            <p className="text-sm text-red-700">
+              {semaforo.rojas.length === 1 ? "Tienes una orden" : `Tienes ${semaforo.rojas.length} órdenes`} con más de {DIAS_BLOQUEO} días esperando factura:{" "}
+              {semaforo.rojas.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/ordenes-servicio/${r.id}`} className="font-bold underline">#{r.numero}</Link> ({r.dias} días)
+                </span>
+              ))}
+              . Consigue la factura con el transportador y envíala a administración — el bloqueo se libera automáticamente cuando la orden pase a Facturada.
+            </p>
+          </div>
+        )}
+        {!loading && !canViewAll && semaforo.rojas.length === 0 && semaforo.amarillas.length > 0 && (
+          <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+            <p className="font-bold text-yellow-800 mb-1">
+              🟡 Órdenes próximas a bloquearte
+            </p>
+            <p className="text-sm text-yellow-800">
+              {semaforo.amarillas.length === 1 ? "Tienes una orden" : `Tienes ${semaforo.amarillas.length} órdenes`} con más de {DIAS_AVISO} días esperando factura:{" "}
+              {semaforo.amarillas.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/ordenes-servicio/${r.id}`} className="font-bold underline">#{r.numero}</Link> ({r.dias} días)
+                </span>
+              ))}
+              . A los {DIAS_BLOQUEO} días no podrás crear órdenes nuevas. Consigue la factura con el transportador y envíala a administración.
+            </p>
+          </div>
+        )}
+        {!loading && canViewAll && (semaforo.rojas.length > 0 || semaforo.amarillas.length > 0) && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+            <p className="font-bold text-amber-900 mb-2">
+              Semáforo de facturación — {semaforo.rojas.length + semaforo.amarillas.length} {semaforo.rojas.length + semaforo.amarillas.length === 1 ? "orden" : "órdenes"} con más de {DIAS_AVISO} días sin factura
+            </p>
+            <ul className="text-sm text-amber-900 space-y-1">
+              {[...semaforo.rojas, ...semaforo.amarillas].map((r) => (
+                <li key={r.id}>
+                  {r.dias >= DIAS_BLOQUEO ? "🔴" : "🟡"}{" "}
+                  <Link href={`/ordenes-servicio/${r.id}`} className="font-bold underline">#{r.numero}</Link>
+                  {" — "}{r.dias} días · {r.coordinador || "Sin coordinador"} · pedido del {r.fechaPedido ? formatDate(r.fechaPedido) : "?"}
+                  {r.dias >= DIAS_BLOQUEO && <span className="font-medium"> · coordinador bloqueado para crear órdenes</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="mb-6 bg-white rounded-lg shadow border border-gray-200 p-4">
@@ -482,6 +551,8 @@ function OrdenesServicioPageInner() {
                                           const facturaUrl = orden.fields.Factura?.[0]?.url || null;
                                           const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
                                           const tags = conceptos[orden.id] || [];
+                                          const diasMora = diasSinFactura(orden.fields);
+                                          const enMora = diasMora !== null && diasMora >= DIAS_AVISO;
 
                                           return (
                                             <tr key={orden.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/50 transition-colors`}>
@@ -509,6 +580,14 @@ function OrdenesServicioPageInner() {
                                                 <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded ${estadoColors[estado] || "bg-gray-100 text-gray-800"}`}>
                                                   {estado}
                                                 </span>
+                                                {enMora && (
+                                                  <span
+                                                    title={`${diasMora} días sin factura`}
+                                                    className={`mt-1 block px-2 py-0.5 text-xs font-bold rounded whitespace-nowrap ${diasMora! >= DIAS_BLOQUEO ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
+                                                  >
+                                                    {diasMora! >= DIAS_BLOQUEO ? "🔴" : "🟡"} {diasMora} d sin factura
+                                                  </span>
+                                                )}
                                               </td>
                                               <td className="px-2 py-2.5 text-right font-mono text-xs text-gray-700">
                                                 {formatCurrency(subtotalOrden)}

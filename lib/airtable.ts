@@ -1037,6 +1037,29 @@ export async function createOrdenServicio(
       }
     }
 
+    // ─── Validación: semáforo de facturación del coordinador ─────────────────
+    // Órdenes Enviada sin factura ≥60 días bloquean la creación de nuevas
+    // (política 2026-06-17). Si Airtable falla acá NO se bloquea: es regla
+    // de negocio, no de seguridad.
+    try {
+      const { semaforoDeOrdenes, DIAS_BLOQUEO } = await import("./ordenesSemaforo");
+      const ordenesCoord = await getOrdenesCoordinador(params.coordinatorRecordId);
+      const { rojas } = semaforoDeOrdenes(ordenesCoord);
+      if (rojas.length > 0) {
+        const lista = rojas
+          .map((r) => `#${r.numero} (${r.dias} días sin factura, pedido del ${r.fechaPedido})`)
+          .join(", ");
+        return {
+          validationError:
+            rojas.length === 1
+              ? `Tienes una orden con más de ${DIAS_BLOQUEO} días esperando factura: ${lista}. No puedes crear órdenes nuevas hasta que administración reciba y suba esa factura. Consigue la factura con el transportador y envíala a Bogotá.`
+              : `Tienes ${rojas.length} órdenes con más de ${DIAS_BLOQUEO} días esperando factura: ${lista}. No puedes crear órdenes nuevas hasta que administración reciba y suba esas facturas. Consíguelas con los transportadores y envíalas a Bogotá.`,
+        };
+      }
+    } catch (err) {
+      console.warn("[semaforo] error consultando ordenes del coordinador, se permite crear:", err);
+    }
+
     // ─── Auto-asignar coordinador_responsable si el tercero no tiene ─────────
     const tieneResponsable = (terceroFields.coordinador_responsable || []).length > 0;
     if (!tieneResponsable && params.coordinatorRecordId) {
