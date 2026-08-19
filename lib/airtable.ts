@@ -153,6 +153,10 @@ interface OrdenFields {
     thumbnails?: { small?: { url: string }; large?: { url: string } };
   }>;
   FechaFactura?: string;
+  // Reapertura para corrección (ver lib/ordenesReapertura.ts)
+  reabierta_hasta?: string;
+  reapertura_motivo?: string;
+  reapertura_por?: string;
   PorcentajeIVA?: number;
   MontoIVA?: number;
   PorcentajeReteFuente?: number;
@@ -3184,6 +3188,41 @@ export async function updateEstadoOrden(
     return true;
   } catch (error) {
     console.error(`Error updating estado of Orden ${ordenId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Marca o limpia la reapertura para corrección de una orden
+ * (ver lib/ordenesReapertura.ts). Pasar null en los campos para cerrar.
+ */
+export async function setReaperturaOrden(
+  ordenId: string,
+  campos: {
+    reabierta_hasta: string | null;
+    reapertura_motivo: string | null;
+    reapertura_por: string | null;
+  }
+): Promise<boolean> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) {
+    console.error("Airtable credentials not configured");
+    return false;
+  }
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: campos }),
+    });
+    if (!res.ok) {
+      console.error(`Error setting reapertura on Orden ${ordenId}:`, await res.text());
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`Error setting reapertura on Orden ${ordenId}:`, error);
     return false;
   }
 }

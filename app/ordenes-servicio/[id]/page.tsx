@@ -8,6 +8,7 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenById, getItemsOrden, getKardexByIds, getRubrosByIds, type Orden, type ItemOrden, type Kardex, type Rubro } from "@/lib/airtable";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import { useVolverAlListado } from "@/lib/listadoFiltrosNav";
+import { estaReabierta, puedeReabrirse, DIAS_REAPERTURA } from "@/lib/ordenesReapertura";
 
 export default function OrdenDetallePage() {
   const params = useParams();
@@ -209,6 +210,60 @@ export default function OrdenDetallePage() {
     }
   }
 
+  async function handleReabrir() {
+    const motivo = window.prompt(
+      `Reabrir esta orden para corrección:\n\nDurante ${DIAS_REAPERTURA} días el coordinador podrá eliminarla y rehacerla aunque el mes esté cerrado (los kardex vuelven a "Por Pagar").\n\nEscribe el motivo de la reapertura:`
+    );
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      setActionMessage({ type: "error", text: "El motivo de la reapertura es obligatorio" });
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setActionMessage(null);
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reabrir", motivo: motivo.trim() }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMessage({ type: "success", text: data.message });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al reabrir la orden" });
+      }
+    } catch {
+      setActionMessage({ type: "error", text: "Error al reabrir la orden" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleCerrarReapertura() {
+    try {
+      setActionLoading(true);
+      setActionMessage(null);
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cerrar-reapertura" }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMessage({ type: "success", text: data.message });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al cerrar la reapertura" });
+      }
+    } catch {
+      setActionMessage({ type: "error", text: "Error al cerrar la reapertura" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   async function handleRegenerarPDF() {
     setRegeneratingPDF(true);
     setActionMessage(null);
@@ -313,6 +368,7 @@ export default function OrdenDetallePage() {
   const beneficiario = orden.fields.RazonSocial?.[0] || "Sin beneficiario";
   const coordinador = orden.fields.NombreCoordinador?.[0] || "Sin coordinador";
   const estado = orden.fields.Estado || "Sin estado";
+  const reabierta = estaReabierta(orden.fields);
   const observaciones = orden.fields.Observaciones || "";
   const total = orden.fields.Total || 0;
   const itemsCount = orden.fields.ItemsOrden?.length || 0;
@@ -411,6 +467,22 @@ export default function OrdenDetallePage() {
           </div>
         )}
 
+        {/* Banner de reapertura para corrección */}
+        {reabierta && (
+          <div className="mb-4 p-4 rounded-lg border-2 bg-orange-50 border-orange-300">
+            <p className="font-bold text-orange-800 mb-1">
+              🔓 Orden reabierta para corrección hasta el {orden.fields.reabierta_hasta?.slice(0, 10)}
+            </p>
+            <p className="text-sm text-orange-800">
+              {orden.fields.reapertura_por ? `Reabierta por ${orden.fields.reapertura_por}. ` : ""}
+              Motivo: {orden.fields.reapertura_motivo || "—"}
+            </p>
+            <p className="text-sm text-orange-700 mt-1">
+              Mientras esté reabierta, la orden puede <strong>eliminarse aunque el mes esté cerrado</strong> — sus kardex vuelven a &quot;Por Pagar&quot; y podrás usarlos en la orden corregida. La marca se apaga sola al vencer.
+            </p>
+          </div>
+        )}
+
         {/* Action messages */}
         {actionMessage && (
           <div className={`mb-4 p-4 rounded-lg border ${
@@ -457,6 +529,27 @@ export default function OrdenDetallePage() {
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {actionLoading ? "Procesando..." : "Rechazar Orden"}
+                </button>
+              )}
+
+              {/* Reabrir para corrección - Enviada/Borrador con mes cerrado */}
+              {puedeReabrirse(orden.fields) && !reabierta && (
+                <button
+                  onClick={handleReabrir}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={`Permite al coordinador eliminar y rehacer esta orden durante ${DIAS_REAPERTURA} días aunque el mes esté cerrado`}
+                >
+                  🔓 Reabrir para corrección
+                </button>
+              )}
+              {reabierta && (
+                <button
+                  onClick={handleCerrarReapertura}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cerrar reapertura
                 </button>
               )}
 

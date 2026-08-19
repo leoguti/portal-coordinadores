@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds, setReaperturaOrden } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
+import { estaReabierta } from "@/lib/ordenesReapertura";
 
 // Allow up to 60 seconds for PDF regeneration (fetches images, generates PDF, uploads)
 export const maxDuration = 60;
@@ -45,9 +46,14 @@ export async function DELETE(
       );
     }
 
+    // Reapertura para corrección: si un admin marcó la orden como reabierta
+    // (y la marca sigue vigente), se saltan las validaciones de fecha — la
+    // cascada de deleteOrdenServicio devuelve los kardex a "Por Pagar".
+    const reabierta = estaReabierta(orden.fields);
+
     // Validar restricción de fecha (regla de 7 días)
     const fechaPedido = orden.fields["Fecha de pedido"];
-    if (fechaPedido && !puedeModificarFecha(fechaPedido)) {
+    if (!reabierta && fechaPedido && !puedeModificarFecha(fechaPedido)) {
       return NextResponse.json(
         { error: getMensajeErrorFecha() },
         { status: 403 }
@@ -60,7 +66,7 @@ export async function DELETE(
       .filter(item => item.fields.Kardex && item.fields.Kardex.length > 0)
       .map(item => item.fields.Kardex![0]);
 
-    if (kardexIds.length > 0) {
+    if (!reabierta && kardexIds.length > 0) {
       const kardexRecords = await getKardexByIds(kardexIds);
       const kardexFueraFecha = kardexRecords.filter(
         k => k.fields.fechakardex && !puedeModificarFecha(k.fields.fechakardex)
@@ -244,6 +250,56 @@ export async function PATCH(
             { status: 500 }
           );
         }
+      }
+
+      // ─── Reapertura para corrección ─────────────────────────────────────
+      // Admin marca la orden para que el coordinador pueda eliminarla y
+      // rehacerla aunque el mes esté cerrado. Vence sola a los 7 días.
+      if (action === "reabrir") {
+        const motivo = String(body.motivo || "").trim();
+        if (!motivo) {
+          return NextResponse.json(
+            { error: "El motivo de la reapertura es obligatorio" },
+            { status: 400 }
+          );
+        }
+        const orden = await getOrdenById(ordenId);
+        if (!orden) {
+          return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
+        }
+        const { puedeReabrirse, DIAS_REAPERTURA } = await import("@/lib/ordenesReapertura");
+        if (!puedeReabrirse(orden.fields)) {
+          return NextResponse.json(
+            { error: `Solo se pueden reabrir órdenes en estado Enviada o Borrador (esta está "${orden.fields.Estado}")` },
+            { status: 400 }
+          );
+        }
+        const hasta = new Date(Date.now() + DIAS_REAPERTURA * 86400000).toISOString();
+        const ok = await setReaperturaOrden(ordenId, {
+          reabierta_hasta: hasta,
+          reapertura_motivo: motivo,
+          reapertura_por: session.user.name || session.user.email || "Administrador",
+        });
+        if (!ok) {
+          return NextResponse.json({ error: "Error al reabrir la orden" }, { status: 500 });
+        }
+        return NextResponse.json({
+          success: true,
+          message: `Orden reabierta para corrección hasta ${hasta.slice(0, 10)}`,
+          reabiertaHasta: hasta,
+        });
+      }
+
+      if (action === "cerrar-reapertura") {
+        const ok = await setReaperturaOrden(ordenId, {
+          reabierta_hasta: null,
+          reapertura_motivo: null,
+          reapertura_por: null,
+        });
+        if (!ok) {
+          return NextResponse.json({ error: "Error al cerrar la reapertura" }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, message: "Reapertura cerrada" });
       }
 
       if (action !== "cambiar-estado") {

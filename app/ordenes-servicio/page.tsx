@@ -10,6 +10,7 @@ import { puedeModificarFecha } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 import { semaforoDeOrdenes, diasSinFactura, DIAS_AVISO, DIAS_BLOQUEO } from "@/lib/ordenesSemaforo";
+import { estaReabierta } from "@/lib/ordenesReapertura";
 import {
   reflejarFiltrosEnUrl,
   leerExpandidosGuardados,
@@ -129,9 +130,14 @@ function OrdenesServicioPageInner() {
     return `${nombres[parseInt(month) - 1]} ${year}`;
   };
 
-  const puedeEliminarOrden = (fechaPedido: string, estado: string): boolean => {
+  const puedeEliminarOrden = (orden: Orden): boolean => {
+    const fechaPedido = orden.fields["Fecha de pedido"] || "";
+    const estado = orden.fields.Estado || "";
     if (!fechaPedido) return false;
     if (estado === "Facturada" || estado === "Pagada") return false;
+    // Reabierta para corrección por un admin: se puede eliminar aunque
+    // el mes esté cerrado (la cascada libera los kardex).
+    if (estaReabierta(orden.fields)) return true;
     return puedeModificarFecha(fechaPedido);
   };
 
@@ -549,10 +555,11 @@ function OrdenesServicioPageInner() {
                                             : subtotalOrden;
                                           const pdfUrl = orden.fields.PDF?.[0]?.url || null;
                                           const facturaUrl = orden.fields.Factura?.[0]?.url || null;
-                                          const puedeEliminar = puedeEliminarOrden(fechaPedido, estado);
+                                          const puedeEliminar = puedeEliminarOrden(orden);
                                           const tags = conceptos[orden.id] || [];
                                           const diasMora = diasSinFactura(orden.fields);
                                           const enMora = diasMora !== null && diasMora >= DIAS_AVISO;
+                                          const reabierta = estaReabierta(orden.fields);
 
                                           return (
                                             <tr key={orden.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/50 transition-colors`}>
@@ -586,6 +593,14 @@ function OrdenesServicioPageInner() {
                                                     className={`mt-1 block px-2 py-0.5 text-xs font-bold rounded whitespace-nowrap ${diasMora! >= DIAS_BLOQUEO ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
                                                   >
                                                     {diasMora! >= DIAS_BLOQUEO ? "🔴" : "🟡"} {diasMora} d sin factura
+                                                  </span>
+                                                )}
+                                                {reabierta && (
+                                                  <span
+                                                    title={`Reabierta para corrección hasta ${orden.fields.reabierta_hasta?.slice(0, 10)} por ${orden.fields.reapertura_por || "administración"}`}
+                                                    className="mt-1 block px-2 py-0.5 text-xs font-bold rounded whitespace-nowrap bg-orange-100 text-orange-800"
+                                                  >
+                                                    🔓 Reabierta
                                                   </span>
                                                 )}
                                               </td>
