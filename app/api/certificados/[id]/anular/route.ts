@@ -118,6 +118,15 @@ export async function POST(
 
   // Notificar a agricultor + coord + auditoría (background — no bloquea respuesta).
   after(async () => {
+    // Espejo en Neon: la página pública de verificación (/v/<token>) lee de
+    // Neon y debe mostrar ANULADO de inmediato.
+    try {
+      const { marcarAnuladoEnNeon } = await import("@/lib/certificadosVerificacion");
+      const ok = await marcarAnuladoEnNeon(id, motivo);
+      console.log(`[cert/${id}/anular neon] ${ok ? "OK" : "sin fila en Neon"}`);
+    } catch (err) {
+      console.error(`[cert/${id}/anular neon] Error:`, err);
+    }
     try {
       const consecutivo = Number(rec.fields.consecutivo) || 0;
       const emailGen = firstStr(rec.fields.emailgenerador);

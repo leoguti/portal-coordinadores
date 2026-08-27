@@ -45,6 +45,10 @@ export interface CertificadoPDFProps {
   // Pie de página (ya formateadas para mostrar, ej. "12/06/2026 14:32")
   fechageneracion?: string;
   fechaaprobacion?: string;
+  // Verificación de autenticidad (QR → página pública). Opcionales para que
+  // los renders legacy (sin token) sigan funcionando sin el bloque.
+  verificacionUrl?: string;
+  qrDataUrl?: string;
 }
 
 // ---------- Gestores data (static, same for every certificate) ----------
@@ -373,6 +377,36 @@ const s = StyleSheet.create({
     color: "#888888",
     textAlign: "center",
   },
+  verifRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: "#2d6a4f",
+    padding: 4,
+  },
+  verifQr: {
+    width: 52,
+    height: 52,
+    marginRight: 6,
+  },
+  verifTitulo: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#2d6a4f",
+    marginBottom: 2,
+  },
+  verifUrl: {
+    fontSize: 6.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#1b4332",
+    marginBottom: 2,
+  },
+  verifNota: {
+    fontSize: 5.5,
+    color: "#555555",
+    lineHeight: 1.4,
+  },
 });
 
 // ---------- Component ----------
@@ -403,6 +437,8 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
     nombrefinca,
     fechageneracion,
     fechaaprobacion,
+    verificacionUrl,
+    qrDataUrl,
   } = props;
 
   return (
@@ -792,6 +828,20 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.valueText}>{movilcoordinador}</Text>
           </View>
         </View>
+
+        {/* Bloque de verificación de autenticidad (QR + URL + leyenda) */}
+        {verificacionUrl && qrDataUrl && (
+          <View style={s.verifRow}>
+            <Image src={qrDataUrl} style={s.verifQr} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.verifTitulo}>Verifique la autenticidad de este certificado</Text>
+              <Text style={s.verifUrl}>{verificacionUrl}</Text>
+              <Text style={s.verifNota}>
+                Escanee el código QR o digite la dirección en su navegador para cotejar los datos contra el registro oficial de CampoLimpio. Verifique ÚNICAMENTE en portal.campolimpio.org — cualquier otra dirección es fraudulenta. Verificación manual: portal.campolimpio.org/verificar (número de certificado + cédula del generador).
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Pie de página: fechas de generación y aprobación */}
         {(fechageneracion || fechaaprobacion) && (

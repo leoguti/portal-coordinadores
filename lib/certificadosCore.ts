@@ -142,7 +142,8 @@ async function backupToNeon(
   coordinadorAirtableId: string,
   municipioDevolucionAirtableId: string,
   airtableCreatedTime: string,
-  fuente: string = "portal"
+  fuente: string = "portal",
+  verificacionToken: string | null = null
 ) {
   const tag = "[certificados/backup]";
   try {
@@ -167,10 +168,10 @@ async function backupToNeon(
         rigidos, flexibles, metalicos, embalaje, total,
         triplelavado, ano,
         certificadopdf_filename, certificadopdf_r2_url, certificadopdf_size,
-        airtable_created_time, observaciones, fuente
+        airtable_created_time, observaciones, fuente, verificacion_token
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31
+        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
       ) ON CONFLICT (airtable_id) DO NOTHING`,
       [
         airtableId,
@@ -204,6 +205,7 @@ async function backupToNeon(
         airtableCreatedTime,
         p.observaciones || null,
         fuente,
+        verificacionToken || (await import("./certificadosVerificacion")).generarTokenVerificacion(),
       ]
     );
 
@@ -384,6 +386,26 @@ export async function generarYAdjuntarPDF(
 ): Promise<PDFGenerado> {
   const { recordId, pdfProps, coordinadorId, municipioDevolucionId, airtableCreatedTime } = input;
 
+  // 0. Token de verificación + QR. Si el cert ya existe en Neon (regeneración
+  // vía /aprobar) se reutiliza su token para que el QR impreso siga válido.
+  let verificacionToken: string | null = null;
+  try {
+    const { obtenerOCrearToken, VERIFICACION_BASE_URL } = await import("./certificadosVerificacion");
+    verificacionToken = await obtenerOCrearToken(recordId);
+    const verificacionUrl = `${VERIFICACION_BASE_URL}${verificacionToken}`;
+    const QRCode = (await import("qrcode")).default;
+    pdfProps.qrDataUrl = await QRCode.toDataURL(verificacionUrl, {
+      margin: 0,
+      width: 200,
+      errorCorrectionLevel: "M",
+    });
+    pdfProps.verificacionUrl = verificacionUrl;
+  } catch (err) {
+    // El certificado sale sin bloque de verificación antes que no salir.
+    console.error("[certificados/core] QR de verificación falló (non-blocking):", err);
+    verificacionToken = null;
+  }
+
   // 1. Render PDF
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const element = React.createElement(CertificadoPDF, pdfProps) as any;
@@ -440,7 +462,8 @@ export async function generarYAdjuntarPDF(
       coordinadorId,
       municipioDevolucionId,
       airtableCreatedTime,
-      fuenteBackup
+      fuenteBackup,
+      verificacionToken
     );
     try {
       const emailRecipients = [
