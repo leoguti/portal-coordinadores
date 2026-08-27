@@ -144,28 +144,28 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   headerLogoCell: {
-    width: "30%",
+    width: "26%",
     padding: 4,
     justifyContent: "center",
     alignItems: "center",
   },
   headerLogo: {
-    width: 130,
-    height: 52,
+    width: 120,
+    height: 48,
   },
   headerTitleCell: {
-    width: "45%",
+    width: "40%",
     padding: 4,
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 11,
+    fontSize: 9.5,
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
   },
   headerSubtitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
   },
@@ -175,10 +175,28 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   headerCertCell: {
-    width: "25%",
+    width: "18%",
     padding: 4,
     justifyContent: "center",
     alignItems: "center",
+  },
+  // QR de verificación en el encabezado (idea de Ángela 2026-08-27: el
+  // certificado debe seguir siendo UNA sola hoja).
+  headerQrCell: {
+    width: "16%",
+    padding: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerQrLabel: {
+    fontSize: 5.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#2d6a4f",
+    marginBottom: 1,
+  },
+  headerQr: {
+    width: 50,
+    height: 50,
   },
   headerCertLabel: {
     fontSize: 10,
@@ -377,35 +395,12 @@ const s = StyleSheet.create({
     color: "#888888",
     textAlign: "center",
   },
-  verifRow: {
-    marginTop: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 0.5,
-    borderColor: "#2d6a4f",
-    padding: 4,
-  },
-  verifQr: {
-    width: 52,
-    height: 52,
-    marginRight: 6,
-  },
-  verifTitulo: {
-    fontSize: 7,
+  verifLinea: {
+    marginTop: 5,
+    fontSize: 6,
     fontFamily: "Helvetica-Bold",
     color: "#2d6a4f",
-    marginBottom: 2,
-  },
-  verifUrl: {
-    fontSize: 6.5,
-    fontFamily: "Helvetica-Bold",
-    color: "#1b4332",
-    marginBottom: 2,
-  },
-  verifNota: {
-    fontSize: 5.5,
-    color: "#555555",
-    lineHeight: 1.4,
+    textAlign: "center",
   },
 });
 
@@ -460,6 +455,12 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
             <Text style={s.headerCertLabel}>CERTIFICADO</Text>
             <Text style={s.headerCertNumber}>No. {consecutivo}</Text>
           </View>
+          {qrDataUrl && (
+            <View style={s.headerQrCell}>
+              <Text style={s.headerQrLabel}>VERIFICAR:</Text>
+              <Image src={qrDataUrl} style={s.headerQr} />
+            </View>
+          )}
         </View>
 
         {/* ============ DATOS DEL GENERADOR ============ */}
@@ -829,18 +830,12 @@ const CertificadoPDF: React.FC<CertificadoPDFProps> = (props) => {
           </View>
         </View>
 
-        {/* Bloque de verificación de autenticidad (QR + URL + leyenda) */}
-        {verificacionUrl && qrDataUrl && (
-          <View style={s.verifRow}>
-            <Image src={qrDataUrl} style={s.verifQr} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.verifTitulo}>Verifique la autenticidad de este certificado</Text>
-              <Text style={s.verifUrl}>{verificacionUrl}</Text>
-              <Text style={s.verifNota}>
-                Escanee el código QR o digite la dirección en su navegador para cotejar los datos contra el registro oficial de CampoLimpio. Verifique ÚNICAMENTE en portal.campolimpio.org — cualquier otra dirección es fraudulenta. Verificación manual: portal.campolimpio.org/verificar (número de certificado + cédula del generador).
-              </Text>
-            </View>
-          </View>
+        {/* Línea de verificación: URL en texto (defensa contra QR clonado —
+            el dominio impreso se verifica a ojo aunque el QR mienta) */}
+        {verificacionUrl && (
+          <Text style={s.verifLinea}>
+            Verifique la autenticidad de este certificado ÚNICAMENTE en {verificacionUrl} (o en portal.campolimpio.org/verificar con número de certificado + cédula). Cualquier otro dominio es fraudulento.
+          </Text>
         )}
 
         {/* Pie de página: fechas de generación y aprobación */}
