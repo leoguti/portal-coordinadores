@@ -1,9 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
   enmascararCedula,
+  enmascararNombre,
   generarTokenVerificacion,
   VERIFICACION_BASE_URL,
 } from "../certificadosVerificacion";
+
+describe("enmascararNombre", () => {
+  it("primeras 3 letras de cada palabra, estilo Nequi", () => {
+    expect(enmascararNombre("LEONARDO GUTIERREZ")).toBe("LEO*** GUT***");
+    expect(enmascararNombre("ANA DE LA CRUZ")).toBe("ANA*** DE*** LA*** CRU***");
+  });
+
+  it("vacío queda vacío", () => {
+    expect(enmascararNombre("")).toBe("");
+    expect(enmascararNombre("   ")).toBe("");
+  });
+});
 
 describe("enmascararCedula", () => {
   it("muestra solo los últimos 4 dígitos (ignorando puntos)", () => {

@@ -28,6 +28,21 @@ export function enmascararCedula(cedula: string): string {
   return "*".repeat(d.length - 4) + d.slice(-4);
 }
 
+/**
+ * Estilo Nequi (pedido de Ángela 2026-08-27): solo las primeras 3 letras de
+ * cada palabra — suficiente para cotejar contra el papel sin revelar el
+ * nombre completo a quien solo tiene el enlace.
+ * "LEONARDO GUTIERREZ" → "LEO*** GUT***"
+ */
+export function enmascararNombre(nombre: string): string {
+  return String(nombre || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => (p.length <= 3 ? p + "***" : p.slice(0, 3) + "***"))
+    .join(" ");
+}
+
 export interface CertVerificado {
   consecutivo: number;
   nombregenerador: string;
@@ -59,7 +74,7 @@ const COLUMNAS = `consecutivo, nombregenerador, cedulagenerador, municipiogenera
 function mapRow(r: any): CertVerificado {
   return {
     consecutivo: Number(r.consecutivo),
-    nombregenerador: r.nombregenerador || "",
+    nombregenerador: enmascararNombre(r.nombregenerador || ""),
     cedulaEnmascarada: enmascararCedula(r.cedulagenerador || ""),
     municipiogenerador: r.municipiogenerador || "",
     cultivogenerador: r.cultivogenerador || "",
