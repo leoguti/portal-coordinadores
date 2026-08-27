@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { buscarCertPorToken, type CertVerificado } from "@/lib/certificadosVerificacion";
 import { roundKg } from "@/lib/kilos";
+import ReenviarPdf from "./ReenviarPdf";
 
 // Página PÚBLICA de verificación de certificados (destino del QR impreso).
 // Sin sesión: cualquier auditor/comprador escanea y coteja contra el papel.
@@ -33,7 +34,7 @@ function Fila({ label, valor }: { label: string; valor: string }) {
   );
 }
 
-function TarjetaCert({ cert }: { cert: CertVerificado }) {
+function TarjetaCert({ cert, token }: { cert: CertVerificado; token?: string }) {
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
       <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
@@ -61,17 +62,12 @@ function TarjetaCert({ cert }: { cert: CertVerificado }) {
         <Fila label="Triple lavado" valor={cert.triplelavado} />
         <Fila label="Coordinador que recibió" valor={cert.nombrecoordinador} />
       </div>
-      {cert.pdfUrl && !cert.anulado && (
-        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50">
-          <a
-            href={cert.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-[#00a868] hover:underline"
-          >
-            Ver el PDF oficial emitido por CampoLimpio →
-          </a>
-        </div>
+      {token && !cert.anulado && (
+        <ReenviarPdf
+          token={token}
+          emailEnmascarado={cert.emailEnmascarado}
+          movilEnmascarado={cert.movilEnmascarado}
+        />
       )}
     </div>
   );
@@ -139,7 +135,7 @@ export default async function VerificacionPage({
                 Este certificado fue emitido por CampoLimpio y está registrado en nuestra base de datos oficial.
               </p>
             </div>
-            <TarjetaCert cert={cert} />
+            <TarjetaCert cert={cert} token={token} />
           </>
         )}
 

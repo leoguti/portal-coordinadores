@@ -43,6 +43,25 @@ export function enmascararNombre(nombre: string): string {
     .join(" ");
 }
 
+/** "leogiga@gmail.com" → "leo***@g***.com" */
+export function enmascararEmail(email: string): string {
+  const e = String(email || "").trim();
+  const at = e.indexOf("@");
+  if (at <= 0) return e ? "***" : "";
+  const local = e.slice(0, at);
+  const dominio = e.slice(at + 1);
+  const punto = dominio.lastIndexOf(".");
+  const tld = punto > 0 ? dominio.slice(punto) : "";
+  return `${local.slice(0, 3)}***@${dominio.slice(0, 1)}***${tld}`;
+}
+
+/** "3101234567" → "***4567" */
+export function enmascararMovil(movil: string): string {
+  const d = String(movil || "").replace(/\D/g, "");
+  if (d.length <= 4) return d ? "***" : "";
+  return "***" + d.slice(-4);
+}
+
 export interface CertVerificado {
   consecutivo: number;
   nombregenerador: string;
@@ -62,13 +81,16 @@ export interface CertVerificado {
   ano: number | null;
   anulado: boolean;
   anuladoEn: string | null;
-  pdfUrl: string | null;
+  /** Contacto REGISTRADO, ya enmascarado — para el botón de reenvío del PDF.
+   *  El dato completo nunca sale al cliente: el envío lo hace el servidor. */
+  emailEnmascarado: string;
+  movilEnmascarado: string;
 }
 
 const COLUMNAS = `consecutivo, nombregenerador, cedulagenerador, municipiogenerador,
   cultivogenerador, rigidos, flexibles, metalicos, embalaje, total, triplelavado,
   lugardevolucion, municipiodevolucion, fechadevolucion, nombrecoordinador, ano,
-  anulado, anulado_en, certificadopdf_r2_url`;
+  anulado, anulado_en, emailgenerador, movilgenerador`;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(r: any): CertVerificado {
@@ -91,7 +113,8 @@ function mapRow(r: any): CertVerificado {
     ano: r.ano !== null ? Number(r.ano) : null,
     anulado: Boolean(r.anulado),
     anuladoEn: r.anulado_en ? new Date(r.anulado_en).toISOString().slice(0, 10) : null,
-    pdfUrl: r.certificadopdf_r2_url || null,
+    emailEnmascarado: enmascararEmail(r.emailgenerador || ""),
+    movilEnmascarado: enmascararMovil(r.movilgenerador || ""),
   };
 }
 
@@ -158,6 +181,35 @@ export async function obtenerOCrearToken(airtableId: string): Promise<string> {
     console.error("[verificacion] error leyendo token existente:", err);
   }
   return generarTokenVerificacion();
+}
+
+/**
+ * Datos COMPLETOS para el reenvío del PDF al contacto registrado.
+ * SOLO para uso server-side (el endpoint de reenvío) — nunca exponer al
+ * cliente: el visitante de /v/<token> solo ve las versiones enmascaradas.
+ */
+export async function datosParaReenvio(token: string): Promise<{
+  consecutivo: number;
+  email: string;
+  r2Url: string | null;
+  anulado: boolean;
+} | null> {
+  if (!/^[0-9a-f]{32}$/.test(token)) return null;
+  return conNeon(async (pg) => {
+    const res = await pg.query(
+      `SELECT consecutivo, emailgenerador, certificadopdf_r2_url, anulado
+       FROM certificados WHERE verificacion_token = $1 LIMIT 1`,
+      [token]
+    );
+    const r = res.rows[0];
+    if (!r) return null;
+    return {
+      consecutivo: Number(r.consecutivo),
+      email: String(r.emailgenerador || "").trim(),
+      r2Url: r.certificadopdf_r2_url || null,
+      anulado: Boolean(r.anulado),
+    };
+  });
 }
 
 /** Marca anulado en Neon (espejo del estado de Airtable). Best-effort. */

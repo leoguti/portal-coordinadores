@@ -45,3 +45,16 @@ describe("VERIFICACION_BASE_URL", () => {
     expect(VERIFICACION_BASE_URL).toBe("https://portal.campolimpio.org/v/");
   });
 });
+
+import { enmascararEmail, enmascararMovil } from "../certificadosVerificacion";
+
+describe("enmascararEmail / enmascararMovil", () => {
+  it("email: 3 letras + dominio parcial", () => {
+    expect(enmascararEmail("leogiga@gmail.com")).toBe("leo***@g***.com");
+    expect(enmascararEmail("")).toBe("");
+  });
+  it("móvil: últimos 4 dígitos", () => {
+    expect(enmascararMovil("3101234567")).toBe("***4567");
+    expect(enmascararMovil("")).toBe("");
+  });
+});
