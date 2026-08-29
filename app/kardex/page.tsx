@@ -8,6 +8,14 @@ import KardexFormModal from "@/components/KardexFormModal";
 import { puedeModificarFecha, getFechaCorteMesesCerrados } from "@/lib/dateValidations";
 import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
 
+/**
+ * Redondea kilos a 1 decimal. Evita el error de coma flotante al sumar
+ * (756.8 + 36.8 = 793.5999999999999) — reportado por Ángela 2026-08-26.
+ */
+function redondearKg(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
 interface KardexRecord {
   id: string;
   createdTime: string;
@@ -403,8 +411,8 @@ function KardexPageInner() {
   };
 
   // Calcular totales (IMPORTANTE: salidas vienen negativas, usamos Math.abs para mostrar)
-  const totalEntradas = entradasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
-  const totalSalidas = salidasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+  const totalEntradas = redondearKg(entradasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
+  const totalSalidas = redondearKg(salidasFiltradas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
   const saldoTotal = totalEntradas - totalSalidas;
 
   // ========== CÁLCULOS DE RESÚMENES ==========
@@ -456,8 +464,8 @@ function KardexPageInner() {
     const entradasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasDelMes = registrosDelMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasMes = entradasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
-    const totalSalidasMes = salidasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalEntradasMes = redondearKg(entradasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
+    const totalSalidasMes = redondearKg(salidasDelMes.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
     
     // SALDO: TODO el histórico HASTA el final de este mes
     const [anio, mesNum] = mes.split('-');
@@ -473,8 +481,8 @@ function KardexPageInner() {
     const entradasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasAcumuladas = registrosHastaEsteMes.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
-    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalEntradasAcum = redondearKg(entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
+    const totalSalidasAcum = redondearKg(salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
     
     // DESGLOSE POR TIPO DE MATERIAL (saldo acumulado histórico)
     const materiales = ['Reciclaje', 'Incineracion', 'Flexibles', 'PlasticoContaminado', 'Lonas', 'Carton', 'Metal'] as const;
@@ -514,8 +522,8 @@ function KardexPageInner() {
     const entradasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasDelAnio = registrosDelAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAnio = entradasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
-    const totalSalidasAnio = salidasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalEntradasAnio = redondearKg(entradasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
+    const totalSalidasAnio = redondearKg(salidasDelAnio.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
     
     // SALDO: TODO el histórico HASTA el final de este año
     const registrosHastaEsteAnio = filteredRecords.filter(r => {
@@ -527,8 +535,8 @@ function KardexPageInner() {
     const entradasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "ENTRADA");
     const salidasAcumuladas = registrosHastaEsteAnio.filter(r => r.fields.TipoMovimiento === "SALIDA");
     
-    const totalEntradasAcum = entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
-    const totalSalidasAcum = salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0);
+    const totalEntradasAcum = redondearKg(entradasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
+    const totalSalidasAcum = redondearKg(salidasAcumuladas.reduce((sum, r) => sum + kilosDelRegistro(r), 0));
     
     return {
       año: anio,
@@ -1587,13 +1595,15 @@ function KardexPageInner() {
                         <div className="flex justify-between bg-purple-100 px-3 py-3 rounded border-2 border-purple-300 mt-3">
                           <span className="font-bold text-purple-900">TOTAL</span>
                           <span className="font-bold text-purple-900 text-lg">
-                            {(Number(kardexCreado.formData?.Reciclaje || 0) +
+                            {redondearKg(
+                              Number(kardexCreado.formData?.Reciclaje || 0) +
                               Number(kardexCreado.formData?.Incineracion || 0) +
                               Number(kardexCreado.formData?.Flexibles || 0) +
                               Number(kardexCreado.formData?.PlasticoContaminado || 0) +
                               Number(kardexCreado.formData?.Lonas || 0) +
                               Number(kardexCreado.formData?.Carton || 0) +
-                              Number(kardexCreado.formData?.Metal || 0))} kg
+                              Number(kardexCreado.formData?.Metal || 0)
+                            ).toLocaleString("es-CO")} kg
                           </span>
                         </div>
                       </div>
