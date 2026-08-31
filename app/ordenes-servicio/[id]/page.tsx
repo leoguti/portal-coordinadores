@@ -171,8 +171,17 @@ export default function OrdenDetallePage() {
   }
 
   async function handleCambiarEstado(nuevoEstado: "Pagada" | "Rechazada") {
+    let motivoRechazo = "";
     if (nuevoEstado === "Rechazada") {
-      if (!confirm("Rechazar esta orden? Esta accion no se puede deshacer.")) return;
+      const motivo = window.prompt(
+        "Rechazar esta orden:\n\nLos kardex vinculados volverán a \"Por Pagar\" y el coordinador recibirá un correo con el motivo para rehacer la orden con los valores correctos. La orden rechazada queda como registro.\n\nEscribe el motivo del rechazo:"
+      );
+      if (motivo === null) return;
+      if (!motivo.trim()) {
+        setActionMessage({ type: "error", text: "El motivo del rechazo es obligatorio" });
+        return;
+      }
+      motivoRechazo = motivo.trim();
     }
 
     if (nuevoEstado === "Pagada" && !fechaPagoInput) return;
@@ -185,6 +194,9 @@ export default function OrdenDetallePage() {
       if (nuevoEstado === "Pagada") {
         bodyData.fechaPago = fechaPagoInput;
       }
+      if (nuevoEstado === "Rechazada") {
+        bodyData.motivo = motivoRechazo;
+      }
 
       const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
         method: "PATCH",
@@ -195,7 +207,7 @@ export default function OrdenDetallePage() {
       const data = await response.json();
 
       if (response.ok) {
-        setActionMessage({ type: "success", text: `Orden marcada como ${nuevoEstado}` });
+        setActionMessage({ type: "success", text: data.message || `Orden marcada como ${nuevoEstado}` });
         setShowPagoForm(false);
         setFechaPagoInput("");
         await loadOrden();
@@ -205,6 +217,37 @@ export default function OrdenDetallePage() {
     } catch (err) {
       console.error("Error cambiando estado:", err);
       setActionMessage({ type: "error", text: "Error al cambiar el estado" });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDevolverEnviada() {
+    const motivo = window.prompt(
+      "Devolver esta orden Facturada a Enviada (caso excepcional):\n\nSe retira la factura adjunta (queda anotada en Observaciones con su número) y la orden vuelve a Enviada para poder reabrirla, eliminarla y rehacerla. La factura se vuelve a subir a la orden corregida.\n\nEscribe el motivo:"
+    );
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      setActionMessage({ type: "error", text: "El motivo es obligatorio" });
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setActionMessage(null);
+      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "devolver-enviada", motivo: motivo.trim() }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMessage({ type: "success", text: data.message });
+        await loadOrden();
+      } else {
+        setActionMessage({ type: "error", text: data.error || "Error al devolver la orden a Enviada" });
+      }
+    } catch {
+      setActionMessage({ type: "error", text: "Error al devolver la orden a Enviada" });
     } finally {
       setActionLoading(false);
     }
@@ -507,6 +550,19 @@ export default function OrdenDetallePage() {
                   className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Subir Factura (PDF)
+                </button>
+              )}
+
+              {/* Devolver a Enviada - caso excepcional para corregir una
+                  orden Facturada con valores errados */}
+              {estado === "Facturada" && (
+                <button
+                  onClick={handleDevolverEnviada}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Retira la factura (queda anotada en Observaciones) y devuelve la orden a Enviada para poder corregirla"
+                >
+                  ↩️ Retirar factura y devolver a Enviada
                 </button>
               )}
 

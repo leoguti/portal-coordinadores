@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds, setReaperturaOrden } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds, setReaperturaOrden, devolverOrdenAEnviada, rechazarOrden } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 import { estaReabierta } from "@/lib/ordenesReapertura";
 
@@ -290,6 +290,32 @@ export async function PATCH(
         });
       }
 
+      // Caso excepcional (solo admin): orden Facturada con valores errados.
+      // Retira la factura y devuelve a Enviada, con rastro; luego aplica el
+      // flujo normal de reapertura y la factura se resube a la orden nueva.
+      if (action === "devolver-enviada") {
+        const motivo = String(body.motivo || "").trim();
+        if (!motivo) {
+          return NextResponse.json(
+            { error: "El motivo es obligatorio para devolver la orden a Enviada" },
+            { status: 400 }
+          );
+        }
+        const res = await devolverOrdenAEnviada(
+          ordenId,
+          motivo,
+          session.user.name || session.user.email || "Administrador"
+        );
+        if (!res.ok) {
+          return NextResponse.json({ error: res.error }, { status: 400 });
+        }
+        return NextResponse.json({
+          success: true,
+          message:
+            "Orden devuelta a Enviada y factura retirada (quedó anotado en Observaciones). Ahora puedes reabrirla para corrección.",
+        });
+      }
+
       if (action === "cerrar-reapertura") {
         const ok = await setReaperturaOrden(ordenId, {
           reabierta_hasta: null,
@@ -335,12 +361,59 @@ export async function PATCH(
           );
         }
       } else if (estado === "Rechazada") {
-        if (estadoActual !== "Enviada") {
+        // Rechazo con consecuencias (2026-08-31): motivo obligatorio, libera
+        // los kardex a "Por Pagar" y notifica al coordinador por email para
+        // que rehaga la orden. La orden rechazada queda como huella.
+        const motivo = String(body.motivo || "").trim();
+        if (!motivo) {
           return NextResponse.json(
-            { error: "Solo se puede rechazar una orden en estado Enviada" },
+            { error: "El motivo del rechazo es obligatorio" },
             { status: 400 }
           );
         }
+        const res = await rechazarOrden(
+          ordenId,
+          motivo,
+          session.user.name || session.user.email || "Administración"
+        );
+        if (!res.ok) {
+          return NextResponse.json({ error: res.error }, { status: 400 });
+        }
+        // Email al coordinador en background — no bloquea la respuesta.
+        after(async () => {
+          try {
+            if (!res.coordinadorId) return;
+            const apiKey = process.env.AIRTABLE_API_KEY!;
+            const baseId = process.env.AIRTABLE_BASE_ID!;
+            const rc = await fetch(
+              `https://api.airtable.com/v0/${baseId}/Coordinadores/${res.coordinadorId}`,
+              { headers: { Authorization: `Bearer ${apiKey}` } }
+            );
+            if (!rc.ok) return;
+            const coord = await rc.json();
+            const email = String(coord.fields.Email || "").trim();
+            if (!email) {
+              console.warn(`[rechazo] coordinador ${res.coordinadorId} sin email — no se notificó`);
+              return;
+            }
+            const { enviarEmailOrdenRechazada } = await import("@/lib/emailOrdenRechazada");
+            await enviarEmailOrdenRechazada({
+              emailCoordinador: email,
+              nombreCoordinador: String(coord.fields.Name || "Coordinador"),
+              numeroOrden: res.numeroOrden || 0,
+              beneficiario: res.beneficiario || "",
+              motivo,
+              rechazadaPor: session.user.name || session.user.email || "Administración",
+              kardexLiberados: res.kardexLiberados || [],
+            });
+          } catch (err) {
+            console.error("[rechazo] error notificando al coordinador:", err);
+          }
+        });
+        return NextResponse.json({
+          success: true,
+          message: `Orden rechazada. ${res.kardexLiberados?.length || 0} kardex quedaron liberados ("Por Pagar") y el coordinador será notificado por correo.`,
+        });
       } else {
         return NextResponse.json(
           { error: "Estado no válido. Opciones: Pagada, Rechazada" },

@@ -3048,6 +3048,85 @@ export async function deleteKardexWithConciliacion(kardexId: string): Promise<bo
  * @param ordenId - Airtable record ID of the orden to delete
  * @returns true if successful, false otherwise
  */
+/**
+ * Devuelve a "Por Pagar" los kardex vinculados a una orden y reporta cuáles
+ * liberó. Usado por el rechazo de órdenes (los items NO se borran: la orden
+ * rechazada queda como huella histórica del error).
+ */
+export async function liberarKardexDeOrden(
+  ordenId: string
+): Promise<Array<{ idkardex: number; fecha: string; kg: number }>> {
+  const apiKey = process.env.AIRTABLE_API_KEY!;
+  const baseId = process.env.AIRTABLE_BASE_ID!;
+  const items = await getItemsOrden(ordenId);
+  const liberados: Array<{ idkardex: number; fecha: string; kg: number }> = [];
+  for (const item of items) {
+    const kardexId = item.fields.Kardex?.[0];
+    if (!kardexId) continue;
+    const kardexUrl = `https://api.airtable.com/v0/${baseId}/Kardex/${kardexId}`;
+    const res = await fetch(kardexUrl, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: { EstadoPago: "Por Pagar" } }),
+    });
+    if (res.ok) {
+      const rec = await res.json();
+      liberados.push({
+        idkardex: rec.fields.idkardex || 0,
+        fecha: rec.fields.fechakardex || "",
+        kg: Math.abs(rec.fields.Total || 0),
+      });
+    } else {
+      console.error(`[liberarKardex] Error en kardex ${kardexId}:`, await res.text());
+    }
+  }
+  console.log(`[liberarKardex] Orden ${ordenId}: ${liberados.length} kardex a "Por Pagar"`);
+  return liberados;
+}
+
+/**
+ * Rechaza una orden (solo Enviada): guarda motivo/quién/cuándo, LIBERA los
+ * kardex a "Por Pagar" para que el coordinador pueda rehacer la orden, y
+ * devuelve los datos para notificarlo. La orden queda como registro
+ * histórico — no se elimina nada.
+ */
+export async function rechazarOrden(
+  ordenId: string,
+  motivo: string,
+  por: string
+): Promise<{
+  ok: boolean;
+  error?: string;
+  numeroOrden?: number;
+  coordinadorId?: string;
+  beneficiario?: string;
+  kardexLiberados?: Array<{ idkardex: number; fecha: string; kg: number }>;
+}> {
+  const orden = await getOrdenById(ordenId);
+  if (!orden) return { ok: false, error: "Orden no encontrada" };
+  if (orden.fields.Estado !== "Enviada") {
+    return {
+      ok: false,
+      error: `Solo se puede rechazar una orden en estado Enviada (esta está "${orden.fields.Estado}")`,
+    };
+  }
+  const okEstado = await updateEstadoOrden(ordenId, "Rechazada", {
+    rechazo_motivo: motivo,
+    rechazo_por: por,
+    rechazo_en: new Date().toISOString(),
+  });
+  if (!okEstado) return { ok: false, error: "Error actualizando el estado de la orden" };
+
+  const kardexLiberados = await liberarKardexDeOrden(ordenId);
+  return {
+    ok: true,
+    numeroOrden: orden.fields.NumeroOrden || 0,
+    coordinadorId: orden.fields.Coordinador?.[0] || "",
+    beneficiario: orden.fields.RazonSocial?.[0] || "",
+    kardexLiberados,
+  };
+}
+
 export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
@@ -3189,6 +3268,65 @@ export async function updateEstadoOrden(
   } catch (error) {
     console.error(`Error updating estado of Orden ${ordenId}:`, error);
     return false;
+  }
+}
+
+/**
+ * Devuelve una orden Facturada al estado Enviada retirando la factura
+ * (caso excepcional, solo admin): permite corregir una orden facturada con
+ * valores errados sin tocar Airtable a mano. Deja rastro del motivo, de la
+ * factura retirada y de quién lo hizo en Observaciones. Después de esto
+ * aplica el flujo normal de reapertura (reabrir → eliminar → rehacer) y la
+ * factura se vuelve a subir a la orden corregida.
+ */
+export async function devolverOrdenAEnviada(
+  ordenId: string,
+  motivo: string,
+  por: string
+): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  const baseId = process.env.AIRTABLE_BASE_ID;
+  if (!apiKey || !baseId) return { ok: false, error: "Airtable no configurado" };
+
+  const orden = await getOrdenById(ordenId);
+  if (!orden) return { ok: false, error: "Orden no encontrada" };
+  if (orden.fields.Estado !== "Facturada") {
+    return {
+      ok: false,
+      error: `Solo se puede devolver a Enviada una orden Facturada (esta está "${orden.fields.Estado}")`,
+    };
+  }
+
+  const numFactura = orden.fields.NumeroFactura || "(sin número)";
+  const facturaUrl = orden.fields.Factura?.[0]?.url || "";
+  const hoy = new Date().toISOString().slice(0, 10);
+  const rastro = `[${hoy}] Devuelta a Enviada por ${por}. Motivo: ${motivo}. Factura retirada: ${numFactura}${facturaUrl ? ` (${facturaUrl})` : ""}`;
+  const obsPrev = orden.fields.Observaciones || "";
+
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/Ordenes/${ordenId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          Estado: "Enviada",
+          Factura: [],
+          NumeroFactura: "",
+          FechaFactura: null,
+          Observaciones: obsPrev ? `${obsPrev}\n${rastro}` : rastro,
+        },
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error(`[devolver-enviada] Airtable error orden ${ordenId}:`, t);
+      return { ok: false, error: "Error actualizando la orden en Airtable" };
+    }
+    console.log(`[devolver-enviada] Orden #${orden.fields.NumeroOrden} devuelta a Enviada por ${por}`);
+    return { ok: true };
+  } catch (error) {
+    console.error(`[devolver-enviada] Error orden ${ordenId}:`, error);
+    return { ok: false, error: "Error de conexión con Airtable" };
   }
 }
 
