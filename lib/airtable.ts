@@ -3298,9 +3298,11 @@ export async function devolverOrdenAEnviada(
   }
 
   const numFactura = orden.fields.NumeroFactura || "(sin número)";
-  const facturaUrl = orden.fields.Factura?.[0]?.url || "";
+  // OJO: no guardar la URL del adjunto — las URLs de attachments de Airtable
+  // son temporales (expiran en horas) y ensucian la observación. El número
+  // de factura basta para identificarla.
   const hoy = new Date().toISOString().slice(0, 10);
-  const rastro = `[${hoy}] Devuelta a Enviada por ${por}. Motivo: ${motivo}. Factura retirada: ${numFactura}${facturaUrl ? ` (${facturaUrl})` : ""}`;
+  const rastro = `[${hoy}] Devuelta a Enviada por ${por}. Motivo: ${motivo}. Factura retirada: ${numFactura}.`;
   const obsPrev = orden.fields.Observaciones || "";
 
   try {
