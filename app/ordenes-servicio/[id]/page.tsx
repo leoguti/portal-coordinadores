@@ -633,8 +633,40 @@ export default function OrdenDetallePage() {
                 </button>
               )}
 
+              {/* Reenviar notificación de rechazo al coordinador */}
+              {estado === "Rechazada" && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setActionLoading(true);
+                      setActionMessage(null);
+                      const response = await fetch(`/api/ordenes-servicio/${ordenId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "reenviar-rechazo" }),
+                      });
+                      const data = await response.json();
+                      setActionMessage(
+                        response.ok
+                          ? { type: "success", text: data.message }
+                          : { type: "error", text: data.error || "Error al reenviar la notificación" }
+                      );
+                    } catch {
+                      setActionMessage({ type: "error", text: "Error al reenviar la notificación" });
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Vuelve a enviar el correo con el motivo del rechazo y los kardex liberados al coordinador"
+                >
+                  ✉️ Reenviar notificación al coordinador
+                </button>
+              )}
+
               {/* Message when no actions available */}
-              {estado !== "Enviada" && estado !== "Facturada" && (
+              {estado !== "Enviada" && estado !== "Facturada" && estado !== "Rechazada" && (
                 <p className="text-sm text-gray-500 italic">
                   No hay acciones disponibles para ordenes en estado &quot;{estado}&quot;
                 </p>

@@ -3132,6 +3132,64 @@ export async function rechazarOrden(
   };
 }
 
+/**
+ * (Re)envía la notificación de rechazo al coordinador de una orden ya
+ * Rechazada — el correo sale del sistema con las credenciales de producción.
+ * Reconstruye la lista de kardex desde los items (a esta altura ya están
+ * en "Por Pagar" por la cascada del rechazo).
+ */
+export async function notificarRechazoOrden(
+  ordenId: string
+): Promise<{ ok: boolean; error?: string; email?: string }> {
+  const apiKey = process.env.AIRTABLE_API_KEY!;
+  const baseId = process.env.AIRTABLE_BASE_ID!;
+  const orden = await getOrdenById(ordenId);
+  if (!orden) return { ok: false, error: "Orden no encontrada" };
+  if (orden.fields.Estado !== "Rechazada") {
+    return { ok: false, error: "La orden no está Rechazada" };
+  }
+  const coordId = orden.fields.Coordinador?.[0];
+  if (!coordId) return { ok: false, error: "La orden no tiene coordinador" };
+  const rc = await fetch(`https://api.airtable.com/v0/${baseId}/Coordinadores/${coordId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!rc.ok) return { ok: false, error: "No se pudo consultar el coordinador" };
+  const coord = await rc.json();
+  const email = String(coord.fields.email || "").trim();
+  if (!email) return { ok: false, error: "El coordinador no tiene correo registrado" };
+
+  const items = await getItemsOrden(ordenId);
+  const kardexLiberados: Array<{ idkardex: number; fecha: string; kg: number }> = [];
+  for (const item of items) {
+    const kid = item.fields.Kardex?.[0];
+    if (!kid) continue;
+    const rk = await fetch(`https://api.airtable.com/v0/${baseId}/Kardex/${kid}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (rk.ok) {
+      const jk = await rk.json();
+      kardexLiberados.push({
+        idkardex: jk.fields.idkardex || 0,
+        fecha: jk.fields.fechakardex || "",
+        kg: Math.abs(jk.fields.Total || 0),
+      });
+    }
+  }
+
+  const { enviarEmailOrdenRechazada } = await import("./emailOrdenRechazada");
+  const enviado = await enviarEmailOrdenRechazada({
+    emailCoordinador: email,
+    nombreCoordinador: String(coord.fields.Name || "Coordinador"),
+    numeroOrden: orden.fields.NumeroOrden || 0,
+    beneficiario: orden.fields.RazonSocial?.[0] || "",
+    motivo: orden.fields.rechazo_motivo || "(sin motivo registrado)",
+    rechazadaPor: orden.fields.rechazo_por || "Administración",
+    kardexLiberados,
+  });
+  if (!enviado) return { ok: false, error: "El envío del correo falló" };
+  return { ok: true, email };
+}
+
 export async function deleteOrdenServicio(ordenId: string): Promise<boolean> {
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;

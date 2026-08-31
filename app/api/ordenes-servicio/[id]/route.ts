@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds, setReaperturaOrden, devolverOrdenAEnviada, rechazarOrden } from "@/lib/airtable";
+import { deleteOrdenServicio, updateEstadoOrden, uploadFacturaOrden, getOrdenById, regenerarPDFOrden, getItemsOrden, getKardexByIds, setReaperturaOrden, devolverOrdenAEnviada, rechazarOrden, notificarRechazoOrden } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
 import { estaReabierta } from "@/lib/ordenesReapertura";
 
@@ -313,6 +313,19 @@ export async function PATCH(
           success: true,
           message:
             "Orden devuelta a Enviada y factura retirada (quedó anotado en Observaciones). Ahora puedes reabrirla para corrección.",
+        });
+      }
+
+      // Reenvía la notificación de rechazo al coordinador (orden Rechazada).
+      // Útil si el correo original falló o se perdió.
+      if (action === "reenviar-rechazo") {
+        const res = await notificarRechazoOrden(ordenId);
+        if (!res.ok) {
+          return NextResponse.json({ error: res.error }, { status: 400 });
+        }
+        return NextResponse.json({
+          success: true,
+          message: `Notificación de rechazo enviada al coordinador (${res.email})`,
         });
       }
 
