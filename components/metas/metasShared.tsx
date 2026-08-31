@@ -29,9 +29,13 @@ export function estadoMes(
   return "futuro";
 }
 
+// Escala ajustada 2026-08-31 (pedido de Roberto vía Ángela): el verde — y el
+// ✓ — se reservan para meta CUMPLIDA (≥100%); de ahí hacia abajo los tonos
+// bajan un escalón (amarillo cerca, naranja rezagado, rojo crítico).
 export function pctColor(p: number): { bg: string; text: string } {
-  if (p >= 70) return { bg: "bg-green-100", text: "text-green-700" };
-  if (p >= 40) return { bg: "bg-yellow-100", text: "text-yellow-700" };
+  if (p >= 100) return { bg: "bg-green-100", text: "text-green-700" };
+  if (p >= 70) return { bg: "bg-yellow-100", text: "text-yellow-700" };
+  if (p >= 40) return { bg: "bg-orange-100", text: "text-orange-700" };
   return { bg: "bg-red-100", text: "text-red-700" };
 }
 
@@ -195,7 +199,8 @@ export function CeldaMes({
 
   let simbolo = "";
   if (estado === "pasado" && !sinMeta) {
-    simbolo = cumpleMes >= 70 ? "✓ " : "✗ ";
+    // ✓ solo con meta cumplida — color y símbolo cuentan la misma historia.
+    simbolo = cumpleMes >= 100 ? "✓ " : "✗ ";
   }
 
   const tip = neutral
@@ -281,8 +286,9 @@ export function LeyendaMetas() {
         celda para ver el detalle completo.
       </span>
       <span className="text-gray-300">|</span>
-      <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />≥70%</span>
-      <span><span className="inline-block w-3 h-3 rounded bg-yellow-100 border border-yellow-200 mr-1 align-middle" />40–69%</span>
+      <span><span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 mr-1 align-middle" />✓ Meta cumplida (≥100%)</span>
+      <span><span className="inline-block w-3 h-3 rounded bg-yellow-100 border border-yellow-200 mr-1 align-middle" />70–99%</span>
+      <span><span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-200 mr-1 align-middle" />40–69%</span>
       <span><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-200 mr-1 align-middle" />&lt;40%</span>
       <span><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 mr-1 align-middle" />Sin meta / futuro</span>
       <span><span className="inline-block w-0.5 h-3 bg-indigo-500 mr-1 align-middle" />Mes vigente (pasado | futuro)</span>

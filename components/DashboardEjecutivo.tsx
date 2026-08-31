@@ -95,9 +95,12 @@ const semaforoColor: Record<string, string> = {
   rojo: "bg-red-500",
 };
 
+// Escala alineada con Metas por Zona (2026-08-31): verde solo con meta
+// cumplida; amarillo cerca, naranja rezagado, rojo crítico.
 function metaBarColor(porcentaje: number): string {
-  if (porcentaje >= 70) return "#22c55e";
-  if (porcentaje >= 40) return "#f59e0b";
+  if (porcentaje >= 100) return "#22c55e";
+  if (porcentaje >= 70) return "#eab308";
+  if (porcentaje >= 40) return "#f97316";
   return "#dc2626";
 }
 
