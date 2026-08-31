@@ -1736,19 +1736,39 @@ export default function RevisionFincasPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (res.ok && data.marcarRevisado) {
-      setGrupos((prev) =>
-        prev.map((g) => {
-          const updated = g.fincas.map((f) =>
-            f.fincaId === fincaId && f.finca ? { ...f, finca: { ...f.finca, revisado: true } } : f
-          );
-          return {
-            ...g,
-            fincas: updated,
-            revisadas: updated.filter((f) => f.finca?.revisado).length,
-          };
-        })
-      );
+    if (!res.ok) {
+      // Un guardado fallido JAMÁS puede parecer exitoso: antes esta rama no
+      // hacía nada y el usuario asumía que quedó guardado.
+      const err = await res.json().catch(() => ({} as { error?: string }));
+      alert(`No se pudo guardar: ${err.error || "error del servidor"}. Intenta de nuevo.`);
+      return;
+    }
+    // Reflejar los valores guardados en la copia local de la lista — antes
+    // solo se marcaba `revisado` y al reabrir la finca el formulario se
+    // rellenaba con los datos VIEJOS (caso Hacienda Cánada 2, 2026-08-31),
+    // aunque Airtable sí había guardado.
+    setGrupos((prev) =>
+      prev.map((g) => {
+        const updated = g.fincas.map((f) => {
+          if (f.fincaId !== fincaId || !f.finca) return f;
+          const finca = { ...f.finca };
+          if (data.nombre !== undefined) finca.nombre = data.nombre;
+          if (data.municipioId !== undefined) finca.municipioId = data.municipioId;
+          if (data.cultivoIds !== undefined) finca.cultivoIds = data.cultivoIds;
+          if (data.movil !== undefined) finca.movil = data.movil;
+          if (data.fijo !== undefined) finca.fijo = data.fijo;
+          if (data.email !== undefined) finca.email = data.email;
+          if (data.marcarRevisado) finca.revisado = true;
+          return { ...f, finca };
+        });
+        return {
+          ...g,
+          fincas: updated,
+          revisadas: updated.filter((f) => f.finca?.revisado).length,
+        };
+      })
+    );
+    if (data.marcarRevisado) {
       setTotalRevisadas((n) => n + 1);
       setExpandedFinca(null);
     }
