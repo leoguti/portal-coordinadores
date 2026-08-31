@@ -280,6 +280,7 @@ export default function NuevoGastoCajaMenorPage() {
         }
       }
 
+      router.refresh(); // caché del enrutador: el gasto nuevo no aparecía en la lista
       router.push(volverHref);
     } catch (err) {
       console.error("Error creating gasto:", err);

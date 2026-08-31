@@ -86,6 +86,9 @@ export default function EditarGeneradorPage() {
         }),
       });
       if (!res.ok) throw new Error("Error al guardar");
+      // Invalida la caché del enrutador: sin esto la ficha se pinta con
+      // los datos viejos hasta ~30s después (reporte de Ángela 2026-08-31).
+      router.refresh();
       router.push(`/generadores/${id}`);
     } catch {
       setError("No se pudo guardar. Intenta de nuevo.");

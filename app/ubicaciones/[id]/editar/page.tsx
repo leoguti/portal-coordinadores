@@ -99,6 +99,7 @@ export default function EditarUbicacionPage() {
       }
 
       setSuccess(true);
+      router.refresh(); // caché del enrutador: la lista mostraría datos viejos
       setTimeout(() => router.push("/ubicaciones"), 1500);
     } catch {
       setError("Error de conexión.");

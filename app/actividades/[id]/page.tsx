@@ -147,6 +147,7 @@ export default function ActividadDetailPage() {
       }
 
       // Redirigir a la lista de actividades
+      router.refresh(); // caché del enrutador: la eliminada seguía apareciendo
       router.push(volverHref);
     } catch (err) {
       console.error("Error deleting activity:", err);

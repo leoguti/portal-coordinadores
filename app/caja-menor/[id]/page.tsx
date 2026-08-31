@@ -590,6 +590,7 @@ export default function GastoDetallePage() {
                   try {
                     const res = await fetch(`/api/caja-menor/${gastoId}`, { method: "DELETE" });
                     if (res.ok) {
+                      router.refresh(); // caché del enrutador: el eliminado seguía apareciendo
                       router.push(volverHref);
                     } else {
                       const d = await res.json();
