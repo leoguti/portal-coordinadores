@@ -75,3 +75,11 @@ public/revisar-fincas.html
 # Archivos locales de trabajo
 backup/
 .claude/
+
+# Artefactos del navegador de pruebas (Playwright MCP)
+.playwright-mcp/
+
+# Informes con datos personales — viven en Dropbox/gestion, no en el repo
+docs/telefonos_compartidos_*
+docs/actualizacion_telefonos_generadores_ANGELA.csv
+docs/AUDITORIA_TICKETS_TEXTIT_*.pdf
