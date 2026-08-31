@@ -135,6 +135,9 @@ function OrdenesServicioPageInner() {
     const estado = orden.fields.Estado || "";
     if (!fechaPedido) return false;
     if (estado === "Facturada" || estado === "Pagada") return false;
+    // Rechazada = registro solo informativo: sus kardex ya fueron liberados
+    // al rechazar; no hay nada que hacer con ella.
+    if (estado === "Rechazada") return false;
     // Reabierta para corrección por un admin: se puede eliminar aunque
     // el mes esté cerrado (la cascada libera los kardex).
     if (estaReabierta(orden.fields)) return true;
@@ -181,6 +184,18 @@ function OrdenesServicioPageInner() {
   // Para admin: todas — sirve de vista de control por coordinador.
   const semaforo = semaforoDeOrdenes(ordenes);
   const creacionBloqueada = !canViewAll && semaforo.rojas.length > 0;
+
+  // --- Rechazos recientes (15 días): alerta grande para el coordinador ---
+  // Rechazar libera los kardex al instante; la alerta guía a rehacer la orden.
+  const QUINCE_DIAS = 15 * 86400000;
+  const rechazadasRecientes = !canViewAll
+    ? ordenes.filter(
+        (o) =>
+          o.fields.Estado === "Rechazada" &&
+          o.fields.rechazo_en &&
+          Date.now() - new Date(o.fields.rechazo_en).getTime() < QUINCE_DIAS
+      )
+    : [];
 
   // --- Filtros ---
   const coordinadoresUnicos = [...new Set(ordenes.map(o => o.fields.NombreCoordinador?.[0] || "").filter(Boolean))].sort();
@@ -315,6 +330,34 @@ function OrdenesServicioPageInner() {
             )}
           </div>
         </div>
+
+        {/* Alerta de órdenes rechazadas recientes (coordinador) */}
+        {!loading && rechazadasRecientes.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+            <p className="font-bold text-red-800 mb-2">
+              ⚠️ Administración rechazó {rechazadasRecientes.length === 1 ? "una orden tuya" : `${rechazadasRecientes.length} órdenes tuyas`}
+            </p>
+            {rechazadasRecientes.map((o) => (
+              <p key={o.id} className="text-sm text-red-800 mb-1">
+                <Link href={`/ordenes-servicio/${o.id}`} className="font-bold underline">#{o.fields.NumeroOrden}</Link>
+                {o.fields.rechazo_motivo ? ` — "${o.fields.rechazo_motivo}"` : ""}
+              </p>
+            ))}
+            <div className="mt-2 p-3 bg-white border border-red-200 rounded-lg">
+              <p className="text-sm text-red-900 font-bold mb-1">📋 Qué debes hacer para arreglarlo:</p>
+              <p className="text-sm text-red-800">
+                Los kardex de {rechazadasRecientes.length === 1 ? "esa orden" : "esas órdenes"} <strong>ya quedaron liberados</strong> (volvieron a &quot;Por Pagar&quot;).
+                Debes <strong>crear una orden NUEVA</strong>: selecciona esos mismos kardex en el paso 1 del formulario y esta vez ingresa los <strong>valores corregidos</strong>. La orden rechazada no se toca — queda solo como registro.
+              </p>
+            </div>
+            <Link
+              href="/ordenes-servicio-v2/nueva"
+              className="inline-block mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors"
+            >
+              + Crear la orden nueva con los kardex liberados →
+            </Link>
+          </div>
+        )}
 
         {/* Semáforo de facturación */}
         {!loading && !canViewAll && semaforo.rojas.length > 0 && (

@@ -157,6 +157,11 @@ interface OrdenFields {
   reabierta_hasta?: string;
   reapertura_motivo?: string;
   reapertura_por?: string;
+  // Rastro del rechazo (rechazar libera los kardex y notifica al coordinador;
+  // la orden Rechazada queda solo informativa)
+  rechazo_motivo?: string;
+  rechazo_por?: string;
+  rechazo_en?: string;
   PorcentajeIVA?: number;
   MontoIVA?: number;
   PorcentajeReteFuente?: number;

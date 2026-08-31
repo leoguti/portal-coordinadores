@@ -510,6 +510,30 @@ export default function OrdenDetallePage() {
           </div>
         )}
 
+        {/* Banner de orden rechazada: registro solo informativo */}
+        {estado === "Rechazada" && (
+          <div className="mb-4 p-4 rounded-lg border-2 bg-red-50 border-red-300">
+            <p className="font-bold text-red-800 mb-1">
+              ❌ Esta orden fue rechazada{orden.fields.rechazo_en ? ` el ${new Date(orden.fields.rechazo_en).toLocaleDateString("es-CO")}` : ""}{orden.fields.rechazo_por ? ` por ${orden.fields.rechazo_por}` : " por administración"}
+            </p>
+            {orden.fields.rechazo_motivo && (
+              <p className="text-sm text-red-800">Motivo: {orden.fields.rechazo_motivo}</p>
+            )}
+            <p className="text-sm text-red-700 mt-1">
+              Sus registros de kardex fueron <strong>liberados en el momento del rechazo</strong> (volvieron a &quot;Por Pagar&quot;). Esta orden es <strong>solo informativa</strong> — no se puede editar ni eliminar.
+            </p>
+            <p className="text-sm text-red-900 font-bold mt-2">
+              📋 Para arreglar el problema debes crear una orden NUEVA: selecciona esos mismos kardex y esta vez ingresa los valores corregidos.
+            </p>
+            <Link
+              href="/ordenes-servicio-v2/nueva"
+              className="inline-block mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors"
+            >
+              + Crear la orden nueva con los kardex liberados →
+            </Link>
+          </div>
+        )}
+
         {/* Banner de reapertura para corrección */}
         {reabierta && (
           <div className="mb-4 p-4 rounded-lg border-2 bg-orange-50 border-orange-300">
