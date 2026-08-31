@@ -391,7 +391,8 @@ export async function PATCH(
             );
             if (!rc.ok) return;
             const coord = await rc.json();
-            const email = String(coord.fields.Email || "").trim();
+            // OJO: el campo en Coordinadores es `email` en minúscula.
+            const email = String(coord.fields.email || "").trim();
             if (!email) {
               console.warn(`[rechazo] coordinador ${res.coordinadorId} sin email — no se notificó`);
               return;

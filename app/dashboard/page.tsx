@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import AlertaOrdenesRechazadas from "@/components/AlertaOrdenesRechazadas";
 import { isAdminOrSupervisor, isJunta } from "@/lib/roles";
 
 const spinner = (
@@ -54,6 +55,9 @@ export default function DashboardPage() {
 
   return (
     <AuthenticatedLayout>
+      {/* Alerta de órdenes rechazadas — el dashboard es lo único que muchos
+          coordinadores abren, la alerta debe vivir aquí también */}
+      <AlertaOrdenesRechazadas />
       <div className="max-w-7xl mx-auto mb-4">
         <div className="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
           <button
