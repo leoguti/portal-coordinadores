@@ -71,7 +71,11 @@ export async function enviarEmailOrdenRechazada(params: {
       </table>`
           : `<p>La orden no tenía registros de kardex vinculados.</p>`
       }
-      <p style="margin-top: 16px;"><strong>Qué hacer:</strong> crea la orden nuevamente con los valores corregidos en el <a href="https://portal.campolimpio.org/ordenes-servicio" style="color: #00d084; font-weight: 600;">Portal de Coordinadores</a>. Si tienes dudas sobre el motivo, contacta a administración.</p>
+      <p style="margin-top: 16px;"><strong>Qué debes hacer:</strong> crear una orden NUEVA seleccionando esos mismos kardex (paso 1 del formulario) e ingresando los valores corregidos. La orden rechazada no se toca — queda solo como registro.</p>
+      <p style="text-align: center; margin: 20px 0;">
+        <a href="https://portal.campolimpio.org/ordenes-servicio-v2/nueva" style="display: inline-block; background-color: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">Crear la orden corregida ahora →</a>
+      </p>
+      <p style="color: #6b7280; font-size: 13px;">Si tienes dudas sobre el motivo del rechazo, contacta a administración.</p>
     </div>
     <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
       <p style="margin: 0;"><strong>Programa de Manejo de Envases Vacíos</strong> - CampoLimpio Colombia</p>
