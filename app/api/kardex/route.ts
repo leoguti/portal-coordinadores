@@ -9,7 +9,7 @@ import {
   getAllKardexPaginated
 } from "@/lib/airtable";
 import { puedeModificarFecha, getMensajeErrorFecha } from "@/lib/dateValidations";
-import { isAdminOrSupervisor } from "@/lib/roles";
+import { puedeVerKardexOrdenes } from "@/lib/roles";
 
 /**
  * GET /api/kardex
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const canViewAll = isAdminOrSupervisor(session.user.rol);
+    const canViewAll = puedeVerKardexOrdenes(session.user.rol);
     const { searchParams } = new URL(request.url);
     const filterCoordinatorId = searchParams.get("coordinatorId");
     const pageSize = Math.min(parseInt(searchParams.get("pageSize") || "50"), 100);

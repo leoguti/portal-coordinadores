@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { isJunta } from "@/lib/roles";
+import { isJunta, JUNTA_VE_KARDEX_ORDENES } from "@/lib/roles";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard-ejecutivo", icon: "📊", roles: ["Administrador", "Supervisor"] },
@@ -80,7 +80,7 @@ export default function Sidebar({
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {(isJunta(userRol)
-            ? navItems.filter((item) => item.href === "/dashboard-junta")
+            ? navItems.filter((item) => item.href === "/dashboard-junta" || (JUNTA_VE_KARDEX_ORDENES && (item.href === "/kardex" || item.href === "/ordenes-servicio")))
             : navItems.filter((item) => item.roles.includes(userRol))
           )
             .map((item) => {

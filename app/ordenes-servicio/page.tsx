@@ -7,7 +7,7 @@ import Link from "next/link";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { getOrdenesCoordinador, getAllOrdenes, computeConceptosOrdenes, type Orden } from "@/lib/airtable";
 import { puedeModificarFecha } from "@/lib/dateValidations";
-import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
+import { isAdmin, puedeVerKardexOrdenes } from "@/lib/roles";
 import { groupOrdenesByMes } from "@/lib/ordenesGrouping";
 import { semaforoDeOrdenes, diasSinFactura, DIAS_AVISO, DIAS_BLOQUEO } from "@/lib/ordenesSemaforo";
 import { estaReabierta } from "@/lib/ordenesReapertura";
@@ -64,7 +64,7 @@ function OrdenesServicioPageInner() {
     });
   }, [expandedMeses, expandedBeneficiarios]);
 
-  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canViewAll = puedeVerKardexOrdenes(session?.user?.rol);
   const canWrite = isAdmin(session?.user?.rol);
 
   useEffect(() => {

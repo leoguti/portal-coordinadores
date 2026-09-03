@@ -6,7 +6,7 @@ import { useEffect, useState, Fragment, Suspense } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import KardexFormModal from "@/components/KardexFormModal";
 import { puedeModificarFecha, getFechaCorteMesesCerrados } from "@/lib/dateValidations";
-import { isAdminOrSupervisor, isAdmin } from "@/lib/roles";
+import { isAdmin, puedeVerKardexOrdenes } from "@/lib/roles";
 
 /**
  * Redondea kilos a 1 decimal. Evita el error de coma flotante al sumar
@@ -60,7 +60,7 @@ function KardexPageInner() {
   const pageSize = 50;
 
   // Admin features
-  const canViewAll = isAdminOrSupervisor(session?.user?.rol);
+  const canViewAll = puedeVerKardexOrdenes(session?.user?.rol);
   const canWrite = isAdmin(session?.user?.rol);
   const [coordinadores, setCoordinadores] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCoordinador, setSelectedCoordinador] = useState("");
