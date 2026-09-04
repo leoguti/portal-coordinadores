@@ -89,7 +89,7 @@ function buildHtml(p: EmailAprobacionCertParams): string {
         <!-- RESUMEN -->
         <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb; border-radius:6px; border-collapse:separate; margin-bottom:16px;">
           <tr><td colspan="2" style="background:#f9fafb; padding:8px 12px; font-size:12px; font-weight:bold; color:#374151; border-bottom:1px solid #e5e7eb;">RESUMEN DE LA SOLICITUD</td></tr>
-          ${filaResumen("Agricultor", p.nombreAgricultor)}
+          ${filaResumen("Nombres y apellidos / Razón social", p.nombreAgricultor)}
           ${filaResumen("Cédula / NIT", p.cedulaAgricultor)}
           ${filaResumen("Finca", p.finca)}
           ${filaResumen("Municipio", p.municipioDevolucion)}
@@ -172,7 +172,7 @@ function buildText(p: EmailAprobacionCertParams): string {
     `${p.nombreAgricultor} envió por WhatsApp la solicitud de certificado de devolución #${p.consecutivo}. Está asignada a ti y quedó en espera de tu revisión.`,
     ``,
     `RESUMEN`,
-    `- Agricultor: ${p.nombreAgricultor}`,
+    `- Nombres y apellidos / Razón social: ${p.nombreAgricultor}`,
     `- Cédula / NIT: ${p.cedulaAgricultor}`,
     `- Finca: ${p.finca}`,
     `- Municipio: ${p.municipioDevolucion}`,

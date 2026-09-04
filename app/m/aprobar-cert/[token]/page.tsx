@@ -266,7 +266,7 @@ export default function AprobarCertPage({
         <dl className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
           {(
             [
-              ["Agricultor", s.nombreAgricultor],
+              ["Nombres y apellidos / Razón social", s.nombreAgricultor],
               ["Cédula / NIT", s.cedulaAgricultor],
               ["Finca", s.finca],
               ["Municipio", s.municipioDevolucion],
