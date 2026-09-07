@@ -36,9 +36,9 @@ interface RubroFields {
   requiere_trayecto?: boolean;
   requiere_noches?: boolean;
   requiere_hora?: boolean;
-  // Rubros que se cobran por peso (kg) y se asignan a filas de Kardex en la orden.
-  // Reemplaza el antiguo criterio Tipo === "Transporte": ahora incluye también
-  // Disposicion Final y Clasificacion y Compactacion. Se administra desde Airtable.
+  // Rubros de servicio (catálogo) que se cobran POR KILO como línea global
+  // (cantidad = kg, subtotal = kg × precio), no atados a un Kardex.
+  // Marcado en Airtable para Disposicion Final y Clasificacion y Compactacion.
   AplicaPorKilo?: boolean;
 }
 

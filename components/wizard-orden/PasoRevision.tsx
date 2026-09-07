@@ -33,6 +33,7 @@ export interface ItemOrden {
   kardexData?: Kardex;
   tipoMovimiento?: "ENTRADA" | "SALIDA";
   concepto?: string;
+  aplicaPorKilo?: boolean; // catalogo cobrado por kilo (linea global kg x precio)
 }
 
 interface PasoRevisionProps {
@@ -406,8 +407,8 @@ export default function PasoRevision({
                   {/* Forma de cobro */}
                   <td className="px-3 py-3">
                     {item.tipo === "CATALOGO" ? (
-                      <div className="px-2 py-1.5 text-xs rounded bg-gray-100 font-semibold text-gray-600 text-center border border-gray-300">
-                        Precio Fijo
+                      <div className={`px-2 py-1.5 text-xs rounded font-semibold text-center border ${item.aplicaPorKilo ? "bg-blue-50 text-blue-700 border-blue-300" : "bg-gray-100 text-gray-600 border-gray-300"}`}>
+                        {item.aplicaPorKilo ? "Por Kilo" : "Precio Fijo"}
                       </div>
                     ) : (
                       <select

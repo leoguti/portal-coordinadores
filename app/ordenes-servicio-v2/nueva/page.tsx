@@ -141,7 +141,10 @@ export default function NuevaOrdenV2Page() {
         tipo: "CATALOGO",
         catalogoId: item.catalogo.id,
         descripcion: item.catalogo.fields.Nombre || "Sin nombre",
-        formaCobro: "Por Flete",
+        // Rubros marcados AplicaPorKilo (Disposicion Final, Clasificacion y
+        // Compactacion) se cobran por kilo como linea global: cantidad = kg.
+        aplicaPorKilo: item.catalogo.fields.AplicaPorKilo === true,
+        formaCobro: item.catalogo.fields.AplicaPorKilo === true ? "Por Kilo" : "Por Flete",
         cantidad: item.cantidad,
         precioUnitario: item.precioUnitario,
       });
@@ -498,7 +501,7 @@ export default function NuevaOrdenV2Page() {
 
           {pasoActual === 2 && (
             <PasoCatalogo
-              rubrosServicio={rubrosDisponibles.filter((r) => !r.fields.AplicaPorKilo)}
+              rubrosServicio={rubrosDisponibles.filter((r) => r.fields.Tipo?.[0] !== "Transporte")}
               kardexSeleccionados={kardexSeleccionados}
               itemsCatalogo={itemsCatalogo}
               onItemsChange={setItemsCatalogo}
@@ -530,7 +533,7 @@ export default function NuevaOrdenV2Page() {
               observaciones={observaciones}
               itemsOrden={itemsOrden}
               onItemsOrdenChange={setItemsOrden}
-              rubrosTransporte={rubrosDisponibles.filter((r) => r.fields.AplicaPorKilo === true)}
+              rubrosTransporte={rubrosDisponibles.filter((r) => r.fields.Tipo?.[0] === "Transporte")}
               soporteBascula={soporteBascula}
               onSoporteBasculaChange={setSoporteBascula}
               onSubmit={handleSubmit}
