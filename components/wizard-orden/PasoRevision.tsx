@@ -79,13 +79,15 @@ export default function PasoRevision({
   };
 
   const calcularSubtotal = (item: ItemOrden) => {
-    if (item.tipo === "CATALOGO") {
+    // Servicios de precio fijo (catálogo sin AplicaPorKilo): precio × cantidad.
+    if (item.tipo === "CATALOGO" && !item.aplicaPorKilo) {
       return item.precioUnitario * item.cantidad;
     }
+    // Kardex y servicios por kilo/flete: mismo cálculo.
     if (item.formaCobro === "Por Kilo") {
       return item.cantidad * item.precioUnitario;
     }
-    return item.precioUnitario;
+    return item.precioUnitario; // Por Flete
   };
 
   const total = useMemo(() => {
@@ -413,9 +415,9 @@ export default function PasoRevision({
 
                   {/* Forma de cobro */}
                   <td className="px-3 py-3">
-                    {item.tipo === "CATALOGO" ? (
-                      <div className={`px-2 py-1.5 text-xs rounded font-semibold text-center border ${item.aplicaPorKilo ? "bg-blue-50 text-blue-700 border-blue-300" : "bg-gray-100 text-gray-600 border-gray-300"}`}>
-                        {item.aplicaPorKilo ? "Por Kilo" : "Precio Fijo"}
+                    {item.tipo === "CATALOGO" && !item.aplicaPorKilo ? (
+                      <div className="px-2 py-1.5 text-xs rounded font-semibold text-center border bg-gray-100 text-gray-600 border-gray-300">
+                        Precio Fijo
                       </div>
                     ) : (
                       <select
