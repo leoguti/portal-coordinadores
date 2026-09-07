@@ -368,7 +368,7 @@ export default function PasoRevision({
                         onChange={(e) =>
                           actualizarItem(item.id, "descripcionLibre", e.target.value)
                         }
-                        placeholder="Ej: Arriendo bodega febrero"
+                        placeholder="Descripción (opcional)"
                         className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white text-gray-900 focus:ring-2 focus:ring-purple-400 focus:border-transparent"
                       />
                     )}
