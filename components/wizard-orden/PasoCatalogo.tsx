@@ -54,7 +54,9 @@ export default function PasoCatalogo({
   const actualizarCantidad = (rubroId: string, cantidad: number) => {
     onItemsChange(
       itemsCatalogo.map((i) =>
-        i.catalogo.id === rubroId ? { ...i, cantidad: Math.max(1, cantidad) } : i
+        i.catalogo.id === rubroId
+          ? { ...i, cantidad: Number.isFinite(cantidad) ? cantidad : 0 }
+          : i
       )
     );
   };
@@ -139,11 +141,17 @@ export default function PasoCatalogo({
                     <label className="text-xs text-gray-600">Cant:</label>
                     <input
                       type="number"
-                      value={item.cantidad}
+                      value={item.cantidad || ""}
                       onChange={(e) =>
                         actualizarCantidad(
                           item.catalogo.id,
-                          Number(e.target.value) || 1
+                          Number(e.target.value)
+                        )
+                      }
+                      onBlur={() =>
+                        actualizarCantidad(
+                          item.catalogo.id,
+                          Math.max(1, item.cantidad || 1)
                         )
                       }
                       className="w-16 px-2 py-1 text-xs text-center border border-gray-300 rounded focus:ring-2 focus:ring-purple-400"

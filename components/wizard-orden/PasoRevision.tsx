@@ -377,12 +377,19 @@ export default function PasoRevision({
                     {item.tipo === "CATALOGO" ? (
                       <input
                         type="number"
-                        value={item.cantidad}
+                        value={item.cantidad || ""}
                         onChange={(e) =>
                           actualizarItem(
                             item.id,
                             "cantidad",
-                            Number(e.target.value) || 1
+                            Number(e.target.value)
+                          )
+                        }
+                        onBlur={() =>
+                          actualizarItem(
+                            item.id,
+                            "cantidad",
+                            Math.max(1, item.cantidad || 1)
                           )
                         }
                         className="w-16 px-2 py-1 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
