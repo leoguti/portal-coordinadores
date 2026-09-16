@@ -307,6 +307,7 @@ function ListarCertificadosPage() {
     // El Nº de certificado no estaba aquí: se escribía y la búsqueda jamás
     // se disparaba (reporte cliente 2026-07-31, cert #86465 "no aparece").
     consecutivoDebounced,
+    cedulaDebounced,
     generador?.id,
     finca?.id,
     depKeyDepartamentos,
