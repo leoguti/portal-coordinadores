@@ -18,6 +18,8 @@ export interface CertificadosFilterInput {
   forceCoordinadorId?: string;
   /** Número de consecutivo exacto a buscar (usado por coordinadores que conocen el número). */
   consecutivo?: number | string;
+  /** NIT o cédula del generador — busca por documento directamente sobre el certificado. */
+  cedula?: string;
   /**
    * Estados a incluir. Default ['aprobado'] (con BLANK por compatibilidad).
    * Pasar ['pendiente'] para la bandeja del coord, ['aprobado','pendiente','rechazado']
@@ -66,6 +68,17 @@ export function buildCertificadosFilterFormula(
     if (Number.isFinite(n)) {
       clauses.push(`{consecutivo} = ${n}`);
     }
+  }
+
+  if (
+    input.cedula !== undefined &&
+    input.cedula !== null &&
+    `${input.cedula}`.trim() !== ""
+  ) {
+    // cedulagenerador es un lookup (array); ARRAYJOIN lo aplana a texto.
+    clauses.push(
+      `FIND(${quoted(`${input.cedula}`.trim())}, ARRAYJOIN({cedulagenerador}))`
+    );
   }
 
   if (input.departamentos && input.departamentos.length > 0) {

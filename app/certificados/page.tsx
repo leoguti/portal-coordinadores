@@ -163,6 +163,13 @@ function ListarCertificadosPage() {
     );
     return () => clearTimeout(t);
   }, [consecutivoFiltro]);
+  // Búsqueda por NIT / cédula del generador (directo sobre el certificado).
+  const [cedulaFiltro, setCedulaFiltro] = useState("");
+  const [cedulaDebounced, setCedulaDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setCedulaDebounced(cedulaFiltro.trim()), 450);
+    return () => clearTimeout(t);
+  }, [cedulaFiltro]);
   const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
   const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
   const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
@@ -219,6 +226,7 @@ function ListarCertificadosPage() {
       if (mes) params.set("mes", mes);
       if (consecutivoDebounced)
         params.set("consecutivo", consecutivoDebounced);
+      if (cedulaDebounced) params.set("cedula", cedulaDebounced);
       if (generador) params.set("generador", generador.id);
       if (finca) params.set("finca", finca.id);
       for (const d of selDepartamentos) params.append("departamento", d);
@@ -239,6 +247,7 @@ function ListarCertificadosPage() {
       ano,
       mes,
       consecutivoDebounced,
+      cedulaDebounced,
       generador,
       finca,
       selDepartamentos,
@@ -319,6 +328,7 @@ function ListarCertificadosPage() {
     setAno("");
     setMes("");
     setConsecutivoFiltro("");
+    setCedulaFiltro("");
     setSelDepartamentos([]);
     setSelMunicipios([]);
     setSelCultivos([]);
@@ -520,6 +530,22 @@ function ListarCertificadosPage() {
                   setConsecutivoFiltro(e.target.value.replace(/[^\d]/g, ""))
                 }
                 placeholder="Ej. 1234"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                NIT / Cédula
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={cedulaFiltro}
+                onChange={(e) =>
+                  setCedulaFiltro(e.target.value.replace(/[^\d]/g, ""))
+                }
+                placeholder="Ej. 891300233"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               />
             </div>

@@ -269,6 +269,7 @@ export async function GET(request: Request) {
   const ano = searchParams.get("ano") || "";
   const mes = searchParams.get("mes") || "";
   const consecutivo = (searchParams.get("consecutivo") || "").trim();
+  const cedula = (searchParams.get("cedula") || "").trim();
   const generadorId = (searchParams.get("generador") || "").trim();
   const fincaId = (searchParams.get("finca") || "").trim();
 
@@ -318,6 +319,7 @@ export async function GET(request: Request) {
     mes: mes || undefined,
     forceCoordinadorId,
     consecutivo: consecutivo || undefined,
+    cedula: cedula || undefined,
     estados: estados.length > 0 ? estados : undefined,
   });
 
