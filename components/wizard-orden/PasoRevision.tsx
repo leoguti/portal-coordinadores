@@ -448,7 +448,7 @@ export default function PasoRevision({
                       placeholder="$0"
                       className="w-full px-2 py-1.5 text-xs text-right border-2 border-blue-400 rounded bg-blue-50 font-mono font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500"
                       min="0"
-                      step="1000"
+                      step="0.01"
                     />
                   </td>
 

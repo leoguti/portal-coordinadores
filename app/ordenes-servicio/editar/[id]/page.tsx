@@ -507,7 +507,7 @@ export default function EditarOrdenPage() {
                         value={item.precioUnitario || ""}
                         onChange={(e) => updateItem(item.itemId, "precioUnitario", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                         min="0"
-                        step="1"
+                        step="0.01"
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-[#00d084]"
                       />
                     </div>
@@ -671,7 +671,7 @@ export default function EditarOrdenPage() {
                                         updateKardexDisponible(kardex.id, "precioUnitario", e.target.value === "" ? 0 : parseFloat(e.target.value))
                                       }
                                       min="0"
-                                      step="1"
+                                      step="0.01"
                                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-[#00d084]"
                                     />
                                   </div>

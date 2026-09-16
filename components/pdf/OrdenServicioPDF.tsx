@@ -50,11 +50,13 @@ const OrdenServicioPDF: React.FC<OrdenServicioPDFProps> = ({
   soportesOrden,
 }) => {
   const formatCurrency = (value: number) => {
+    // Hasta 2 decimales cuando el valor los tiene (tarifas por kilo tipo
+    // $659,50); los valores enteros se siguen mostrando sin decimales.
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
     }).format(value);
   };
 

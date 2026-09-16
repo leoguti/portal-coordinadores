@@ -102,11 +102,12 @@ export default function OrdenDetallePage() {
   }
 
   const formatCurrency = (amount: number) => {
+    // Hasta 2 decimales cuando el valor los tiene (tarifas por kilo $659,50).
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     }).format(amount);
   };
 
