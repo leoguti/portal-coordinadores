@@ -646,7 +646,7 @@ function ListarCertificadosPage() {
                       </div>
                       {r.sinGenerador && (
                         <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                          Histórico
+                          Sin generador registrado
                         </span>
                       )}
                     </td>
