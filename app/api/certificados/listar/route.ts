@@ -23,6 +23,7 @@ interface CertificadoItem {
   estado: string;
   motivoAnulacion: string;
   fechaAnulacion: string;
+  sinGenerador: boolean;
 }
 
 const FIELDS_TO_FETCH = [
@@ -269,7 +270,7 @@ export async function GET(request: Request) {
   const ano = searchParams.get("ano") || "";
   const mes = searchParams.get("mes") || "";
   const consecutivo = (searchParams.get("consecutivo") || "").trim();
-  const cedula = (searchParams.get("cedula") || "").trim();
+  const q = (searchParams.get("q") || "").trim();
   const generadorId = (searchParams.get("generador") || "").trim();
   const fincaId = (searchParams.get("finca") || "").trim();
 
@@ -319,7 +320,7 @@ export async function GET(request: Request) {
     mes: mes || undefined,
     forceCoordinadorId,
     consecutivo: consecutivo || undefined,
-    cedula: cedula || undefined,
+    busqueda: q || undefined,
     estados: estados.length > 0 ? estados : undefined,
   });
 
@@ -387,6 +388,7 @@ export async function GET(request: Request) {
           estado: firstString(f["estado"]) || "aprobado",
           motivoAnulacion: firstString(f["motivo_anulacion"]),
           fechaAnulacion: firstString(f["fecha_anulacion"]),
+          sinGenerador: fincasLink.length === 0,
         };
       }
     );

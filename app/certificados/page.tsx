@@ -37,6 +37,7 @@ interface CertificadoItem {
   estado: string;
   motivoAnulacion: string;
   fechaAnulacion: string;
+  sinGenerador?: boolean;
 }
 
 interface CultivoOption {
@@ -57,15 +58,6 @@ interface FiltrosData {
   municipios: string[];
   meses: string[];
   anos: number[];
-}
-
-interface GeneradorOption {
-  id: string;
-  nombre: string;
-  nit: string;
-  tipo: string;
-  tipopersona: string;
-  fincaIds: string[];
 }
 
 interface FincaOption {
@@ -163,18 +155,18 @@ function ListarCertificadosPage() {
     );
     return () => clearTimeout(t);
   }, [consecutivoFiltro]);
-  // Búsqueda por NIT / cédula del generador (directo sobre el certificado).
-  const [cedulaFiltro, setCedulaFiltro] = useState("");
-  const [cedulaDebounced, setCedulaDebounced] = useState("");
+  // Búsqueda única: generador por nombre o NIT. Busca directo sobre el
+  // certificado, por eso encuentra también históricos sin generador registrado.
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
   useEffect(() => {
-    const t = setTimeout(() => setCedulaDebounced(cedulaFiltro.trim()), 450);
+    const t = setTimeout(() => setBusquedaDebounced(busqueda.trim()), 450);
     return () => clearTimeout(t);
-  }, [cedulaFiltro]);
+  }, [busqueda]);
   const [selDepartamentos, setSelDepartamentos] = useState<string[]>([]);
   const [selMunicipios, setSelMunicipios] = useState<string[]>([]);
   const [selCultivos, setSelCultivos] = useState<string[]>([]); // record IDs
   const [selCoordinadores, setSelCoordinadores] = useState<string[]>([]); // record IDs
-  const [generador, setGenerador] = useState<GeneradorOption | null>(null);
   const [finca, setFinca] = useState<FincaOption | null>(null);
 
   // Datos
@@ -226,8 +218,7 @@ function ListarCertificadosPage() {
       if (mes) params.set("mes", mes);
       if (consecutivoDebounced)
         params.set("consecutivo", consecutivoDebounced);
-      if (cedulaDebounced) params.set("cedula", cedulaDebounced);
-      if (generador) params.set("generador", generador.id);
+      if (busquedaDebounced) params.set("q", busquedaDebounced);
       if (finca) params.set("finca", finca.id);
       for (const d of selDepartamentos) params.append("departamento", d);
       for (const m of selMunicipios) params.append("municipio", m);
@@ -247,8 +238,7 @@ function ListarCertificadosPage() {
       ano,
       mes,
       consecutivoDebounced,
-      cedulaDebounced,
-      generador,
+      busquedaDebounced,
       finca,
       selDepartamentos,
       selMunicipios,
@@ -307,8 +297,7 @@ function ListarCertificadosPage() {
     // El Nº de certificado no estaba aquí: se escribía y la búsqueda jamás
     // se disparaba (reporte cliente 2026-07-31, cert #86465 "no aparece").
     consecutivoDebounced,
-    cedulaDebounced,
-    generador?.id,
+    busquedaDebounced,
     finca?.id,
     depKeyDepartamentos,
     depKeyMunicipios,
@@ -329,19 +318,18 @@ function ListarCertificadosPage() {
     setAno("");
     setMes("");
     setConsecutivoFiltro("");
-    setCedulaFiltro("");
+    setBusqueda("");
     setSelDepartamentos([]);
     setSelMunicipios([]);
     setSelCultivos([]);
     setSelCoordinadores([]);
-    setGenerador(null);
     setFinca(null);
   };
 
   const hasActiveFilters =
     ano !== "" ||
     mes !== "" ||
-    generador !== null ||
+    busqueda !== "" ||
     finca !== null ||
     selDepartamentos.length > 0 ||
     selMunicipios.length > 0 ||
@@ -503,17 +491,26 @@ function ListarCertificadosPage() {
         <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
           {/* Búsqueda: Generador y Finca dependiente */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <GeneradorAutocomplete
-              value={generador}
-              onChange={(g) => {
-                setGenerador(g);
-                setFinca(null);
-              }}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Generador (nombre o NIT)
+              </label>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por nombre o NIT"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Busca en todos los certificados, incluidos los históricos sin
+                generador registrado.
+              </p>
+            </div>
             <FincaAutocomplete
               value={finca}
               onChange={setFinca}
-              generadorId={generador?.id}
+              generadorId={undefined}
               disabled={false}
             />
           </div>
@@ -530,23 +527,7 @@ function ListarCertificadosPage() {
                 onChange={(e) =>
                   setConsecutivoFiltro(e.target.value.replace(/[^\d]/g, ""))
                 }
-                placeholder="Ej. 1234"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                NIT / Cédula
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={cedulaFiltro}
-                onChange={(e) =>
-                  setCedulaFiltro(e.target.value.replace(/[^\d]/g, ""))
-                }
-                placeholder="Ej. 891300233"
+                placeholder="N° de certificado"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               />
             </div>
@@ -663,6 +644,11 @@ function ListarCertificadosPage() {
                       <div className="text-xs text-gray-500">
                         {r.cedulagenerador}
                       </div>
+                      {r.sinGenerador && (
+                        <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          Histórico
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-700">
                       <div>{r.municipiogenerador}</div>
@@ -964,117 +950,6 @@ function ActionModal({
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-/* -------------------- Autocomplete Generador -------------------- */
-
-function GeneradorAutocomplete({
-  value,
-  onChange,
-}: {
-  value: GeneradorOption | null;
-  onChange: (g: GeneradorOption | null) => void;
-}) {
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<GeneradorOption[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `/api/generadores/buscar?q=${encodeURIComponent(q)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.results || []);
-        }
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [q]);
-
-  return (
-    <div className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Generador
-      </label>
-      {value ? (
-        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2 bg-green-50">
-          <span className="text-sm text-gray-800 flex-1">
-            <span className="font-medium">{value.nombre}</span>
-            {value.nit && <span className="text-xs text-gray-500"> · NIT {value.nit}</span>}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              onChange(null);
-              setQ("");
-            }}
-            className="text-gray-500 hover:text-red-600 text-sm"
-            aria-label="Quitar generador"
-          >
-            ×
-          </button>
-        </div>
-      ) : (
-        <>
-          <input
-            type="text"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder="Buscar por nombre o NIT (mín 2 caracteres)"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-          />
-          {open && q.length >= 2 && (
-            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {loading ? (
-                <div className="p-2 text-xs text-gray-400">Buscando...</div>
-              ) : results.length === 0 ? (
-                <div className="p-2 text-xs text-gray-400">Sin resultados</div>
-              ) : (
-                results.map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => {
-                      onChange(g);
-                      setQ("");
-                      setOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                  >
-                    <div className="text-sm font-medium text-gray-800">
-                      {g.nombre}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {g.nit && `NIT ${g.nit}`}
-                      {g.tipo && ` · ${g.tipo}`}
-                      {g.fincaIds.length > 0 && ` · ${g.fincaIds.length} finca(s)`}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

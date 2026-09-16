@@ -18,8 +18,8 @@ export interface CertificadosFilterInput {
   forceCoordinadorId?: string;
   /** Número de consecutivo exacto a buscar (usado por coordinadores que conocen el número). */
   consecutivo?: number | string;
-  /** NIT o cédula del generador — busca por documento directamente sobre el certificado. */
-  cedula?: string;
+  /** Texto de búsqueda del generador: nombre o NIT/cédula, directo sobre el certificado (incluye históricos). */
+  busqueda?: string;
   /**
    * Estados a incluir. Default ['aprobado'] (con BLANK por compatibilidad).
    * Pasar ['pendiente'] para la bandeja del coord, ['aprobado','pendiente','rechazado']
@@ -71,13 +71,16 @@ export function buildCertificadosFilterFormula(
   }
 
   if (
-    input.cedula !== undefined &&
-    input.cedula !== null &&
-    `${input.cedula}`.trim() !== ""
+    input.busqueda !== undefined &&
+    input.busqueda !== null &&
+    `${input.busqueda}`.trim() !== ""
   ) {
-    // cedulagenerador es un lookup (array); ARRAYJOIN lo aplana a texto.
+    // Busca sobre el propio certificado: nombre del generador O su NIT/cédula
+    // (lookups array → ARRAYJOIN, en minúsculas). Así aparecen también los
+    // históricos sin generador registrado en la tabla maestra.
+    const b = `${input.busqueda}`.trim().toLowerCase();
     clauses.push(
-      `FIND(${quoted(`${input.cedula}`.trim())}, ARRAYJOIN({cedulagenerador}))`
+      `OR(FIND(${quoted(b)}, LOWER(ARRAYJOIN({nombregenerador}))), FIND(${quoted(b)}, LOWER(ARRAYJOIN({cedulagenerador}))))`
     );
   }
 
