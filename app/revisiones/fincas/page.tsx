@@ -7,6 +7,10 @@ import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import MunicipioSearch from "@/components/MunicipioSearch";
 import { calcularDigitoVerificador } from "@/lib/nit";
 
+// Normaliza texto para búsqueda: minúsculas y sin tildes/acentos.
+const norm = (s: string) =>
+  (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FincaItem {
@@ -1140,19 +1144,20 @@ function GeneradorRow({
   // Indicadores de NIT duplicado solo para admin (son accionables solo por ellos).
   const showDup = isAdmin && duplicadosNit.length > 0;
 
-  // La búsqueda también matchea el nombre/NIT del GENERADOR (no solo la finca);
-  // si el generador coincide, se muestra el grupo completo.
+  // Búsqueda insensible a mayúsculas Y a tildes/acentos (normalización Unicode).
+  // También matchea el nombre/NIT del GENERADOR (no solo la finca); si el
+  // generador coincide, se muestra el grupo completo.
+  const q = norm(search);
   const genMatch =
     !!search &&
-    (((grupo.generador?.nombre || "") as string).toLowerCase().includes(search.toLowerCase()) ||
+    (norm((grupo.generador?.nombre || "") as string).includes(q) ||
       ((grupo.generador?.nit || "") as string).includes(search));
   const visibleFincas = search && !genMatch
     ? grupo.fincas.filter((f) => {
-        const s = search.toLowerCase();
         return (
-          f.original.nombre.toLowerCase().includes(s) ||
-          f.original.nit.includes(s) ||
-          f.original.direccion.toLowerCase().includes(s)
+          norm(f.original.nombre).includes(q) ||
+          f.original.nit.includes(search) ||
+          norm(f.original.direccion).includes(q)
         );
       })
     : grupo.fincas;
