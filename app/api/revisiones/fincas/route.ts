@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getCultivosMap } from "@/lib/cultivosCache";
 import { norm, busquedaValue } from "@/lib/busqueda";
+import { isAdminOrSupervisor } from "@/lib/roles";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -89,8 +90,6 @@ export async function GET(request: NextRequest) {
   const CHUNK = 30;
   const sp = request.nextUrl.searchParams;
   const q = norm((sp.get("q") || "").trim());
-  // Filtro por coordinador: por query param, o por defecto el propio (carga rápida).
-  const coordinadorId = sp.get("coordinadorId") || session.user.coordinatorRecordId!;
 
   const fFields = [
     "nombre", "generador", "municipio", "cultivos", "movil", "fijo", "email",
@@ -123,8 +122,15 @@ export async function GET(request: NextRequest) {
       fincas.push(...(data.records || []));
     }
   } else {
-    // Vista por defecto: las fincas del coordinador (rápido). ?coordinadorId=... filtra a otro.
-    const fincaFilter = `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
+    // Vista por defecto (sin búsqueda):
+    //  - Admin/Supervisor: TODOS (oversight). Con ?coordinadorId=... filtra a ese.
+    //  - Coordinador: solo los suyos (carga rápida).
+    const coordParam = sp.get("coordinadorId");
+    const fincaFilter = coordParam
+      ? `FIND('${coordParam}', ARRAYJOIN({coordinador_id}, ',')) > 0`
+      : isAdminOrSupervisor(session.user.rol)
+      ? "TRUE()"
+      : `FIND('${session.user.coordinatorRecordId!}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
     let offset = "";
     do {
       const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
