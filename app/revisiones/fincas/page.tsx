@@ -1140,7 +1140,13 @@ function GeneradorRow({
   // Indicadores de NIT duplicado solo para admin (son accionables solo por ellos).
   const showDup = isAdmin && duplicadosNit.length > 0;
 
-  const visibleFincas = search
+  // La búsqueda también matchea el nombre/NIT del GENERADOR (no solo la finca);
+  // si el generador coincide, se muestra el grupo completo.
+  const genMatch =
+    !!search &&
+    (((grupo.generador?.nombre || "") as string).toLowerCase().includes(search.toLowerCase()) ||
+      ((grupo.generador?.nit || "") as string).includes(search));
+  const visibleFincas = search && !genMatch
     ? grupo.fincas.filter((f) => {
         const s = search.toLowerCase();
         return (
@@ -1151,7 +1157,7 @@ function GeneradorRow({
       })
     : grupo.fincas;
 
-  if (search && visibleFincas.length === 0) return null;
+  if (search && !genMatch && visibleFincas.length === 0) return null;
 
   return (
     <div className={`rounded-xl border overflow-hidden ${allDone ? "border-green-200" : showDup ? "border-red-200" : "border-gray-200"}`}>

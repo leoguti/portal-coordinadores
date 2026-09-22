@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { isAdminOrSupervisor } from "@/lib/roles";
 import { getCultivosMap } from "@/lib/cultivosCache";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
@@ -84,14 +83,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const isAdmin = isAdminOrSupervisor(session.user.rol);
-  const coordinadorId = session.user.coordinatorRecordId;
   const CHUNK = 30;
 
-  // Admin puede filtrar por coordinador específico via query param
-  const filtroCoordinadorId = isAdmin
-    ? (request.nextUrl.searchParams.get("coordinadorId") || null)
-    : coordinadorId;
+  // Acceso abierto: todos los coordinadores ven y editan todos los generadores
+  // y fincas (cada edición queda registrada en la tabla Auditoría). El filtro por
+  // coordinador queda disponible como opción vía query param (?coordinadorId=...).
+  const filtroCoordinadorId = request.nextUrl.searchParams.get("coordinadorId") || null;
 
   // 1. Fetch FINCAS asignadas al coordinador vía el rollup coordinador_id
   // (expone el RECORD_ID de coordinador_asignado como texto, sí filtrable).
