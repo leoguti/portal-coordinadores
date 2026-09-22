@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { registrarEdicion } from "@/lib/auditoria";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -48,6 +49,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
   }
 
+  // Auditoría: quién editó y cuándo (best-effort, no bloquea la respuesta)
+  const coordinador = session.user.name || session.user.email || "coordinador";
+  await registrarEdicion({ tipo: "finca", fichaId: id, fichaNombre: body.nombre, coordinador });
+
   // Si viene nit/nombre del generador, actualizar GENERADOR también
   if (body.generadorId && (body.generadorNombre !== undefined || body.generadorNit !== undefined || body.generadorTipo !== undefined)) {
     const genFields: Record<string, unknown> = {};
@@ -60,6 +65,7 @@ export async function PATCH(
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ fields: genFields }),
     });
+    await registrarEdicion({ tipo: "generador", fichaId: body.generadorId, fichaNombre: body.generadorNombre, coordinador });
   }
 
   const data = await resFinca.json();

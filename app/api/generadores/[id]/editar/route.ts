@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { registrarEdicion } from "@/lib/auditoria";
 import {
   soloDigitos,
   esMovilCOValido,
@@ -323,6 +324,11 @@ export async function PATCH(
       { status: 500 }
     );
   }
+
+  // Auditoría: quién editó y cuándo (best-effort, no bloquea la respuesta)
+  const coordinador = session.user.name || session.user.email || "coordinador";
+  await registrarEdicion({ tipo: "generador", fichaId: generadorId, fichaNombre: nombre, coordinador });
+  await registrarEdicion({ tipo: "finca", fichaId: fincaId, fichaNombre: fincaNombre, coordinador });
 
   return NextResponse.json({
     generador: { id: generadorId, nombre, nit, tipo, tipopersona },
