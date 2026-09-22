@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { registrarEdicion } from "@/lib/auditoria";
+import { busquedaValue } from "@/lib/busqueda";
 import {
   soloDigitos,
   esMovilCOValido,
@@ -260,6 +261,7 @@ export async function PATCH(
       email: genEmail || "",
       // Limpiar dv si tipopersona pasó a Natural; setear si es Juridica con DV válido.
       dv: dvJuridica,
+      busqueda: busquedaValue(nombre, nit),
     };
     const res = await fetch(
       `https://api.airtable.com/v0/${baseId}/GENERADORES/${generadorId}`,

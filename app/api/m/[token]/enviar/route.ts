@@ -33,6 +33,7 @@ import {
   notificarCertAprobado,
 } from "@/lib/textitNotify";
 import { normalizarMovilCO, validarDocumento } from "@/lib/validacionesCO";
+import { busquedaValue } from "@/lib/busqueda";
 
 function intentToNotifTipo(
   intent: Intent
@@ -876,6 +877,7 @@ async function manejarRegistroGenerador(
     estado: "pendiente",
     solicitud_origen: "whatsapp",
     fecha_solicitud: nowIso(),
+    busqueda: busquedaValue(nombre, nit),
   };
   if (municipioId) genFields.municipio = [municipioId];
   if (coordinadorSolicitadoId) {

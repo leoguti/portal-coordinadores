@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { registrarEdicion } from "@/lib/auditoria";
+import { busquedaValue } from "@/lib/busqueda";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -30,6 +31,10 @@ export async function PATCH(
   if (body.email !== undefined) fields.email = body.email;
   if (body.municipioId !== undefined) {
     fields.municipio = body.municipioId ? [body.municipioId] : [];
+  }
+  // Mantener el campo normalizado de búsqueda al cambiar nombre o NIT.
+  if (body.nombre !== undefined || body.nit !== undefined) {
+    fields.busqueda = busquedaValue(body.nombre, body.nit);
   }
 
   if (Object.keys(fields).length === 0) {

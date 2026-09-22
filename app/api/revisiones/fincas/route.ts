@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getCultivosMap } from "@/lib/cultivosCache";
+import { norm, busquedaValue } from "@/lib/busqueda";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
+
 
 async function airtableGet(url: string) {
   const res = await fetch(url, {
@@ -34,6 +36,7 @@ export async function POST(req: NextRequest) {
       nombre: body.generadorNombre || "",
       nit: body.generadorNit || "",
       tipo: body.generadorTipo || "AGRICOLA",
+      busqueda: busquedaValue(body.generadorNombre, body.generadorNit),
     };
     if (!genFields.nombre || !genFields.nit) {
       return NextResponse.json({ error: "Nombre y NIT del generador son obligatorios" }, { status: 400 });
@@ -84,35 +87,53 @@ export async function GET(request: NextRequest) {
   }
 
   const CHUNK = 30;
+  const sp = request.nextUrl.searchParams;
+  const q = norm((sp.get("q") || "").trim());
+  // Filtro por coordinador: por query param, o por defecto el propio (carga rápida).
+  const coordinadorId = sp.get("coordinadorId") || session.user.coordinatorRecordId!;
 
-  // Acceso abierto: todos los coordinadores ven y editan todos los generadores
-  // y fincas (cada edición queda registrada en la tabla Auditoría). El filtro por
-  // coordinador queda disponible como opción vía query param (?coordinadorId=...).
-  const filtroCoordinadorId = request.nextUrl.searchParams.get("coordinadorId") || null;
-
-  // 1. Fetch FINCAS asignadas al coordinador vía el rollup coordinador_id
-  // (expone el RECORD_ID de coordinador_asignado como texto, sí filtrable).
-  // La lista se ancla DIRECTAMENTE en FINCAS (modelo nuevo): ya no recorremos
-  // `ubicaciones`, así toda finca aparece —venga de migración o de un
-  // certificado— y la vista sobrevive al borrado de la tabla `ubicaciones`.
   const fFields = [
     "nombre", "generador", "municipio", "cultivos", "movil", "fijo", "email",
     "revisado", "notas_migracion", "coordinador_asignado", "Certificados",
   ];
   const ffp = fFields.map((f) => `fields[]=${encodeURIComponent(f)}`).join("&");
-  const fincaFilter = !filtroCoordinadorId
-    ? "TRUE()"
-    : `FIND('${filtroCoordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
 
   const fincas: any[] = [];
-  let offset = "";
-  do {
-    const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
-    const data = await airtableGet(url);
-    if (data.error) return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
-    fincas.push(...data.records);
-    offset = data.offset || "";
-  } while (offset);
+
+  if (q) {
+    // BÚSQUEDA server-side, insensible a tildes: generadores cuyo campo normalizado
+    // {busqueda} contiene el texto; se cargan solo las fincas de esos generadores.
+    // Así la pantalla no vuelca miles de registros: es search-first.
+    const nq = q.replace(/'/g, "\\'");
+    const genUrl = `https://api.airtable.com/v0/${BASE}/GENERADORES?filterByFormula=${encodeURIComponent(`FIND('${nq}', {busqueda}) > 0`)}&fields[]=FINCAS&maxRecords=60`;
+    const genData = await airtableGet(genUrl);
+    const fincaIds: string[] = [];
+    for (const g of (genData.records || [])) {
+      for (const fid of (g.fields?.FINCAS || [])) fincaIds.push(fid);
+    }
+    if (fincaIds.length === 0) {
+      return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });
+    }
+    for (let i = 0; i < fincaIds.length; i += CHUNK) {
+      const chunk = fincaIds.slice(i, i + CHUNK);
+      const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+      const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(formula)}&${ffp}&pageSize=100`;
+      const data = await airtableGet(url);
+      if (data.error) return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
+      fincas.push(...(data.records || []));
+    }
+  } else {
+    // Vista por defecto: las fincas del coordinador (rápido). ?coordinadorId=... filtra a otro.
+    const fincaFilter = `FIND('${coordinadorId}', ARRAYJOIN({coordinador_id}, ',')) > 0`;
+    let offset = "";
+    do {
+      const url = `https://api.airtable.com/v0/${BASE}/FINCAS?filterByFormula=${encodeURIComponent(fincaFilter)}&${ffp}&pageSize=100${offset ? "&offset=" + offset : ""}`;
+      const data = await airtableGet(url);
+      if (data.error) return NextResponse.json({ error: "Error Airtable", detail: data.error }, { status: 500 });
+      fincas.push(...data.records);
+      offset = data.offset || "";
+    } while (offset);
+  }
 
   if (fincas.length === 0) {
     return NextResponse.json({ grupos: [], totalFincas: 0, totalRevisadas: 0 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
@@ -1710,10 +1710,17 @@ export default function RevisionFincasPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
+  // search-first: la búsqueda se hace en el SERVIDOR. searchRef permite que
+  // loadData lea el texto actual sin re-crearse en cada tecla.
+  const searchRef = useRef("");
+  const didMountSearch = useRef(false);
+
   const loadData = useCallback(() => {
     if (status !== "authenticated") return;
     setLoading(true);
     const params = new URLSearchParams();
+    const q = searchRef.current.trim();
+    if (q.length >= 2) params.set("q", q);
     if (session?.user?.rol && ["Administrador", "Supervisor"].includes(session.user.rol) && selectedCoordinador) {
       params.set("coordinadorId", selectedCoordinador);
     }
@@ -1730,6 +1737,16 @@ export default function RevisionFincasPage() {
   }, [status, session, selectedCoordinador]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Al escribir en el buscador: consulta al servidor con debounce (350ms).
+  // Al borrar, vuelve a la vista por defecto (los del coordinador).
+  useEffect(() => {
+    searchRef.current = search;
+    if (!didMountSearch.current) { didMountSearch.current = true; return; }
+    const t = setTimeout(() => loadData(), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   // Cargar coordinadores si es admin
   useEffect(() => {

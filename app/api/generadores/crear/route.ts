@@ -7,6 +7,7 @@ import {
   validarDocumento,
 } from "@/lib/validacionesCO";
 import { validarNitJuridica, calcularDigitoVerificador } from "@/lib/nit";
+import { busquedaValue } from "@/lib/busqueda";
 
 export const maxDuration = 30;
 
@@ -245,6 +246,7 @@ export async function POST(req: NextRequest) {
       // registro no aparece en la cola de pendientes.
       estado: "aprobado",
       solicitud_origen: "portal",
+      busqueda: busquedaValue(nombre, nit),
     };
     if (genEmail) genFields.email = genEmail;
     if (dvJuridica !== null) genFields.dv = dvJuridica;
