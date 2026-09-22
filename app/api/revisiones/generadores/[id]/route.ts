@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { registrarEdicion } from "@/lib/auditoria";
 
 const KEY = process.env.AIRTABLE_API_KEY!;
 const BASE = process.env.AIRTABLE_BASE_ID!;
@@ -46,6 +47,10 @@ export async function PATCH(
     console.error("[generadores/patch]", err);
     return NextResponse.json({ error: "Error al actualizar generador" }, { status: 500 });
   }
+
+  // Auditoría: quién editó y cuándo (best-effort, no bloquea la respuesta)
+  const coordinador = session.user.name || session.user.email || "coordinador";
+  await registrarEdicion({ tipo: "generador", fichaId: id, fichaNombre: body.nombre, coordinador });
 
   const data = await res.json();
   return NextResponse.json(data);
