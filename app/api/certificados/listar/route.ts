@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { buildCertificadosFilterFormula } from "@/lib/certificadosFilters";
 import { getCultivosMap } from "@/lib/cultivosCache";
 import { isAdminOrSupervisor } from "@/lib/roles";
+import { norm } from "@/lib/busqueda";
 
 export const maxDuration = 60;
 
@@ -111,6 +112,52 @@ async function resolveFincasDelGenerador(
   const rec = await res.json();
   const fincaIds = Array.isArray(rec.fields?.FINCAS) ? rec.fields.FINCAS : [];
   return resolveFincaNombres(apiKey, baseId, fincaIds);
+}
+
+/**
+ * Búsqueda por NOMBRE en certificados nuevos: encuentra los generadores cuyo
+ * campo normalizado {busqueda} coincide con el texto (insensible a tildes) y
+ * devuelve los NOMBRES de sus fincas, para poder filtrar los certificados
+ * vinculados a ellas (cuyo campo nombregenerador viene vacío).
+ */
+async function fincaNombresPorTextoGenerador(
+  apiKey: string,
+  baseId: string,
+  q: string
+): Promise<string[]> {
+  const nq = norm(q).replace(/'/g, "\\'");
+  if (!nq) return [];
+  const genUrl = `https://api.airtable.com/v0/${baseId}/GENERADORES?filterByFormula=${encodeURIComponent(
+    `FIND('${nq}', {busqueda}) > 0`
+  )}&fields[]=FINCAS&maxRecords=25`;
+  const genRes = await fetch(genUrl, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    cache: "no-store",
+  });
+  if (!genRes.ok) return [];
+  const genData = await genRes.json();
+  const fincaIds: string[] = [];
+  for (const g of arr<{ fields?: { FINCAS?: string[] } }>(genData.records)) {
+    for (const fid of arr<string>(g.fields?.FINCAS)) fincaIds.push(fid);
+  }
+  if (fincaIds.length === 0) return [];
+  // Resolver nombres de fincas en lotes (evita 1 request por finca).
+  const nombres: string[] = [];
+  for (let i = 0; i < fincaIds.length; i += 30) {
+    const chunk = fincaIds.slice(i, i + 30);
+    const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+    const u = `https://api.airtable.com/v0/${baseId}/FINCAS?filterByFormula=${encodeURIComponent(
+      formula
+    )}&fields[]=nombre&pageSize=100`;
+    const r = await fetch(u, { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" });
+    if (!r.ok) continue;
+    const d = await r.json();
+    for (const rec of arr<{ fields?: { nombre?: string } }>(d.records)) {
+      const n = String(rec.fields?.nombre || "").trim();
+      if (n) nombres.push(n);
+    }
+  }
+  return nombres;
 }
 
 /**
@@ -310,6 +357,18 @@ export async function GET(request: Request) {
     console.error("Error resolviendo finca/generador:", err);
   }
 
+  // Búsqueda por nombre: los certificados nuevos tienen nombregenerador vacío
+  // (el nombre está en el generador vinculado vía FINCAS). Resolvemos las fincas
+  // de los generadores que coinciden con el texto para incluir esos certificados.
+  let busquedaFincaNombres: string[] = [];
+  if (q) {
+    try {
+      busquedaFincaNombres = await fincaNombresPorTextoGenerador(apiKey, baseId, q);
+    } catch (err) {
+      console.error("Error buscando generadores por texto:", err);
+    }
+  }
+
   const filterFormula = buildCertificadosFilterFormula({
     ano: ano || undefined,
     departamentos,
@@ -321,6 +380,7 @@ export async function GET(request: Request) {
     forceCoordinadorId,
     consecutivo: consecutivo || undefined,
     busqueda: q || undefined,
+    busquedaFincaNombres,
     estados: estados.length > 0 ? estados : undefined,
   });
 

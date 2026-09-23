@@ -21,6 +21,13 @@ export interface CertificadosFilterInput {
   /** Texto de búsqueda del generador: nombre o NIT/cédula, directo sobre el certificado (incluye históricos). */
   busqueda?: string;
   /**
+   * Nombres de fincas de los generadores que coinciden con `busqueda`. Los
+   * certificados nuevos guardan el nombre en el generador vinculado (vía FINCAS),
+   * no en el propio certificado; el caller resuelve esas fincas y las pasa aquí
+   * para incluir esos certificados en la búsqueda por nombre.
+   */
+  busquedaFincaNombres?: string[];
+  /**
    * Estados a incluir. Default ['aprobado'] (con BLANK por compatibilidad).
    * Pasar ['pendiente'] para la bandeja del coord, ['aprobado','pendiente','rechazado']
    * para una vista de auditoría, etc.
@@ -76,12 +83,21 @@ export function buildCertificadosFilterFormula(
     `${input.busqueda}`.trim() !== ""
   ) {
     // Busca sobre el propio certificado: nombre del generador O su NIT/cédula
-    // (lookups array → ARRAYJOIN, en minúsculas). Así aparecen también los
-    // históricos sin generador registrado en la tabla maestra.
+    // (lookups array → ARRAYJOIN, en minúsculas). Así aparecen los históricos
+    // que tienen el nombre copiado en el certificado.
     const b = `${input.busqueda}`.trim().toLowerCase();
-    clauses.push(
-      `OR(FIND(${quoted(b)}, LOWER(ARRAYJOIN({nombregenerador}))), FIND(${quoted(b)}, LOWER(ARRAYJOIN({cedulagenerador}))))`
-    );
+    const parts = [
+      `FIND(${quoted(b)}, LOWER(ARRAYJOIN({nombregenerador})))`,
+      `FIND(${quoted(b)}, LOWER(ARRAYJOIN({cedulagenerador})))`,
+    ];
+    // Certificados nuevos: el nombre vive en el generador vinculado (vía FINCAS),
+    // no en el certificado. Se OR-ean las fincas de los generadores que coinciden.
+    for (const fincaNombre of input.busquedaFincaNombres || []) {
+      if (fincaNombre && fincaNombre.trim() !== "") {
+        parts.push(`FIND(${quoted(fincaNombre)}, ARRAYJOIN({FINCAS}))`);
+      }
+    }
+    clauses.push(orParts(parts));
   }
 
   if (input.departamentos && input.departamentos.length > 0) {
